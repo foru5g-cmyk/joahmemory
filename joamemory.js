@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.1.1084
+// @version      2.1.1092
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1122,7 +1122,7 @@
     .bd-hot{font-style:normal;font-size:10.5px;font-weight:800;color:#fff;background:var(--bad);border-radius:999px;padding:1px 6px;margin-right:6px;vertical-align:2px}
     .bd-post{padding:14px 16px;border-bottom:1px solid var(--rule)}.bd-post h4{margin:0 0 4px;font-size:16px}.bd-post p{margin:0 0 4px;font-size:14px;line-height:1.65}
     .bd-meta{font-size:12px!important;color:var(--graphite)}.bd-meta b{color:var(--ink2)}
-    .bd-cmts{padding:6px 16px 12px}.bd-c{padding:8px 0;border-bottom:1px dashed var(--rule)}.bd-c.re{padding-left:18px}.bd-c p{margin:0;font-size:13.5px;line-height:1.55}
+    .bd-cmts{padding:6px 16px 12px}.bd-c{padding:8px 0;border-bottom:1px dashed var(--rule)}.bd-c.re{padding-left:18px}.bd-c p{margin:0;font-size:13.5px;line-height:1.55}.bd-to{color:var(--graphite);font-size:12.5px}
     .bd-site{padding:14px 16px 12px;color:#fff;display:flex;flex-direction:column;gap:2px}.bd-site b{font-size:17px;font-weight:800}.bd-site small{font-size:12px;opacity:.85}
     .bd-cover{height:86px}
     .bd-head{display:flex;align-items:flex-end;gap:12px;padding:0 16px 12px;margin-top:-30px;border-bottom:1px solid var(--rule)}
@@ -1147,9 +1147,10 @@
     .bd-vote button[aria-pressed="true"]{border-color:var(--bad);color:var(--bad);background:#FFF1F3}
     .bd-write{display:flex;gap:6px;margin:10px 0 2px}.bd-write input{flex:1;min-width:0;height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 12px;font-size:14px;background:var(--paper);color:var(--ink)}.bd-write input:focus{outline:none;border-color:var(--ink)}
     .bd-write button{flex:none;border:0;border-radius:10px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:700;padding:0 14px}.bd-write button:disabled{opacity:.4}
+    .bd-write input.bd-nick{flex:0 0 64px;width:64px;min-width:0;height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 8px;font-size:13px;background:var(--paper);color:var(--ink)}
     .bd-anon{flex:none;display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink2);cursor:pointer}.bd-anon input{width:16px;height:16px;accent-color:var(--ink)}
     .bd-write-r{margin:4px 0 8px 18px}.bd-x{flex:none;border:0;background:transparent;color:var(--graphite);font-size:13px;padding:0 6px;cursor:pointer}
-    .bd-rep{border:0;background:transparent;padding:0 0 0 6px;font-size:11.5px;color:var(--graphite);cursor:pointer;margin-left:auto}.bd-c.to{background:#FFF8EC}
+    .bd-rep{border:0;background:transparent;padding:0 0 0 6px;font-size:11.5px;color:var(--graphite);cursor:pointer;margin-left:auto}.bd-c.to{background:#EEF2F7}
     .bd-to{margin:8px 0 0;font-size:12.5px;color:var(--ink2)}.bd-to button{border:0;background:transparent;color:var(--graphite);cursor:pointer;font-size:12px}
     .bd-op{font-style:normal;font-size:10.5px;font-weight:800;color:#2F6FB8;background:var(--sky);border-radius:4px;padding:0 5px;margin-left:4px}
     .bd-c.mine{background:#F6F7FF}.bd-me{font-style:normal;font-size:10.5px;font-weight:800;color:#fff;background:var(--ink);border-radius:4px;padding:0 5px;margin-left:4px}
@@ -2744,7 +2745,8 @@
     await setValue('board:' + chatIdFromPath(), JSON.stringify(boardData));
   }
   // 💬 내 댓글 → 바로 붙이고, 로딩 보이는 동안 커뮤니티 사람들 대댓글을 AI로 받아 이어 붙임
-  const REPLY_PROMPT = `너는 RP 세계 안 커뮤니티 게시판의 댓글러들이다. [글]과 지금까지 [댓글]을 읽고, 방금 달린 [새 댓글]에 바로 붙는 대댓글 2~4개를 쓴다.
+  const REPLY_PROMPT = `너는 RP 세계 안 커뮤니티 게시판의 댓글러들이다. [글]과 지금까지 [댓글]을 읽고, 방금 달린 [새 댓글]에 붙는 대댓글을 쓴다.
+- 개수는 상황 따라 0~4개. 재미없거나 묻힐 댓글이면 0개(빈 배열 [])나 1개만, 판이 커질 댓글이면 3~4개. 매번 같은 개수로 맞추지 않는다. 0개일 때 가끔 "무플방지"·"ㅇㄷ" 같은 한 줄만 다는 것도 된다.
 - 그 게시판의 분위기(vibe)와 말투를 그대로: 카페는 존댓말·이모티콘과 은근한 기싸움, 여초는 "헐 미쳤다"·ㅠㅠ·언니들·과몰입과 편 가르기, 남초는 "~함/~임"·형들·개추/비추·팩트 공방, 익명은 은어·초성체·드립·가벼운 비속어, 음지는 디시 야갤처럼 반말 비속어·조롱·희롱·과격한 드립을 세게.
 - 착한 반응만 쓰지 않는다: 시비·맞장구·밈·조롱·"ㅋㅋ 이게 맞냐"·"↑ 본인 등판?" 같은 반응을 섞는다. 서로 싸우기도 한다.
 - [답글 대상 댓글]이 있으면 그 둘의 대화에 끼어든다. 원댓글이 싸가지 없거나 공격적이면 원댓글러가 다시 받아치고("ㅇㅇ 그래서 뭐"), 편 들기·비꼼·조리돌림·싸움 붙이기로 판을 키운다. 원댓글이 맞는 말이면 동조·추가 폭로, 웃기면 드립 받기. 가끔 쉴드·중재("둘 다 그만해 ㅋㅋ")도. 매번 같은 패턴은 피한다.
@@ -2756,7 +2758,7 @@
 - [기억 노트]의 인물(NPC)도 아주 가끔(0~1개) 몰래 끼어들 수 있다. 그 인물의 성격·말투·숨긴 마음 그대로 쓰고, by에 그 인물 정본명. 그 인물이 모르는 정보는 쓰지 않는다. 비밀은 맞히지 않는다.
 - 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 말, 현실의 특정 집단을 향한 혐오 표현. 음지 게시판이 아니면 노골적인 성적 묘사도.
 [출력] JSON 배열 하나만. 설명·코드블록 금지.
-[{"nick":"닉네임","ip":"익명·음지일 때만, 아니면 빈 칸","text":"대댓글","ago":"방금","likes":0,"by":""}]`;
+[{"nick":"닉네임","ip":"익명·음지일 때만, 아니면 빈 칸","text":"대댓글","ago":"방금","likes":0,"by":"","to":"이 대댓글이 대꾸하는 사람(새 댓글 쓴 사람이나 앞 대댓글러). ip가 있으면 닉(ip) 그대로"}]`;
   let bdTyping = null, bdTypingAt = -1; // 대댓글 기다리는 글 번호 · 그 글에서 내 댓글 위치
   const keepView = () => { const m = out('main'), y = m?.scrollTop || 0; render(); if (m) m.scrollTop = y; };
   async function bdComment() {
@@ -2766,11 +2768,14 @@
     const anon = /익명|음지/.test(vibe), hide = out(rep ? 'bdAnonR' : 'bdAnon')?.checked !== false; nav.bdAnon = hide;
     const me = [...PROF.entries()].find(([, v]) => v.isUser)?.[0] || '나';
     p.comments = p.comments || [];
-    const mine = { nick: hide ? (anon ? 'ㅇㅇ' : '익명') : me, ip: hide && anon ? '125.18' : '', text, ago: '방금', likes: 0, mine: true };
+    const nickIn = String(out(rep ? 'bdNickR' : 'bdNick')?.value || '').trim().slice(0, 20);
+    if (!hide && nickIn) { nav.bdNick = nickIn; setValue('bdNick', nickIn); }
+    const myNick = nickIn || nav.bdNick || me, real = myNick === me || personAlias(me).includes(myNick);
+    const mine = { nick: hide ? (anon ? 'ㅇㅇ' : '익명') : myNick, ip: hide && anon ? '125.18' : '', text, ago: '방금', likes: 0, mine: true };
     // 답글이면 그 댓글(과 이미 달린 대댓글) 바로 뒤에, 아니면 맨 끝에
     const to = Number.isInteger(nav.bdReplyTo) && p.comments[nav.bdReplyTo] ? nav.bdReplyTo : null, parent = to != null ? p.comments[to] : null;
     let pos = p.comments.length;
-    if (to != null) { pos = to + 1; while (p.comments[pos]?.reply) pos++; mine.reply = true; }
+    if (to != null) { pos = to + 1; while (p.comments[pos]?.reply) pos++; mine.reply = true; mine.to = (parent.nick || "익명") + (parent.ip ? "(" + parent.ip + ")" : ""); }
     p.comments.splice(pos, 0, mine); nav.bdReplyTo = null;
     const at = pos + 1; // 반응 대댓글은 내 댓글 바로 뒤에
     bdTyping = i; bdTypingAt = pos; await setValue('board:' + chatIdFromPath(), JSON.stringify(boardData)); keepView();
@@ -2778,10 +2783,10 @@
       const ctx = [`[게시판] ${p.board || ''} (분위기: ${vibe || '자유'})`, `[글] ${p.title || ''}\n${p.body || ''}`, `[글쓴이] ${p.nick || '익명'}${p.ip ? `(${p.ip})` : ''}`,
         '[댓글]', ...p.comments.filter(c => c !== mine).slice(-12).map(c => `${c.reply ? 'ㄴ ' : ''}${c.nick || '익명'}: ${c.text || ''}`),
         ...(parent ? [`[답글 대상 댓글] ${parent.nick || '익명'}: ${parent.text || ''} — 새 댓글은 이 댓글에 단 답글이다. 대댓글러들은 이 둘의 대화에 끼어든다(원댓글 쓴 사람이 다시 반박해도 됨)`] : []),
-        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이라 누군지 모른다)' : `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)`, '', '[기억 노트]', noteMemory()].join('\n');
+        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이라 누군지 모른다)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 모른다. 말투로 의심하는 정도는 괜찮다. 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', noteMemory()].join('\n');
       const raw = await askModel(REPLY_PROMPT, ctx, '💬대댓글');
       let list; try { const t = String(raw).replace(/^```\w*\n?|\n?```$/g, ''), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
-      const replies = (Array.isArray(list) ? list : []).slice(0, 4).map(r => ({ nick: r.nick || 'ㅇㅇ', ip: anon ? (r.ip || '') : '', text: r.text || '', ago: '방금', likes: Number(r.likes) || 0, reply: true, by: r.by || '' }));
+      const replies = (Array.isArray(list) ? list : []).slice(0, 4).map(r => ({ nick: r.nick || 'ㅇㅇ', ip: anon ? (r.ip || '') : '', text: r.text || '', ago: '방금', likes: Number(r.likes) || 0, reply: true, by: r.by || '', to: r.to || mine.nick + (mine.ip ? "(" + mine.ip + ")" : "") }));
       p.comments.splice(at, 0, ...replies);
       await setValue('board:' + chatIdFromPath(), JSON.stringify(boardData));
     } catch (e) { toast('대댓글 받기 실패 · ' + e.message, 'err'); }
@@ -2831,9 +2836,9 @@
         ${(() => { const key = c => { const o = c._src || c; if (!o.id) o.id = Math.random().toString(36).slice(2, 9); return `${nav.bdPost}:${o.id}`; };
           const cs = p.comments || [], to = Number.isInteger(nav.bdReplyTo) && cs[nav.bdReplyTo] ? nav.bdReplyTo : -1;
           let end = to; if (to >= 0) while (cs[end + 1]?.reply) end++;
-          const replyBox = () => `<div class="bd-write bd-write-r"><label class="bd-anon"><input type="checkbox" data-out="bdAnonR"${nav.bdAnon === false ? '' : ' checked'}>익명</label><input type="text" data-out="bdCmtR" maxlength="300" placeholder="${esc(cs[to]?.nick || '익명')}님에게 답글" autocomplete="off"><button data-act="bdcmt"${bdTyping != null ? ' disabled' : ''}>등록</button><button class="bd-x" data-act="bdrep" data-arg="" aria-label="답글 취소">✕</button></div>`;
+          const replyBox = () => `<div class="bd-write bd-write-r"><label class="bd-anon"><input type="checkbox" data-act="bdanon" data-out="bdAnonR"${nav.bdAnon === false ? '' : ' checked'}>익명</label>${nav.bdAnon === false ? `<input type="text" class="bd-nick" data-out="bdNickR" maxlength="20" placeholder="닉네임" value="${esc(nav.bdNick || [...PROF.entries()].find(([, v]) => v.isUser)?.[0] || '')}">` : ''}<input type="text" data-out="bdCmtR" maxlength="300" placeholder="${esc((cs[to]?.nick || '익명') + (cs[to]?.ip ? '(' + cs[to].ip + ')' : ''))}님에게 답글" autocomplete="off"><button data-act="bdcmt"${bdTyping != null ? ' disabled' : ''}>등록</button><button class="bd-x" data-act="bdrep" data-arg="" aria-label="답글 취소">✕</button></div>`;
           const cm = c => { const idx = (p.comments || []).indexOf(c._src || c);
-            return `<div class="bd-c${c.reply ? ' re' : ''}${c.mine ? ' mine' : ''}${nav.bdReplyTo === idx && !c._src ? ' to' : ''}"><p class="bd-cw">${c.reply ? '<i>ㄴ</i>' : ''}<b>${nick(c)}</b>${c.mine ? '<em class="bd-me">나</em>' : ''}${!c.mine && c.nick && c.nick === p.nick && (c.ip || '') === (p.ip || '') ? '<em class="bd-op">글쓴이</em>' : ''} ${reveal(c.by, key(c))}<small>${esc(c.ago || '')}${c.likes ? ` · 추천 ${c.likes}` : ''}</small>${c._src || bdTyping != null ? '' : `<button class="bd-rep" data-act="bdrep" data-arg="${idx}">답글</button>`}</p><p class="bd-ct">${esc(c.text || '')}</p></div>`
+            return `<div class="bd-c${c.reply ? ' re' : ''}${c.mine ? ' mine' : ''}${nav.bdReplyTo === idx && !c._src ? ' to' : ''}"><p class="bd-cw">${c.reply ? '<i>ㄴ</i>' : ''}<b>${nick(c)}</b>${c.mine ? '<em class="bd-me">나</em>' : ''}${!c.mine && c.nick && c.nick === p.nick && (c.ip || '') === (p.ip || '') ? '<em class="bd-op">글쓴이</em>' : ''} ${reveal(c.by, key(c))}<small>${esc(c.ago || '')}${c.likes ? ` · 추천 ${c.likes}` : ''}</small>${c._src || bdTyping != null ? '' : `<button class="bd-rep" data-act="bdrep" data-arg="${idx}">답글</button>`}</p><p class="bd-ct">${c.reply && c.to ? `<span class="bd-to">@${esc(c.to)}</span> ` : ''}${esc(c.text || '')}</p></div>`
               // 반응 기다리는 동안: 내 댓글 바로 밑에 ㄴ ··· 댓글 다는 중
               + (!c._src && bdTyping === nav.bdPost && idx === bdTypingAt ? '<div class="bd-c re bd-typing"><p class="bd-cw"><i>ㄴ</i><b>ㅇㅇ</b><small>방금</small></p><p class="bd-ct"><span class="dots"><i></i><i></i><i></i></span> 댓글 다는 중</p></div>' : '')
               + (!c._src && to >= 0 && idx === end && bdTyping == null ? replyBox() : ''); };
@@ -2842,7 +2847,7 @@
           const best = [...(p.comments || [])].filter(c => (c.likes || 0) >= 10).sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 2);
           return (best.length ? `<div class="bd-cmts bd-bestc"><p class="bd-ch">🏆 베스트 댓글</p>${best.map(c => cm({ ...c, reply: false, _src: c })).join('')}</div>` : '')
             + `<div class="bd-cmts"><p class="bd-ch">전체 댓글 <b>${cmtN(p)}</b>개</p>${(p.comments || []).map(cm).join('')}`
-            + `<div class="bd-write"><label class="bd-anon"><input type="checkbox" data-out="bdAnon"${nav.bdAnon === false ? '' : ' checked'}>익명</label><input type="text" data-out="bdCmt" maxlength="300" placeholder="댓글을 입력하세요" autocomplete="off"><button data-act="bdcmt"${bdTyping != null ? ' disabled' : ''}>등록</button></div></div>`; })()}
+            + `<div class="bd-write"><label class="bd-anon"><input type="checkbox" data-act="bdanon" data-out="bdAnon"${nav.bdAnon === false ? '' : ' checked'}>익명</label>${nav.bdAnon === false ? `<input type="text" class="bd-nick" data-out="bdNick" maxlength="20" placeholder="닉네임" value="${esc(nav.bdNick || [...PROF.entries()].find(([, v]) => v.isUser)?.[0] || '')}">` : ''}<input type="text" data-out="bdCmt" maxlength="300" placeholder="댓글을 입력하세요" autocomplete="off"><button data-act="bdcmt"${bdTyping != null ? ' disabled' : ''}>등록</button></div></div>`; })()}
         <p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="post">이미지로 저장</button></p>`;
     } else if (!cur) {
       const hot = all.filter(([p]) => p.hot).concat(all.filter(([p]) => !p.hot).sort((a, b) => (b[0].likes || 0) - (a[0].likes || 0))).slice(0, 5);
@@ -3641,7 +3646,7 @@
       }
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); histList = await historyOf(chatId);
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       loadTurnMap(chatId, snap);
       try {
@@ -4014,6 +4019,7 @@
       case 'noop': return;
       case 'bdvote': await bdVote(arg); return keepScroll(render);
       case 'bdcmt': return bdComment();
+      case 'bdanon': nav.bdAnon = el.checked; { const keep = out(nav.bdReplyTo != null ? 'bdCmtR' : 'bdCmt')?.value || ''; keepScroll(render); const i = out(nav.bdReplyTo != null ? 'bdCmtR' : 'bdCmt'); if (i) i.value = keep; } return;
       case 'bdrep': nav.bdReplyTo = arg === '' || nav.bdReplyTo === Number(arg) ? null : Number(arg); // 같은 답글을 한 번 더 누르면 닫힘
         keepScroll(render); setTimeout(() => out(nav.bdReplyTo == null ? 'bdCmt' : 'bdCmtR')?.focus({ preventScroll: true }), 30); return;
       case 'bdrange': nav.bdRange = !nav.bdRange; if (nav.bdRange) nav.rgKind = 'board'; return keepScroll(render);
