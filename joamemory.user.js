@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.1.1097
+// @version      2.1.1115
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -324,18 +324,23 @@
     const cut = list.indexOf(oldest);
     return list.filter((x, i) => i < cut || keep.has(x) || !isChat(x));
   }
+  // 채팅에 안 넣기(ETC만): 노트를 채팅에서 빼고 여기(기기)에만 보관합니다. 켜면 직전 AI 답변에 다시 넣어요.
+  const parkedOf = async chatId => { try { const p = JSON.parse(String(await getValue('parked:' + chatId, '')) || 'null'); return p?.memory ? { ...p, carrierId: '', parked: true } : null; } catch (_) { return null; } };
+  const park = (chatId, memory, upto, turns, at) => setValue('parked:' + chatId, JSON.stringify({ memory, upto, turns, at: at || new Date().toISOString() }));
   async function readSinceLastNote(chatId, maxPages = 40) {
-    const newestFirst = [];
+    const newestFirst = [], pk = await parkedOf(chatId);
     let cursor = '', note = null, reachedStart = false;
     for (let page = 0; page < maxPages; page++) {
       const { list, next } = await listPage(chatId, cursor);
       // 노트는 리롤로 밀려난 답에 있어도 찾습니다(직전 답을 리롤하면 노트가 거기 남아요). 다음에 최신 답으로 옮겨져요.
       for (const m of list) { newestFirst.push(m); if (!note) note = parseNote(m); }
       // 노트를 최신 답변으로 옮기면 upto(정리 끝 메시지)는 노트보다 한참 앞에 있어요. 거기까지 읽어야 새 대화 턴을 제대로 셉니다.
-      if (note && newestFirst.some(m => msgId(m) === note.upto)) break;
+      const nt = note || pk;
+      if (nt && newestFirst.some(m => msgId(m) === nt.upto)) break;
       cursor = next;
       if (!cursor) { reachedStart = true; break; }
     }
+    if (!note) note = pk;
     const all = liveLine(sortOld(newestFirst));
     let fresh = all;
     if (note) {
@@ -903,6 +908,7 @@
     .ringtext span{font-size:13px;color:var(--ink2);margin-top:6px}
     .ringtext small{font-size:11.5px;color:var(--graphite);margin-top:4px;font-variant-numeric:tabular-nums}
     .hero-sub{margin:10px 0 12px;font-size:14px;color:var(--ink2)}
+    .inj-sw{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:12px;color:var(--graphite);cursor:pointer}.inj-sw input{display:none}.inj-sw i{width:26px;height:15px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.inj-sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s}.inj-sw input:checked+i{background:var(--ink)}.inj-sw input:checked+i::after{left:13px}.inj-sw small{color:var(--bad);font-size:11px}
     .hero-run{min-width:180px}
     .hero-btns{display:flex;flex-direction:column;align-items:center;gap:8px}
     .hero-renew{height:36px;border:0;background:transparent;font-size:13px;color:var(--graphite);text-decoration:underline;text-underline-offset:3px}
@@ -1327,12 +1333,12 @@
     .tl-fold summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer}.tl-fold summary::-webkit-details-marker{display:none}
     .tl-fold summary b{margin:0}.tl-fold summary .linkbtn{padding:0}
     .tl-fold[open] summary{margin-bottom:6px}
-    .tl-q{padding:6px 0;border-top:1px dashed var(--rule)}.tl-q:first-of-type{border-top:0}
+    .tl-q{padding:6px 22px 6px 0;border-top:1px dashed var(--rule);position:relative}.tl-qx{position:absolute;right:0;top:6px;border:0;background:transparent;color:var(--graphite);font-size:15px;line-height:1;padding:2px 4px;cursor:pointer}.tl-q:first-of-type{border-top:0}
     .tl-qt{margin:0;font-size:15px;font-weight:700;line-height:1.6;color:var(--ink);word-break:keep-all}
     .tl-qs{margin:2px 0 0;font-size:12.5px;line-height:1.5;color:var(--graphite)}
     .tl-fold .qmake{margin-top:10px}
     .tl-quotes{margin-top:16px}
-    .qplus{margin-left:auto;margin-right:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--rule);background:var(--paper);font-size:15px;line-height:1;color:var(--ink2)}.tl-fold summary b::after{content:" ▾";font-size:11px;color:var(--graphite)}.tl-fold[open] summary b::after{content:" ▴"}
+    .qplus{margin-left:auto;margin-right:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--rule);background:var(--paper);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;padding:0}.qplus svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;stroke-linecap:round}.tl-fold summary b::after{content:" ▾";font-size:11px;color:var(--graphite)}.tl-fold[open] summary b::after{content:" ▴"}
     /* 폰: 이모티콘만 보낸 말 · 은행 · 비밀 메모 */
     .im-b.emo,.dm-b.emo{background:transparent!important;font-size:38px;line-height:1.15;padding:0 2px}
     .ic-bank{background:linear-gradient(#3182F6,#1B64DA)}
@@ -1974,9 +1980,14 @@
     });
   }
   // 명대사: "화자 → 상대: "대사"" + 바로 아래 "번역:" · "장면:" 줄 (예전 형식의 대사 뒤 (괄호)도 장면으로 읽음)
+  //   명대사는 노트와 따로 이 기기에 모읍니다(quotes:채팅). 아직 없으면 예전처럼 노트의 명대사 칸을 씁니다.
+  let quoteStore = '';
+  const quoteBody = () => quoteStore || bodyOf('명대사');
+  const quoteLine = q => `${q.who || '?'}${q.to ? ` → ${q.to}` : ''}: "${q.text}"${q.tr ? `\n번역: ${q.tr}` : ''}${q.ctx ? `\n장면: ${q.ctx}` : ''}`;
+  async function saveQuotes(chatId, list) { quoteStore = list.map(quoteLine).join('\n') || ' '; await setValue('quotes:' + chatId, quoteStore); }
   function quotes() {
     const qs = [], unq = t => t.replace(/^["“]|["”]$/g, '');
-    for (const l of itemsOf(bodyOf('명대사'))) {
+    for (const l of itemsOf(quoteBody().trim())) {
       const t = l.match(/^(번역|장면)\s*[:：]\s*(.*)$/);
       if (t) { if (qs.length) qs[qs.length - 1][t[1] === '번역' ? 'tr' : 'ctx'] = unq(t[2].trim()); continue; }
       const m = l.match(/^(.+?)\s*(?:→\s*(.+?))?\s*[:：]\s*["“](.+?)["”]\s*(?:\((.*)\))?\s*$/);
@@ -2053,6 +2064,7 @@
       <div class="ringtext">${over ? `<b>+${over}</b><span>턴 넘었어요</span>` : due ? '<b>정리할<br>때예요</b>' : `<b>${left}</b><span>턴 남았어요</span>`}<small>${turns} / ${cycle}</small></div></div>`;
     const hero = `<section class="hero2">${ring}
       <p class="hero-sub">${n ? `1~${n.turns}턴을 기억하고 있어요` : '아직 정리한 기억이 없어요'}</p>
+      <label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐 · 채팅방은 안 건드려요</small>'}</label>
       <div class="hero-btns"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리하기'}</button>
         <button class="hero-renew" data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}>다른 방법으로 정리 (다른 AI · 처음부터 · 백업)</button></div>
       ${n ? '' : '<p class="muted" style="text-align:center;margin:10px 0 0">정리하면 지금까지의 이야기를 노트로 만들어 채팅 안에 보이지 않게 넣어 둬요.</p>'}</section>`;
@@ -2247,26 +2259,28 @@
   //    버튼을 눌렀을 때만 AI를 부르고, 결과는 이 브라우저에만 저장합니다. 기억 노트·채팅에는 들어가지 않아요.
   // ── ✨ 명대사 뽑기: 정리와 따로, 버튼을 눌렀을 때만. 지난번 뽑은 뒤의 대화(처음이면 최근 100개 메시지)에서 고릅니다 ──
   const QUOTE_PROMPT = unveil('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');
-  async function makeQuotes() {
-    const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId || !n || busyNow) return;
+  async function makeQuotes(from, to) {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
     busyNow = true; render(); toast('대화를 읽는 중이에요…');
     try {
-      const all = await readAll(chatId), cur = String(await getValue('qcur:' + chatId, '')), at = all.findIndex(m => msgId(m) === cur);
-      const msgs = at >= 0 ? all.slice(at + 1) : all.slice(-100);
-      if (!msgs.length) { toast('지난번에 뽑은 뒤로 새 대화가 없어요.', 'info', 3000); return; }
-      toast(`명대사를 고르는 중이에요… (메시지 ${msgs.length}개)`);
-      const list = splitSections(noteMemory()), old = list.find(x => x.key === '명대사')?.body || '';
-      const names = personsIn(bodyOf('인물')).map(p => p.name).join(', ');
-      const input = `[인물] ${names}\n\n[기존 명대사]\n${old || '(없음)'}\n\n[새 RP 로그]\n${msgs.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n')}`;
+      // 1턴부터면 첫 인사(시작 장면)도 넣음
+      let t = 0; const msgs = (await readAll(chatId)).filter(m => { if (msgRole(m) === 'user') t++; return isChat(m) && t >= (from === 1 ? 0 : from) && t <= to; });
+      if (!msgs.length) { toast('그 범위에 대화가 없어요.', 'info', 3000); return; }
+      toast(`명대사를 고르는 중이에요… (${from}~${to}턴)`);
+      const old = quotes(), names = snapshot?.note ? personsIn(bodyOf('인물')).map(p => p.name).join(', ') : '(노트 없음 · 로그에서 읽을 것)';
+      const input = `[인물] ${names}\n\n[기존 명대사 — 이미 있음. 다시 쓰지 말고 새로 고른 대사만 출력]\n${old.map(quoteLine).join('\n') || '(없음)'}\n\n[새 RP 로그 ${from}~${to}턴]\n${msgs.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n')}`;
       let body = (await askModel(QUOTE_PROMPT, input, '✨명대사')).replace(/^\s*■\s*명대사\s*\n?/, '').trim();
       body = dropUserQuotes(`■ 명대사\n${body}`, msgs).replace(/^■ 명대사\n?/, '').trim();
-      const sec = list.find(x => x.key === '명대사'); if (sec) sec.body = body; else list.push({ key: '명대사', body });
-      await saveFull(chatId, n.upto, joinSections(list));
-      await setValue('qcur:' + chatId, msgId(all[all.length - 1]));
-      toast('명대사를 골랐어요 ✨', 'ok', 2500);
+      const prevStore = quoteStore; quoteStore = body; const got = quotes(); quoteStore = prevStore;
+      const key = q => String(q.text).replace(/[\s"“”'‘’.,!?…~]/g, '');
+      const add = got.filter(q => q.text && !old.some(o => key(o) === key(q)));
+      if (!add.length) { toast('새로 고를 만한 대사가 없었어요.', 'info', 3000); return; }
+      await saveQuotes(chatId, [...old, ...add]);
+      toast(`명대사 ${add.length}개를 더했어요 ✨`, 'ok', 2500);
     } catch (e) { toast('명대사 뽑기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
   }
+
 
   const PHONE_PROMPT = unveil('gevphu/5TyApDd6Kot3Mwozp1YHy6lnBp7Teq96C7t1Fgen/lbC2EN6R7oPG8Ynf95nmkRLajI6BxtFNjt7bnu6BEtyRioHl9U2I4cNSlZCq3bemhtfBTYnz/pjJrdm7lhhKNIvV1YH5x1nGt4jfvNIyjfD9TYPw1cG5lPCBhuvQh9fErcWSiqLdupqo2IvZ5Yfc9rua2ICi2sr6jenFr9ie8rHekKLa/f9BhsLzg8TJARLclbaGz/SA8PFPnuSV2ZyOFof6/U2Ox+qe5LUS3b2GSoTj2Yn3xp7kqRLblbqB/MGG7slBUpWmltySqkqD/NWJ58uf+q3wh96j7oP82Y7E+57ysd6XsvTdhOrUj9rTsM7Gm6TZnMJPjfjUgfL2WcahlN6hxoTqyY7e25nzuRLagLWG3fmG+tFPnvqw3rOv2//3i9/pQ2UplYqy3bCaSoXT7jhnQlKbtbcQ3oP2g/vdienPWpKmltuXjkqEy8WO/s9SkoGK3KyTgdzVhu7JT5nRkd6Qsh9QT43xxYHP8pW0shDZtPKE6eVFhuPylLSm27iiSoPB5Y7h71KSir7boZKGyOFNifjlmfO52buWGEqD/c2Jze+e4K3eraoWgcb1ge7xg9X5xoKZ8IEuIordzK/Yn/+Y36mmFoDX0YbE8IPv+Q3epbba8udBhsLhhOHdwZWwEtr/5YvexUFPnuWN3pCy3NrvQYH22U+Z9b7YiLL03YTI+Ynm857erfCHdnuB4OVNjsrjmeqJ3peyFob664bv+YT53QMS27meh+nAhtXEg+XpxrikEtr2z43N5YbKzlnGtpPekepPjfjvhuXmkqaWHhLa99tBgfjVhN7Fwa+EEtr2z43N5YH44lnGvrDfo95PjPXZgfHiWcGSsd6r6k+KxPGGxdqSr6oQfGYphODRjsvDUpWxktyStoHK3U2O/P+Yyo0S3aeugeX1TY7K/5n2qR4Q2bPSguvVifD3UpWvntqDgqjYiuHlge3elbqiENiB0oTt7Y7M81KVs7rbuKJKg/zRjsrjUpW+htu5kkRlTE2J78Oe8okS2oGWhs/0V0WB8sqSgY7cr65KhdLpj9XmsM7BlbHYjuOt1oHC7IPD/O+F27CuhvLVr9KByPOVurfyhdrs443r6K/YmM2t2IO29N2C+dWJ1MKe5K0Sa9iO2oP32EWG6sqUp4pt3qH6T43N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');
   const phones = async chatId => { try { return JSON.parse(String(await getValue('phone:' + chatId, '{}')) || '{}'); } catch (_) { return {}; } };
@@ -2302,14 +2316,14 @@
     }
   }
   async function makePhone(name, from = 0, to = 0) {
-    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
     busyNow = true; startGen('phone'); render(); toast(`${josa(name, '이', '가')} 폰을 꾸미는 중이에요… (30초~1분)`);
     try {
       const others = Object.entries(phoneData).filter(([n]) => n !== name).map(([n, r]) => `${n}: 팔로워 ${r.data?.insta?.followers || '-'} · 잔고 ${r.data?.bank?.balance || '-'} · 씀씀이 ${r.data?.bank?.spend || '-'} · 거래처 ${(r.data?.bank?.tx || []).map(t => t.title).slice(0, 6).join('/') || '-'} · 메모 ${(r.data?.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 아이디 ${r.data?.insta?.id || '-'}`).join('\n');
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
-      const raw = await askModelRetry(PHONE_PROMPT, `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}\n${others ? `[이미 만든 다른 인물의 폰 — 이것과 겹치지 않게, 이 인물답게 다르게]\n${others}\n\n` : ''}[기억 노트]\n${noteMemory()}${await rangeLogText(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 폰 속(메시지·메모·검색·사진·통화 등)에 특히 많이 반영할 것. 유저가 보낸 말은 지어내지 말 것')}`, `📱${name}`);
+      const raw = await askModelRetry(PHONE_PROMPT, `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}\n${others ? `[이미 만든 다른 인물의 폰 — 이것과 겹치지 않게, 이 인물답게 다르게]\n${others}\n\n` : ''}${await etcLog(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 폰 속(메시지·메모·검색·사진·통화 등)에 특히 많이 반영할 것. 유저가 보낸 말은 지어내지 말 것')}`, `📱${name}`);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      phoneData = await phones(chatId); phoneData[name] = { at: Date.now(), turns: snapshot.note.turns, from, to, data };
+      phoneData = await phones(chatId); phoneData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, data };
       await setValue('phone:' + chatId, JSON.stringify(phoneData));
       nav.phScreen = 'home'; toast(`${name}의 폰이 열렸어요 📱`, 'ok', 2500);
     } catch (e) { toast('폰 만들기 실패 · ' + e.message, 'err'); }
@@ -2368,11 +2382,11 @@
     return { t, date };
   }
   function phoneHtml() {
-    if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요. 정리하고 나면 인물마다 폰을 열어 볼 수 있어요.');
-    const names = [...people().keys()], who = names.includes(nav.phWho) ? nav.phWho : names[0];
-    if (!who) return emptyBox('인물이 아직 없어요.');
+    if (!snapshot?.note && !freshTurns()) return devSeg() + emptyBox('아직 대화가 없어요.');
+    const names = etcPeople(), who = names.includes(nav.phWho) ? nav.phWho : names[0];
+    if (!who) return devSeg() + `<div class="tl-who">${addBtn()}</div>${emptyBox(`정리한 기억이 없어서 아직 인물 목록이 없어요. 위 ↻를 누르면 대화에서 NPC를 찾아 와요(AI 1번).`)}`;
     nav.phWho = who;
-    const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${phoneData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}</div>`;
+    const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${phoneData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}${addBtn()}</div>${nameAdder()}`;
     const rec = phoneData[who], d = scrubUser(rec?.data || {}), [bg, fg] = avColor(who), face = PROF.get(who)?.emoji || ANIM.get(who) || animalOf(who);
     // 아이디 ↔ 인물: 노트 인물의 아이디면 그 인물 얼굴, 아니면 회색 머리글자
     const idOf = d.ids || {}, byId = new Map(Object.entries(idOf).map(([n, id]) => [String(id), canon(n)]));
@@ -2495,6 +2509,32 @@
   }
   // etc 탭: 📱 폰 / 💻 컴퓨터. 고른 인물은 둘이 같이 씁니다(nav.phWho).
   const DEVICES = [['phone', '📱 폰'], ['pc', '💻 컴퓨터'], ['board', '🗨 커뮤니티']];
+  // 노트가 없으면 인물 목록 대신 직접 추가한 이름(+ 이미 만든 폰·컴퓨터 주인)
+  let etcNames = [];
+  const etcPeople = () => snapshot?.note ? [...people().keys()] : [...new Set([...etcNames, ...Object.keys(phoneData), ...Object.keys(pcData)])];
+  // 노트가 없으면 대화에서 NPC를 찾아 목록을 만듭니다(AI 1번). 목록 끝 ↻로 다시 찾기
+  const nameAdder = () => '';
+  const addBtn = () => snapshot?.note ? '' : `<button data-act="findnpc" aria-pressed="false" title="대화에서 인물 다시 찾기"${busyNow ? ' disabled' : ''}><span class="av ph-anon">↻</span><small>다시 찾기</small></button>`;
+  const NPC_PROMPT = 'RP 로그를 읽고 등장하는 NPC(AI가 연기하는 인물)의 이름만 고른다. [USER] 메시지를 쓰는 유저 캐릭터는 뺀다. 로그에 이름이 실제로 나온 인물만, 지어내지 않는다. 대사·행동이 있는 비중 큰 순서로 최대 8명. 출력은 JSON 배열 하나만: ["이름", ...]';
+  async function findNpc() {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
+    busyNow = true; render(); toast('대화에서 인물을 찾는 중이에요…');
+    try {
+      const end = freshTurns(), log = (await rangeLogText(chatId, 1, end, '전체 대화', 60000)).trim();
+      if (!log) throw new Error('대화가 없어요.');
+      const raw = await askModel(NPC_PROMPT, log, '👥인물 찾기');
+      let list; try { const t = String(raw), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
+      list = [...new Set((Array.isArray(list) ? list : []).map(x => String(x || '').trim().slice(0, 20)).filter(Boolean))].slice(0, 8);
+      if (!list.length) throw new Error('인물을 찾지 못했어요');
+      etcNames = list; await setValue('etcnames:' + chatId, JSON.stringify(etcNames));
+      nav.phWho = list[0]; nav.phScreen = 'home'; nav.pcScreen = 'home';
+      toast(`인물 ${list.length}명을 찾았어요`, 'ok', 2500);
+    } catch (e) { toast('인물 찾기 실패 · ' + e.message, 'err'); }
+    finally { busyNow = false; render(); }
+  }
+  const etcLog = async (chatId, from, to, hint) => snapshot?.note
+    ? `[기억 노트]\n${noteMemory()}${await rangeLogText(chatId, from, to, hint)}`
+    : (await rangeLogText(chatId, from || Math.max(1, freshTurns() - 29), to || freshTurns(), '기억 노트가 없어 대화 원문으로 대신함. 인물·관계는 여기서 읽을 것. ' + hint, 120000)).trim();
   const devSeg = () => `<div class="seg devseg">${DEVICES.map(([k, l]) => `<button data-act="dev" data-arg="${k}" aria-pressed="${(nav.dev || 'phone') === k}">${l}</button>`).join('')}</div>`;
 
   // ── 💻 컴퓨터: 폰처럼 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
@@ -2502,15 +2542,15 @@
   const pcs = async chatId => { try { return JSON.parse(String(await getValue('pc:' + chatId, '{}')) || '{}'); } catch (_) { return {}; } };
   let pcData = {};
   async function makePc(name, from = 0, to = 0) {
-    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
     busyNow = true; startGen('pc'); render(); toast(`${josa(name, '이', '가')} 컴퓨터를 켜는 중이에요… (30초~1분)`);
     try {
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const ph = phoneData[name]?.data, phone = ph ? `[이 인물의 폰 — 같은 사람답게 이어지게] 씀씀이 ${ph.bank?.spend || '-'} · 메모 ${(ph.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 검색 ${(ph.search || []).map(t => t.q).slice(0, 6).join('/') || '-'}\n` : '';
       const others = Object.entries(pcData).filter(([n]) => n !== name).map(([n, r]) => `${n}: ${r.data?.os || '-'} · 바탕화면 ${(r.data?.desktop || []).map(x => x.name).slice(0, 6).join('/') || '-'} · 메일 ${(r.data?.mail || []).map(x => x.subject).slice(0, 4).join('/') || '-'}`).join('\n');
-      const raw = await askModelRetry(PC_PROMPT, `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메일·메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}${phone}\n${others ? `[이미 만든 다른 인물의 컴퓨터 — 이것과 겹치지 않게]\n${others}\n\n` : ''}[기억 노트]\n${noteMemory()}${await rangeLogText(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 컴퓨터 속(검색·메일·문서·파일·메신저 등)에 특히 많이 반영할 것. 유저가 보낸 메일·메시지는 지어내지 말 것')}`, `💻${name}`);
+      const raw = await askModelRetry(PC_PROMPT, `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메일·메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}${phone}\n${others ? `[이미 만든 다른 인물의 컴퓨터 — 이것과 겹치지 않게]\n${others}\n\n` : ''}${await etcLog(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 컴퓨터 속(검색·메일·문서·파일·메신저 등)에 특히 많이 반영할 것. 유저가 보낸 메일·메시지는 지어내지 말 것')}`, `💻${name}`);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      pcData = await pcs(chatId); pcData[name] = { at: Date.now(), turns: snapshot.note.turns, from, to, data };
+      pcData = await pcs(chatId); pcData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, data };
       await setValue('pc:' + chatId, JSON.stringify(pcData));
       nav.pcScreen = 'home'; toast(`${name}의 컴퓨터가 켜졌어요 💻`, 'ok', 2500);
     } catch (e) { toast('컴퓨터 만들기 실패 · ' + e.message, 'err'); }
@@ -2535,11 +2575,11 @@
   ];
   const FILE_ICON = { folder: '📁', doc: '📄', img: '🖼️', zip: '🗜️', app: '🧩' };
   function pcHtml() {
-    if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요. 정리하고 나면 인물마다 컴퓨터를 켜 볼 수 있어요.');
-    const names = [...people().keys()], who = names.includes(nav.phWho) ? nav.phWho : names[0];
-    if (!who) return emptyBox('인물이 아직 없어요.');
+    if (!snapshot?.note && !freshTurns()) return devSeg() + emptyBox('아직 대화가 없어요.');
+    const names = etcPeople(), who = names.includes(nav.phWho) ? nav.phWho : names[0];
+    if (!who) return devSeg() + `<div class="tl-who">${addBtn()}</div>${emptyBox(`정리한 기억이 없어서 아직 인물 목록이 없어요. 위 ↻를 누르면 대화에서 NPC를 찾아 와요(AI 1번).`)}`;
     nav.phWho = who;
-    const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${pcData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}</div>`;
+    const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${pcData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}${addBtn()}</div>${nameAdder()}`;
     const rec = pcData[who], d = scrubPcUser(rec?.data || {}), [bg, fg] = avColor(who), clk = phClock();
     const bar = `<div class="pc-bar"><b>${d.os === 'win' ? '⊞' : ''} ${esc(d.login || who)}</b><span>${esc(clk.date)} ${clk.t}</span></div>`;
     const txt = t => String(t || '').split('\n').map(l => `<p>${esc(l) || '&nbsp;'}</p>`).join('');
@@ -2589,7 +2629,7 @@
   }
 
   // ── 🗨 커뮤니티: 이야기 세계의 커뮤니티 사이트 하나(게시판마다 분위기가 다름). 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
-  const BOARD_PROMPT = unveil('gevphu/5TyApDd60itzZ60GB8OWD5ekN3q663eD7QYHeyYTc3ca5uN+92k+N78mB8saUp4oQ36PyhOP1jsjTUpWKttyVqobd+Yb60U+Yx5XZmYIWgdzVgfLBT57akdm6phaH481NidD3n/y93oiSFobx8IfV7YT53QMSa9iO2oP32EWG6sqUp4pt3qvyT43p3Yfc9pOZsvKF2ujDi9zRr9ie5JXZnI703YXV7Y/e67DOwbms3pb6g/b9RYbI7JWbghwS3N3XQYHh1YXB/Q3esp7d9OOK/sGB8sZZwaGA2bz+T43WwYbB1pKmut25hoHK3U2I69qe3pXZka4WgcjthvbNhPndAzhr3pHqguPBRYfd8SQnHxDQru9Pjdj5gfXClamSChLa9s+NzeVFg/DVwaiZ3qj6T43X9YbJ35SpghnYhupPjf7RTYXK+e+F276lgNfhgfjtT57Zpdm8shaByO2G9smD1fkN3qW43eD7iubBQ0+e5Y3ekLIWhvLVhsPpg+/9Ddm7u93uy43z4a/YEADGk6wS2vnfjcrlTYPn88eBkB4WhvPBgcXtg+/hDdm8strow6Paievimd6l3q2+9N2C9+SO4vae5KkS3JW2hvnVhufZhcPJxrCoEt3m743mxU2D0uzAp6jekepPjfjvhuXmkqaWHhLa9s+NzeWG5eZZxrCY2aXOg/zZRYfd+5WxjtuTqkqE0tmP3N+Z+7US3LS6gcPZgfnRhNPlDdmjltr370GGwuGC88XGlbwS2/P7jc35gfjiWcGqlNmT0oTqyU2G3MqVsIrcr4JKg/LZRYfX8pWwshDeoeyD/OFMQ2VfWcGukN6W6oP47UWG6sqUp4oQ3qvShM3Rjv7LnuSZEtySqoby3U2I7N9SlLSm3JKqgeTFV0WG/upZwbCc3qvehMTRRYbcylnGmJnYhMOE6tlJTYP/we+F3KWGhvrBTYnw957ygR4Q2aTdhOrZSU2DwvXGr4zevfZDQU+H+uSQ7qbZrqMWiPnSj/PeT5nVmd66mhaG7c2B+NmD7P0SEBDYhvOD/O1Fh9/ylaaf3K+ySoPB7I/a1p7ZrN6sjt3L809NjujXn/OV3qeiFobkxYHF8YTT5Q3errra/eeK4P1Ng+/FDd6UoxaB7cmG9smD780N2YOG3Nvfiu/9TYTh3cGvtBLdzeOM+PlNhcD6wa+0Et3c74z/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');
+  const BOARD_PROMPT = unveil('gevphu/5TyApDd60itzZ60GB8OWD5ekN3q663eD7QYHeyYTc3ca5uN+92k+N78mB8saUp4oQ36PyhOP1jsjTUpWKttyVqobd+Yb60U+Yx5XZmYIWgdzVgfLBT57akdm6phaH481NidD3n/y93oiSFobx8IfV7YT53QMSa9iO2oP32EWG6sqUp4pt3qvyT43p3Yfc9pOZsvKF2ujDi9zRr9ie5JXZnI703YXV7Y/e67DOwbms3pb6g/b9RYbI7JWbghwS3N3XQYHh1YXB/Q3esp7d9OOK/sGB8sZZwaGA2bz+T43WwYbB1pKmut25hoHK3U2I69qe3pXZka4WgcjthvbNhPndAzhr3pHqguPBRYfd8SQnHxDQru9Pjdj5gfXClamSChLa9s+NzeVFg/DVwaiZ3qj6T43X9YbJ35SpghnYhupPjf7RTYXK+e+F276lgNfhgfjtT57Zpdm8shaByO2G9smD1fkN3qW43eD7iubBQ0+e5Y3ekLIWhvLVhsPpg+/9Ddm7u93uy43z4a/YEADGk6wS2vnfjcrlTYPn88eBkB4WhvPBgcXtg+/hDdm8strow6Paievimd6l3q2+9N2C9+SO4vae5KkS3JW2hvnVhufZhcPJxrCoEt3m743mxU2D0uzAp6jekepPjfjvhuXmkqaWHhLa9s+NzeWG5eZZxrCY2aXOg/zZRYfd+5WxjtuTqkqE0tmP3N+Z+7US3LS6gcPZgfnRhNPlDdmjltr370GGwuGC88XGlbwS2/P7jc35gfjiWcGqlNmT0oTqyU2G3MqVsIrcr4JKg/LZRYfX8pWwshDeoeyD/OFMQ2VfWcGukN6W6oP47UWG6sqUp4oQ3qvShM3Rjv7LnuSZEtySqoby3U2I7N9SlLSm3JKqgeTFV0WG/upZwbCc3qvehMTRRYbcylnGmJnYhMOE6tlJTYP/we+F3KWGhvrBTYnw957ygR4Q2aTdhOrZSU2DwvXGr4zevfZDQU+H+uSQ7qbZrqMWiPnSj/PeT5nVmd66mhaG7c2B+NmD7P0SEBDYhvOD/O1Fh9/ylaaf3K+ySoPB7I/a1p7ZrN6sjt3L809NjujXn/OV3qeiFobkxYHF8YTT5Q3errra/eeK4P1Ng+/FDd6UoxaB7cmG9smD780N2YOG3Nvfiu/9TYTh3cGvtBLdzeOM+PlNhcD6wa+0Et3c74z/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');
   // ⏳ 만드는 중 표시: 흐른 시간 · 지금까지 쓴 글/댓글 수를 실시간으로 보여 줍니다(받아 오는 중에만 알 수 있는 값은 기기가 허용할 때만).
   let genProg = null, genTick = 0;
   function startGen(kind, expect = 0) {
@@ -2632,8 +2672,11 @@
   const boardOf = async chatId => { try { return JSON.parse(String(await getValue('board:' + chatId, 'null')) || 'null'); } catch (_) { return null; } };
   let boardData = null;
   // from~to: 기억 노트와 함께 보낼 실제 대화 범위(턴). 원문이 너무 길면 뒤쪽(최근) 2만 4천 자만.
+  // 정리를 안 했어도 커뮤니티는 열 수 있게: 노트가 없으면 최근 30턴 대화 원문을 대신 보냅니다.
+  //   고른 범위(from~to)가 있으면 그 범위를 씁니다(새로고침·대댓글도 처음 고른 범위 그대로).
+  const etcMemory = async (chatId, from = boardData?.from, to = boardData?.to) => { if (snapshot?.note) return noteMemory(); const end = freshTurns(); if (!(from && to)) { from = Math.max(1, end - 29); to = end; } return end ? (await rangeLogText(chatId, from, to, '기억 노트가 없어 대화 원문으로 대신함. 인물·관계는 여기서 읽을 것', 120000)).trim() : ''; };
   async function makeBoard(from = 0, to = 0) {
-    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
     busyNow = true; startGen('board', 12); render(); toast('커뮤니티를 여는 중이에요… (30초~1분)');
     try {
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
@@ -2641,9 +2684,9 @@
       let log = '';
       if (from && to) { let t = 0; const pick = (await readAll(chatId)).filter(m => { if (msgRole(m) === 'user') t++; return t >= from && t <= to; });
         log = pick.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n').slice(-24000); }
-      const raw = await askModel(BOARD_PROMPT, [who, '', '[기억 노트]', noteMemory(), ...(log ? ['', `[참고할 대화 ${from}~${to}턴 — 이 장면들을 커뮤니티 화제로 특히 많이 쓸 것]`, log] : [])].join('\n'), '🗨커뮤니티');
+      const raw = await askModel(BOARD_PROMPT, [who, '', ...(!snapshot?.note ? [await etcMemory(chatId, from, to)] : ['[기억 노트]', noteMemory(), ...(log ? ['', `[참고할 대화 ${from}~${to}턴 — 이 장면들을 커뮤니티 화제로 특히 많이 쓸 것]`, log] : [])])].join('\n'), '🗨커뮤니티');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      boardData = { at: Date.now(), turns: snapshot.note.turns, from, to, data }; scrubBoardUser(boardData);
+      boardData = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, data }; scrubBoardUser(boardData);
       await setValue('board:' + chatId, JSON.stringify(boardData));
       nav.bdPost = null; nav.bdBoard = ''; toast('커뮤니티가 열렸어요 🗨', 'ok', 2500);
     } catch (e) { toast('커뮤니티 만들기 실패 · ' + e.message, 'err'); }
@@ -2653,7 +2696,7 @@
   const BOARD_MORE = `\n\n[이번엔 '새로고침']\n- 이미 만들어진 커뮤니티에 방금 올라온 새 글만 만든다. 사이트 이름·소개·게시판·공지·핫플은 다시 만들지 않는다. 위의 개수 규칙(전체 10~14개 등)과 출력 형식은 무시하고, JSON은 {"posts":[...]} 하나만 낸다(글 모양은 위와 같다).\n- 새 글은 4~6개. 게시판은 [이미 있는 게시판] 이름 중에서만, 여러 게시판에 고루. 글마다 댓글 4~8개(대댓글 섞기). 방금 올라온 글이므로 ago는 '방금'·'3분 전'·'20분 전'·'1시간 전' 정도, 조회·추천은 아직 적은 편(hot은 대부분 false).\n- [이미 올라온 글 제목]과 겹치거나 비슷한 글은 쓰지 않는다. 같은 화제를 이어 가더라도 후속 글·반응·다른 사람의 목격담처럼 새 각도로.
 - 세 줄 요약 요구·"이게 맞냐"·주작 의심 같은 단골 멘트는 이번 새 글 전체에서 한 번 이하.`;
   async function refreshBoard() {
-    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note || !boardData?.data) return;
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot || !boardData?.data) return;
     busyNow = true; startGen('more', 5); render(); toast('새 글을 불러오는 중이에요… (10~30초)');
     try {
       const d = boardData.data, posts = d.posts || [];
@@ -2663,7 +2706,7 @@
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const who = users.length ? `[유저] ${users.join(', ')} — 이 사람이 쓴 글·댓글은 만들지 말 것` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공이 쓴 글은 만들지 말 것';
       const titles = posts.slice(0, 40).map(p => `${p.board}: ${p.title}`).join('\n');
-      const raw = await askModelRetry(BOARD_PROMPT + BOARD_MORE, [who, '', `[사이트] ${d.name || ''} — ${d.about || ''}`, `[이미 있는 게시판] ${names.join(', ')}`, '[이미 올라온 글 제목]', titles, '', '[기억 노트]', noteMemory()].join('\n'), '🗨커뮤니티 새로고침');
+      const raw = await askModelRetry(BOARD_PROMPT + BOARD_MORE, [who, '', `[사이트] ${d.name || ''} — ${d.about || ''}`, `[이미 있는 게시판] ${names.join(', ')}`, '[이미 올라온 글 제목]', titles, '', '[기억 노트]', await etcMemory(chatId)].join('\n'), '🗨커뮤니티 새로고침');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       const norm = t => String(t || '').replace(/[\s\p{P}\p{S}]/gu, ''), have = new Set(posts.map(p => norm(p.title)));
       const batch = (boardData.refreshed || 0) + 1, fresh = (data.posts || []).filter(p => p && p.title && !have.has(norm(p.title)) && (have.add(norm(p.title)), true)).slice(0, 8).map((p, i) => ({ ...p, batch, board: names.includes(p.board) ? p.board : names[i % names.length] }));
@@ -2681,8 +2724,14 @@
   // 🖼 이미지로 저장: 지금 보이는 커뮤니티 카드를 화면 그대로(글꼴·색·배너) 찍습니다. 컴퓨터는 바로 내려받기, 아이폰은 공유 창.
   async function snapBoard() {
     const card = root.querySelector('.bd'); if (!card) return;
+    // 지금 스크롤해서 보고 있는 부분만 찍습니다. 원본의 화면 위·아래 끝을, 뺄 칸(입력창 등)을 뺀 복사본 좌표로 옮겨서 자릅니다.
+    const cr = card.getBoundingClientRect(), vr = (out('main') || card).getBoundingClientRect();
+    const drop = [...card.querySelectorAll('.bd-snap,.bd-tools,.bd-write,.bd-typing')].map(e => e.getBoundingClientRect());
+    const toClone = y => y - cr.top - drop.reduce((a, r) => a + (y >= r.bottom ? r.height : y > r.top ? y - r.top : 0), 0);
+    const viewTop = toClone(Math.max(cr.top, vr.top)), viewBot = toClone(Math.min(cr.bottom, vr.bottom));
     const clone = card.cloneNode(true);
-    clone.querySelectorAll('.bd-snap,.bd-tools,.bd-by,.bd-write,.bd-typing').forEach(x => x.remove());
+    clone.querySelectorAll('.bd-snap,.bd-tools,.bd-write,.bd-typing').forEach(x => x.remove());
+    clone.querySelectorAll('.bd-by').forEach(x => { if (!/^✍/.test(x.textContent)) x.remove(); }); // 몰래 본 이름은 그대로 찍힘, 안 연 버튼만 뺌
     // 높이는 뺄 것 다 뺀 복사본으로 잼(원본으로 재면 빠진 입력창만큼 아래가 비어요)
     const w = card.offsetWidth;
     clone.style.cssText += `;position:absolute;left:-99999px;top:0;width:${w}px;visibility:hidden`;
@@ -2693,8 +2742,9 @@
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="snap" style="width:${w}px;background:#fff"><style>${css.replace(/</g, '\\3c ')}</style>${body}</div></foreignObject></svg>`;
     const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     try { await img.decode(); } catch (_) { toast('이미지를 만들지 못했어요.', 'err'); return; }
-    const scale = 2, cv = document.createElement('canvas'); cv.width = w * scale; cv.height = h * scale;
-    const x = cv.getContext('2d'); x.scale(scale, scale); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0);
+    const sy = Math.max(0, Math.floor(viewTop)), sh = Math.max(1, Math.min(h, Math.ceil(viewBot)) - sy);
+    const scale = 2, cv = document.createElement('canvas'); cv.width = w * scale; cv.height = sh * scale;
+    const x = cv.getContext('2d'); x.scale(scale, scale); x.fillStyle = '#fff'; x.fillRect(0, 0, w, sh); x.drawImage(img, 0, sy, w, sh, 0, 0, w, sh);
     const name = `커뮤니티-${(boardData?.data?.name || '글').replace(/[\\/:*?"<>|]/g, '')}.png`;
     let blob; try { blob = await new Promise(r => cv.toBlob(r, 'image/png')); } catch (_) { blob = null; }
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2706,10 +2756,10 @@
     nav.bdImg = url; render();
   }
   // 폰·컴퓨터도 커뮤니티처럼: 고른 턴 범위의 실제 대화를 기억 노트 뒤에 붙입니다(범위 없으면 빈 글).
-  async function rangeLogText(chatId, from, to, hint) {
+  async function rangeLogText(chatId, from, to, hint, max = 24000) {
     if (!(from && to)) return '';
     let t = 0; const pick = (await readAll(chatId)).filter(m => { if (msgRole(m) === 'user') t++; return t >= from && t <= to; });
-    const log = pick.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n').slice(-24000);
+    const log = pick.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n').slice(-max);
     return log ? `\n\n[참고할 대화 ${from}~${to}턴 — ${hint}]\n${log}` : '';
   }
   // 🖼 폰·모니터 이미지로 저장: 지금 보이는 기기 화면을 그대로 찍습니다(컴퓨터는 바로 내려받기, 아이폰은 공유 창).
@@ -2756,12 +2806,12 @@
   const REPLY_PROMPT = `너는 RP 세계 안 커뮤니티 게시판의 댓글러들이다. [글]과 지금까지 [댓글]을 읽고, 방금 달린 [새 댓글]에 붙는 대댓글을 쓴다.
 - 개수는 상황 따라 0~4개. 재미없거나 묻힐 댓글이면 0개(빈 배열 [])나 1개만, 판이 커질 댓글이면 3~4개. 매번 같은 개수로 맞추지 않는다. 0개일 때 가끔 "무플방지"·"ㅇㄷ" 같은 한 줄만 다는 것도 된다.
 - 그 게시판의 분위기(vibe)와 말투를 그대로: 카페는 존댓말·이모티콘과 은근한 기싸움, 여초는 "헐 미쳤다"·ㅠㅠ·언니들·과몰입과 편 가르기, 남초는 "~함/~임"·형들·개추/비추·팩트 공방, 익명은 은어·초성체·드립·가벼운 비속어, 음지는 디시 야갤처럼 반말 비속어·조롱·희롱·과격한 드립을 세게.
-- 착한 반응만 쓰지 않는다: 시비·맞장구·밈·조롱 같은 반응을 섞는다. [댓글]에 이미 나온 단골 멘트(세 줄 요약 요구 등)는 다시 쓰지 않는다. 서로 싸우기도 한다.
+- 착한 반응만 쓰지 않는다: 시비·맞장구·밈·조롱 같은 반응을 섞는다. [댓글]에 이미 나온 단골 멘트(세 줄 요약 요구, 어그로·병먹금 언급, 캡처·박제 언급 등)는 다시 쓰지 않는다. 남을 어그로라고 부르는 반응은 상대가 진짜 분탕일 때만. 서로 싸우기도 한다.
 - [답글 대상 댓글]이 있으면 그 둘의 대화에 끼어든다. 원댓글이 싸가지 없거나 공격적이면 원댓글러가 다시 받아치고("ㅇㅇ 그래서 뭐"), 편 들기·비꼼·조리돌림·싸움 붙이기로 판을 키운다. 원댓글이 맞는 말이면 동조·추가 폭로, 웃기면 드립 받기. 가끔 쉴드·중재("둘 다 그만해 ㅋㅋ")도. 매번 같은 패턴은 피한다.
 - 글쓴이가 끼어들 수도 있다(해명·반박). 그때 nick·ip는 [글쓴이]와 똑같이.
-- 가끔(0~1개) 분탕·어그로가 끼어든다(일부러 반대로 말하기, 남 까기, 싸움 붙이기). 그 게시판 말투로.
+- 아주 가끔(대부분은 0개) 분탕이 끼어든다(일부러 반대로 말하기, 남 까기, 싸움 붙이기). 그 게시판 말투로.
 - ★ 이 지침의 따옴표 속 표현은 분위기 참고일 뿐이다. 그대로 베끼지 말고 이 글·이 댓글에 맞는 새 말로 쓴다. [댓글]에 이미 나온 말·드립도 되풀이하지 않는다.
-- 한 번에 단 대댓글들끼리도 반응이 다 달라야 한다(같은 맞장구만 여러 개 금지). 반응 종류를 골고루 섞는다: 오해(말을 잘못 알아듣고 엉뚱하게 화냄 "아니 그 뜻이 아니잖아"), 질투(NPC나 팬이 유저·NPC 사이를 질투 "그 인턴 뭔데 ㅡㅡ"), 병먹금("병먹금 ㄱ"·"어그로임 무시해"), 뇌절, 과몰입, 맞춤법 지적, 정정, 박제("캡처함 ㅋ"), 신고 각, 국어 공부 권유, 뜬금 TMI.
+- 한 번에 단 대댓글들끼리도 반응이 다 달라야 한다(같은 맞장구만 여러 개 금지). 반응 종류를 골고루 섞는다: 오해(말을 잘못 알아듣고 엉뚱하게 화냄), 질투(NPC나 팬이 유저·NPC 사이를 질투), 병먹금, 뇌절, 과몰입, 맞춤법 지적, 정정, 박제, 신고 각, 국어 공부 권유, 뜬금 TMI.
 - 새 댓글 쓴 사람이 익명인지 실명인지는 [새 댓글] 아래 안내를 따른다. 그 사람 말을 대신 더 쓰지 않는다.
 - [기억 노트]의 인물(NPC)도 아주 가끔(0~1개) 몰래 끼어들 수 있다. 그 인물의 성격·말투·숨긴 마음 그대로 쓰고, by에 그 인물 정본명. 그 인물이 모르는 정보는 쓰지 않는다. 비밀은 맞히지 않는다.
 - 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 말, 현실의 특정 집단을 향한 혐오 표현. 음지 게시판이 아니면 노골적인 성적 묘사도.
@@ -2791,7 +2841,7 @@
       const ctx = [`[게시판] ${p.board || ''} (분위기: ${vibe || '자유'})`, `[글] ${p.title || ''}\n${p.body || ''}`, `[글쓴이] ${p.nick || '익명'}${p.ip ? `(${p.ip})` : ''}`,
         '[댓글]', ...p.comments.filter(c => c !== mine).slice(-12).map(c => `${c.reply ? 'ㄴ ' : ''}${c.nick || '익명'}: ${c.text || ''}`),
         ...(parent ? [`[답글 대상 댓글] ${parent.nick || '익명'}: ${parent.text || ''} — 새 댓글은 이 댓글에 단 답글이다. 대댓글러들은 이 둘의 대화에 끼어든다(원댓글 쓴 사람이 다시 반박해도 됨)`] : []),
-        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이라 누군지 모른다)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 모른다. 말투로 의심하는 정도는 괜찮다. 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', noteMemory()].join('\n');
+        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이라 누군지 모른다)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 모른다. 말투로 의심하는 정도는 괜찮다. 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', await etcMemory(chatIdFromPath())].join('\n');
       const raw = await askModel(REPLY_PROMPT, ctx, '💬대댓글');
       let list; try { const t = String(raw).replace(/^```\w*\n?|\n?```$/g, ''), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
       const replies = (Array.isArray(list) ? list : []).slice(0, 4).map(r => ({ nick: r.nick || 'ㅇㅇ', ip: anon ? (r.ip || '') : '', text: r.text || '', ago: '방금', likes: Number(r.likes) || 0, reply: true, by: r.by || '', to: r.to || mine.nick + (mine.ip ? "(" + mine.ip + ")" : "") }));
@@ -2801,9 +2851,9 @@
     finally { bdTyping = null; bdTypingAt = -1; keepView(); }
   }
   // 참고할 대화 고르기는 팝업으로(바깥을 누르면 닫힘)
-  const rangeSheet = label => `<div class="rsheet" data-act="bdrange"><div class="rbox" data-act="noop"><b>참고할 대화</b><small>이 범위의 실제 대화를 기억 노트와 함께 보내요</small>${rangePick(label)}</div></div>`;
+  const rangeSheet = label => `<div class="rsheet" data-act="bdrange"><div class="rbox" data-act="noop"><b>참고할 대화</b><small>${nav.rgKind === 'quote' ? '이 범위의 대화에서 골라 기존 명대사 뒤에 더해요' : snapshot?.note ? '이 범위의 실제 대화를 기억 노트와 함께 보내요' : '이 범위의 실제 대화를 불러와서 만들어요'}</small>${rangePick(label)}</div></div>`;
   function boardHtml() {
-    if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요. 정리하고 나면 이 세계의 커뮤니티를 열어 볼 수 있어요.');
+    if (!snapshot?.note && !freshTurns()) return emptyBox('아직 대화가 없어요. RP를 조금 하고 나면 이 세계의 커뮤니티를 열어 볼 수 있어요.');
     const head = devSeg(); // 회색 설명 상자 없이 바로 사이트
     // 만드는 중엔 로딩 카드만(빈 사이트·열어 보기 버튼은 숨김)
     if (!boardData && busyNow && genProg) return head + genCard();
@@ -2814,7 +2864,9 @@
     const boards = (d.boards || [...new Set(posts.map(p => p.board).filter(Boolean))]).map(b => typeof b === 'string' ? { name: b, vibe: '' } : b);
     const vibeOf = name => boards.find(b => b.name === name)?.vibe || '';
     const seen = nav.bdSeen || (nav.bdSeen = new Set());
-    const reveal = (by, key) => by ? `<button class="bd-by" data-act="bdwho" data-arg="${esc(key)}">${seen.has(key) ? `✍ ${esc(by)}` : '작성자 몰래 보기'}</button>` : '';
+    // 몰래 보기는 기억 노트에 있는 인물(유저 빼고)일 때만. AI가 by에 닉네임(ㅇㅇ 등)을 넣으면 버튼을 안 띄움
+    const npcOf = by => { const c = canon(by); return c && (CANON.includes(c) || PROF.has(c)) && !PROF.get(c)?.isUser ? c : ''; };
+    const reveal = (by, key) => { const who = npcOf(by); return who ? `<button class="bd-by" data-act="bdwho" data-arg="${esc(key)}">${seen.has(key) ? `✍ ${esc(who)}` : '작성자 몰래 보기'}</button>` : ''; };
     const nick = x => `${esc(x.nick || '익명')}${x.ip ? `<span class="bd-ip">(${esc(x.ip)})</span>` : ''}`;
     const cmtN = p => (p.comments || []).length;
     // 목록 한 줄: HOT · 개념(추천 50↑) · [게시판] 제목 [댓글수] · N(3시간 안 된 글)
@@ -2847,6 +2899,7 @@
           let end = to; if (to >= 0) while (cs[end + 1]?.reply) end++;
           const replyBox = () => `<div class="bd-write bd-write-r"><label class="bd-anon"><input type="checkbox" data-act="bdanon" data-out="bdAnonR"${nav.bdAnon === false ? '' : ' checked'}>익명</label>${nav.bdAnon === false ? `<input type="text" class="bd-nick" data-out="bdNickR" maxlength="20" placeholder="닉네임" value="${esc(nav.bdNick || [...PROF.entries()].find(([, v]) => v.isUser)?.[0] || '')}">` : ''}<input type="text" data-out="bdCmtR" maxlength="300" placeholder="${esc((cs[to]?.nick || '익명') + (cs[to]?.ip ? '(' + cs[to].ip + ')' : ''))}님에게 답글" autocomplete="off"><button data-act="bdcmt"${bdTyping != null ? ' disabled' : ''}>등록</button><button class="bd-x" data-act="bdrep" data-arg="" aria-label="답글 취소">✕</button></div>`;
           const cm = c => { const idx = (p.comments || []).indexOf(c._src || c);
+            if (c.reply && !c.to && idx > 0) { const cs0 = p.comments || []; let j = idx - 1; while (j > 0 && cs0[j].reply) j--; const par = cs0[j]; if (par && par !== c) c = { ...c, to: (par.nick || '익명') + (par.ip ? `(${par.ip})` : '') }; }
             return `<div class="bd-c${c.reply ? ' re' : ''}${c.mine ? ' mine' : ''}${nav.bdReplyTo === idx && !c._src ? ' to' : ''}"><p class="bd-cw">${c.reply ? '<i>ㄴ</i>' : ''}<b>${nick(c)}</b>${c.mine ? '<em class="bd-me">나</em>' : ''}${!c.mine && c.nick && c.nick === p.nick && (c.ip || '') === (p.ip || '') ? '<em class="bd-op">글쓴이</em>' : ''} ${reveal(c.by, key(c))}<small>${esc(c.ago || '')}${c.likes ? ` · 추천 ${c.likes}` : ''}</small>${c._src || bdTyping != null ? '' : `<button class="bd-rep" data-act="bdrep" data-arg="${idx}">답글</button>`}</p><p class="bd-ct">${c.reply && c.to ? `<span class="bd-to">@${esc(c.to)}</span> ` : ''}${esc(c.text || '')}</p></div>`
               // 반응 기다리는 동안: 내 댓글 바로 밑에 ㄴ ··· 댓글 다는 중
               + (!c._src && bdTyping === nav.bdPost && idx === bdTypingAt ? '<div class="bd-c re bd-typing"><p class="bd-cw"><i>ㄴ</i><b>ㅇㅇ</b><small>방금</small></p><p class="bd-ct"><span class="dots"><i></i><i></i><i></i></span> 댓글 다는 중</p></div>' : '')
@@ -2912,11 +2965,14 @@
     const world = blocksOf(bodyOf('세계관'));
     const worldHtml = !who ? `<details class="tl-up tl-fold"><summary><b>🌍 세계관 ${world.reduce((a, b) => a + b.lines.length + (b.title ? 1 : 0), 0)}</b><button class="linkbtn" data-act="edit" data-arg="세계관">고치기</button></summary>
       ${world.map(b => `${b.title ? `<p><span>${esc(b.title)}</span></p>` : ''}${b.lines.filter(notProofLine).map(l => `<p>${esc(l)}</p>`).join('')}`).join('') || '<p>아직 정리된 세계관이 없어요. 원문에서 설정·규칙이 확인되면 정리할 때 여기에 쌓여요.</p>'}</details>` : '';
-    const qs = quotes().filter(q => !who || q.who === who);
-    const qHtml = `<details class="tl-up tl-fold tl-quotes"><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" title="새 대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '＋'}</button></summary>
-      ${qs.map(q => { const [orig, inl] = splitTr(q.text), tr = q.tr || inl; return `<div class="tl-q"><p class="tl-qt">"${esc(orig)}"</p>${tr ? `<p class="tl-qs">${esc(tr)}</p>` : ''}<p class="tl-qs">${q.who && !who ? `${esc(q.who)}${q.to ? ` → ${esc(q.to)}` : ''} · ` : q.to ? `→ ${esc(q.to)} · ` : ''}${q.ctx ? `🎬 ${esc(q.ctx)}` : ''}</p></div>`; }).join('')}
-      ${qs.length ? '' : '<p>오른쪽 ＋를 누르면 대화에서 골라 와요.</p>'}</details>`;
+    const qHtml = quoteFold(who);
     return descHtml('timeline') + chips + storyHtml + worldHtml + upcoming + memHtml + head + list + qHtml;
+  }
+  function quoteFold(who, open) {
+    const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who);
+    return `<details class="tl-up tl-fold tl-quotes"${open || nav.rgKind === 'quote' ? ' open' : ''}><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" title="대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg>'}</button></summary>
+      ${qs.map(q => { const [orig, inl] = splitTr(q.text), tr = q.tr || inl; return `<div class="tl-q"><button class="tl-qx" data-act="qdel" data-arg="${q.i}" title="이 대사 지우기">×</button><p class="tl-qt">"${esc(orig)}"</p>${tr ? `<p class="tl-qs">${esc(tr)}</p>` : ''}<p class="tl-qs">${q.who && !who ? `${esc(q.who)}${q.to ? ` → ${esc(q.to)}` : ''} · ` : q.to ? `→ ${esc(q.to)} · ` : ''}${q.ctx ? `🎬 ${esc(q.ctx)}` : ''}</p></div>`; }).join('')}
+      ${qs.length ? '' : '<p>오른쪽 ＋를 누르면 고른 턴의 대화에서 골라 와요. 다시 누르면 기존 대사 뒤에 더해져요.</p>'}</details>${nav.bdRange && nav.rgKind === 'quote' ? rangeSheet('명대사 뽑기') : ''}`;
   }
 
   // 칸마다 맨 위 한 줄 안내. 무엇을 담는지 · 어떻게 관리되는지 (명사형)
@@ -3244,6 +3300,7 @@
   function injectedHtml() {
     const n = snapshot?.note;
     if (!n) return emptyBox('아직 채팅에 들어간 노트가 없어요.');
+    if (n.parked) return emptyBox('채팅에 넣기가 꺼져 있어요. 지금은 노트가 채팅에 없고 여기에만 보관돼 있어요(홈에서 켤 수 있어요).');
     const carrier = snapshot.all.find(m => msgId(m) === n.carrierId);
     const raw = carrier ? msgText(carrier) : '';
     const story = stripBlocks(raw).trim(), block = (raw.match(V3_RE) || raw.match(V2_RE) || raw.match(V1_RE) || [''])[0].trim();
@@ -3620,7 +3677,7 @@
   // ══════════════════════════════════════════════════════════════
   const behindOf = snap => { const n = snap?.note; if (!n) return null; const chat = snap.all.filter(isChat), i = chat.findIndex(m => msgId(m) === n.carrierId); return i >= 0 ? chat.length - 1 - i : null; };
   // 노트가 뒤로 밀리면 최신 답변으로 다시 붙입니다. AI 호출이 없어서 비용이 들지 않아요.
-  let moving = false;
+  let moving = false, injectOn = true; // injectOn=false: 어느 채팅방에도 노트를 넣거나 옮기지 않음(ETC만)
   async function moveNote(chatId, snap) {
     const n = snap.note, carrier = pickCarrier(snap.all);
     if (!n || !carrier || msgId(carrier) === n.carrierId) return false;
@@ -3641,7 +3698,8 @@
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
-      if (!moving && !busyNow && snap.note && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
+      injectOn = String(await getValue('inject', 'on')) !== 'off';
+      if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
         try {
           if (await moveNote(chatId, snap)) {
@@ -3655,7 +3713,7 @@
       }
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       loadTurnMap(chatId, snap);
       try {
@@ -3761,6 +3819,30 @@
     out('count').textContent = `기억 ${fmt(memory.length)}자 · 노트 전체 ${fmt(block.length)}자 · 칸 ${draft.sections.length}개`;
   }
 
+  async function toggleInject() {
+    const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId || busyNow) return;
+    injectOn = !injectOn; await setValue('inject', injectOn ? 'on' : 'off');
+    if (!n || !!n.parked === !injectOn) { toast(injectOn ? '채팅에 넣기를 켰어요.' : '채팅에 넣기를 껐어요. 이제 채팅방은 안 건드려요.', 'ok', 2500); render(); return; }
+    busyNow = true; render();
+    try {
+      if (n.parked) { // 켜기: 직전 AI 답변에 다시 넣음
+        const carrier = pickCarrier(snapshot.all); if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
+        await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(n.memory, n.upto, n.turns, n.at || undefined));
+        await setValue('parked:' + chatId, '');
+        toast('기억을 채팅에 다시 넣었어요.', 'ok', 2500);
+      } else { // 끄기: 여기 보관하고 채팅에서 뺌
+        await park(chatId, n.memory, n.upto, n.turns, n.at);
+        const msg = await readMessage(chatId, n.carrierId), cleaned = stripBlocks(msgText(msg)).trimEnd();
+        if (cleaned !== msgText(msg)) await writeMessage(chatId, n.carrierId, cleaned);
+        toast('기억을 채팅에서 뺐어요. ETC는 그대로 쓸 수 있어요.', 'ok', 3000);
+      }
+      await refresh();
+    } catch (e) { // 실패하면 스위치를 원래대로(채팅과 스위치가 어긋나지 않게)
+      injectOn = !injectOn; await setValue('inject', injectOn ? 'on' : 'off'); if (!n.parked) await setValue('parked:' + chatId, '');
+      toast('바꾸기 실패 · ' + e.message, 'err'); }
+    finally { busyNow = false; render(); }
+  }
+
   async function apply() {
     const chatId = chatIdFromPath();
     if (!chatId || !draft || busyNow) return;
@@ -3771,21 +3853,22 @@
       // 정리하는 사이 마지막으로 정리한 메시지가 리롤·삭제됐으면 묻습니다(그 답을 기준으로 다음 정리가 이어지므로).
       if (draft.uptoId && !draft.restore && !now.all.some(m => msgId(m) === draft.uptoId)
         && !confirm('정리하는 사이 마지막 대화가 리롤되거나 지워졌어요. 그래도 이 결과를 넣을까요? (취소하면 아무것도 바뀌지 않아요)')) { toast('넣지 않았어요. 노트는 그대로예요.', 'info', 3000); return; }
-      const carrier = pickCarrier(now.all);
-      if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
-      await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns));
+      const carrier = pickCarrier(now.all), parked = !!now.note?.parked || !injectOn;
+      if (!carrier && !parked) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
+      if (parked) await park(chatId, memory, draft.uptoId, draft.turns);
+      else await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns));
       await saveFull(chatId, draft.uptoId, memory);
       if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId });
       await setValue('edited:' + chatId, '[]');
       const oldId = now.note?.carrierId;
-      if (cleanOld && oldId && oldId !== msgId(carrier)) {
+      if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) {
         try {
           const old = await readMessage(chatId, oldId), cleaned = stripBlocks(msgText(old)).trimEnd();
           if (cleaned !== msgText(old)) await writeMessage(chatId, oldId, cleaned);
         } catch (_) { /* 예전 노트 정리가 실패해도 새 노트는 이미 들어감 */ }
       }
       draft = null; nav = fresh();
-      toast('넣었어요. 이제 앱에서 이어서 RP하면 돼요.', 'ok', 3500);
+      toast(parked ? '저장했어요. 채팅에는 안 넣었어요(채팅에 넣기 꺼짐).' : '넣었어요. 이제 앱에서 이어서 RP하면 돼요.', 'ok', 3500);
       await refresh();
     } catch (e) { toast('넣기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
@@ -3804,8 +3887,8 @@
     try {
       const list = splitSections(noteMemory()), s = list.find(x => x.key === nav.key);
       if (s) s.body = body; else list.push({ key: nav.key, body });
-      const msg = await readMessage(chatId, n.carrierId);
-      await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(joinSections(list), n.upto, n.turns, n.at || undefined));
+      if (n.parked) await park(chatId, joinSections(list), n.upto, n.turns, n.at);
+      else { const msg = await readMessage(chatId, n.carrierId); await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(joinSections(list), n.upto, n.turns, n.at || undefined)); }
       await saveFull(chatId, n.upto, joinSections(list));
       const ed = await editedKeys(chatId); if (!ed.includes(nav.key)) { ed.push(nav.key); await setValue('edited:' + chatId, JSON.stringify(ed)); }
       nav.view = nav.prevView || null; nav.key = nav.prevKey || null;
@@ -3856,8 +3939,8 @@
     if (!(v >= 1 && v <= 100000)) { toast('1 이상의 숫자를 넣어 주세요.', 'err', 2500); return; }
     busyNow = true; toast('턴 번호를 고치는 중…');
     try {
-      const msg = await readMessage(chatId, n.carrierId);
-      await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(n.memory, n.upto, v, n.at || undefined));
+      if (n.parked) await park(chatId, n.memory, n.upto, v, n.at);
+      else { const msg = await readMessage(chatId, n.carrierId); await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(n.memory, n.upto, v, n.at || undefined)); }
       turnMapAt = 0;
       await refresh();
       toast(`1~${v}턴으로 고쳤어요. 말풍선 위 번호도 같이 바뀌어요.`, 'ok', 3000);
@@ -4013,15 +4096,18 @@
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
       case 'peek': { const i = el.previousElementSibling; if (i) { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.textContent = show ? '숨기기' : '보기'; } return; }
       case 'grp': nav.grp = arg; return keepScroll(render);
-      case 'qmake': return makeQuotes();
+      case 'qmake': nav.bdRange = true; nav.rgKind = 'quote'; return keepScroll(render); // 범위 고르는 팝업
+      case 'qdel': { const cid = chatIdFromPath(), list = quotes(); list.splice(Number(arg), 1); if (cid) await saveQuotes(cid, list); return keepScroll(render); }
       case 'phwho': nav.phWho = arg; nav.phScreen = 'home'; nav.pcScreen = 'home'; return keepScroll(render);
       case 'dev': nav.dev = arg; return keepScroll(render);
+      case 'findnpc': return findNpc();
       case 'pcmake': nav.rgKind = 'pc'; nav.rgWho = arg; nav.bdRange = true; return keepScroll(render);
       case 'devimg': return snapDevice(arg);
       case 'pcgo': nav.pcScreen = arg; return keepScroll(render);
       case 'bdmake': { const a = Number(out('bdFrom')?.value) || 0, b = Number(out('bdTo')?.value) || 0; if (a > b) { toast('앞 턴이 뒤 턴보다 커요.', 'err'); return; }
         const k = nav.rgKind || 'board', who = nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
         const lab = k === 'phone' ? `${who}의 폰` : k === 'pc' ? `${who}의 컴퓨터` : '커뮤니티';
+        if (k === 'quote') { nav.bdRange = false; return makeQuotes(a, b); }
         if (ex && !confirm(`${a}~${b}턴 대화를 참고해서 ${lab}을(를) 다시 만들까요? (AI를 1번 불러요)`)) return;
         nav.bdRange = false; return k === 'phone' ? makePhone(who, a, b) : k === 'pc' ? makePc(who, a, b) : makeBoard(a, b); }
       case 'bdgo': nav.bdReplyTo = null; nav.bdPost = arg === '' ? null : Number(arg); nav.bdWho = null; return keepScroll(render);
@@ -4033,6 +4119,7 @@
         keepScroll(render); setTimeout(() => out(nav.bdReplyTo == null ? 'bdCmt' : 'bdCmtR')?.focus({ preventScroll: true }), 30); return;
       case 'bdrange': nav.bdRange = !nav.bdRange; if (nav.bdRange) nav.rgKind = 'board'; return keepScroll(render);
       case 'imgclose': nav.bdImg = null; return keepScroll(render);
+      case 'inject': return toggleInject();
       case 'bdimg': return snapBoard();
       case 'bdrefresh': return refreshBoard();
       case 'bddel': { const [k, ...v] = arg.split(':'), a = v.join(':'), d = boardData?.data; if (!d) return;
