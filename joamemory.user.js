@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.1.1096
+// @version      2.1.1097
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -458,6 +458,8 @@
       { headers: { 'x-goog-api-key': key }, timeout: 600000, onProgress: raw => updateProg(raw),
         body: { systemInstruction: { parts: [{ text: system }] },
                 contents: [{ role: 'user', parts: [{ text: input }] }],
+                // 창작 RP 정리라 조절 가능한 필터는 끔(공식 설정). 끌 수 없는 금지 항목은 그대로 막혀요.
+                safetySettings: ['HARASSMENT', 'HATE_SPEECH', 'SEXUALLY_EXPLICIT', 'DANGEROUS_CONTENT', 'CIVIC_INTEGRITY'].map(c => ({ category: 'HARM_CATEGORY_' + c, threshold: 'OFF' })),
                 generationConfig: { maxOutputTokens: 65536 } } });
     let text = '', finish = '', u = {};
     for (const line of raw.split('\n')) {
@@ -467,9 +469,10 @@
       for (const p of c?.content?.parts || []) if (!p.thought && p.text) text += p.text;
       if (c?.finishReason) finish = c.finishReason;
       if (j.usageMetadata) u = j.usageMetadata;
+      if (j.promptFeedback?.blockReason) finish = j.promptFeedback.blockReason;
     }
     if (/MAX_TOKENS/i.test(finish)) throw Object.assign(cutError(), { partial: text.trim() });
-    if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw new Error('AI 안전 필터가 답을 막았어요. 다른 모델로 해 주세요.');
+    if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw new Error(`AI 안전 필터가 막았어요(${finish}). 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.`);
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.promptTokenCount) || 0, outTok: (Number(u.candidatesTokenCount) || 0) + (Number(u.thoughtsTokenCount) || 0) };
   }
