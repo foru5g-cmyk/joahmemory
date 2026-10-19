@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.1.1073
+// @version      2.1.1076
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2656,8 +2656,9 @@
       const titles = posts.slice(0, 40).map(p => `${p.board}: ${p.title}`).join('\n');
       const raw = await askModelRetry(BOARD_PROMPT + BOARD_MORE, [who, '', `[사이트] ${d.name || ''} — ${d.about || ''}`, `[이미 있는 게시판] ${names.join(', ')}`, '[이미 올라온 글 제목]', titles, '', '[기억 노트]', noteMemory()].join('\n'), '🗨커뮤니티 새로고침');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      const fresh = (data.posts || []).filter(p => p && p.title).slice(0, 8).map((p, i) => ({ ...p, board: names.includes(p.board) ? p.board : names[i % names.length] }));
-      if (!fresh.length) throw new Error('새 글이 오지 않았어요. 한 번 더 눌러 주세요.');
+      const norm = t => String(t || '').replace(/[\s\p{P}\p{S}]/gu, ''), have = new Set(posts.map(p => norm(p.title)));
+      const fresh = (data.posts || []).filter(p => p && p.title && !have.has(norm(p.title)) && (have.add(norm(p.title)), true)).slice(0, 8).map((p, i) => ({ ...p, board: names.includes(p.board) ? p.board : names[i % names.length] }));
+      if (!fresh.length) throw new Error((data.posts || []).length ? '새로 온 글이 다 이미 있는 글이랑 겹쳐서 버렸어요. 한 번 더 눌러 주세요.' : '새 글이 오지 않았어요. 한 번 더 눌러 주세요.');
       d.posts = [...fresh, ...posts].slice(0, 80); scrubBoardUser(boardData);
       boardData.refreshed = (boardData.refreshed || 0) + 1;
       await setValue('board:' + chatId, JSON.stringify(boardData));
@@ -2776,6 +2777,8 @@
   function boardHtml() {
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요. 정리하고 나면 이 세계의 커뮤니티를 열어 볼 수 있어요.');
     const head = devSeg(); // 회색 설명 상자 없이 바로 사이트
+    // 만드는 중엔 로딩 카드만(빈 사이트·열어 보기 버튼은 숨김)
+    if (!boardData && busyNow && genProg) return head + genCard();
     if (!boardData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 커뮤니티</b><small>카페·여초·익명·음지 게시판을 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>
       <button class="ph-make" data-act="bdrange">🗨 커뮤니티 열어 보기</button></div></div>${nav.bdRange ? rangeSheet('만들기') : ''}`;
     // 사이트처럼: 색 막대 + 이름 / 메뉴(메인·게시판들) / 메인·게시판·게시글 화면
@@ -2827,7 +2830,7 @@
         + `<p class="bd-sec">🔥 실시간 HOT</p><div class="bd-rank">${hot.map(([p, i], n) => `<button data-act="bdgo" data-arg="${i}"><em>${n + 1}</em><span>${esc(p.title || '')}${cmtN(p) ? ` <span class="bd-cn">[${cmtN(p)}]</span>` : ''}</span></button>`).join('')}</div>`
         + (spots.length ? `<p class="bd-sec">📍 요즘 핫플</p><div class="bd-spots">${spots.map(s => `<span><b>${esc(s.name || '')}</b>${s.note ? `<small>${esc(s.note)}</small>` : ''}</span>`).join('')}</div>` : '')
         // 게시판마다 글 3개씩 미리 보기(제목 줄을 누르면 그 게시판으로)
-        + boards.map(b => { const list = all.filter(([p]) => p.board === b.name).slice(0, 3); return list.length ? `<button class="bd-sec bd-more" data-act="bdboard" data-arg="${esc(b.name)}">${VIBE[b.vibe] || ''} ${esc(b.name)} <span>›</span></button><div class="bd-list">${list.map(row).join('')}</div>` : ''; }).join('')
+        + boards.map(b => { const shown = new Set(hot.map(([, i]) => i)), list = all.filter(([p, i]) => p.board === b.name && !shown.has(i)).slice(0, 3); return list.length ? `<button class="bd-sec bd-more" data-act="bdboard" data-arg="${esc(b.name)}">${VIBE[b.vibe] || ''} ${esc(b.name)} <span>›</span></button><div class="bd-list">${list.map(row).join('')}</div>` : ''; }).join('')
         + `<p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p>`;
     } else {
       inner = `<p class="bd-sec">${VIBE[vibeOf(cur)] || ''} ${esc(cur)} <small class="pdim">${esc(vibeOf(cur))}</small></p><div class="bd-list">${all.filter(([p]) => p.board === cur).map(row).join('') || '<p class="pc-empty">글이 없어요</p>'}</div>
