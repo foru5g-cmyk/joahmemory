@@ -2317,15 +2317,16 @@
   }
   async function makePhone(name, from = 0, to = 0) {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
-    busyNow = true; startGen('phone'); render(); toast(`${josa(name, '이', '가')} 폰을 꾸미는 중이에요… (30초~1분)`);
+    busyNow = true; startGen('phone'); render(); toast(name ? `${josa(name, '이', '가')} 폰을 꾸미는 중이에요… (30초~1분)` : '인물을 고르고 폰을 꾸미는 중이에요… (30초~1분)');
     try {
+      if (!name) name = await pickNpc(chatId, from, to, 'phone');
       const others = Object.entries(phoneData).filter(([n]) => n !== name).map(([n, r]) => `${n}: 팔로워 ${r.data?.insta?.followers || '-'} · 잔고 ${r.data?.bank?.balance || '-'} · 씀씀이 ${r.data?.bank?.spend || '-'} · 거래처 ${(r.data?.bank?.tx || []).map(t => t.title).slice(0, 6).join('/') || '-'} · 메모 ${(r.data?.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 아이디 ${r.data?.insta?.id || '-'}`).join('\n');
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const raw = await askModelRetry(PHONE_PROMPT, `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}\n${others ? `[이미 만든 다른 인물의 폰 — 이것과 겹치지 않게, 이 인물답게 다르게]\n${others}\n\n` : ''}${await etcLog(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 폰 속(메시지·메모·검색·사진·통화 등)에 특히 많이 반영할 것. 유저가 보낸 말은 지어내지 말 것')}`, `📱${name}`);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       phoneData = await phones(chatId); phoneData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, data };
       await setValue('phone:' + chatId, JSON.stringify(phoneData));
-      nav.phScreen = 'home'; toast(`${name}의 폰이 열렸어요 📱`, 'ok', 2500);
+      nav.phWho = name; nav.phScreen = 'home'; toast(`${name}의 폰이 열렸어요 📱`, 'ok', 2500);
     } catch (e) { toast('폰 만들기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
   }
@@ -2384,7 +2385,7 @@
   function phoneHtml() {
     if (!snapshot?.note && !freshTurns()) return devSeg() + emptyBox('아직 대화가 없어요.');
     const names = etcPeople(), who = names.includes(nav.phWho) ? nav.phWho : names[0];
-    if (!who) return devSeg() + `<div class="tl-who">${addBtn()}</div>${emptyBox(`정리한 기억이 없어서 아직 인물 목록이 없어요. 위 ↻를 누르면 대화에서 NPC를 찾아 와요(AI 1번).`)}`;
+    if (!who) return etcEmpty('phone');
     nav.phWho = who;
     const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${phoneData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}${addBtn()}</div>${nameAdder()}`;
     const rec = phoneData[who], d = scrubUser(rec?.data || {}), [bg, fg] = avColor(who), face = PROF.get(who)?.emoji || ANIM.get(who) || animalOf(who);
@@ -2505,7 +2506,7 @@
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 폰${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="phone">이미지로 저장</button> · <button class="linkbtn" data-act="phmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button></p>` : '';
     return descHtml('phone') + devSeg() + genCard() + picker + `<div class="iphone"><i class="ph-island"></i><div class="ph-screen">${inner}</div><i class="ph-homebar" data-act="phhome"></i></div>` + foot
-      + (nav.bdRange && nav.rgKind === 'phone' && nav.rgWho === who ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
+      + (nav.bdRange && nav.rgKind === 'phone' && (nav.rgWho === who || !nav.rgWho) ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
   }
   // etc 탭: 📱 폰 / 💻 컴퓨터. 고른 인물은 둘이 같이 씁니다(nav.phWho).
   const DEVICES = [['phone', '📱 폰'], ['pc', '💻 컴퓨터'], ['board', '🗨 커뮤니티']];
@@ -2514,7 +2515,11 @@
   const etcPeople = () => snapshot?.note ? [...people().keys()] : [...new Set([...etcNames, ...Object.keys(phoneData), ...Object.keys(pcData)])];
   // 노트가 없으면 대화에서 NPC를 찾아 목록을 만듭니다(AI 1번). 목록 끝 ↻로 다시 찾기
   const nameAdder = () => '';
-  const addBtn = () => snapshot?.note ? '' : `<button data-act="findnpc" aria-pressed="false" title="대화에서 인물 다시 찾기"${busyNow ? ' disabled' : ''}><span class="av ph-anon">↻</span><small>다시 찾기</small></button>`;
+  // 노트가 없을 때만: 다른 인물의 폰/컴퓨터도 같은 '불러오기'(몇 턴부터) 시트로 만듭니다.
+  const addBtn = () => snapshot?.note ? '' : `<button data-act="${(nav.dev || 'phone') === 'pc' ? 'pcmake' : 'phmake'}" data-arg="" title="다른 인물 불러오기"${busyNow ? ' disabled' : ''}><span class="av ph-anon">＋</span><small>불러오기</small></button>`;
+  // 인물이 아직 없을 때(노트 없음): 커뮤니티 첫 화면처럼 안내 + 불러오기 버튼
+  const etcEmpty = kind => devSeg() + genCard() + emptyBox(`<b>이 세계 인물의 ${kind === 'pc' ? '컴퓨터' : '폰'}</b><br><small>대화를 몇 턴부터 읽을지 정해서 불러와요 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><br><button class="btn pri" style="margin-top:12px" data-act="${kind === 'pc' ? 'pcmake' : 'phmake'}" data-arg=""${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : kind === 'pc' ? '💻 컴퓨터 불러오기' : '📱 폰 불러오기'}</button>`)
+    + (nav.bdRange && nav.rgKind === kind ? rangeSheet('불러오기') : '');
   const NPC_PROMPT = 'RP 로그를 읽고 등장하는 NPC(AI가 연기하는 인물)의 이름만 고른다. [USER] 메시지를 쓰는 유저 캐릭터는 뺀다. 로그에 이름이 실제로 나온 인물만, 지어내지 않는다. 대사·행동이 있는 비중 큰 순서로 최대 8명. 출력은 JSON 배열 하나만: ["이름", ...]';
   async function findNpc() {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
@@ -2532,6 +2537,18 @@
     } catch (e) { toast('인물 찾기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
   }
+  // 주인을 안 정했을 때: 고른 범위의 대화에서 AI가 NPC를 골라 줍니다(이미 만든 인물은 뒤로).
+  async function pickNpc(chatId, from, to, kind) {
+    const end = freshTurns(), log = (await rangeLogText(chatId, from || 1, to || end, '인물 고르기', 60000)).trim();
+    if (!log) throw new Error(`그 범위에 대화가 없어요. (읽은 메시지 ${snapshot.all.length}개 · 유저 턴 ${end})`);
+    const raw = await askModel(NPC_PROMPT, log, '👥인물 고르기');
+    let list; try { const t = String(raw), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('인물을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
+    list = [...new Set((Array.isArray(list) ? list : []).map(x => String(x || '').trim().slice(0, 20)).filter(Boolean))].slice(0, 8);
+    if (!list.length) throw new Error('이 범위에서 인물을 찾지 못했어요.');
+    const made = kind === 'pc' ? pcData : phoneData;
+    etcNames = [...new Set([...etcNames, ...list])]; await setValue('etcnames:' + chatId, JSON.stringify(etcNames));
+    return list.find(n => !made[n]) || list[0];
+  }
   const etcLog = async (chatId, from, to, hint) => snapshot?.note
     ? `[기억 노트]\n${noteMemory()}${await rangeLogText(chatId, from, to, hint)}`
     : (await rangeLogText(chatId, from || Math.max(1, freshTurns() - 29), to || freshTurns(), '기억 노트가 없어 대화 원문으로 대신함. 인물·관계는 여기서 읽을 것. ' + hint, 120000)).trim();
@@ -2543,8 +2560,9 @@
   let pcData = {};
   async function makePc(name, from = 0, to = 0) {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
-    busyNow = true; startGen('pc'); render(); toast(`${josa(name, '이', '가')} 컴퓨터를 켜는 중이에요… (30초~1분)`);
+    busyNow = true; startGen('pc'); render(); toast(name ? `${josa(name, '이', '가')} 컴퓨터를 켜는 중이에요… (30초~1분)` : '인물을 고르고 컴퓨터를 켜는 중이에요… (30초~1분)');
     try {
+      if (!name) name = await pickNpc(chatId, from, to, 'pc');
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const ph = phoneData[name]?.data, phone = ph ? `[이 인물의 폰 — 같은 사람답게 이어지게] 씀씀이 ${ph.bank?.spend || '-'} · 메모 ${(ph.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 검색 ${(ph.search || []).map(t => t.q).slice(0, 6).join('/') || '-'}\n` : '';
       const others = Object.entries(pcData).filter(([n]) => n !== name).map(([n, r]) => `${n}: ${r.data?.os || '-'} · 바탕화면 ${(r.data?.desktop || []).map(x => x.name).slice(0, 6).join('/') || '-'} · 메일 ${(r.data?.mail || []).map(x => x.subject).slice(0, 4).join('/') || '-'}`).join('\n');
@@ -2552,7 +2570,7 @@
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       pcData = await pcs(chatId); pcData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, data };
       await setValue('pc:' + chatId, JSON.stringify(pcData));
-      nav.pcScreen = 'home'; toast(`${name}의 컴퓨터가 켜졌어요 💻`, 'ok', 2500);
+      nav.phWho = name; nav.pcScreen = 'home'; toast(`${name}의 컴퓨터가 켜졌어요 💻`, 'ok', 2500);
     } catch (e) { toast('컴퓨터 만들기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
   }
@@ -2577,7 +2595,7 @@
   function pcHtml() {
     if (!snapshot?.note && !freshTurns()) return devSeg() + emptyBox('아직 대화가 없어요.');
     const names = etcPeople(), who = names.includes(nav.phWho) ? nav.phWho : names[0];
-    if (!who) return devSeg() + `<div class="tl-who">${addBtn()}</div>${emptyBox(`정리한 기억이 없어서 아직 인물 목록이 없어요. 위 ↻를 누르면 대화에서 NPC를 찾아 와요(AI 1번).`)}`;
+    if (!who) return etcEmpty('pc');
     nav.phWho = who;
     const picker = `<div class="tl-who">${names.map(n => `<button data-act="phwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small>${pcData[n] ? '' : '<i class="ph-new">새</i>'}</button>`).join('')}${addBtn()}</div>${nameAdder()}`;
     const rec = pcData[who], d = scrubPcUser(rec?.data || {}), [bg, fg] = avColor(who), clk = phClock();
@@ -2625,7 +2643,7 @@
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 컴퓨터${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="pc">이미지로 저장</button> · <button class="linkbtn" data-act="pcmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button></p>` : '';
     return descHtml('phone') + devSeg() + genCard() + picker + `<div class="pc"><div class="pc-screen">${inner}</div></div><i class="pc-stand"></i>` + foot
-      + (nav.bdRange && nav.rgKind === 'pc' && nav.rgWho === who ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
+      + (nav.bdRange && nav.rgKind === 'pc' && (nav.rgWho === who || !nav.rgWho) ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
   }
 
   // ── 🗨 커뮤니티: 이야기 세계의 커뮤니티 사이트 하나(게시판마다 분위기가 다름). 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
@@ -2791,7 +2809,9 @@
   const devImgSheet = () => nav.bdImg ? `<div class="imgsheet" data-act="imgclose"><img src="${nav.bdImg}" alt="이미지"><p>이미지를 길게 눌러 '사진에 저장'을 고르세요 · 바깥을 누르면 닫혀요</p></div>` : '';
   // 참고할 대화 범위 고르기(기본: 최근 25턴) + 만들기 버튼
   const rangePick = label => { const end = (snapshot?.note?.turns || 0) + freshTurns(), start = Math.max(1, end - 24);
-    return `<div class="bd-range"><span>참고할 대화</span><input type="number" inputmode="numeric" min="1" data-out="bdFrom" value="${start}"><span>~</span><input type="number" inputmode="numeric" min="1" data-out="bdTo" value="${end}"><span>턴</span>
+    const dev = nav.rgKind === 'phone' || nav.rgKind === 'pc';
+    const nameRow = !snapshot?.note && dev ? `<div class="bd-range" style="margin-bottom:8px"><span>${nav.rgKind === 'pc' ? '컴퓨터' : '폰'} 주인</span><input type="text" data-out="rgName" value="${esc(nav.rgWho || '')}" placeholder="비우면 AI가 골라요" style="flex:1;width:auto;min-width:0;text-align:left"></div>` : '';
+    return nameRow + `<div class="bd-range"><span>참고할 대화</span><input type="number" inputmode="numeric" min="1" data-out="bdFrom" value="${start}"><span>~</span><input type="number" inputmode="numeric" min="1" data-out="bdTo" value="${end}"><span>턴</span>
       <button class="btn sm pri" data-act="bdmake"${busyNow ? ' disabled' : ''}>${busyNow ? '만드는 중…' : label}</button></div>`; };
   // 👍/👎: 누르면 +1, 다시 누르면 취소(이 브라우저에 저장)
   async function bdVote(dir) {
@@ -4105,7 +4125,7 @@
       case 'devimg': return snapDevice(arg);
       case 'pcgo': nav.pcScreen = arg; return keepScroll(render);
       case 'bdmake': { const a = Number(out('bdFrom')?.value) || 0, b = Number(out('bdTo')?.value) || 0; if (a > b) { toast('앞 턴이 뒤 턴보다 커요.', 'err'); return; }
-        const k = nav.rgKind || 'board', who = nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
+        const k = nav.rgKind || 'board', who = out('rgName') ? out('rgName').value.trim() : nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
         const lab = k === 'phone' ? `${who}의 폰` : k === 'pc' ? `${who}의 컴퓨터` : '커뮤니티';
         if (k === 'quote') { nav.bdRange = false; return makeQuotes(a, b); }
         if (ex && !confirm(`${a}~${b}턴 대화를 참고해서 ${lab}을(를) 다시 만들까요? (AI를 1번 불러요)`)) return;
