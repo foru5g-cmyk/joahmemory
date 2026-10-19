@@ -2518,7 +2518,7 @@
   // 노트가 없을 때만: 다른 인물의 폰/컴퓨터도 같은 '불러오기'(몇 턴부터) 시트로 만듭니다.
   const addBtn = () => snapshot?.note ? '' : `<button data-act="${(nav.dev || 'phone') === 'pc' ? 'pcmake' : 'phmake'}" data-arg="" title="다른 인물 불러오기"${busyNow ? ' disabled' : ''}><span class="av ph-anon">＋</span><small>불러오기</small></button>`;
   // 인물이 아직 없을 때(노트 없음): 커뮤니티 첫 화면처럼 안내 + 불러오기 버튼
-  const etcEmpty = kind => devSeg() + genCard() + emptyBox(`<b>이 세계 인물의 ${kind === 'pc' ? '컴퓨터' : '폰'}</b><br><small>대화를 몇 턴부터 읽을지 정해서 불러와요 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><br><button class="btn pri" style="margin-top:12px" data-act="${kind === 'pc' ? 'pcmake' : 'phmake'}" data-arg=""${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : kind === 'pc' ? '💻 컴퓨터 불러오기' : '📱 폰 불러오기'}</button>`)
+  const etcEmpty = kind => devSeg() + genCard() + emptyBox(`<b>이 세계 인물의 ${kind === 'pc' ? '컴퓨터' : '폰'}</b><br><small>대화를 몇 턴부터 읽을지 정하면 NPC를 알아서 찾아 불러와요 · AI를 2번 불러요 · 기억 노트엔 안 들어가요</small><br><button class="btn pri" style="margin-top:12px" data-act="${kind === 'pc' ? 'pcmake' : 'phmake'}" data-arg=""${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : kind === 'pc' ? '💻 컴퓨터 불러오기' : '📱 폰 불러오기'}</button>`)
     + (nav.bdRange && nav.rgKind === kind ? rangeSheet('불러오기') : '');
   const NPC_PROMPT = 'RP 로그를 읽고 등장하는 NPC(AI가 연기하는 인물)의 이름만 고른다. [USER] 메시지를 쓰는 유저 캐릭터는 뺀다. 로그에 이름이 실제로 나온 인물만, 지어내지 않는다. 대사·행동이 있는 비중 큰 순서로 최대 8명. 출력은 JSON 배열 하나만: ["이름", ...]';
   async function findNpc() {
@@ -2547,7 +2547,9 @@
     if (!list.length) throw new Error('이 범위에서 인물을 찾지 못했어요.');
     const made = kind === 'pc' ? pcData : phoneData;
     etcNames = [...new Set([...etcNames, ...list])]; await setValue('etcnames:' + chatId, JSON.stringify(etcNames));
-    return list.find(n => !made[n]) || list[0];
+    const pick = list.find(n => !made[n]) || list[0];
+    toast(`인물 ${list.length}명을 찾았어요 · ${pick}부터 만들어요`, 'ok', 2800);
+    return pick;
   }
   const etcLog = async (chatId, from, to, hint) => snapshot?.note
     ? `[기억 노트]\n${noteMemory()}${await rangeLogText(chatId, from, to, hint)}`
@@ -2809,9 +2811,7 @@
   const devImgSheet = () => nav.bdImg ? `<div class="imgsheet" data-act="imgclose"><img src="${nav.bdImg}" alt="이미지"><p>이미지를 길게 눌러 '사진에 저장'을 고르세요 · 바깥을 누르면 닫혀요</p></div>` : '';
   // 참고할 대화 범위 고르기(기본: 최근 25턴) + 만들기 버튼
   const rangePick = label => { const end = (snapshot?.note?.turns || 0) + freshTurns(), start = Math.max(1, end - 24);
-    const dev = nav.rgKind === 'phone' || nav.rgKind === 'pc';
-    const nameRow = !snapshot?.note && dev ? `<div class="bd-range" style="margin-bottom:8px"><span>${nav.rgKind === 'pc' ? '컴퓨터' : '폰'} 주인</span><input type="text" data-out="rgName" value="${esc(nav.rgWho || '')}" placeholder="비우면 AI가 골라요" style="flex:1;width:auto;min-width:0;text-align:left"></div>` : '';
-    return nameRow + `<div class="bd-range"><span>참고할 대화</span><input type="number" inputmode="numeric" min="1" data-out="bdFrom" value="${start}"><span>~</span><input type="number" inputmode="numeric" min="1" data-out="bdTo" value="${end}"><span>턴</span>
+    return `<div class="bd-range"><span>참고할 대화</span><input type="number" inputmode="numeric" min="1" data-out="bdFrom" value="${start}"><span>~</span><input type="number" inputmode="numeric" min="1" data-out="bdTo" value="${end}"><span>턴</span>
       <button class="btn sm pri" data-act="bdmake"${busyNow ? ' disabled' : ''}>${busyNow ? '만드는 중…' : label}</button></div>`; };
   // 👍/👎: 누르면 +1, 다시 누르면 취소(이 브라우저에 저장)
   async function bdVote(dir) {
@@ -4125,7 +4125,7 @@
       case 'devimg': return snapDevice(arg);
       case 'pcgo': nav.pcScreen = arg; return keepScroll(render);
       case 'bdmake': { const a = Number(out('bdFrom')?.value) || 0, b = Number(out('bdTo')?.value) || 0; if (a > b) { toast('앞 턴이 뒤 턴보다 커요.', 'err'); return; }
-        const k = nav.rgKind || 'board', who = out('rgName') ? out('rgName').value.trim() : nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
+        const k = nav.rgKind || 'board', who = nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
         const lab = k === 'phone' ? `${who}의 폰` : k === 'pc' ? `${who}의 컴퓨터` : '커뮤니티';
         if (k === 'quote') { nav.bdRange = false; return makeQuotes(a, b); }
         if (ex && !confirm(`${a}~${b}턴 대화를 참고해서 ${lab}을(를) 다시 만들까요? (AI를 1번 불러요)`)) return;
@@ -4258,7 +4258,7 @@
 
   // 방을 옮기면 초기화하고 가볍게 다시 확인
   (async () => {
-    const c = Number(await getValue('cycle', '25')); if (CYCLES.includes(c)) cycle = c;
+    const c = Number(await getValue('cycle', '25')); if (CYCLES.includes(c)) ACcycle = c;
     const l = Number(await getValue('noteLimit', '15000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
   let lastPath = '';
