@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.1.1136
+// @version      2.1.1140
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2768,8 +2768,9 @@
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="snap" style="width:${w}px;background:#fff"><style>${css.replace(/</g, '\\3c ')}</style>${body}</div></foreignObject></svg>`;
     const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     try { await img.decode(); } catch (_) { toast('이미지를 만들지 못했어요.', 'err'); return; }
-    const sy = Math.max(0, Math.floor(viewTop)), sh = Math.max(1, Math.min(h, Math.ceil(viewBot)) - sy);
-    const scale = 2, cv = document.createElement('canvas'); cv.width = w * scale; cv.height = sh * scale;
+    const sy = 0, sh = h; // 카드 전체(스크롤 위치와 상관없이 처음부터 끝까지)
+    // 아주 길면(아이폰 캔버스 한도) 해상도만 낮춰서 끝까지 다 찍히게
+    const scale = Math.min(2, Math.sqrt(16e6 / (w * sh))), cv = document.createElement('canvas'); cv.width = Math.floor(w * scale); cv.height = Math.floor(sh * scale);
     const x = cv.getContext('2d'); x.scale(scale, scale); x.fillStyle = '#fff'; x.fillRect(0, 0, w, sh); x.drawImage(img, 0, sy, w, sh, 0, 0, w, sh);
     const name = `커뮤니티-${(boardData?.data?.name || '글').replace(/[\\/:*?"<>|]/g, '')}.png`;
     let blob; try { blob = await new Promise(r => cv.toBlob(r, 'image/png')); } catch (_) { blob = null; }
@@ -2986,6 +2987,21 @@
   // [사진: 🍑👀📸 캡션] → 이모지는 크게, 캡션은 작게
   const photoHtml = (raw, cls) => { const t = String(raw || '').replace(/^\[사진\s*[:：]?\s*|\]$/g, '').trim(), m = t.match(/^[\p{Extended_Pictographic}\u200d\ufe0f\s]+/u), em = m ? m[0].trim() : '', cap = t.slice(m ? m[0].length : 0).trim();
     return `<p class="${cls}">${em ? `<span class="nw-em">${esc(em)}</span>` : ''}<small>${esc(cap || (em ? '' : t))}</small></p>`; };
+  // 예전에 만든 뉴스처럼 검색 결과가 없는 검색어만, 누르면 그 검색어 결과를 따로 채움
+  const NEWS_SEARCH = '너는 RP 세계 안 음지 찌라시 포털의 검색 결과를 만든다. [검색어]를 친 사람에게 보이는 화면이다. 예시 문장 없이 이 이야기 디테일로 새로 짓는다.\n- related: 연관검색어 4~6개. 검색어보다 더 깊이·악랄하게 파고들고, 원문 속 디테일을 비튼다.\n- hits: 검색 결과 조각 4개. src는 카페·블로그·지식인·SNS·동영상 중 서로 다르게. title과 한두 줄 text, 출처마다 말투가 확 다르게. 서사 안의 씨앗에 매달린 구라·가십.\n- 유저(사용자 캐릭터)의 대사·속마음은 지어내지 않는다. 미성년자 성적 내용·현실 집단 혐오·실존 인물 이름 금지. 노골적인 성행위 묘사 금지.\n[출력] JSON 하나만: {"related":[""],"hits":[{"src":"","title":"","text":""}]}';
+  let nwSearching = -1;
+  async function newsSearch(n) {
+    const chatId = chatIdFromPath(), tr = newsData?.data?.trends?.[n]; if (!chatId || !tr || busyNow || nwSearching >= 0) return;
+    nwSearching = n; keepView();
+    try {
+      const base = snapshot?.note ? '[기억 노트]\n' + noteMemory() : await etcMemory(chatId, newsData.from, newsData.to);
+      const titles = (newsData.data.articles || []).slice(0, 12).map(a => a.title).join('\n');
+      const data = parseJsonLoose(await askModel(NEWS_SEARCH, `[검색어] ${tr.word}\n[포털] ${newsData.data.portal || ''}\n[지금 기사 제목]\n${titles}\n\n${base}`, '📰검색'));
+      tr.related = data.related || []; tr.hits = data.hits || [];
+      await setValue('news:' + chatId, JSON.stringify(newsData));
+    } catch (e) { toast('검색 결과 불러오기 실패 · ' + e.message, 'err'); }
+    finally { nwSearching = -1; keepView(); }
+  }
   function newsHtml() {
     const head = devSeg();
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
@@ -3016,7 +3032,7 @@
           ${(tr.related || []).length ? `<p class="nw-sub">연관검색어</p><div class="nw-rel">${tr.related.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}
           ${hitArt.length ? `<p class="nw-sub">뉴스</p><div class="bd-list">${hitArt.map(row).join('')}</div>` : ''}
           ${(tr.hits || []).length ? `<p class="nw-sub">카페·블로그·지식인</p>${tr.hits.map(h => `<div class="nw-hit"><small>${src[h.src] || '·'} ${esc(h.src || '')}</small><b>${esc(h.title || '')}</b><p>${esc(h.text || '')}</p></div>`).join('')}` : ''}
-          ${!(tr.related || []).length && !hitArt.length && !(tr.hits || []).length ? '<p class="pc-empty">검색 결과가 없어요</p>' : ''}</div>
+          ${nwSearching === nav.nwTrend ? '<p class="nw-sub"><span class="dots"><i></i><i></i><i></i></span> 검색 결과 불러오는 중…</p>' : !(tr.hits || []).length ? `<p class="nw-sub"><button class="linkbtn" data-act="nwsearch" data-arg="${nav.nwTrend}">카페·블로그·지식인 검색 결과 불러오기 (AI 1번)</button></p>` : ''}</div>
         <p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p>`;
     } else if (open) {
       const a = open, cs = [...(a.comments || [])].sort((x, y) => (y.likes || 0) - (x.likes || 0));
@@ -4218,6 +4234,7 @@
       case 'nwfact': { const st = nav.nwFact || (nav.nwFact = new Set()); st.has(nav.nwArt) ? st.delete(nav.nwArt) : st.add(nav.nwArt); return keepScroll(render); }
       case 'nwgo': nav.nwArt = Number(arg); nav.nwTrend = null; return keepView();
       case 'nwtrend': nav.nwTrend = arg === '' ? null : Number(arg); nav.nwArt = null; return keepView();
+      case 'nwsearch': return newsSearch(Number(arg));
       case 'nwcat': nav.nwArt = null; nav.nwTrend = null; nav.nwCat = arg; return keepScroll(render);
       case 'npcrange': nav.rgKind = 'npc'; nav.bdRange = true; return keepScroll(render);
       case 'pcmake': nav.rgKind = 'pc'; nav.rgWho = arg; nav.bdRange = true; return keepScroll(render);
