@@ -339,10 +339,11 @@
     return decodeURIComponent(c.slice('access_token='.length));
   }
   // 글 그대로 받는 요청(Gemini 스트리밍용)
-  function requestRaw(method, url, { body, headers = {}, timeout = 30000 } = {}) {
+  function requestRaw(method, url, { body, headers = {}, timeout = 30000, onProgress } = {}) {
     return new Promise((resolve, reject) => {
       if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       gmRequest({ method, url, timeout, headers: { 'Content-Type': 'application/json', ...headers }, data: body === undefined ? undefined : JSON.stringify(body),
+        onprogress: r => { try { onProgress?.(r?.responseText || ''); } catch (_) {} },
         onload: r => { if (r.status >= 200 && r.status < 300) return resolve(r.responseText || '');
           let msg = ''; try { const j = JSON.parse(r.responseText); msg = (Array.isArray(j) ? j[0] : j)?.error?.message || ''; } catch (_) {}
           reject(new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`)); },
@@ -679,7 +680,7 @@
     if (!key) throw new Error('설정에서 Gemini API 키를 먼저 넣어 주세요.');
     const raw = await requestRaw('POST',
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
-      { headers: { 'x-goog-api-key': key }, timeout: 600000,
+      { headers: { 'x-goog-api-key': key }, timeout: 600000, onProgress: raw => updateProg(raw),
         body: { systemInstruction: { parts: [{ text: system }] },
                 contents: [{ role: 'user', parts: [{ text: input }] }],
                 generationConfig: { maxOutputTokens: 65536 } } });
@@ -1384,6 +1385,14 @@
     .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet img{max-width:100%;max-height:78vh;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}.imgsheet p{margin:0;color:#fff;font-size:13px;text-align:center}
+    .gen-prog{margin:10px 0;padding:14px 16px;border:1px solid var(--rule);border-radius:14px;background:var(--mist)}
+    .gp-top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}.gp-time{font-size:13px;color:var(--graphite);font-variant-numeric:tabular-nums}
+    .gp-bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin:10px 0 8px}
+    .gp-bar i{display:block;height:100%;background:var(--ink);border-radius:3px;transition:width .4s}
+    .gp-bar.ind i{animation:gpslide 1.4s ease-in-out infinite}
+    @keyframes gpslide{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
+    @media (prefers-reduced-motion:reduce){.gp-bar.ind i{animation:none}}
+    .gp-info{margin:0;font-size:12.5px;line-height:1.55;color:var(--ink2)}
     .bd-pick{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.bd-pick .ph-make{margin-top:10px}
     .bd-by{border:0;border-radius:999px;background:var(--mist);color:var(--ink2);font-size:11px;font-weight:600;padding:1px 8px;margin-left:4px;cursor:pointer}
     .pc-lock .av{width:72px;height:72px;font-size:34px}.pc-lock b{font-size:17px}.pc-lock small{font-size:12px;opacity:.85;max-width:280px}
@@ -2561,7 +2570,7 @@
   }
   async function makePhone(name, from = 0, to = 0) {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
-    busyNow = true; render(); toast(`${josa(name, '이', '가')} 폰을 꾸미는 중이에요… (30초~1분)`);
+    busyNow = true; startGen('phone'); render(); toast(`${josa(name, '이', '가')} 폰을 꾸미는 중이에요… (30초~1분)`);
     try {
       const others = Object.entries(phoneData).filter(([n]) => n !== name).map(([n, r]) => `${n}: 팔로워 ${r.data?.insta?.followers || '-'} · 잔고 ${r.data?.bank?.balance || '-'} · 씀씀이 ${r.data?.bank?.spend || '-'} · 거래처 ${(r.data?.bank?.tx || []).map(t => t.title).slice(0, 6).join('/') || '-'} · 메모 ${(r.data?.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 아이디 ${r.data?.insta?.id || '-'}`).join('\n');
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
@@ -2748,7 +2757,7 @@
       }
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 폰${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="phone">이미지로 저장</button> · <button class="linkbtn" data-act="phmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button></p>` : '';
-    return descHtml('phone') + devSeg() + picker + `<div class="iphone"><i class="ph-island"></i><div class="ph-screen">${inner}</div><i class="ph-homebar" data-act="phhome"></i></div>` + foot
+    return descHtml('phone') + devSeg() + genCard() + picker + `<div class="iphone"><i class="ph-island"></i><div class="ph-screen">${inner}</div><i class="ph-homebar" data-act="phhome"></i></div>` + foot
       + (nav.bdRange && nav.rgKind === 'phone' && nav.rgWho === who ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
   }
   // etc 탭: 📱 폰 / 💻 컴퓨터. 고른 인물은 둘이 같이 씁니다(nav.phWho).
@@ -2789,7 +2798,7 @@
   let pcData = {};
   async function makePc(name, from = 0, to = 0) {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
-    busyNow = true; render(); toast(`${josa(name, '이', '가')} 컴퓨터를 켜는 중이에요… (30초~1분)`);
+    busyNow = true; startGen('pc'); render(); toast(`${josa(name, '이', '가')} 컴퓨터를 켜는 중이에요… (30초~1분)`);
     try {
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const ph = phoneData[name]?.data, phone = ph ? `[이 인물의 폰 — 같은 사람답게 이어지게] 씀씀이 ${ph.bank?.spend || '-'} · 메모 ${(ph.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 검색 ${(ph.search || []).map(t => t.q).slice(0, 6).join('/') || '-'}\n` : '';
@@ -2870,14 +2879,14 @@
       inner = `${bar}<div class="pc-desk" style="--wb:${bg};--wf:${fg}"><span class="pc-wall">${esc(d.wallpaper || '')}</span><div class="pc-icons">${icons}</div>${sticky ? `<div class="pc-stk">${sticky}</div>` : ''}${w}</div>`;
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 컴퓨터${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="pc">이미지로 저장</button> · <button class="linkbtn" data-act="pcmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button></p>` : '';
-    return descHtml('phone') + devSeg() + picker + `<div class="pc"><div class="pc-screen">${inner}</div></div><i class="pc-stand"></i>` + foot
+    return descHtml('phone') + devSeg() + genCard() + picker + `<div class="pc"><div class="pc-screen">${inner}</div></div><i class="pc-stand"></i>` + foot
       + (nav.bdRange && nav.rgKind === 'pc' && nav.rgWho === who ? rangeSheet(rec ? '다시 만들기' : '만들기') : '') + devImgSheet();
   }
 
   // ── 🗨 커뮤니티: 이야기 세계의 커뮤니티 사이트 하나(게시판마다 분위기가 다름). 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
   const BOARD_PROMPT = `너는 RP 세계 안에 있는 커뮤니티 사이트 하나를 진짜처럼 꾸며 보여 주는 팬 콘텐츠 작가다. [기억 노트]의 세계관·사건·인물·관계·시점에 맞춰, 그 세계 사람들이 쓰는 커뮤니티를 통째로 만든다.
 [지킬 것]
-- ★ 최우선: 유저가 쓴 글·댓글은 만들지 않는다.
+- ★ 최우선: 유저(사용자 캐릭터)가 쓴 글·댓글은 절대 만들지 않는다. 유저 이름을 닉네임·by로 쓰지 않고, 유저의 대사·속마음·행동을 지어내거나 대신 정하지 않는다. 유저는 남들이 겉으로 보거나 소문으로 들은 만큼만 화제에 오른다(본인이 쓴 글은 없음).
 - 유저와 노트 인물들이 제일 큰 화제다: 둘 사이를 본 목격담, 썸·연애 의심, 뒷담, 찌라시, "○○랑 △△ 무슨 사이임?" 같은 가십을 적극적으로. 노트에 실제로 있었던 일 중 남들이 보거나 들을 만한 것을 부풀리고 추측하되, 비밀(인지·비밀의 '모름')은 진실을 맞히지 않고 헛다리를 짚는다.
 - 재미 요소를 섞는다: 목격담·찌라시·투표 글("A vs B 누구 편?")·짤 설명([사진: …])·저격글·"자작 아님?" 의심·고정닉·베스트 댓글·반전 댓글·싸움 난 글.
 - 사실 고정: 인물의 계급·직급·직책·나이·직업·소속·관계·호칭은 [기억 노트]에 적힌 그대로 쓴다(예: 대위를 중사로, 과장을 대리로 바꾸지 않는다). 노트에 없는 계급·직급·직함은 새로 지어 붙이지 말고, 꼭 필요하면 이름만 쓰거나 '선임'·'상관'처럼 모호하게 쓴다. 다른 사람이 이 인물을 부르는 호칭도 이 계급·직급에 맞춘다.
@@ -2905,12 +2914,51 @@
 - 글은 게시판마다 4~6개(전체 20~30개), 글마다 댓글 5~12개(그중 대댓글 2~4개). 인기글(hot:true)은 4~6개. 노트 인물이 몰래 쓴 글·댓글은 3~6개.
 - 댓글은 착하게만 쓰지 않는다: 글마다 시비·욕·밈·조롱이 섞여야 한다(익명·음지는 'ㅂㅅ'·'ㅈㄹ'·'개추'·'ㅋㅋ 이게 맞냐'·'3줄 요약 좀'·'주작 ㄴ' 같은 말과 유행어·밈으로 거칠게, 카페·여초는 은근한 비꼼·편 가르기·"언니 그건 아니지"식 싸움으로). 한 글 안에서 편이 갈려 댓글끼리 싸우는 흐름을 만든다.
 - 자극적으로: 제목은 눌러 보고 싶게(어그로·떡밥·"ㄹㅇ?"·"후기)" 같은 말머리), 댓글은 싸움·드립·편 가르기·폭로 추측으로 시끌벅적하게. 익명·음지 게시판은 수위를 확 올리고, 카페·여초는 그 커뮤 특유의 과몰입·호들갑으로. 밋밋한 글·인사만 하는 댓글은 쓰지 않는다.`;
+  // ⏳ 만드는 중 표시: 흐른 시간 · 지금까지 쓴 글/댓글 수를 실시간으로 보여 줍니다(받아 오는 중에만 알 수 있는 값은 기기가 허용할 때만).
+  let genProg = null, genTick = 0;
+  function startGen(kind, expect = 0) {
+    genProg = { kind, t0: Date.now(), chars: 0, recv: 0, posts: 0, comments: 0, expect, last: 0 };
+    clearInterval(genTick);
+    genTick = setInterval(() => { if (!busyNow || !genProg) { clearInterval(genTick); genProg = null; return; } paintGen(); }, 500);
+  }
+  function updateProg(raw) {
+    const g = genProg; if (!g || Date.now() - g.last < 300) return; g.last = Date.now();
+    g.recv = String(raw).length; let text = '';
+    for (const line of String(raw).split('\n')) { if (!line.startsWith('data:')) continue;
+      try { for (const p of JSON.parse(line.slice(5)).candidates?.[0]?.content?.parts || []) if (!p.thought && p.text) text += p.text; } catch (_) {} }
+    g.chars = text.length; g.posts = (text.match(/"board"\s*:/g) || []).length; g.comments = (text.match(/"text"\s*:/g) || []).length;
+  }
+  function genView() {
+    const g = genProg, s = Math.floor((Date.now() - g.t0) / 1000), tm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const name = { board: '커뮤니티', more: '새 글', phone: '폰', pc: '컴퓨터' }[g.kind] || '';
+    const board = g.kind === 'board' || g.kind === 'more'; let info;
+    if (!g.chars) info = s < 10 ? 'AI에게 기억 노트를 보내는 중…' : s < 25 ? 'AI가 노트를 읽고 구상하는 중…' : 'AI가 구상하는 중이에요 · 긴 글은 첫 글자가 나오기까지 오래 걸려요';
+    else if (board && !g.posts) info = '사이트와 게시판을 만드는 중…';
+    else info = board ? `글 ${g.posts}개 · 댓글 ${g.comments}개 작성됨` : `${fmt(g.chars)}자 작성됨`;
+    return { name, tm, info, pct: board && g.posts && g.expect ? Math.min(96, Math.round(g.posts / g.expect * 100)) : 0 };
+  }
+  function paintGen() {
+    if (!genProg) return; const v = genView();
+    root.querySelectorAll('.gen-prog').forEach(c => { c.querySelector('.gp-time').textContent = v.tm; c.querySelector('.gp-info').textContent = v.info;
+      const bar = c.querySelector('.gp-bar'); bar.classList.toggle('ind', !v.pct); bar.firstElementChild.style.width = (v.pct || 35) + '%'; });
+  }
+  const genCard = () => { if (!busyNow || !genProg) return ''; const v = genView();
+    return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p></div>`; };
+  // 유저(사용자 캐릭터)가 쓴 글·댓글은 AI가 만들었어도 빼요. 닉네임이 유저 이름이거나 몰래 쓴 사람(by)이 유저면 지웁니다.
+  function scrubBoardUser(bd) {
+    const d = bd?.data; if (!d) return 0;
+    const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n); if (!users.length) return 0;
+    const isU = x => { const k = String(x || '').trim(); return !!k && users.some(u => k === u || canon(k) === u || personAlias(u).includes(k)); };
+    const bad = x => isU(x?.by) || isU(x?.nick); let n = 0;
+    d.posts = (d.posts || []).filter(p => { if (bad(p)) { n++; return false; } p.comments = (p.comments || []).filter(c => { if (bad(c)) { n++; return false; } return true; }); return true; });
+    return n;
+  }
   const boardOf = async chatId => { try { return JSON.parse(String(await getValue('board:' + chatId, 'null')) || 'null'); } catch (_) { return null; } };
   let boardData = null;
   // from~to: 기억 노트와 함께 보낼 실제 대화 범위(턴). 원문이 너무 길면 뒤쪽(최근) 2만 4천 자만.
   async function makeBoard(from = 0, to = 0) {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note) return;
-    busyNow = true; render(); toast('커뮤니티를 여는 중이에요… (30초~1분)');
+    busyNow = true; startGen('board', 24); render(); toast('커뮤니티를 여는 중이에요… (30초~1분)');
     try {
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const who = users.length ? `[유저] ${users.join(', ')} — 이 사람이 쓴 글·댓글은 만들지 말 것` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공이 쓴 글은 만들지 말 것';
@@ -2919,7 +2967,7 @@
         log = pick.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n').slice(-24000); }
       const raw = await askModel(BOARD_PROMPT, [who, '', '[기억 노트]', noteMemory(), ...(log ? ['', `[참고할 대화 ${from}~${to}턴 — 이 장면들을 커뮤니티 화제로 특히 많이 쓸 것]`, log] : [])].join('\n'), '🗨커뮤니티');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      boardData = { at: Date.now(), turns: snapshot.note.turns, from, to, data };
+      boardData = { at: Date.now(), turns: snapshot.note.turns, from, to, data }; scrubBoardUser(boardData);
       await setValue('board:' + chatId, JSON.stringify(boardData));
       nav.bdPost = null; nav.bdBoard = ''; toast('커뮤니티가 열렸어요 🗨', 'ok', 2500);
     } catch (e) { toast('커뮤니티 만들기 실패 · ' + e.message, 'err'); }
@@ -2929,7 +2977,7 @@
   const BOARD_MORE = `\n\n[이번엔 '새로고침']\n- 이미 만들어진 커뮤니티에 방금 올라온 새 글만 만든다. 사이트 이름·소개·게시판·공지·핫플은 다시 만들지 않는다. 위의 개수 규칙(전체 20~30개 등)과 출력 형식은 무시하고, JSON은 {"posts":[...]} 하나만 낸다(글 모양은 위와 같다).\n- 새 글은 4~6개. 게시판은 [이미 있는 게시판] 이름 중에서만, 여러 게시판에 고루. 글마다 댓글 4~8개(대댓글 섞기). 방금 올라온 글이므로 ago는 '방금'·'3분 전'·'20분 전'·'1시간 전' 정도, 조회·추천은 아직 적은 편(hot은 대부분 false).\n- [이미 올라온 글 제목]과 겹치거나 비슷한 글은 쓰지 않는다. 같은 화제를 이어 가더라도 후속 글·반응·다른 사람의 목격담처럼 새 각도로.`;
   async function refreshBoard() {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot?.note || !boardData?.data) return;
-    busyNow = true; render(); toast('새 글을 불러오는 중이에요… (10~30초)');
+    busyNow = true; startGen('more', 5); render(); toast('새 글을 불러오는 중이에요… (10~30초)');
     try {
       const d = boardData.data, posts = d.posts || [];
       const names = (d.boards || []).map(b => typeof b === 'string' ? b : b.name).filter(Boolean);
@@ -2942,7 +2990,7 @@
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       const fresh = (data.posts || []).filter(p => p && p.title).slice(0, 8).map((p, i) => ({ ...p, board: names.includes(p.board) ? p.board : names[i % names.length] }));
       if (!fresh.length) throw new Error('새 글이 오지 않았어요. 한 번 더 눌러 주세요.');
-      d.posts = [...fresh, ...posts].slice(0, 80);
+      d.posts = [...fresh, ...posts].slice(0, 80); scrubBoardUser(boardData);
       boardData.refreshed = (boardData.refreshed || 0) + 1;
       await setValue('board:' + chatId, JSON.stringify(boardData));
       nav.bdPost = null; toast(`새 글 ${fresh.length}개가 올라왔어요 🔄`, 'ok', 2500);
@@ -3018,7 +3066,7 @@
   function boardHtml() {
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요. 정리하고 나면 이 세계의 커뮤니티를 열어 볼 수 있어요.');
     const head = devSeg(); // 회색 설명 상자 없이 바로 사이트
-    if (!boardData) return head + `<div class="bd"><div class="bd-empty"><b>이 세계의 커뮤니티</b><small>카페·여초·익명·음지 게시판을 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>
+    if (!boardData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 커뮤니티</b><small>카페·여초·익명·음지 게시판을 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>
       <button class="ph-make" data-act="bdrange">🗨 커뮤니티 열어 보기</button></div></div>${nav.bdRange ? rangeSheet('만들기') : ''}`;
     // 사이트처럼: 색 막대 + 이름 / 메뉴(메인·게시판들) / 메인·게시판·게시글 화면
     const d = boardData.data || {}, posts = d.posts || [];
@@ -3070,7 +3118,7 @@
       inner = `<p class="bd-sec">${VIBE[vibeOf(cur)] || ''} ${esc(cur)} <small class="pdim">${esc(vibeOf(cur))}</small></p><div class="bd-list">${all.filter(([p]) => p.board === cur).map(row).join('') || '<p class="pc-empty">글이 없어요</p>'}</div>
         <p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="board">이미지로 저장</button> · <button class="linkbtn" data-act="bddel" data-arg="board:${esc(cur)}">이 게시판 비우기</button></p>`;
     }
-    return head + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${boardData.turns}턴 시점에 만든 커뮤니티${boardData.from ? ` · ${boardData.from}~${boardData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="bdrange">다시 만들기</button></p>${nav.bdRange ? rangeSheet('다시 만들기') : ''}${nav.bdImg ? `<div class="imgsheet" data-act="imgclose"><img src="${nav.bdImg}" alt="커뮤니티 이미지"><p>이미지를 길게 눌러 '사진에 저장'을 고르세요 · 바깥을 누르면 닫혀요</p></div>` : ''}`;
+    return head + genCard() + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${boardData.turns}턴 시점에 만든 커뮤니티${boardData.from ? ` · ${boardData.from}~${boardData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="bdrange">다시 만들기</button></p>${nav.bdRange ? rangeSheet('다시 만들기') : ''}${nav.bdImg ? `<div class="imgsheet" data-act="imgclose"><img src="${nav.bdImg}" alt="커뮤니티 이미지"><p>이미지를 길게 눌러 '사진에 저장'을 고르세요 · 바깥을 누르면 닫혀요</p></div>` : ''}`;
   }
   // ── 타임라인: 날짜로그를 날짜순 세로 줄로. 위에서 인물을 고르면 그 사람이 나온 일만 ──
   //    "태정"처럼 이름 끝 두 글자로만 불러도 (그 이름이 이 사람에게만 맞으면) 같은 사람으로 찾습니다.
@@ -3870,7 +3918,7 @@
       }
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); histList = await historyOf(chatId);
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       loadTurnMap(chatId, snap);
       try {
