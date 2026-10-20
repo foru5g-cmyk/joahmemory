@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
-// @namespace    memo-note.v2
-// @version      2.7.3
+// @namespace    memo-note.v
+// @version      2.7.3.
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2030,15 +2030,45 @@
   const quoteBody = () => quoteStore || bodyOf('명대사');
   const quoteLine = q => `${q.who || '?'}${q.to ? ` → ${q.to}` : ''}: "${q.text}"${q.tr ? `\n번역: ${q.tr}` : ''}${q.ctx ? `\n장면: ${q.ctx}` : ''}`;
   async function saveQuotes(chatId, list) { quoteStore = list.map(quoteLine).join('\n') || ' '; await setValue('quotes:' + chatId, quoteStore); }
+  // AI가 어떤 모양으로 줘도(별표 번역·괄호 번역·다른 따옴표·줄바꿈 제각각) 가브리엘 케인 모양(원문/번역/화자→상대·🎬장면)으로 맞춥니다
   function quotes() {
-    const qs = [], unq = t => t.replace(/^["“]|["”]$/g, '');
-    for (const l of itemsOf(quoteBody().trim())) {
-      const t = l.match(/^(번역|장면)\s*[:：]\s*(.*)$/);
-      if (t) { if (qs.length) qs[qs.length - 1][t[1] === '번역' ? 'tr' : 'ctx'] = unq(t[2].trim()); continue; }
-      const m = l.match(/^(.+?)\s*(?:→\s*(.+?))?\s*[:：]\s*["“](.+?)["”]\s*(?:\((.*)\))?\s*$/);
-      qs.push(m ? { who: canon(m[1]), to: canon(m[2] || ''), text: m[3], ctx: (m[4] || '').trim(), tr: '' } : { who: '', to: '', text: l, ctx: '', tr: '' });
+    const qs = [], unq = t => String(t).replace(/^[\s"“”「『*_]+|[\s"”“」』*_]+$/g, '');
+    for (const raw of itemsOf(quoteBody().trim())) {
+      const line0 = raw.replace(/^\s*(?:[-•·▪◦]|\d{1,2}[.)])\s+/, '').replace(/\*\*|__/g, '').trim();
+      if (!line0) continue;
+      const last = qs[qs.length - 1];
+      // 번역·장면 줄 (라벨이 조금씩 달라도)
+      const lab = line0.match(/^[*_\s]*(번역|해석|장면|상황|배경)[*_\s]*[:：]\s*(.*)$/);
+      if (lab && last) { last[/번역|해석/.test(lab[1]) ? 'tr' : 'ctx'] = unq(lab[2].trim()); continue; }
+      if (/^🎬/.test(line0) && last) { last.ctx = line0.replace(/^🎬\s*/, '').trim(); continue; }
+      // 같은 줄 끝에 *번역* 이 붙은 경우
+      let line = line0, tr0 = '';
+      const tm = line.match(/\s+\*([^*]+)\*\s*$/);
+      if (tm) { tr0 = tm[1].trim(); line = line.slice(0, tm.index).trim(); }
+      // 화자 → 상대: "대사"
+      let m = line.match(/^(.+?)\s*(?:(?:→|->)\s*(.+?))?\s*[:：]\s*["“「『](.+?)["”」』]\s*(?:\((.*)\))?\s*$/);
+      if (m) { qs.push(fixQuote({ who: canon(m[1]), to: canon(m[2] || ''), text: m[3], ctx: (m[4] || '').trim(), tr: tr0 })); continue; }
+      // "대사" — 화자 → 상대
+      m = line.match(/^["“「『](.+?)["”」』]\s*(?:[-—–~]+|[(（])\s*(.+?)[)）]?\s*$/);
+      if (m) { const [w, t] = m[2].split(/\s*(?:→|->)\s*/); qs.push({ who: canon(w || ''), to: canon(t || ''), text: m[1], ctx: '', tr: tr0 }); continue; }
+      // 따옴표 없이 따로 떨어진 줄 = 앞 대사의 번역(한글이면) 또는 장면
+      if (last && !/["“”「」『』]/.test(line)) {
+        const body = unq(line);
+        if (!last.tr && /[가-힣]/.test(body) && !/\d{4}|[·]/.test(body)) last.tr = body; else if (!last.ctx) last.ctx = body;
+        continue;
+      }
+      qs.push(fixQuote({ who: '', to: '', text: line, ctx: '', tr: tr0 }));
     }
+    // 한국어 대사는 번역이 필요 없어요: 있어도 지웁니다
+    for (const q of qs) if (/[가-힣]/.test(q.text) && !/[A-Za-z]{3,}/.test(q.text)) q.tr = '';
     return qs;
+  }
+  // 화자 칸이 비어 있거나 '?'인데 대사 안에 "화자 → 상대: \"대사\" *번역*"이 통째로 들어간 항목(이미 저장된 것 포함)을 풀어 줍니다
+  function fixQuote(q) {
+    if (q.who && q.who !== '?') return q;
+    const m = String(q.text).match(/^\s*([^:：“"”「」『』\n]{1,30}?)\s*(?:(?:→|->)\s*([^:：“"”「」『』\n]{1,30}?))?\s*[:：]\s*["“「『](.+)["”」』]\s*(?:\*([^*]+)\*)?\s*$/);
+    if (!m) return q.who === '?' ? { ...q, who: '' } : q;
+    return { ...q, who: canon(m[1].trim()), to: canon((m[2] || q.to || '').trim()), text: m[3].trim(), tr: q.tr || (m[4] || '').trim() };
   }
   function threads() {
     const list = [];
@@ -2304,7 +2334,7 @@
   //    버튼을 눌렀을 때만 AI를 부르고, 결과는 이 브라우저에만 저장합니다. 기억 노트·채팅에는 들어가지 않아요.
   // ── ✨ 명대사 뽑기: 정리와 따로, 버튼을 눌렀을 때만. 지난번 뽑은 뒤의 대화(처음이면 최근 100개 메시지)에서 고릅니다 ──
   const QUOTE_PROMPT = unveil('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');
-  async function makeQuotes(from, to) {
+  async function makeQuotes(from, to, onlyWho = '') {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
     busyNow = true; render(); toast('대화를 읽는 중이에요…');
     try {
@@ -2313,13 +2343,24 @@
       if (!msgs.length) { toast('그 범위에 대화가 없어요.', 'info', 3000); return; }
       toast(`명대사를 고르는 중이에요… (${from}~${to}턴)`);
       const old = quotes(), names = snapshot?.note ? personsIn(bodyOf('인물')).map(p => p.name).join(', ') : '(노트 없음 · 로그에서 읽을 것)';
-      const input = `[인물] ${names}\n\n[기존 명대사 — 이미 있음. 다시 쓰지 말고 새로 고른 대사만 출력]\n${old.map(quoteLine).join('\n') || '(없음)'}\n\n[새 RP 로그 ${from}~${to}턴]\n${msgs.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n')}`;
+      const input = `[인물] ${names}\n\n[기존 명대사 — 이미 있음. 다시 쓰지 말고 새로 고른 대사만 출력]\n${old.map(quoteLine).join('\n') || '(없음)'}\n\n[새 RP 로그 ${from}~${to}턴]\n${msgs.map(m => `[${msgRole(m) === 'user' ? 'USER' : 'AI'}]\n${cleanLog(msgText(m))}`).join('\n\n')}\n\n[개수 규칙 — 반드시 지킬 것] ${onlyWho ? `${onlyWho}이(가) 직접 한 대사만 정확히 4개. 다른 인물 대사는 출력 금지.` : '인물당 최대 1개. 이 구간에서 비중이 큰 주요 인물 2~3명의 대사만 총 2~3개. 모든 NPC에서 하나씩 뽑지 말 것.'}\n\n[출력 형식 — 반드시 지킬 것] 대사마다 정확히 이 3줄: 첫 줄 화자 → 상대: \"원문 대사\" / 둘째 줄 번역: 한국어 번역 / 셋째 줄 장면: 날짜 · 장소 · 상황. 번역을 별표로 감싸 같은 줄에 붙이지 말 것. 대사 원문이 한국어면 번역 줄을 쓰지 말 것.`;
       let body = (await askModel(QUOTE_PROMPT, input, '✨명대사')).replace(/^\s*■\s*명대사\s*\n?/, '').trim();
       body = dropUserQuotes(`■ 명대사\n${body}`, msgs).replace(/^■ 명대사\n?/, '').trim();
       const prevStore = quoteStore; quoteStore = body; const got = quotes(); quoteStore = prevStore;
       const key = q => String(q.text).replace(/[\s"“”'‘’.,!?…~]/g, '');
-      const add = got.filter(q => q.text && !old.some(o => key(o) === key(q)));
+      let add = got.filter(q => q.text && !old.some(o => key(o) === key(q)));
+      if (onlyWho) { const ow = canon(onlyWho); add = add.filter(q => q.who === ow || sameName(q.who, ow)).slice(0, 4); }
+      else { const seenW = new Set(); add = add.filter(q => { const w = q.who || '?'; if (seenW.has(w)) return false; seenW.add(w); return true; }).slice(0, 3); }
       if (!add.length) { toast('새로 고를 만한 대사가 없었어요.', 'info', 3000); return; }
+      // 영어 대사인데 번역이 없으면 강제로 채웁니다 (AI 1번 더, 빠진 것만 한꺼번에)
+      const needTr = add.filter(q => /[A-Za-z]/.test(q.text) && !/[가-힣]/.test(q.text) && !q.tr && !splitTr(q.text)[1]);
+      if (needTr.length) {
+        try {
+          toast('번역이 빠진 대사를 번역하는 중이에요…');
+          const out = await askModel('영어 대사를 자연스러운 한국어 구어체로 번역한다. 입력은 번호가 붙은 줄이다. 출력은 같은 번호로 "번호. 번역" 한 줄씩만. 설명·따옴표·별표 금지. 말투·욕설 수위는 원문 그대로.', needTr.map((q, i) => `${i + 1}. ${q.text}`).join('\n'), '✨명대사 번역');
+          for (const l of String(out).split('\n')) { const m = l.match(/^\s*(\d+)\s*[.)]\s*(.+)$/); if (m && needTr[Number(m[1]) - 1]) needTr[Number(m[1]) - 1].tr = m[2].replace(/^[\s"“”*]+|[\s"“”*]+$/g, ''); }
+        } catch (e) { toast('번역 채우기 실패 · ' + e.message, 'err'); }
+      }
       await saveQuotes(chatId, [...old, ...add]);
       toast(`명대사 ${add.length}개를 더했어요 ✨`, 'ok', 2500);
     } catch (e) { toast('명대사 뽑기 실패 · ' + e.message, 'err'); }
@@ -3400,8 +3441,8 @@
     return descHtml('timeline') + chips + storyHtml + worldHtml + upcoming + memHtml + head + list + qHtml;
   }
   function quoteFold(who, open) {
-    const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who);
-    return `<details class="tl-up tl-fold tl-quotes"${open || nav.rgKind === 'quote' ? ' open' : ''}><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" title="대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg>'}</button></summary>
+    const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who || sameName(q.who, who));
+    return `<details class="tl-up tl-fold tl-quotes"${open || nav.rgKind === 'quote' ? ' open' : ''}><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" data-arg="${esc(who || '')}" title="대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg>'}</button></summary>
       ${qs.map(q => { const [orig, inl] = splitTr(q.text), tr = q.tr || inl; return `<div class="tl-q"><button class="tl-qx" data-act="qdel" data-arg="${q.i}" title="이 대사 지우기">×</button><p class="tl-qt">"${esc(orig)}"</p>${tr ? `<p class="tl-qs">${esc(tr)}</p>` : ''}<p class="tl-qs">${q.who && !who ? `${esc(q.who)}${q.to ? ` → ${esc(q.to)}` : ''} · ` : q.to ? `→ ${esc(q.to)} · ` : ''}${q.ctx ? `🎬 ${esc(q.ctx)}` : ''}</p></div>`; }).join('')}
       ${qs.length ? '' : '<p>오른쪽 ＋를 누르면 고른 턴의 대화에서 골라 와요. 다시 누르면 기존 대사 뒤에 더해져요.</p>'}</details>${nav.bdRange && nav.rgKind === 'quote' ? rangeSheet('명대사 뽑기') : ''}`;
   }
@@ -4527,7 +4568,7 @@
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
       case 'peek': { const i = el.previousElementSibling; if (i) { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.textContent = show ? '숨기기' : '보기'; } return; }
       case 'grp': nav.grp = arg; return keepScroll(render);
-      case 'qmake': nav.bdRange = true; nav.rgKind = 'quote'; return keepScroll(render); // 범위 고르는 팝업
+      case 'qmake': nav.bdRange = true; nav.rgKind = 'quote'; nav.qWho = arg || ''; return keepScroll(render); // 범위 고르는 팝업
       case 'qdel': { const cid = chatIdFromPath(), list = quotes(); list.splice(Number(arg), 1); if (cid) await saveQuotes(cid, list); return keepScroll(render); }
       case 'phwho': nav.phWho = arg; nav.phScreen = 'home'; nav.pcScreen = 'home'; return keepScroll(render);
       case 'dev': nav.dev = arg; return keepScroll(render);
@@ -4564,7 +4605,7 @@
       case 'bdmake': { const a = Number(out('bdFrom')?.value) || 0, b = Number(out('bdTo')?.value) || 0; if (a > b) { toast('앞 턴이 뒤 턴보다 커요.', 'err'); return; }
         const k = nav.rgKind || 'board', who = nav.rgWho, ex = k === 'phone' ? phoneData[who] : k === 'pc' ? pcData[who] : boardData;
         const lab = k === 'phone' ? `${who}의 폰` : k === 'pc' ? `${who}의 컴퓨터` : '커뮤니티';
-        if (k === 'quote') { nav.bdRange = false; return makeQuotes(a, b); }
+        if (k === 'quote') { nav.bdRange = false; return makeQuotes(a, b, nav.qWho || ''); }
         if (k === 'npc') { nav.bdRange = false; return findNpc(a, b); }
         if (k === 'wiki') { if (wikiData && !confirm(a + '~' + b + '턴 대화를 참고해서 위키를 다시 만들까요? (AI를 1번 불러요)')) return; nav.bdRange = false; return makeWiki(a, b); }
         if (k === 'live' && b - a + 1 > 5) { toast('실시간톡은 한 화에 최대 5턴이에요 (추천 2턴).', 'err', 3000); return; }
