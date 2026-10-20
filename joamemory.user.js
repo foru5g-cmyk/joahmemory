@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.7.3
+// @version      2.7.3.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -446,7 +446,16 @@
   // 정리 말고 따로 만드는 것(명대사·폰)에 쓰는 AI 호출. 설정한 모델 그대로, 비용은 정리 기록에 함께 적어요.
   async function askModel(system, input, label) {
     const model = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-    const out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input);
+    // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
+    let out; const waits = [4, 10];
+    for (let k = 0; ; k++) {
+      try { out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input); break; }
+      catch (e) {
+        if (k >= waits.length || !/HTTP (429|500|502|503|504)\b/.test(String(e?.message))) throw e;
+        toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
+        await new Promise(r => setTimeout(r, waits[k] * 1000));
+      }
+    }
     const chatId = chatIdFromPath();
     if (chatId) { await recordUsage(chatId, { at: Date.now(), from: 0, to: 0, label, chars: out.text.length, model, inTok: out.inTok, outTok: out.outTok }); usage = await usageOf(chatId); }
     if (!out.text) throw new Error('AI가 빈 답을 보냈어요.');
@@ -1377,7 +1386,12 @@
     /* 타임라인 접는 칸 · 명대사 */
     .tl-fold summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer}.tl-fold summary::-webkit-details-marker{display:none}
     .tl-fold summary b{margin:0}.tl-fold summary .linkbtn{padding:0}
-    .tl-fold[open] summary{margin-bottom:6px}
+    .tl-fold[open]>summary{margin-bottom:6px}
+    /* 겪은 일 안의 칸: 제목·내용 위아래 여백을 줄입니다 */
+    .tl-fold .fold>summary{padding:8px 0;margin:0}
+    .tl-fold .fold[open]>summary{padding-bottom:2px}
+    .tl-fold .fold-b{padding:0 0 8px}
+    .tl-fold .fold-b>:first-child{margin-top:0}
     .tl-q{padding:6px 22px 6px 0;border-top:1px dashed var(--rule);position:relative}.tl-qx{position:absolute;right:0;top:6px;border:0;background:transparent;color:var(--graphite);font-size:15px;line-height:1;padding:2px 4px;cursor:pointer}.tl-q:first-of-type{border-top:0}
     .tl-qt{margin:0;font-size:15px;font-weight:700;line-height:1.6;color:var(--ink);word-break:keep-all}
     .tl-qs{margin:2px 0 0;font-size:12.5px;line-height:1.5;color:var(--graphite)}
@@ -3862,7 +3876,7 @@
   const placePeek = b => { const first = placeBits(b)[0] || ''; return first && !isOrg(b) ? `📍 ${first}` : first; };
   // 사건 줄 맨 앞 "장소 · 시각 → 원인 → …"의 앞부분이 장소면 📍. '·'가 없어도 장소처럼 생긴 짧은 말(거실·복도·카페…)이면 📍로 봅니다.
   const placeHead = t => { t = String(t).trim(); return /·/.test(t) || /^📍/.test(t) || ([...t].length <= 18 && /(실|방|집|관|장|원|교|당|점|터|역|층|복도|거실|부엌|주방|옥상|골목|길|거리|카페|병원|사무실|라운지|하우스|캠퍼스|공원|호텔|숲|해변|창고|차고|마당|정원|학교|기숙사|강당|도서관|식당)\s*(?:[(（][^)）]*[)）])?\s*$/.test(t)); };
-  const evBody = l => { const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && (placeHead(parts[0]) || (parts.length >= 3 && [...parts[0]].length <= 24 && !/[다음함됨임요]\s*$/.test(parts[0])));
+  const evBody = l => { const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && placeHead(parts[0]);
     return (hasMeta ? `<p class="tl-meta">📍 ${esc(parts[0].replace(/^📍\s*/, ''))}</p>` : '') + (hasMeta ? parts.slice(1) : parts).flatMap(bitsOf).map(bitHtml).join(''); };
   // 기억하는 일: "1년차 09.12 저잣거리 입궁" → 왼쪽 날짜 / 오른쪽 내용, 한 줄씩
   const MEM_DATE = /^((?:\d+년차\s*)?\d{1,2}[./]\d{1,2}(?:\s+\d{1,2}:\d{2})?|\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}(?:\s+\d{1,2}:\d{2})?)\s+(.+)$/;
@@ -3872,7 +3886,7 @@
     const b = blocksOf(bodyOf('날짜로그')).find(b => { const t = ((b.title || '').match(/-\s*(.+?)\]?(?:\s*\(요약\))?$/) || [])[1]?.replace(/\s/g, '') || '';
       return t && (t.includes(k) || k.includes(t)); });
     if (!b) return '';
-    const where = (b.lines.find(l => !/^(근거|번역)\s*[:：]/.test(l)) || '').split(/\s+→\s+/)[0];
+    const where = '';
     const q = b.lines.find(l => /^근거\s*[:：]/.test(l));
     return (where ? `<p class="tl-meta">📍 ${esc(where)}</p>` : '') + (q ? quoteHtml(q.replace(/^근거\s*[:：]\s*/, '').replace(/^["“]|["”]$/g, '')) : '');
   };
