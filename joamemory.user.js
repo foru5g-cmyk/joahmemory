@@ -2912,6 +2912,20 @@
 [{"nick":"닉네임","ip":"익명·음지일 때만, 아니면 빈 칸","text":"대댓글","ago":"방금","likes":0,"by":"","to":"이 대댓글이 대꾸하는 사람(새 댓글 쓴 사람이나 앞 대댓글러). ip가 있으면 닉(ip) 그대로"}]`;
   let bdTyping = null, bdTypingAt = -1; // 대댓글 기다리는 글 번호 · 그 글에서 내 댓글 위치
   const keepView = () => { const m = out('main'), y = m?.scrollTop || 0; render(); if (m) m.scrollTop = y; };
+  // 익명·닉네임 댓글에는 기억 노트에서 유저 캐릭터 정보를 빼고 보냅니다. AI가 노트를 보고 "이 댓글 쓴 사람은 유저"라고 짐작하지 못하게.
+  //   유저 인물 블록(【이름】 줄부터 다음 인물·칸 제목 전까지)과, 유저 이름이 들어간 줄을 지웁니다.
+  const noUserNote = memory => {
+    const names = [...PROF.entries()].filter(([, v]) => v.isUser).flatMap(([n]) => personAlias(n)); if (!names.length) return memory;
+    let skip = false; const out = [];
+    for (const l of String(memory || '').split('\n')) {
+      const head = l.match(/【([^】]+)】/), isHead = /^\s*(?:■|##|▸|###)/.test(l) || !!head;
+      if (head && names.some(n => head[1].includes(n))) { skip = true; continue; }
+      if (skip && isHead) skip = false;
+      if (skip || names.some(n => l.includes(n))) continue;
+      out.push(l);
+    }
+    return out.join('\n');
+  };
   async function bdComment() {
     const rep = Number.isInteger(nav.bdReplyTo), i = nav.bdPost, p = boardData?.data?.posts?.[i], input = out(rep ? 'bdCmtR' : 'bdCmt'), text = String(input?.value || '').trim();
     if (!p || !text || bdTyping != null) return;
@@ -2934,7 +2948,7 @@
       const ctx = [`[게시판] ${p.board || ''} (분위기: ${vibe || '자유'})`, `[글] ${p.title || ''}\n${p.body || ''}`, `[글쓴이] ${p.nick || '익명'}${p.ip ? `(${p.ip})` : ''}`,
         '[댓글]', ...p.comments.filter(c => c !== mine).slice(-12).map(c => `${c.reply ? 'ㄴ ' : ''}${c.nick || '익명'}: ${c.text || ''}`),
         ...(parent ? [`[답글 대상 댓글] ${parent.nick || '익명'}: ${parent.text || ''} — 새 댓글은 이 댓글에 단 답글이다. 대댓글러들은 이 둘의 대화에 끼어든다(원댓글 쓴 사람이 다시 반박해도 됨)`] : []),
-        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이라 누군지 모른다)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 모른다. 말투로 의심하는 정도는 괜찮다. 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', await etcMemory(chatIdFromPath())].join('\n');
+        `[새 댓글] ${text}`, hide ? '(새 댓글 쓴 사람은 익명이다. 댓글러들은 이 사람이 누군지 전혀 모르고, 유저나 노트 속 인물과 엮어 짐작하거나 이름을 부르거나 "본인 등판"처럼 반응하지 않는다. 그냥 지나가던 아무나 단 댓글로 대한다. 말투·글솜씨로 정체를 짐작하는 말은 쓰지 않는다. 단 댓글 안에서 본인이 스스로 누구(유저 본인·노트 속 특정 인물)라고 밝히면, 증거가 없으니 대부분 믿지 않고 사칭·주작·관종 의심이나 증명해 보라는 반응으로 받는다(일부는 반신반의하며 떠보는 정도).)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 전혀 모른다. 말투·글솜씨로 의심하거나 유저·노트 속 인물과 엮어 부르지 않고, 그냥 그 닉네임을 쓰는 낯선 사람으로 대한다. 단 댓글 안에서 본인이 스스로 누구(유저 본인·노트 속 특정 인물)라고 밝히면, 증거가 없으니 대부분 믿지 않고 사칭·주작·관종 의심이나 증명해 보라는 반응으로 받는다(일부는 반신반의하며 떠보는 정도). 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', hide || !real ? noUserNote(await etcMemory(chatIdFromPath())) : await etcMemory(chatIdFromPath())].join('\n');
       const raw = await askModel(withRules(REPLY_PROMPT, ETC_KO + etcRoll()), ctx, '💬대댓글');
       let list; try { const t = String(raw).replace(/^```\w*\n?|\n?```$/g, ''), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
       const replies = (Array.isArray(list) ? list : []).slice(0, 4).map(r => ({ nick: r.nick || 'ㅇㅇ', ip: anon ? (r.ip || '') : '', text: r.text || '', ago: '방금', likes: Number(r.likes) || 0, reply: true, by: r.by || '', to: (() => { const myTag = mine.nick + (mine.ip ? '(' + mine.ip + ')' : ''), t = String(r.to || '').trim(); return !t || t.includes(me) || personAlias(me).some(n => t.includes(n)) || t.includes(myNick) ? myTag : t; })() }));
