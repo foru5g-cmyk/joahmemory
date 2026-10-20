@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.7.3
+// @version      2.7.3.
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1809,8 +1809,27 @@
   const KNOW_LINE = new RegExp(`^(${[...KNOW, '숨김'].join('|')})\\s*[:：]\\s*(.*)$`);
   // 같은 사람인지: "주태정"과 "태정"처럼 한쪽이 다른 쪽의 앞·뒤 2글자 이상과 같으면 같은 사람으로 봅니다.
   // ponytail: 이름 앞뒤 일치만 봄. "김민"·"김민수"처럼 실제로 다른 두 사람이면 합쳐져요. 그런 이야기면 별명표를 따로 두세요.
-  const sameName = (a, b) => { a = String(a || '').trim(); b = String(b || '').trim(); if (a === b) return !!a;
+  // 한글 이름 ↔ 영어 이름(가브리엘 ↔ Gabriel, 가브리엘 케인 ↔ Gabriel Kane)도 같은 사람으로 보려고, 두 이름을 "자음 뼈대"로 바꿔 견줍니다.
+  //   예) 가브리엘 → k·p·l / Gabriel → k·p·l. 괄호 이름 "가브리엘(Gabriel)"은 두 이름 다 별명으로 칩니다.
+  // ponytail: 발음이 비슷한 다른 사람이면 합쳐질 수 있어요(뼈대 3글자 이상일 때만 견줘서 줄여 둠). 그런 이야기면 별명표를 따로 두세요.
+  const IN_C = ['k','kk','n','t','tt','l','m','p','pp','s','ss','','j','jj','s','k','t','p','h'];
+  const FIN_C = ['','k','kk','ks','n','nj','nh','t','l','lk','lm','lp','ls','lt','lp','lh','m','p','ps','s','ss','n','j','s','k','t','p','h'];
+  const skelOf = t => {
+    let out = '';
+    if (/[가-힣]/.test(t)) {
+      for (const ch of String(t)) { const c = ch.charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) continue; out += IN_C[Math.floor(c / 588)] + FIN_C[c % 28]; }
+    } else {
+      out = String(t).toLowerCase().replace(/th/g, 's').replace(/ck/g, 'k').replace(/ng/g, 'n').replace(/ph/g, 'p').replace(/qu/g, 'k').replace(/x/g, 'ks').replace(/[^a-z]/g, '')
+        .replace(/[aeiouyhw]/g, '').replace(/[gqc]/g, 'k').replace(/[dt]/g, 't').replace(/[bvf]/g, 'p').replace(/[rl]/g, 'l').replace(/[zj]/g, 's');
+    }
+    return out.replace(/h/g, '').replace(/(.)\1+/g, '$1');
+  };
+  const nameForms = n => { n = String(n || '').trim(); const m = n.match(/^(.*?)\s*[(（]([^()（）]+)[)）]\s*$/); return m ? [m[1].trim(), m[2].trim()].filter(Boolean) : [n]; };
+  const sameName1 = (a, b) => { a = String(a || '').trim().toLowerCase(); b = String(b || '').trim().toLowerCase(); if (a === b) return !!a;
     const [s, l] = [...a].length < [...b].length ? [a, b] : [b, a]; return [...s].length >= 2 && (l.endsWith(s) || l.startsWith(s)); };
+  const crossName = (a, b) => { const ha = /[가-힣]/.test(a), hb = /[가-힣]/.test(b); if (ha === hb) return false;
+    const x = skelOf(a), y = skelOf(b); if (x.length < 3 || y.length < 3) return false; const [s, l] = x.length <= y.length ? [x, y] : [y, x]; return l === s || l.startsWith(s); };
+  const sameName = (a, b) => nameForms(a).some(x => nameForms(b).some(y => sameName1(x, y) || crossName(x, y)));
   // 노트의 【이름】 목록에 맞춰 짧게 부른 이름을 정본 이름으로 바꿉니다. 딱 한 명에게만 맞을 때만.
   let CANON = [];
   const canon = x => { x = String(x || '').trim(); if (!x || CANON.includes(x)) return x; const hit = CANON.filter(n => sameName(n, x)); return hit.length === 1 ? hit[0] : x; };
