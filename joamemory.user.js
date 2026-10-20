@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
-// @namespace    memo-note.v
-// @version      2.7.3.
+// @namespace    memo-note.v2
+// @version      2.7.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -3442,7 +3442,7 @@
   }
   function quoteFold(who, open) {
     const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who || sameName(q.who, who));
-    return `<details class="tl-up tl-fold tl-quotes"${open || nav.rgKind === 'quote' ? ' open' : ''}><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" data-arg="${esc(who || '')}" title="대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg>'}</button></summary>
+    return `<details class="tl-up tl-fold tl-quotes"${open || nav.qOpen || nav.rgKind === 'quote' ? ' open' : ''}><summary><b>✨ ${who ? `${esc(josa(who, '이', '가'))} 한 ` : ''}명대사 ${qs.length}</b><button class="qplus" data-act="qmake" data-arg="${esc(who || '')}" title="대화에서 명대사 고르기"${busyNow ? ' disabled' : ''}>${busyNow ? '…' : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg>'}</button></summary>
       ${qs.map(q => { const [orig, inl] = splitTr(q.text), tr = q.tr || inl; return `<div class="tl-q"><button class="tl-qx" data-act="qdel" data-arg="${q.i}" title="이 대사 지우기">×</button><p class="tl-qt">"${esc(orig)}"</p>${tr ? `<p class="tl-qs">${esc(tr)}</p>` : ''}<p class="tl-qs">${q.who && !who ? `${esc(q.who)}${q.to ? ` → ${esc(q.to)}` : ''} · ` : q.to ? `→ ${esc(q.to)} · ` : ''}${q.ctx ? `🎬 ${esc(q.ctx)}` : ''}</p></div>`; }).join('')}
       ${qs.length ? '' : '<p>오른쪽 ＋를 누르면 고른 턴의 대화에서 골라 와요. 다시 누르면 기존 대사 뒤에 더해져요.</p>'}</details>${nav.bdRange && nav.rgKind === 'quote' ? rangeSheet('명대사 뽑기') : ''}`;
   }
@@ -4564,12 +4564,12 @@
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
       case 'changes': histList = await historyOf(chatIdFromPath()); nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
-      case 'tlwho': nav.tlWho = arg || null; return keepScroll(render);
+      case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
       case 'peek': { const i = el.previousElementSibling; if (i) { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.textContent = show ? '숨기기' : '보기'; } return; }
       case 'grp': nav.grp = arg; return keepScroll(render);
-      case 'qmake': nav.bdRange = true; nav.rgKind = 'quote'; nav.qWho = arg || ''; return keepScroll(render); // 범위 고르는 팝업
-      case 'qdel': { const cid = chatIdFromPath(), list = quotes(); list.splice(Number(arg), 1); if (cid) await saveQuotes(cid, list); return keepScroll(render); }
+      case 'qmake': nav.bdRange = true; nav.rgKind = 'quote'; nav.qWho = arg || ''; nav.qOpen = true; return keepScroll(render); // 범위 고르는 팝업
+      case 'qdel': { const cid = chatIdFromPath(), list = quotes(); list.splice(Number(arg), 1); if (cid) await saveQuotes(cid, list); nav.qOpen = true; return keepScroll(render); }
       case 'phwho': nav.phWho = arg; nav.phScreen = 'home'; nav.pcScreen = 'home'; return keepScroll(render);
       case 'dev': nav.dev = arg; return keepScroll(render);
       case 'wkrange': nav.rgKind = 'wiki'; nav.bdRange = true; return keepScroll(render);
