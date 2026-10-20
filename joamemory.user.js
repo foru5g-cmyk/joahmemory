@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.7.3.0
+// @version      2.7.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1811,7 +1811,7 @@
   // ponytail: 이름 앞뒤 일치만 봄. "김민"·"김민수"처럼 실제로 다른 두 사람이면 합쳐져요. 그런 이야기면 별명표를 따로 두세요.
   // 한글 이름 ↔ 영어 이름(가브리엘 ↔ Gabriel, 가브리엘 케인 ↔ Gabriel Kane)도 같은 사람으로 보려고, 두 이름을 "자음 뼈대"로 바꿔 견줍니다.
   //   예) 가브리엘 → k·p·l / Gabriel → k·p·l. 괄호 이름 "가브리엘(Gabriel)"은 두 이름 다 별명으로 칩니다.
-  // ponytail: 발음이 비슷한 다른 사람이면 합쳐질 수 있어요(뼈대 3글자 이상일 때만 견줘서 줄여 둠). 그런 이야기면 별명표를 따로 두세요.
+  // ponytail: 발음이 비슷한 다른 사람이면 합쳐질 수 있어요(동명이인은 없다고 보고 넉넉하게 봄). 그런 이야기면 별명표를 따로 두세요.
   const IN_C = ['k','kk','n','t','tt','l','m','p','pp','s','ss','','j','jj','s','k','t','p','h'];
   const FIN_C = ['','k','kk','ks','n','nj','nh','t','l','lk','lm','lp','ls','lt','lp','lh','m','p','ps','s','ss','n','j','s','k','t','p','h'];
   const skelOf = t => {
@@ -1824,12 +1824,22 @@
     }
     return out.replace(/h/g, '').replace(/(.)\1+/g, '$1');
   };
-  const nameForms = n => { n = String(n || '').trim(); const m = n.match(/^(.*?)\s*[(（]([^()（）]+)[)）]\s*$/); return m ? [m[1].trim(), m[2].trim()].filter(Boolean) : [n]; };
+  const nameForms = n => { n = String(n || '').trim();
+    // 괄호·슬래시·점 등으로 이름이 여러 개 붙어 있어도 조각내고, 한글+영어가 섞인 조각은 한글 이름·영어 이름으로 또 나눕니다
+    const parts = n.split(/\s*[()（）\/|·,，、]\s*|\s+[-–—]\s+/).map(x => x.trim()).filter(Boolean), out = new Set(parts.length ? parts : [n]);
+    for (const x of [...out]) if (/[가-힣]/.test(x) && /[A-Za-z]/.test(x)) { const k = x.match(/[가-힣][가-힣\s]*/g), e = x.match(/[A-Za-z][A-Za-z\s.'-]*/g);
+      if (k) out.add(k.join(' ').trim()); if (e) out.add(e.join(' ').trim()); }
+    return [...out].filter(Boolean); };
   const sameName1 = (a, b) => { a = String(a || '').trim().toLowerCase(); b = String(b || '').trim().toLowerCase(); if (a === b) return !!a;
     const [s, l] = [...a].length < [...b].length ? [a, b] : [b, a]; return [...s].length >= 2 && (l.endsWith(s) || l.startsWith(s)); };
+  // 이름 전체 뼈대가 앞부분부터 같거나, 이름 조각(이름·성) 하나라도 한글↔영어로 뼈대가 같으면 같은 사람 (동명이인은 없다고 보고 넉넉하게)
   const crossName = (a, b) => { const ha = /[가-힣]/.test(a), hb = /[가-힣]/.test(b); if (ha === hb) return false;
-    const x = skelOf(a), y = skelOf(b); if (x.length < 3 || y.length < 3) return false; const [s, l] = x.length <= y.length ? [x, y] : [y, x]; return l === s || l.startsWith(s); };
+    const x = skelOf(a), y = skelOf(b); if (x.length >= 2 && y.length >= 2) { const [s, l] = x.length <= y.length ? [x, y] : [y, x]; if (l === s || l.startsWith(s)) return true; }
+    const tk = t => String(t).split(/\s+/).map(skelOf).filter(k => k.length >= 2); const ty = tk(b);
+    return tk(a).some(k => ty.includes(k)); };
   const sameName = (a, b) => nameForms(a).some(x => nameForms(b).some(y => sameName1(x, y) || crossName(x, y)));
+  // "가브리엘 케인 (Gabriel Kane)"처럼 한글 이름에 영어 이름이 붙어 있으면 화면·목록에는 한글 이름만 씁니다
+  const cleanName = n => { const f = nameForms(n), k = f.find(x => /[가-힣]/.test(x)); return k && f.some(x => /^[A-Za-z]/.test(x)) ? k : n; };
   // 노트의 【이름】 목록에 맞춰 짧게 부른 이름을 정본 이름으로 바꿉니다. 딱 한 명에게만 맞을 때만.
   let CANON = [];
   const canon = x => { x = String(x || '').trim(); if (!x || CANON.includes(x)) return x; const hit = CANON.filter(n => sameName(n, x)); return hit.length === 1 ? hit[0] : x; };
@@ -1841,7 +1851,7 @@
       const h = l.match(/^【(.+?)】\s*(.*)$/);
       if (h) {
         // 【태정】과 【주태정】이 따로 있으면 한 사람으로 합치고 긴 이름을 씁니다.
-        const nm = h[1].trim(), dup = list.find(p => sameName(p.name, nm));
+        const nm = cleanName(h[1].trim()), dup = list.find(p => sameName(p.name, nm));
         if (dup) { if ([...nm].length > [...dup.name].length) dup.name = nm; if (h[2].trim() && !dup.desc.includes(h[2].trim())) dup.desc += (dup.desc ? ' · ' : '') + h[2].trim(); cur = dup; continue; }
         cur = { name: nm, desc: h[2].trim(), outfit: '', outfitQ: null, rels: [], know: [], memories: [], last: null }; list.push(cur); continue;
       }
@@ -3419,21 +3429,38 @@
   }
   // ── 타임라인: 날짜로그를 날짜순 세로 줄로. 위에서 인물을 고르면 그 사람이 나온 일만 ──
   //    "태정"처럼 이름 끝 두 글자로만 불러도 (그 이름이 이 사람에게만 맞으면) 같은 사람으로 찾습니다.
-  const personAlias = name => { const short = [...name].length >= 3 && /[가-힣]/.test(name) ? [...name].slice(-2).join('') : ''; return short && canon(short) === name ? [name, short] : [name]; };
+  // CANON이 비어 있어도(예전 형식 노트 등) 인물 목록에서 직접 "딱 이 사람에게만 맞는지" 확인합니다
+  let _poolKey = null, _poolVal = [];
+  const namePool = () => { if (CANON.length) return CANON; const k = bodyOf('인물'); if (k !== _poolKey) { _poolKey = k; try { _poolVal = [...people().keys()]; } catch (_) { _poolVal = []; } } return _poolVal; };
+  const personAlias = name => { const out = new Set([name]), pool = namePool();
+    // 이름 조각(영어 이름 포함)·이름 한 토막·뒤 두 글자로도 부르니까, 딱 이 사람에게만 맞을 때 별명으로 칩니다
+    for (const f of nameForms(name)) { out.add(f); const cand = [...f.split(/\s+/).filter(t => [...t].length >= 2), ...([...f].length >= 3 && /[가-힣]/.test(f) ? [[...f].slice(-2).join('')] : [])];
+      for (const c of cand) if (sameName(name, c) && !pool.some(n => n !== name && sameName(n, c))) out.add(c); }
+    return [...out]; };
   function timelineHtml() {
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요.');
     const names = [...people().keys()], who = nav.tlWho && names.includes(nav.tlWho) ? nav.tlWho : null;
-    const al = who ? personAlias(who) : [], has = t => al.some(a => String(t || '').includes(a));
-    const evs = blocksOf(bodyOf('날짜로그')).map(b => {
+    const al = who ? personAlias(who) : [];
+    // 글에 이름·별명이 있거나, 영어 이름(대문자로 시작하는 단어)이 그 사람 이름과 발음이 같으면 그 사람 이야기로 봅니다
+    const has = t => { t = String(t || ''); if (al.some(a => t.includes(a))) return true; const w = t.match(/\b[A-Z][a-z'-]{2,}/g); return !!w && w.some(x => crossName(x, who)); };
+    // 사건·서사 고리는 제목에 가장 먼저 나오는 인물을 "주인공"으로 보고, 그 사람 칸에만 올립니다(두 사람 칸이 똑같아지지 않게).
+    //   제목에 아무도 없으면 본문에 이름이 있는 사람 칸에 올리고, "나오는 사건 전부"를 켜면 예전처럼 이름이 나오는 모든 사건을 봅니다.
+    const aliasOf = new Map(names.map(n => [n, personAlias(n)]));
+    const subjOf = t => { t = String(t || ''); let best = '', at = 1e9; for (const [n, als] of aliasOf) for (const a of als) { const i = t.indexOf(a); if (i >= 0 && i < at) { at = i; best = n; } } return best; };
+    const mine = (title, fallback) => { if (nav.tlAll) return fallback; const sj = subjOf(title); return sj ? sj === who : fallback; };
+    const evsAll = blocksOf(bodyOf('날짜로그')).map(b => {
       const packed = /\(요약\)/.test(b.title || ''), m = (b.title || '').replace(/\s*\(요약\)\s*$/, '').match(/^\[?([^\]\-]+?)\s*-\s*(.+?)\]?$/);
       const q = b.lines.find(l => /^근거\s*[:：]/.test(l));
       return { date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, lines: b.lines.filter(notProofLine),
         quote: q ? q.replace(/^근거\s*[:：]\s*/, '').replace(/^["“]|["”]$/g, '') : '', all: (b.title || '') + ' ' + b.lines.join(' ') };
-    }).filter(e => !who || has(e.all));
+    });
+    const evs = evsAll.filter(e => !who || mine(e.title, has(e.all)));
+    // 주인공은 아니지만 이 사람이 나온(겪은·받은) 사건은 아래에 접어 둡니다
+    const seen = who && !nav.tlAll ? evsAll.filter(e => has(e.all) && !evs.includes(e)) : [];
     const chips = `<div class="tl-who"><button data-act="tlwho" data-arg="" aria-pressed="${!who}"><span class="av tl-all">✦</span><small>전체</small></button>${names.map(n =>
       `<button data-act="tlwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     // 서사 고리는 여기 한 곳에만: 위엔 아직 끝나지 않은 일, 끝난 일은 접어서
-    const th = threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
+    const th = threads().filter(t => !who || mine(t.title, has(t.title) || has(t.text) || has(t.quote))), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
     const thRow = t => { const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
       return `<div class="thr"><b>${m ? `<em class="thk">${esc(m[1])}</em>${esc(m[2])}` : esc(t.title)}</b>${bitsOf(t.text).map(bitHtml).join('')}${quoteHtml(t.quote, t.tr)}</div>`; };
     const upcoming = openTh.length || doneTh.length ? `<div class="tl-up"><div class="tl-up-h"><b>🪢 아직 끝나지 않은 일 ${openTh.length}</b><button class="linkbtn" data-act="edit" data-arg="서사 고리">고치기</button></div>
@@ -3447,7 +3474,7 @@
         <b class="tl-title">${esc(e.title)}</b>${e.lines.map(evBody).join('')}
         <span class="tl-ppl">${peopleIn(e).map(n => avatar(n)).join('')}</span>${quoteHtml(e.quote)}</li>`).join('')}</ol>`
       : emptyBox(who ? `${esc(josa(who, '이', '가'))} 나온 사건이 아직 없어요.` : '아직 사건이 없어요.');
-    const head = `<div class="sechead"><span>${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개 · 오래된 일부터</span><button class="linkbtn" data-act="edit" data-arg="날짜로그">고치기</button></div>`;
+    const head = `<div class="sechead"><span>${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개 · 오래된 일부터</span>${who ? `<button class="linkbtn" data-act="tlall">${nav.tlAll ? '주인공인 사건만' : '나오는 사건 전부'}</button>` : ''}<button class="linkbtn" data-act="edit" data-arg="날짜로그">고치기</button></div>`;
     // 큰 흐름(줄거리)은 맨 위에 한 번. 인물을 고르면 그 사람 이야기만 보이니 숨깁니다.
     const story = itemsOf(bodyOf('줄거리'));
     const storyHtml = !who && story.length ? `<div class="tl-story"><div class="tl-up-h"><b>🧵 지금까지 큰 흐름</b><button class="linkbtn" data-act="edit" data-arg="줄거리">고치기</button></div>
@@ -3457,7 +3484,8 @@
     const worldHtml = !who ? `<details class="tl-up tl-fold"><summary><b>🌍 세계관 ${world.reduce((a, b) => a + b.lines.length + (b.title ? 1 : 0), 0)}</b><button class="linkbtn" data-act="edit" data-arg="세계관">고치기</button></summary>
       ${world.map(b => `${b.title ? `<p><span>${esc(b.title)}</span></p>` : ''}${b.lines.filter(notProofLine).map(l => `<p>${esc(l)}</p>`).join('')}`).join('') || '<p>아직 정리된 세계관이 없어요. 원문에서 설정·규칙이 확인되면 정리할 때 여기에 쌓여요.</p>'}</details>` : '';
     const qHtml = quoteFold(who);
-    return descHtml('timeline') + chips + storyHtml + worldHtml + upcoming + memHtml + head + list + qHtml;
+    const seenHtml = seen.length ? `<details class="tl-up tl-fold"><summary><b>🫂 ${esc(josa(who, '이', '가'))} 겪은 일 ${seen.length}</b></summary>${seen.map(e => fold(`<b>${esc(e.title)}</b>`, e.date, e.lines.map(evBody).join(''))).join('')}</details>` : '';
+    return descHtml('timeline') + chips + storyHtml + worldHtml + upcoming + memHtml + head + list + seenHtml + qHtml;
   }
   function quoteFold(who, open) {
     const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who || sameName(q.who, who));
@@ -3832,8 +3860,10 @@
   const placeBody = (b, peek = false) => placeBits(b).map((x, i) => i === 0 ? (peek ? '' : isOrg(b) ? bitHtml(x) : `<p class="tl-meta">📍 ${esc(x)}</p>`) : bitHtml(x)).join('')
     + b.lines.filter(l => /^근거\s*[:：]/.test(l)).map(l => quoteHtml(l.replace(/^근거\s*[:：]\s*/, ''))).join('');
   const placePeek = b => { const first = placeBits(b)[0] || ''; return first && !isOrg(b) ? `📍 ${first}` : first; };
-  const evBody = l => { const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && /·/.test(parts[0]);
-    return (hasMeta ? `<p class="tl-meta">📍 ${esc(parts[0])}</p>` : '') + (hasMeta ? parts.slice(1) : parts).flatMap(bitsOf).map(bitHtml).join(''); };
+  // 사건 줄 맨 앞 "장소 · 시각 → 원인 → …"의 앞부분이 장소면 📍. '·'가 없어도 장소처럼 생긴 짧은 말(거실·복도·카페…)이면 📍로 봅니다.
+  const placeHead = t => { t = String(t).trim(); return /·/.test(t) || /^📍/.test(t) || ([...t].length <= 18 && /(실|방|집|관|장|원|교|당|점|터|역|층|복도|거실|부엌|주방|옥상|골목|길|거리|카페|병원|사무실|라운지|하우스|캠퍼스|공원|호텔|숲|해변|창고|차고|마당|정원|학교|기숙사|강당|도서관|식당)\s*(?:[(（][^)）]*[)）])?\s*$/.test(t)); };
+  const evBody = l => { const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && (placeHead(parts[0]) || (parts.length >= 3 && [...parts[0]].length <= 24 && !/[다음함됨임요]\s*$/.test(parts[0])));
+    return (hasMeta ? `<p class="tl-meta">📍 ${esc(parts[0].replace(/^📍\s*/, ''))}</p>` : '') + (hasMeta ? parts.slice(1) : parts).flatMap(bitsOf).map(bitHtml).join(''); };
   // 기억하는 일: "1년차 09.12 저잣거리 입궁" → 왼쪽 날짜 / 오른쪽 내용, 한 줄씩
   const MEM_DATE = /^((?:\d+년차\s*)?\d{1,2}[./]\d{1,2}(?:\s+\d{1,2}:\d{2})?|\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}(?:\s+\d{1,2}:\d{2})?)\s+(.+)$/;
   // 같은 이름의 날짜로그 사건이 있으면 그 사건의 장소·근거 원문을 바로 아래에 붙입니다(어디서 처음 만났는지 등).
@@ -4583,6 +4613,7 @@
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
       case 'changes': histList = await historyOf(chatIdFromPath()); nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
+      case 'tlall': nav.tlAll = !nav.tlAll; return keepScroll(render);
       case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
       case 'peek': { const i = el.previousElementSibling; if (i) { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.textContent = show ? '숨기기' : '보기'; } return; }
