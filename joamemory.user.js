@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.0
+// @version      3.8.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
