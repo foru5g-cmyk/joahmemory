@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.4.0
+// @version      3.5.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1396,7 +1396,7 @@
     .bd-tools button{border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink2);font-size:12.5px;font-weight:600;padding:5px 12px;cursor:pointer}
     .bd-snap{margin:0;padding:10px 16px 14px;text-align:center;font-size:12px;border-top:1px solid var(--rule)}.bd-snap .linkbtn{font-size:12px;color:var(--graphite)}
     .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{border:1.5px solid #9D8CEB;background:#F3F0FD;border-radius:14px;padding:12px 14px;margin:0 0 14px;font-size:13px;color:var(--ink)}.devask b{display:block;margin-bottom:6px;font-size:14px}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{color:var(--bad)}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.dcols{display:flex;gap:8px;margin:4px 0 2px}.dcol{flex:1;min-width:0;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.dcol.best{border-color:#9D8CEB;box-shadow:0 0 0 1px #9D8CEB inset}.dcol small{font-size:11.5px;color:var(--graphite)}.dcol em{font-style:normal;color:#6A55D8;font-weight:700}.dcol b{font-size:17px;margin:0}.dcol p{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--ink2)}.dsmall{margin:8px 0 0;text-align:center;font-size:12px}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
+    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet .img-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer;padding:0}
     .imgsheet .img-close{border:0;border-radius:999px;background:#fff;color:#1a1a1a;font-size:14px;font-weight:700;padding:9px 26px;cursor:pointer}
@@ -2613,7 +2613,7 @@
     const a = nav.devAsk, chatId = chatIdFromPath(); if (!a || a.chatId !== chatId || busyNow) return;
     busyNow = true; render();
     try {
-      if (!restore) { fullNote = null; await setValue('full:' + chatId, ''); pageToast(`채팅에 있는 기억(1~${a.c.turns}턴)을 써요`); }
+      if (!restore) { fullNote = null; await setValue('full:' + chatId, ''); nav.fullTried = ''; pageToast(`채팅에 있는 기억(1~${a.c.turns}턴)을 써요`); }
       else {
         const snap = await readSinceLastNote(chatId), c = snap.note || a.c, mine = a.mine, carrier = pickCarrier(snap.all);
         if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
@@ -4772,6 +4772,14 @@
         try { old = JSON.parse(String(await getValue('seen:' + chatId, '')) || 'null'); } catch (_) {}
         if (old?.k !== k) await setValue('seen:' + chatId, JSON.stringify({ k, memory: n.memory, upto: n.upto, turns: n.turns, at: n.at, by: n.by || '', savedAt: new Date().toISOString(), savedBy: DEVICE }));
       }
+      // 근거·감정선 전체 따라오기: 다른 기기에서 정리한 노트라 이 기기에 전체본이 없으면, 구글 백업이 같은 정리본일 때 그 전체본을 화면용으로 받아요.
+      //   채팅은 건드리지 않아요(같은 정리본인지 = 정리 지점이 같고, 채팅에 넣었을 때 모양이 같을 때만).
+      if (snap.note && !snap.note.parked && nav.gsOn && !(nav.devAsk && nav.devAsk.chatId === chatId) && !(fullNote && fullNote.upto === snap.note.upto && sameAsChat(fullNote.memory, snap.note.memory))) {
+        const n = snap.note, tryKey = n.upto + '|' + n.at;
+        if (nav.fullTried !== tryKey) { nav.fullTried = tryKey;
+          gsPeek(chatId).then(async g => { if (!g || g.upto !== n.upto || !sameAsChat(g.memory, n.memory) || chatIdFromPath() !== chatId) return;
+            await saveFull(chatId, n.upto, g.memory, n.turns, n.at); pageToast('구글 백업에서 근거·감정선 전체를 받아 왔어요'); render(); }); }
+      }
       // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남아 있는 것 중 가장 최신으로 다시 넣을지 묻습니다.
       //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만. '그냥 두기'를 누른 같은 후보로는 다시 안 물어요.
       if (!snap.note && injectOn) {
@@ -5376,7 +5384,7 @@
       });
       // 보내기 버튼이 혼자 감싸져 있으면 그 감싼 상자 앞에 넣습니다.
       let anchor = send;
-      while (anchor.parentElement && anchor.parentElement !== box && anchor.parentElement.querySelectorAll('button').length === 1) anchor = anchor.parentElement;
+      while (anchor.parentElement && anchor.parentElemeAnt !== box && anchor.parentElement.querySelectorAll('button').length === 1) anchor = anchor.parentElement;
       return anchor;
     }
     return null;
