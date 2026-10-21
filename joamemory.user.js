@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.6.0
+// @version      3.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -109,7 +109,11 @@
     if (hasGM && GM.getValue) return GM.getValue(key, fallback);
     try { const v = localStorage.getItem('memo-note:' + key); return v === null ? fallback : v; } catch (_) { return fallback; }
   }
+  // ETC(커뮤·폰 등) 저장값이 바뀌면 etcHook을 불러요. 동기화가 켜져 있을 때만 쓰고, 불러오기·비우기 중에는 멈춰요(etcQuiet).
+  const ETC_KEY = /^(board|phone|pc|news|wiki|live|quotes|etcnames):/;
+  let etcHook = null, etcQuiet = false;
   async function setValue(key, value) {
+    if (!etcQuiet && etcHook && ETC_KEY.test(key)) setTimeout(() => etcHook(key), 0);
     if (typeof GM_setValue === 'function') return GM_setValue(key, value);
     if (hasGM && GM.setValue) return GM.setValue(key, value);
     try { localStorage.setItem('memo-note:' + key, value); } catch (_) {}
@@ -1396,7 +1400,7 @@
     .bd-tools button{border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink2);font-size:12.5px;font-weight:600;padding:5px 12px;cursor:pointer}
     .bd-snap{margin:0;padding:10px 16px 14px;text-align:center;font-size:12px;border-top:1px solid var(--rule)}.bd-snap .linkbtn{font-size:12px;color:var(--graphite)}
     .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.etcgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.etcgrid .btn{height:40px;border-radius:12px;font-weight:600}.etcall{height:42px;border-radius:999px;font-weight:700;color:var(--bad);border-color:var(--bad)}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
+    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.etcsw{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--ink);cursor:pointer;padding:4px 0}.etcsw input{display:none}.etcsw i{flex:none;margin-top:2px;width:34px;height:20px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.etcsw i::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}.etcsw input:checked+i{background:#7B67E0}.etcsw input:checked+i::after{left:17px}.etcsw small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.etcgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.etcgrid .btn{height:40px;border-radius:12px;font-weight:600}.etcall{height:42px;border-radius:999px;font-weight:700;color:var(--bad);border-color:var(--bad)}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet .img-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer;padding:0}
     .imgsheet .img-close{border:0;border-radius:999px;background:#fff;color:#1a1a1a;font-size:14px;font-weight:700;padding:9px 26px;cursor:pointer}
@@ -2483,7 +2487,7 @@
       const other = d.chat && d.chat !== chatId;
       const when = d.at ? new Date(d.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
       if (checked || confirm(`${when ? when + '에 만든 ' : ''}백업이에요${other ? '\n⚠ 다른 대화방에서 만든 백업이에요' : ''}.\n\n명대사 · ETC(폰·커뮤니티 등) · 정리 기록을 이 기기에 불러올까요?\n(이 방에 지금 있는 ETC·기록은 백업 내용으로 바뀌어요)\n\n[확인] 불러오기  [취소] 노트만 보기`)) {
-        for (const [k, v] of Object.entries(d.store)) if (BACKUP_KEYS.includes(k)) await setValue(k + ':' + chatId, String(v));
+        etcQuiet = true; try { for (const [k, v] of Object.entries(d.store)) if (BACKUP_KEYS.includes(k)) await setValue(k + ':' + chatId, String(v)); } finally { etcQuiet = false; }
         await refresh(); toast('명대사 · ETC · 기록을 불러왔어요.', 'ok', 3000);
       }
     }
@@ -2513,9 +2517,10 @@
     return r;
   }
   // ② 사라짐 복구용: 구글 백업에 이 방 노트가 있으면 정보만 가져와요(넣는 건 카드에서 고를 때).
+  async function gsFetch(chatId) { try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); return d?.app === 'memo-note' && d.chat === chatId ? d : null; } catch (_) { return null; } }
   async function gsPeek(chatId, resetAt = 0) {
     try {
-      const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data);
+      const d = await gsFetch(chatId); if (!d) return null;
       if (d?.app !== 'memo-note' || d.chat !== chatId || !d.memory) return null;
       const at = d.noteAt || d.at; if ((Date.parse(at) || 0) <= resetAt) return null;
       return { src: 'g', memory: d.memory, upto: d.upto, turns: d.turns, at, by: d.by || '', savedAt: d.at, savedBy: d.by || '' };
@@ -2551,6 +2556,7 @@
       <b>구글 드라이브 백업</b><small>내 구글 드라이브 "조아메모리 백업" 폴더에 방 제목으로 저장돼요</small>
       <label class="gsf"><span>웹 앱 주소</span><input type="text" data-set="gsUrl" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/…/exec"></label>
       <label class="gsf"><span>비밀번호</span><span class="keybox"><input type="password" data-set="gsKey" autocomplete="off" spellcheck="false" placeholder="스크립트의 SECRET"><button type="button" data-act="peek">보기</button></span></label>
+      <label class="etcsw"><input type="checkbox" data-act="etcsync"${nav.etcSyncOn ? ' checked' : ''}><i></i><span>ETC(커뮤·폰 등)도 기기끼리 맞추기<small>끄면 기기마다 따로 봐요 · 기억 노트는 켜고 끄기와 상관없이 맞춰져요</small></span></label>
       <button class="btn pri" data-act="gskeep">연결 저장</button>
       <div class="gsrow"><button class="btn" data-act="gsave">지금 저장</button><button class="btn" data-act="gload">불러오기</button></div>
       <details class="gshow"${nav.gsGuide ? ' open' : ''}><summary>처음 연결하는 방법 (한 번만, 5분)</summary><ol>
@@ -2648,13 +2654,64 @@
     busyNow = true; render();
     try {
       if (nav.gsOn) await gsSave(true); // 지우기 직전 백업
-      for (const [k] of parts) await setValue(k + ':' + chatId, '');
-      if (which === 'all') await setValue('etcnames:' + chatId, '');
+      etcQuiet = true; // 비운 건 구글로 안 올려요(지우기 직전 백업을 남겨 두려고)
+      try { for (const [k] of parts) await setValue(k + ':' + chatId, ''); if (which === 'all') await setValue('etcnames:' + chatId, ''); } finally { etcQuiet = false; }
       nav.etcSheet = false; nav.bdPost = null; nav.bdBoard = '';
       toast(`${which === 'all' ? 'ETC 전체를' : parts[0][1].replace(/^S+s/, '') + ' 기록을'} 비웠어요`, 'ok', 3000);
     } catch (e) { toast('비우기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; }
     await refresh();
+  }
+  // ── ETC 기기끼리 맞추기 (기본 꺼짐) ──
+  //   켜면: ETC가 바뀔 때마다 8초 뒤 구글에 올리고(여러 번 바뀌면 한 번만), 다른 기기 ETC가 더 최신이면 카드로 알려요(말없이 덮어쓰지 않음).
+  const ETC_SYNC_KEYS = ['board', 'phone', 'pc', 'news', 'wiki', 'live', 'quotes', 'etcnames'];
+  let etcUpTimer = null;
+  etcHook = async key => {
+    const chatId = chatIdFromPath(); if (!chatId || !key.endsWith(':' + chatId)) return;
+    await setValue('etcAt:' + chatId, new Date().toISOString());
+    if (String(await getValue('etcSync', 'off')) !== 'on' || !nav.gsOn) return;
+    clearTimeout(etcUpTimer); etcUpTimer = setTimeout(() => gsSave(true), 8000);
+  };
+  async function etcCheck(chatId) {
+    if (String(await getValue('etcSync', 'off')) !== 'on' || !nav.gsOn) return;
+    if (Date.now() - (nav.etcCheckAt || 0) < 120000 && nav.etcCheckRoom === chatId) return; // 2분에 한 번만
+    nav.etcCheckAt = Date.now(); nav.etcCheckRoom = chatId;
+    const d = await gsFetch(chatId); if (!d?.store || chatIdFromPath() !== chatId) return;
+    const mineAt = Date.parse(String(await getValue('etcAt:' + chatId, '')) || '') || 0, theirAt = Date.parse(d.at) || 0;
+    if (theirAt <= mineAt || String(await getValue('etcSkip:' + chatId, '')) === d.at) return;
+    let differs = false; for (const k of ETC_SYNC_KEYS) if ((d.store[k] || '') !== String(await getValue(k + ':' + chatId, '') || '')) { differs = true; break; }
+    if (!differs) { await setValue('etcAt:' + chatId, d.at); return; }
+    nav.etcAsk = { chatId, at: d.at, by: d.by || '', store: d.store }; pageToast('다른 기기 ETC(커뮤·폰 등)가 더 최신이에요 · 조아메모리에서 받을 수 있어요'); render();
+  }
+  async function etcMineLoad(chatId) { const m = {}; for (const k of ETC_SYNC_KEYS) m[k] = !!(await getValue(k + ':' + chatId, '')); nav.etcMine = m; }
+  async function etcFirst() {
+    const chatId = chatIdFromPath(); if (!chatId || !nav.gsOn) return;
+    const d = await gsFetch(chatId); let differs = false;
+    if (d?.store) for (const k of ETC_SYNC_KEYS) if ((d.store[k] || '') !== String(await getValue(k + ':' + chatId, '') || '')) { differs = true; break; }
+    const theirHas = d?.store && ETC_SYNC_KEYS.some(k => d.store[k]);
+    if (differs && theirHas) { await etcMineLoad(chatId); nav.etcAsk = { chatId, at: d.at, by: d.by || '', store: d.store, first: true }; nav.gsSheet = false; render(); }
+    else gsSave(true);
+  }
+  function etcAskHtml() {
+    const e = nav.etcAsk; if (!e || e.chatId !== chatIdFromPath()) return '';
+    const has = ETC_PARTS.filter(([k]) => e.store[k]).map(([, l]) => l).join(' · ') || 'ETC';
+    const mine = ETC_PARTS.filter(([k]) => nav.etcMine?.[k]).map(([, l]) => l).join(' · ');
+    if (e.first) return `<div class="devask"><b>ETC를 어느 쪽으로 맞출까요?</b>
+      <p>기기마다 커뮤·폰 등이 달라요. 한 번만 고르면 그다음부터는 자동으로 맞춰져요.</p>
+      <div class="dcols"><div class="dcol"><small>구글(다른 기기)</small><b style="font-size:15px">${esc(e.by || '다른 기기')}</b><small>${esc(whenOf(e.at))} 올림</small><p>${esc(has)}</p></div>
+        <div class="dcol"><small>이 기기</small><b style="font-size:15px">${esc(DEVICE)}</b><small>지금 이 기기에 있는 것</small><p>${esc(mine || '비어 있음')}</p></div></div>
+      <div class="devask-btns"><button class="btn" data-act="etcpull"${busyNow ? ' disabled' : ''}>구글 것으로 맞추기</button><button class="btn" data-act="etcskip">이 기기 것으로 맞추기</button></div></div>`;
+    return `<div class="devask"><b>다른 기기 ETC가 더 최신이에요</b>
+      <p>${esc([e.by, whenOf(e.at)].filter(Boolean).join(' · '))}에 올린 것 · ${esc(has)}</p>
+      <div class="devask-btns"><button class="btn pri" data-act="etcpull"${busyNow ? ' disabled' : ''}>받아서 이 기기에 맞추기</button><button class="btn" data-act="etcskip">이 기기 것 유지</button></div></div>`;
+  }
+  async function etcPull(take) {
+    const e = nav.etcAsk, chatId = chatIdFromPath(); if (!e || e.chatId !== chatId) return;
+    if (!take) { await setValue('etcSkip:' + chatId, e.at); nav.etcAsk = null; if (e.first) { await setValue('etcAt:' + chatId, new Date().toISOString()); gsSave(true); toast('이 기기 ETC로 맞췄어요(구글에 올렸어요)', 'ok', 3000); } return render(); }
+    etcQuiet = true;
+    try { for (const k of ETC_SYNC_KEYS) await setValue(k + ':' + chatId, e.store[k] || ''); await setValue('etcAt:' + chatId, e.at); }
+    finally { etcQuiet = false; }
+    nav.etcAsk = null; toast('다른 기기 ETC를 받아 왔어요', 'ok', 3000); await refresh();
   }
   async function gsKeep() {
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
@@ -4694,7 +4751,7 @@
     // 다시 그려도 입력 중인 설정 값(키·주소 등)은 남깁니다. 노트를 다시 읽은 뒤 화면이 새로 그려져 타이핑이 지워지지 않게.
     const typed = new Map([...main.querySelectorAll('input[data-set]:not([type=checkbox])')].filter(el => el.value).map(el => [el.dataset.set, el.value]));
     main.style.padding = nav.view === 'graph' ? '0' : '';
-    main.innerHTML = devAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
+    main.innerHTML = devAskHtml() + etcAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -4828,6 +4885,7 @@
         }
       } else if (nav.lostAsk?.chatId === chatId) nav.lostAsk = null;
       loadTurnMap(chatId, snap);
+      etcCheck(chatId);
       if (String(await getValue('gsUrl', '')).trim() && !(await getValue('gsAsked:' + chatId, ''))) {
         let fresh = true; for (const k of BACKUP_KEYS) if (await getValue(k + ':' + chatId, '')) { fresh = false; break; }
         await setValue('gsAsked:' + chatId, '1');
@@ -5338,12 +5396,15 @@
       case 'gsave': return gsSave();
       case 'gload': return gsLoad();
       case 'gscode': return gsCopyCode();
-      case 'gsopen': nav.gsSheet = true; render(); return fillSettings();
+      case 'gsopen': nav.etcSyncOn = String(await getValue('etcSync', 'off')) === 'on'; nav.gsSheet = true; render(); return fillSettings();
       case 'gsclose': nav.gsSheet = false; return render();
       case 'gskeep': return gsKeep();
       case 'etcopen': nav.etcSheet = true; return render();
       case 'etcclose': nav.etcSheet = false; return render();
       case 'etcwipe': return etcWipe(arg);
+      case 'etcpull': return etcPull(true);
+      case 'etcskip': return etcPull(false);
+      case 'etcsync': await setValue('etcSync', el.checked ? 'on' : 'off'); nav.etcSyncOn = el.checked; toast(el.checked ? 'ETC도 기기끼리 맞춰요. 바뀌면 구글에 자동으로 올라가요.' : 'ETC는 기기마다 따로 둬요.', 'ok', 3000); if (el.checked) etcFirst(); return;
       case 'devkeep': return devChoose(false);
       case 'lostput': return lostPut(arg || 'local');
       case 'lostskip': { const l = nav.lostAsk; if (l) await setValue('lostSkip:' + l.chatId, l.key); nav.lostAsk = null; return render(); }
