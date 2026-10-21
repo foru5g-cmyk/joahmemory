@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.7.1
+// @version      3.8.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -738,8 +738,9 @@
     }
     throw lastError || new Error('메시지를 수정하지 못했어요.');
   }
-  // 노트는 늘 직전(가장 최근) AI 답변에 넣습니다.
-  const pickCarrier = all => [...all].reverse().find(m => msgRole(m) === 'assistant') || null;
+  // 노트 자리 = 맨 아래에서 AI 답변 두 개 위(전전 버블). 맨 아래를 리롤하거나 OOC 문답을 지워도 노트가 같이 지워지지 않게.
+  //   더 위로 올리면 앱에서 오래 대화하는 사이 크랙이 AI에게 보내는 최근 대화 밖으로 밀려날 수 있어서 두 칸만. 답변이 3개가 안 되면 가장 위 답변.
+  const pickCarrier = all => { const ai = all.filter(m => msgRole(m) === 'assistant'); return ai.length ? ai[Math.max(0, ai.length - 3)] : null; };
 
   // ══════════════════════════════════════════════════════════════
   // 7. 웹 화면에서 노트 가리기 (혹시 그려졌을 때)
@@ -4825,7 +4826,7 @@
           if (await moveNote(chatId, snap)) {
             snap = await readSinceLastNote(chatId);
             await setValue('moved:' + chatId, JSON.stringify({ at: Date.now(), from: behind }));
-            pageToast(`기억(1~${snap.note?.turns || '?'}턴)를 직전 AI 답변으로 옮겼어요`);
+            pageToast(`기억(1~${snap.note?.turns || '?'}턴)을 최근 AI 답변 쪽으로 옮겼어요`);
           }
         }
         catch (e) { toast('노트 옮기기 실패 · ' + e.message, 'err'); }
