@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.5.1
+// @version      3.6.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1173,7 +1173,7 @@
     .item .wear,.item .spchips,.item .kv{margin-top:8px}
     .kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 14px;align-items:baseline}
     .kv .k{font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap}
-    .kv .v{font-size:14px;line-height:1.6;color:var(--ink2);overflow-wrap:anywhere}
+    .kv .v{font-size:14px;line-height:1.6;color:var(--ink2);overflow-wrap:anywhere}.kv.kv-stack{display:flex;flex-direction:column;gap:3px}.kv-stack .k{white-space:normal;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}.kv-stack .k:first-child{margin-top:0}.kv-stack .k:empty{display:none}.kv-stack .v{padding-left:2px}
     .pill{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:1px}
     .item .quote{margin-top:6px}
     /* 근거 버튼은 어디서나 '아래 줄'에 둡니다. inline으로 두면 자리가 남을 땐 오른쪽, 모자라면 아래로 가서 화면마다 제자리가 달라져요. */
@@ -1396,7 +1396,7 @@
     .bd-tools button{border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink2);font-size:12.5px;font-weight:600;padding:5px 12px;cursor:pointer}
     .bd-snap{margin:0;padding:10px 16px 14px;text-align:center;font-size:12px;border-top:1px solid var(--rule)}.bd-snap .linkbtn{font-size:12px;color:var(--graphite)}
     .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
+    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.etcgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.etcgrid .btn{height:40px;border-radius:12px;font-weight:600}.etcall{height:42px;border-radius:999px;font-weight:700;color:var(--bad);border-color:var(--bad)}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet .img-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer;padding:0}
     .imgsheet .img-close{border:0;border-radius:999px;background:#fff;color:#1a1a1a;font-size:14px;font-weight:700;padding:9px 26px;cursor:pointer}
@@ -2136,13 +2136,13 @@
   };
   // 화면 공통 모양 — 항목 = 굵은 제목 한 줄 + 아래 내용, 사람별 내용은 '이름 | 내용' 두 칸 표
   const itemHtml = (title, body, sub = '') => `<section class="item"><h4>${title}</h4>${sub ? `<p class="item-sub">${sub}</p>` : ''}${body}</section>`;
-  const kvHtml = rows => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('')}</div>` : '';
+  const kvHtml = (rows, cls = '') => rows.length ? `<div class="kv${cls ? ' ' + cls : ''}">${rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('')}</div>` : '';
   const pillHtml = state => { const [bg, fg] = KSTYLE[state] || KSTYLE['모름']; return `<span class="pill" style="background:${bg};color:${fg}">${esc(state)}</span>`; };
   const factBody = f => kvHtml([
-      ...f.who.map(w => [nameChip(w.name), `${pillHtml(w.state)}${w.note ? ` ${esc(w.note)}` : ''}${quoteHtml(w.quote, w.tr)}`]),
+      ...f.who.map(w => [`${nameChip(w.name)} ${pillHtml(w.state)}`, `${w.note ? esc(w.note) : ''}${quoteHtml(w.quote, w.tr)}`]),
       ...f.hide.map(h => { const [a, b] = h.split(/\s*→\s*/); return ['숨김', b ? `${nameChip(a.trim())}<i class="nar">→</i>${nameChip(b.trim())}` : esc(h)]; }),
       ...f.extra.map(x => ['', esc(x)]),
-    ]) + quoteHtml(f.quote, f.tr);
+    ], 'kv-stack') + quoteHtml(f.quote, f.tr); // 인지: 이름이 길어도 설명이 눌리지 않게 이름 아래로
   // 자각 표시는 두 글자로: 자각 / 무자각 / 부정 / 숨김 (예전 표현 자각함·모름도 같은 말로 보여요)
   const AWARE = { '자각함': '자각', '자각': '자각', '모름': '무자각', '무자각': '무자각', '부정': '부정', '숨김': '숨김' };
   function feelings() {
@@ -2630,6 +2630,31 @@
     finally { busyNow = false; }
     await refresh();
     if (nav.gsOn) gsSave(true);
+  }
+  // ETC 비우기: 커뮤·폰·컴퓨터·뉴스·위키·실시간톡을 골라 이 방에서 지워요. 기억 노트·명대사·정리 기록은 그대로.
+  const ETC_PARTS = [['board', '🗨 커뮤니티'], ['phone', '📱 폰'], ['pc', '💻 컴퓨터'], ['news', '📰 뉴스'], ['wiki', '📚 위키'], ['live', '📺 실시간톡']];
+  function etcSheetHtml() {
+    return `<div class="rsheet" data-act="etcclose"><div class="rbox gsbox" data-act="noop">
+      <b>ETC 비우기</b><small>고른 것만 이 방에서 지워요 · 기억 노트·명대사·정리 기록은 그대로</small>
+      <div class="etcgrid">${ETC_PARTS.map(([k, l]) => `<button class="btn" data-act="etcwipe" data-arg="${k}">${l}</button>`).join('')}</div>
+      <button class="btn etcall" data-act="etcwipe" data-arg="all">ETC 전체 비우기</button>
+      <small>${nav.gsOn ? '지우기 직전에 구글 드라이브에 자동으로 백업해 둬요' : '구글 백업이 연결 안 돼 있어요. 필요하면 먼저 "이 방 전체 내보내기"를 해 두세요'}</small>
+    </div></div>`;
+  }
+  async function etcWipe(which) {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow) return;
+    const parts = which === 'all' ? ETC_PARTS : ETC_PARTS.filter(([k]) => k === which); if (!parts.length) return;
+    if (!confirm(`${parts.map(([, l]) => l).join(' · ')}${which === 'all' ? '\n(ETC 전체)' : ''}\n\n이 방에서 지울까요? 기억 노트는 그대로예요.`)) return;
+    busyNow = true; render();
+    try {
+      if (nav.gsOn) await gsSave(true); // 지우기 직전 백업
+      for (const [k] of parts) await setValue(k + ':' + chatId, '');
+      if (which === 'all') await setValue('etcnames:' + chatId, '');
+      nav.etcSheet = false; nav.bdPost = null; nav.bdBoard = '';
+      toast(`${which === 'all' ? 'ETC 전체를' : parts[0][1].replace(/^S+s/, '') + ' 기록을'} 비웠어요`, 'ok', 3000);
+    } catch (e) { toast('비우기 실패 · ' + e.message, 'err'); }
+    finally { busyNow = false; }
+    await refresh();
   }
   async function gsKeep() {
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
@@ -4575,8 +4600,9 @@
         <div class="jump"><button data-act="gsopen"><b>구글 드라이브 백업</b><span class="v">${nav.gsOn ? '연결됨 · 넣을 때마다 자동' : '연결하기'}</span></button>
         <button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터</span></button>
         <button data-act="backup"><b>이 방 전체 내보내기</b><span class="v">파일 하나로</span></button>
+        <button data-act="etcopen"><b>ETC 비우기</b><span class="v">커뮤·폰 등 · 기억 노트는 그대로</span></button>
         <label class="jumprow"><b>백업 불러오기</b><span class="v">백업·노트 파일 열기</span><input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div>
-        ${nav.gsSheet ? gsSheetHtml() : ''}
+        ${nav.gsSheet ? gsSheetHtml() : ''}${nav.etcSheet ? etcSheetHtml() : ''}
         <p class="muted" style="margin:10px 2px 0;font-size:12.5px;line-height:1.6">· 담기는 것: 기억 노트(근거·감정선까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
         · API 키는 담기지 않아요(파일이 새도 안전하게).<br>
         · 구글 드라이브를 연결해 두면 정리해서 넣을 때마다 자동으로 올라가고, 새 기기에서 방을 열면 불러올지 물어봐요.<br>
@@ -5315,6 +5341,9 @@
       case 'gsopen': nav.gsSheet = true; render(); return fillSettings();
       case 'gsclose': nav.gsSheet = false; return render();
       case 'gskeep': return gsKeep();
+      case 'etcopen': nav.etcSheet = true; return render();
+      case 'etcclose': nav.etcSheet = false; return render();
+      case 'etcwipe': return etcWipe(arg);
       case 'devkeep': return devChoose(false);
       case 'lostput': return lostPut(arg || 'local');
       case 'lostskip': { const l = nav.lostAsk; if (l) await setValue('lostSkip:' + l.chatId, l.key); nav.lostAsk = null; return render(); }
@@ -5384,7 +5413,7 @@
       });
       // 보내기 버튼이 혼자 감싸져 있으면 그 감싼 상자 앞에 넣습니다.
       let anchor = send;
-      while (anchor.parentElement && anchor.parentElemeAnt !== box && anchor.parentElement.querySelectorAll('button').length === 1) anchor = anchor.parentElement;
+      while (anchor.parentElement && anchor.parentElement !== box && anchor.parentElement.querySelectorAll('button').length === 1) anchor = anchor.parentElement;
       return anchor;
     }
     return null;
