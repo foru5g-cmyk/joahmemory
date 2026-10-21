@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.7.0
+// @version      3.7.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2681,6 +2681,7 @@
     if (theirAt <= mineAt || String(await getValue('etcSkip:' + chatId, '')) === d.at) return;
     let differs = false; for (const k of ETC_SYNC_KEYS) if ((d.store[k] || '') !== String(await getValue(k + ':' + chatId, '') || '')) { differs = true; break; }
     if (!differs) { await setValue('etcAt:' + chatId, d.at); return; }
+    if (nav.etcAsk?.chatId === chatId && nav.etcAsk.at === d.at) return; // 같은 걸로 이미 카드가 떠 있으면 다시 안 알림
     nav.etcAsk = { chatId, at: d.at, by: d.by || '', store: d.store }; pageToast('다른 기기 ETC(커뮤·폰 등)가 더 최신이에요 · 조아메모리에서 받을 수 있어요'); render();
   }
   async function etcMineLoad(chatId) { const m = {}; for (const k of ETC_SYNC_KEYS) m[k] = !!(await getValue(k + ':' + chatId, '')); nav.etcMine = m; }
