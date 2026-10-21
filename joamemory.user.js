@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      2.8.6
+// @version      2.8.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -4485,6 +4485,7 @@
   // ══════════════════════════════════════════════════════════════
   const behindOf = snap => { const n = snap?.note; if (!n) return null; const chat = snap.all.filter(isChat), i = chat.findIndex(m => msgId(m) === n.carrierId); return i >= 0 ? chat.length - 1 - i : null; };
   // 노트가 뒤로 밀리면 최신 답변으로 다시 붙입니다. AI 호출이 없어서 비용이 들지 않아요.
+  let ownUpto = ''; // 이 기기에서 방금 넣은 노트의 정리 지점(다른 기기 알림에서 뺌)
   let moving = false, injectOn = true; // injectOn=false: 어느 채팅방에도 노트를 넣거나 옮기지 않음(ETC만)
   async function moveNote(chatId, snap) {
     const n = snap.note, carrier = pickCarrier(snap.all);
@@ -4518,6 +4519,26 @@
         }
         catch (e) { toast('노트 옮기기 실패 · ' + e.message, 'err'); }
         finally { moving = false; }
+      }
+      // 다른 기기(폰↔컴)에서 새로 정리해 넣은 노트로 바뀌었으면 알려 줍니다. 화면은 아래에서 새 노트로 갈아끼워져요.
+      //   (이 기기의 확인용 전체본은 정리 지점(upto)이 같을 때만 쓰므로, 다른 기기 노트면 자동으로 채팅 노트를 씁니다.)
+      //   다른 기기 노트가 더 적은 턴이면(예전 화면에서 덮어씀) 예/아니오로 묻고, 예면 이 기기에서 보던 노트로 채팅을 되돌립니다.
+      const was = snapshot?.note;
+      if (was && snap.note && snap.note.upto !== was.upto && snap.note.upto !== ownUpto) {
+        if (snap.note.turns >= was.turns) pageToast(`다른 기기에서 정리한 새 기억(1~${snap.note.turns}턴)으로 바꿨어요`);
+        else if (confirm(`다른 기기에서 더 짧은 기억(1~${snap.note.turns}턴)을 넣었어요.\n이 기기에서 보던 기억은 1~${was.turns}턴까지예요.\n\n[확인] 1~${was.turns}턴 기억으로 되돌리기\n[취소] 1~${snap.note.turns}턴 기억 그대로 쓰기`)) {
+          try {
+            const mem = fullNote && fullNote.upto === was.upto ? fullNote.memory : was.memory, carrier = pickCarrier(snap.all);
+            if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
+            await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(mem, was.upto, was.turns, was.at || undefined));
+            if (snap.note.carrierId && snap.note.carrierId !== msgId(carrier)) {
+              const other = await readMessage(chatId, snap.note.carrierId), cleaned = stripBlocks(msgText(other)).trimEnd();
+              if (cleaned !== msgText(other)) await writeMessage(chatId, snap.note.carrierId, cleaned);
+            }
+            ownUpto = was.upto; snap = await readSinceLastNote(chatId);
+            pageToast(`1~${was.turns}턴 기억으로 되돌렸어요`);
+          } catch (e) { toast('되돌리기 실패 · ' + e.message, 'err'); }
+        }
       }
       snapshot = snap;
       usage = await usageOf(chatId);
@@ -4682,6 +4703,7 @@
       if (!carrier && !parked) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
       if (parked) await park(chatId, memory, draft.uptoId, draft.turns);
       else await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns));
+      ownUpto = draft.uptoId;
       await saveFull(chatId, draft.uptoId, memory);
       if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId });
       await setValue('edited:' + chatId, '[]');
@@ -5101,6 +5123,12 @@
     const c = Number(await getValue('cycle', '25')); if (CYCLES.includes(c)) cycle = c;
     const l = Number(await getValue('noteLimit', '30000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
+  // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
+  let backAt = 0;
+  const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || loading || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
+  document.addEventListener('visibilitychange', comeBack);
+  window.addEventListener('pageshow', comeBack);
+  window.addEventListener('focus', comeBack);
   let lastPath = '';
   setInterval(() => {
     if (location.pathname === lastPath) return;
