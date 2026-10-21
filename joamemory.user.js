@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.1.2
+// @version      3.1.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1384,7 +1384,7 @@
     .bd-tools button{border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink2);font-size:12.5px;font-weight:600;padding:5px 12px;cursor:pointer}
     .bd-snap{margin:0;padding:10px 16px 14px;text-align:center;font-size:12px;border-top:1px solid var(--rule)}.bd-snap .linkbtn{font-size:12px;color:var(--graphite)}
     .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
+    .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{border:1.5px solid #9D8CEB;background:#F3F0FD;border-radius:14px;padding:12px 14px;margin:0 0 14px;font-size:13px;color:var(--ink)}.devask b{display:block;margin-bottom:6px;font-size:14px}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{color:var(--bad)}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet .img-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer;padding:0}
     .imgsheet .img-close{border:0;border-radius:999px;background:#fff;color:#1a1a1a;font-size:14px;font-weight:700;padding:9px 26px;cursor:pointer}
@@ -2543,6 +2543,35 @@
   }
   // 안내를 펼친 채로 화면이 다시 그려져도 접히지 않게
   root.addEventListener('toggle', e => { if (e.target.classList?.contains('gshow')) nav.gsGuide = e.target.open; }, true);
+  function devAskHtml() {
+    const a = nav.devAsk; if (!a || a.chatId !== chatIdFromPath()) return '';
+    const when = t => t ? new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
+    return `<div class="devask"><b>다른 기기에서 정리한 기억이 들어왔어요</b>
+      <p>· 채팅에 있는 기억: 1~${a.c.turns}턴 · ${esc(when(a.c.at))}${a.c.by ? ' · ' + esc(a.c.by) : ''}<br>· 이 기기에서 보던 기억: 1~${a.mine.turns || '?'}턴 · ${esc(when(a.mine.at))}</p>
+      ${a.mine.turns && a.c.turns < a.mine.turns ? '<p class="warn">⚠ 채팅에 있는 기억이 더 짧아요(예전 화면에서 덮어썼을 수 있어요).</p>' : ''}
+      <div class="devask-btns"><button class="btn pri" data-act="devkeep"${busyNow ? ' disabled' : ''}>채팅에 있는 기억 쓰기</button><button class="btn" data-act="devrestore"${busyNow ? ' disabled' : ''}>이 기기 기억으로 되돌리기</button></div></div>`;
+  }
+  async function devChoose(restore) {
+    const a = nav.devAsk, chatId = chatIdFromPath(); if (!a || a.chatId !== chatId || busyNow) return;
+    busyNow = true; render();
+    try {
+      if (!restore) { fullNote = null; await setValue('full:' + chatId, ''); pageToast(`채팅에 있는 기억(1~${a.c.turns}턴)을 써요`); }
+      else {
+        const snap = await readSinceLastNote(chatId), c = snap.note || a.c, mine = a.mine, carrier = pickCarrier(snap.all);
+        if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
+        await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(mine.memory, mine.upto, mine.turns || c.turns, mine.at || undefined, mine.by || ''));
+        if (c.carrierId && c.carrierId !== msgId(carrier)) {
+          const other = await readMessage(chatId, c.carrierId), cleaned = stripBlocks(msgText(other)).trimEnd();
+          if (cleaned !== msgText(other)) await writeMessage(chatId, c.carrierId, cleaned);
+        }
+        if (mine.full) await saveFull(chatId, mine.upto, mine.memory, mine.turns, mine.at);
+        pageToast(`이 기기 기억(1~${mine.turns || c.turns}턴)으로 되돌렸어요`);
+      }
+      nav.devAsk = null;
+    } catch (e) { toast('바꾸기 실패 · ' + e.message, 'err'); }
+    finally { busyNow = false; }
+    await refresh();
+  }
   async function gsKeep() {
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     nav.gsOn = !!String(await getValue('gsUrl', '')).trim();
@@ -4574,7 +4603,7 @@
     // 다시 그려도 입력 중인 설정 값(키·주소 등)은 남깁니다. 노트를 다시 읽은 뒤 화면이 새로 그려져 타이핑이 지워지지 않게.
     const typed = new Map([...main.querySelectorAll('input[data-set]:not([type=checkbox])')].filter(el => el.value).map(el => [el.dataset.set, el.value]));
     main.style.padding = nav.view === 'graph' ? '0' : '';
-    main.innerHTML = backRow + (nav.view === 'preview' ? previewHtml()
+    main.innerHTML = devAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -4665,27 +4694,12 @@
       const mine = fullNote?.memory ? { memory: fullNote.memory, full: true, upto: fullNote.upto, turns: fullNote.turns || (was?.upto === fullNote.upto ? was.turns : 0), at: fullNote.at || (was?.upto === fullNote.upto ? was.at : ''), by: DEVICE }
         : was ? { memory: was.memory, full: false, upto: was.upto, turns: was.turns, at: was.at, by: was.by } : null;
       const same = !c || !mine || c.parked || (c.upto === mine.upto && (mine.full ? sameAsChat(mine.memory, c.memory) : chatShape(mine.memory) === chatShape(c.memory)));
+      // 사파리는 화면으로 돌아오는 순간 뜨는 확인 창을 막거나 바로 닫기도 해서(그러면 '취소'로 처리돼 위험) 창 대신 패널 카드로 묻습니다.
+      //   고르기 전에는 아무것도 바꾸지 않아요.
       if (!same) {
-        const when = t => t ? new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
-        const keepChat = confirm(`다른 기기에서 정리한 기억이 채팅에 들어와 있어요.\n\n`
-          + `· 채팅에 있는 기억: 1~${c.turns}턴 · ${when(c.at)}${c.by ? ' · ' + c.by : ''}\n`
-          + `· 이 기기에서 보던 기억: 1~${mine.turns || '?'}턴 · ${when(mine.at)}\n`
-          + (mine.turns && c.turns < mine.turns ? '\n⚠ 채팅에 있는 기억이 더 짧아요(예전 화면에서 덮어썼을 수 있어요).\n' : '')
-          + `\n[확인] 채팅에 있는 기억 쓰기\n[취소] 이 기기 기억으로 되돌리기`);
-        if (keepChat) { fullNote = null; await setValue('full:' + chatId, ''); pageToast(`채팅에 있는 기억(1~${c.turns}턴)을 써요`); }
-        else {
-          try {
-            const carrier = pickCarrier(snap.all); if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
-            await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(mine.memory, mine.upto, mine.turns || c.turns, mine.at || undefined, mine.by || ''));
-            if (c.carrierId && c.carrierId !== msgId(carrier)) {
-              const other = await readMessage(chatId, c.carrierId), cleaned = stripBlocks(msgText(other)).trimEnd();
-              if (cleaned !== msgText(other)) await writeMessage(chatId, c.carrierId, cleaned);
-            }
-            snap = await readSinceLastNote(chatId); snapshot = snap;
-            pageToast(`이 기기 기억(1~${mine.turns || c.turns}턴)으로 되돌렸어요`);
-          } catch (e) { toast('되돌리기 실패 · ' + e.message, 'err'); }
-        }
-      }
+        const key = c.upto + '|' + c.at + '|' + chatShape(c.memory).length;
+        if (nav.devAsk?.key !== key) { nav.devAsk = { key, chatId, c, mine }; pageToast('다른 기기에서 정리한 기억이 들어왔어요 · 조아메모리를 열어 골라 주세요'); }
+      } else if (nav.devAsk?.chatId === chatId) nav.devAsk = null;
       loadTurnMap(chatId, snap);
       if (String(await getValue('gsUrl', '')).trim() && !(await getValue('gsAsked:' + chatId, ''))) {
         let fresh = true; for (const k of BACKUP_KEYS) if (await getValue(k + ':' + chatId, '')) { fresh = false; break; }
@@ -5195,6 +5209,8 @@
       case 'gsopen': nav.gsSheet = true; render(); return fillSettings();
       case 'gsclose': nav.gsSheet = false; return render();
       case 'gskeep': return gsKeep();
+      case 'devkeep': return devChoose(false);
+      case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
       case 'go': { const mode = nav.runMode; nav.view = null; nav.tab = 'home'; return run(mode); }
       case 'extget': return run(nav.runMode, { export: true });
