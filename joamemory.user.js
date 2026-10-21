@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.8.6
+// @version      3.8.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -50,8 +50,8 @@
   const DEFAULT_MODEL = 'gemini-3.5-flash';
   // 설정에서 버튼으로 고르는 모델. 단가는 priceOf에 있습니다.
   const MODELS = [
-    ['Gemini', [['gemini-3.5-flash', '3.5 Flash (기본)'], ['gemini-3.8-flash', '3.8 Flash'], ['gemini-3.7-flash', '3.7 Flash'], ['gemini-3.6-flash', '3.6 Flash'],
-      ['gemini-3.5-flash-lite', '3.5 Flash-Lite'], ['gemini-3.1-flash-lite', '3.1 Flash-Lite'], ['gemini-3.1-pro-preview', '3.1 Pro']]],
+    ['Gemini', [['gemini-4-argon', '4 Argon (최신)'], ['gemini-3.5-flash', '3.5 Flash (기본)'], ['gemini-3.8-flash', '3.8 Flash'], ['gemini-3.7-flash', '3.7 Flash'], ['gemini-3.6-flash', '3.6 Flash'],
+      ['gemini-3.5-flash-lite', '3.5 Flash-Lite'], ['gemini-3.1-flash-lite', '3.1 Flash-Lite'], ['gemini-3.1-pro-preview', '3.1 Pro'], ['gemini-2.5-pro', '2.5 Pro']]],
     ['Claude', [['claude-fable-5-1', 'Fable 5.1 (가장 똑똑함)'], ['claude-opus-5-5', 'Opus 5.5'], ['claude-opus-5', 'Opus 5'], ['claude-sonnet-5', 'Sonnet 5'], ['claude-haiku-4-5', 'Haiku 4.5']]],
   ];
   const MODEL_IDS = MODELS.flatMap(([, list]) => list.map(([id]) => id));
