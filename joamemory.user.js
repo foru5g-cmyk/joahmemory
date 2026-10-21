@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.8.3
+// @version      3.8.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2456,10 +2456,12 @@
 
   // 기억 초기화: 채팅 속 노트(리롤로 밀려난 답에 남은 것까지)와 이 기기의 정리 기록을 지워, 처음 정리하는 방처럼 만듭니다.
   //   명대사·ETC(폰·게시판 등)·AI 사용 기록은 그대로 둡니다. 백업은 자동으로 받지 않아요(아이폰 등에서 저장 창이 끼어들지 않게). 필요하면 "노트 내보내기"를 먼저.
+  // 기억 초기화 = 이 방을 완전히 처음 상태로: 채팅 속 노트 전부 · 이 기기의 정리본·사본·기록 · 명대사 · ETC 전부 · 쓴 돈 기록 · 구글 백업까지.
+  //   리롤로 밀려난 답에 남은 노트도 지워요. 되돌릴 수 없어서 한 번 확인해요(직접 누른 버튼이라 사파리에서도 창이 떠요).
   async function resetMemory() {
     const chatId = chatIdFromPath(); if (!chatId || busyNow) return;
-    if (!confirm('이 방의 기억을 처음 상태로 지워요.\n\n· 채팅에 넣은 노트 · 정리 기록(바뀐 것) · 직접 고친 표시가 사라져요\n· 명대사 · ETC · 사용 기록은 남아요\n· 백업이 필요하면 취소하고 설정 › 백업에서 "이 방 전체 내보내기"를 먼저 눌러 주세요\n\n초기화할까요?')) return;
-    busyNow = true; render(); toast('노트를 지우는 중…');
+    if (!confirm('이 방을 완전히 처음 상태로 지워요. 되돌릴 수 없어요.\n\n· 채팅에 넣은 기억 노트\n· 정리 기록 · 이 기기 사본\n· 명대사 · ETC 전부(커뮤·폰·컴퓨터·뉴스·위키·실시간톡·찾은 인물)\n· 쓴 돈 기록' + (nav.gsOn ? '\n· 구글 드라이브 백업' : '') + '\n\n대화 내용(RP)은 그대로예요. 지울까요?')) return;
+    busyNow = true; render(); toast('이 방을 처음 상태로 지우는 중…');
     try {
       let cursor = '', fixed = 0;
       for (let page = 0; page < 40; page++) {
@@ -2467,10 +2469,15 @@
         for (const m of list) { const t = msgText(m); if (/MEMO_NOTE/.test(t)) { const cleaned = stripBlocks(t).trimEnd(); if (cleaned !== t) { await writeMessage(chatId, msgId(m), cleaned); fixed++; } } }
         if (!(cursor = next)) break;
       }
-      await setValue('resetAt:' + chatId, new Date().toISOString());
-      for (const k of ['parked', 'hist', 'edited', 'ext', 'full', 'moved', 'seen', 'lostSkip']) await setValue(k + ':' + chatId, '');
-      draft = null; nav = fresh();
-      toast(`초기화했어요${fixed ? `(노트 ${fixed}곳 지움)` : ''}. 이제 "정리하기"를 누르면 처음부터 새로 만들어요.`, 'ok', 4000);
+      etcQuiet = true;
+      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'lostSkip', 'fullSkip', 'etcSkip', 'gsAsked']) await setValue(k + ':' + chatId, ''); }
+      finally { etcQuiet = false; }
+      const now = new Date().toISOString();
+      await setValue('resetAt:' + chatId, now); await setValue('etcAt:' + chatId, now);
+      if (nav.gsOn) try { await gsCall({ action: 'wipe', chat: chatId }); }
+        catch (e) { try { await gsCall({ action: 'save', chat: chatId, title: roomTitle(), data: JSON.stringify({ app: 'memo-note', v: 3, at: now, by: DEVICE, chat: chatId, upto: '', turns: 0, noteAt: '', memory: '', store: {}, reset: true }) }); toast('구글 스크립트가 예전 버전이라 이전 백업은 남아 있어요. 설정 › 백업에서 스크립트를 새로 붙여 넣어 주세요.', 'info', 6000); } catch (e2) { toast('구글 백업 지우기 실패 · ' + e2.message, 'err', 5000); } }
+      draft = null; nav = fresh(); fullNote = null;
+      toast(`이 방을 처음 상태로 지웠어요${fixed ? `(노트 ${fixed}곳 지움)` : ''}. "정리하기"를 누르면 처음부터 새로 만들어요.`, 'ok', 4500);
       await refresh();
     } catch (e) { toast('초기화 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
@@ -2527,7 +2534,7 @@
   // ── 구글 드라이브 백업 (Apps Script 웹 앱) ──
   //   사용자가 자기 구글 계정에 아래 스크립트를 한 번 배포하고, 그 주소와 비밀번호를 설정에 넣어요.
   //   백업은 그 사람 드라이브 "조아메모리 백업" 폴더에 방마다 파일 하나(방 ID.json). 로그인 만료가 없어 아이폰에서도 됩니다.
-  const GS_CODE = "// 조아메모리 구글 드라이브 백업 — script.google.com 에서 [새 프로젝트]를 만들고 원래 있던 글을 지운 뒤 이 글을 통째로 붙여 넣으세요.\n// 1) 아래 SECRET 을 나만 아는 비밀번호로 바꾸기\n// 2) 오른쪽 위 [배포] → [새 배포] → 톱니바퀴에서 유형: 웹 앱 → 다음 사용자로 실행: 나 → 액세스 권한: 모든 사용자 → [배포]\n//    (처음엔 구글이 권한을 물어요: 계정 선택 → 고급 → 이동 → 허용. 내 드라이브에 백업 폴더를 만들려는 거예요)\n// 3) 나온 웹 앱 URL(…/exec)과 SECRET 을 조아메모리 설정 › 백업 › 구글 드라이브 백업 창에 넣고 [연결 저장]\nconst SECRET = '여기를-비밀번호로-바꾸세요';\nconst FOLDER = '조아메모리 백업';\nfunction folder_() { const it = DriveApp.getFoldersByName(FOLDER); return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER); }\nfunction out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }\nfunction find_(f, id) { const all = f.getFiles(); while (all.hasNext()) { const x = all.next(); if (x.getName().indexOf('(' + id + ')') >= 0) return x; } return null; }\nfunction doGet() { return out_({ ok: true, app: 'joamemory-backup' }); }\nfunction doPost(e) {\n  const b = JSON.parse(e.postData.contents || '{}');\n  if (b.key !== SECRET) return out_({ ok: false, error: '비밀번호가 달라요' });\n  if (b.action === 'ping') return out_({ ok: true });\n  const id = String(b.chat || '').replace(/[^A-Za-z0-9_-]/g, ''), f = folder_(), x = find_(f, id);\n  if (b.action === 'save') { const name = (String(b.title || '').trim() || '조아메모리') + ' (' + id + ').json';\n    if (x) { x.setContent(b.data); x.setName(name); } else f.createFile(name, b.data, MimeType.PLAIN_TEXT); return out_({ ok: true }); }\n  if (b.action === 'load') { if (!x) return out_({ ok: false, error: '이 방 백업이 아직 없어요' }); return out_({ ok: true, data: x.getBlob().getDataAsString(), at: x.getLastUpdated() }); }\n  return out_({ ok: false, error: '알 수 없는 요청' });\n}";
+  const GS_CODE = "// 조아메모리 구글 드라이브 백업 v2 — script.google.com 에서 [새 프로젝트]를 만들고 원래 있던 글을 지운 뒤 이 글을 통째로 붙여 넣으세요.\n// (이미 v1을 쓰고 있었다면: 같은 프로젝트에 이 글로 바꿔 붙여 넣고 저장 → [배포] → [배포 관리] → 연필 → 버전: 새 버전 → [배포]. 주소는 그대로예요)\n// 1) 아래 SECRET 을 나만 아는 비밀번호로 바꾸기\n// 2) 오른쪽 위 [배포] → [새 배포] → 톱니바퀴에서 유형: 웹 앱 → 다음 사용자로 실행: 나 → 액세스 권한: 모든 사용자 → [배포]\n//    (처음엔 구글이 권한을 물어요: 계정 선택 → 고급 → 이동 → 허용. 내 드라이브에 백업 폴더를 만들려는 거예요)\n// 3) 나온 웹 앱 URL(…/exec)과 SECRET 을 조아메모리 설정 › 백업 › 구글 드라이브 백업 창에 넣고 [연결 저장]\n// 방마다 파일 두 개: '제목 (방ID).json' = 최신, '제목 (방ID) 이전.json' = 바로 전 백업\nconst SECRET = '여기를-비밀번호로-바꾸세요';\nconst FOLDER = '조아메모리 백업';\nfunction folder_() { const it = DriveApp.getFoldersByName(FOLDER); return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER); }\nfunction out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }\nfunction find_(f, id, prev) { const all = f.getFiles(); while (all.hasNext()) { const x = all.next(), n = x.getName(); if (n.indexOf('(' + id + ')') >= 0 && (n.indexOf(' 이전.json') >= 0) === !!prev) return x; } return null; }\nfunction doGet() { return out_({ ok: true, app: 'joamemory-backup', v: 2 }); }\nfunction doPost(e) {\n  const b = JSON.parse(e.postData.contents || '{}');\n  if (b.key !== SECRET) return out_({ ok: false, error: '비밀번호가 달라요' });\n  if (b.action === 'ping') return out_({ ok: true, v: 2 });\n  const id = String(b.chat || '').replace(/[^A-Za-z0-9_-]/g, ''), f = folder_(), x = find_(f, id, false), p = find_(f, id, true);\n  const base = (String(b.title || '').trim() || '조아메모리') + ' (' + id + ')';\n  if (b.action === 'save') {\n    if (x) { const old = x.getBlob().getDataAsString(); if (p) { p.setContent(old); p.setName(base + ' 이전.json'); } else f.createFile(base + ' 이전.json', old, MimeType.PLAIN_TEXT); x.setContent(b.data); x.setName(base + '.json'); }\n    else f.createFile(base + '.json', b.data, MimeType.PLAIN_TEXT);\n    return out_({ ok: true });\n  }\n  if (b.action === 'load') { if (!x) return out_({ ok: false, error: '이 방 백업이 아직 없어요' }); return out_({ ok: true, data: x.getBlob().getDataAsString(), at: x.getLastUpdated(), prev: p ? p.getBlob().getDataAsString() : '' }); }\n  if (b.action === 'wipe') { if (x) x.setTrashed(true); if (p) p.setTrashed(true); return out_({ ok: true }); }\n  return out_({ ok: false, error: '알 수 없는 요청' });\n}";
   // 드라이브에서 알아보기 쉽게 파일 이름에 방(캐릭터) 제목을 붙여요. 찾을 때는 방 ID로 찾아서 제목이 바뀌어도 같은 파일.
   const roomTitle = () => String(document.title || '').replace(/\s*[|·–—-]\s*(크랙|뤼튼|wrtn|crack).*$/i, '').replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 40);
   async function gsCall(body) {
@@ -2563,8 +2570,17 @@
       if (!auto) toast('구글 드라이브에서 이 방 백업을 찾는 중…');
       const chatId = chatIdFromPath(), r = await gsCall({ action: 'load', chat: chatId });
       let d = null; try { d = JSON.parse(r.data); } catch (_) {}
+      // 이전 백업(바로 전에 덮어쓴 것)이 있으면 최신·이전 중 고르기. 최신이 비었으면(초기화) 이전만 물어요.
+      let pv = null; try { pv = r.prev ? JSON.parse(r.prev) : null; } catch (_) {}
+      const sum = x => x ? `1~${x.turns || 0}턴 · ${x.at ? new Date(x.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름'}${x.by ? ' · ' + x.by : ''}${x.reset ? ' (초기화)' : ''}` : '';
+      const usable = x => x && x.app === 'memo-note' && x.chat === chatId && !x.reset && (x.memory || Object.keys(x.store || {}).some(k => x.store[k]));
+      if (usable(pv) && (!usable(d) || !confirm(`구글 드라이브에 이 방 백업이 두 개 있어요.\n\n· 최신: ${sum(d)}\n· 이전: ${sum(pv)}\n\n[확인] 최신으로 진행\n[취소] 이전 백업 보기`))) {
+        if (!confirm(`이전 백업을 불러올까요?\n\n· ${sum(pv)}\n\n노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
+        return importBackupText(r.prev, false); // 이전 백업은 ETC를 바꾸기 전에 한 번 더 물어요(잘못 눌렀을 때 바로 덮어쓰지 않게)
+      }
       if (!d || d.app !== 'memo-note') throw new Error('조아메모리 백업 파일이 아니에요.');
       if (d.chat !== chatId) throw new Error('다른 대화방의 백업이라 불러오지 않았어요.');
+      if (d.reset || (!d.memory && !Object.keys(d.store || {}).some(k => d.store[k]))) { if (!auto) toast('구글 백업이 비어 있어요(초기화된 방이에요).', 'info', 3000); return; }
       const when = d.at ? new Date(d.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
       const now = snapshot?.note;
       if (!confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
@@ -2623,6 +2639,12 @@
       ${a.mine.turns && a.c.turns < a.mine.turns ? '<p class="warn">⚠ 채팅에 있는 기억이 더 예전 거예요</p>' : ''}
       <div class="devask-btns"><button class="btn${chatBest ? ' pri' : ''}" data-act="devkeep"${busyNow ? ' disabled' : ''}>1~${a.c.turns}턴 쓰기</button><button class="btn${chatBest ? '' : ' pri'}" data-act="devrestore"${busyNow ? ' disabled' : ''}>1~${a.mine.turns || '?'}턴으로 바꾸기</button></div></div>`;
   }
+  function fullAskHtml() {
+    const f = nav.fullAsk; if (!f || f.chatId !== chatIdFromPath()) return '';
+    return `<div class="devask"><b>근거·감정선 전체를 받아올까요?</b>
+      <p>구글 백업에 지금 기억(1~${f.n.turns}턴)과 같은 정리본의 근거·감정선 전체가 있어요. 받아도 채팅 노트는 바뀌지 않고, 이 기기 화면에서 근거 버튼·감정선 단계가 보이게 돼요.</p>
+      <div class="devask-btns"><button class="btn pri" data-act="fullget">받기</button><button class="btn" data-act="fullskip">괜찮아요</button></div></div>`;
+  }
   async function lostPut(which = 'local') {
     const a = nav.lostAsk, l = a?.[which], chatId = chatIdFromPath(); if (!l || a.chatId !== chatId || busyNow) return;
     busyNow = true; render();
@@ -2666,7 +2688,7 @@
       <b>ETC 비우기</b><small>고른 것만 이 방에서 지워요 · 기억 노트·명대사·정리 기록은 그대로</small>
       <div class="etcgrid">${ETC_PARTS.map(([k, l]) => `<button class="btn" data-act="etcwipe" data-arg="${k}">${l}</button>`).join('')}</div>
       <button class="btn etcall" data-act="etcwipe" data-arg="all">ETC 전체 비우기</button>
-      <small>${nav.gsOn ? '지우기 직전에 구글 드라이브에 자동으로 백업해 둬요' : '구글 백업이 연결 안 돼 있어요. 필요하면 먼저 "이 방 전체 내보내기"를 해 두세요'}</small>
+      <small>${nav.gsOn ? '구글 드라이브 백업에서도 같이 지워요(되돌릴 수 없어요)' : '되돌릴 수 없어요. 필요하면 먼저 "이 방 전체 내보내기"를 해 두세요'}</small>
     </div></div>`;
   }
   async function etcWipe(which) {
@@ -2675,9 +2697,10 @@
     if (!confirm(`${parts.map(([, l]) => l).join(' · ')}${which === 'all' ? '\n(ETC 전체)' : ''}\n\n이 방에서 지울까요? 기억 노트는 그대로예요.`)) return;
     busyNow = true; render();
     try {
-      if (nav.gsOn) await gsSave(true); // 지우기 직전 백업
       etcQuiet = true; // 비운 건 구글로 안 올려요(지우기 직전 백업을 남겨 두려고)
       try { for (const [k] of parts) await setValue(k + ':' + chatId, ''); if (which === 'all') await setValue('etcnames:' + chatId, ''); } finally { etcQuiet = false; }
+      await setValue('etcAt:' + chatId, new Date(Date.now() + 1000).toISOString()); nav.etcAsk = null;
+      if (nav.gsOn) await gsSave(true); // 구글 백업에서도 지운 상태로(다시 불러와지지 않게)
       nav.etcSheet = false; nav.bdPost = null; nav.bdBoard = '';
       toast(`${which === 'all' ? 'ETC 전체를' : parts[0][1].replace(/^S+s/, '') + ' 기록을'} 비웠어요`, 'ok', 3000);
     } catch (e) { toast('비우기 실패 · ' + e.message, 'err'); }
@@ -4783,7 +4806,7 @@
     // 다시 그려도 입력 중인 설정 값(키·주소 등)은 남깁니다. 노트를 다시 읽은 뒤 화면이 새로 그려져 타이핑이 지워지지 않게.
     const typed = new Map([...main.querySelectorAll('input[data-set]:not([type=checkbox])')].filter(el => el.value).map(el => [el.dataset.set, el.value]));
     main.style.padding = nav.view === 'graph' ? '0' : '';
-    main.innerHTML = devAskHtml() + etcAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
+    main.innerHTML = devAskHtml() + etcAskHtml() + fullAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -4893,7 +4916,8 @@
         const n = snap.note, tryKey = n.upto + '|' + n.at;
         if (nav.fullTried !== tryKey) { nav.fullTried = tryKey;
           gsPeek(chatId).then(async g => { if (!g || g.upto !== n.upto || !sameAsChat(g.memory, n.memory) || chatIdFromPath() !== chatId) return;
-            await saveFull(chatId, n.upto, g.memory, n.turns, n.at); pageToast('구글 백업에서 근거·감정선 전체를 받아 왔어요'); render(); }); }
+            if (String(await getValue('fullSkip:' + chatId, '')) === tryKey) return;
+            nav.fullAsk = { chatId, key: tryKey, g, n: { upto: n.upto, turns: n.turns, at: n.at } }; render(); }); }
       }
       // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남아 있는 것 중 가장 최신으로 다시 넣을지 묻습니다.
       //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만. '그냥 두기'를 누른 같은 후보로는 다시 안 물어요.
@@ -5440,6 +5464,8 @@
       case 'etcsync': await setValue('etcSync', el.checked ? 'on' : 'off'); nav.etcSyncOn = el.checked; toast(el.checked ? 'ETC도 기기끼리 맞춰요. 바뀌면 구글에 자동으로 올라가요.' : 'ETC는 기기마다 따로 둬요.', 'ok', 3000); if (el.checked) etcFirst(); return;
       case 'devkeep': return devChoose(false);
       case 'lostput': return lostPut(arg || 'local');
+      case 'fullget': { const f = nav.fullAsk; if (f && f.chatId === chatIdFromPath()) { await saveFull(f.chatId, f.n.upto, f.g.memory, f.n.turns, f.n.at); nav.fullAsk = null; toast('근거·감정선 전체를 받아 왔어요', 'ok', 2500); } return render(); }
+      case 'fullskip': { const f = nav.fullAsk; if (f) await setValue('fullSkip:' + f.chatId, f.key); nav.fullAsk = null; return render(); }
       case 'lostskip': { const l = nav.lostAsk; if (l) await setValue('lostSkip:' + l.chatId, l.key); nav.lostAsk = null; return render(); }
       case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
