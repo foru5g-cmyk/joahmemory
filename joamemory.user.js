@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.26
+// @version      3.9.29
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -19,6 +19,7 @@
 // @connect      api.anthropic.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
+// @connect      raw.githubusercontent.com
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -1021,6 +1022,9 @@
     header{flex-shrink:0;display:flex;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 16px) 10px 6px 22px}
     .htitle{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
     .htitle b{font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .verfoot{text-align:center;font-size:11px;color:var(--graphite);margin:22px 0 8px;letter-spacing:.2px}
+    .verfoot .vup{background:#FF6F91;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:4px}
+    .verfoot small{font-size:10px;margin-left:2px}
     .htitle span{font-size:12px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .dot{display:none}
     .hbtn{min-width:40px;height:40px;padding:0 10px;border:0;border-radius:20px;background:transparent;display:flex;align-items:center;justify-content:center;
@@ -2411,6 +2415,27 @@
   // 받침에 맞는 조사: josa('유진', '이', '가') → '유진이'
   const josa = (w, a, b) => { const c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; return w + (c >= 0 && c <= 11171 ? (c % 28 ? a : b) : b); };
 
+  // ── 홈 맨 아래 ♡ 버전 · 깃허브에 새 버전이 있으면 'update 필요!' (12시간에 한 번만 확인)
+  const MY_VER = (() => { try { return (typeof GM_info !== 'undefined' ? GM_info : GM.info)?.script?.version || ''; } catch (_) { return ''; } })();
+  const UPDATE_URL = 'https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js';
+  const verNum = v => String(v || '').split('.').map(x => parseInt(x, 10) || 0);
+  const newerVer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+  let latestVer = '', verAsked = false;
+  async function checkUpdate() {
+    let saved = {}; try { saved = JSON.parse(String(await getValue('verCheck', '') || '{}')) || {}; } catch (_) {}
+    if (saved.ver && Date.now() - (saved.at || 0) < 12 * 3600e3) { latestVer = saved.ver; return; }
+    if (!gmRequest) return;
+    const text = await new Promise(res => gmRequest({ method: 'GET', url: UPDATE_URL + '?t=' + Date.now(), timeout: 15000,
+      onload: r => res(r.status >= 200 && r.status < 300 ? String(r.responseText || '') : ''), onerror: () => res(''), ontimeout: () => res('') }));
+    const v = (text.slice(0, 2000).match(/@version\s+(\S+)/) || [])[1];
+    if (v) { latestVer = v; await setValue('verCheck', JSON.stringify({ at: Date.now(), ver: v })); }
+  }
+  const verFoot = () => {
+    if (!verAsked) { verAsked = true; checkUpdate().then(() => { if (latestVer && newerVer(latestVer, MY_VER)) render(); }).catch(() => {}); }
+    if (!MY_VER) return '';
+    const up = latestVer && newerVer(latestVer, MY_VER);
+    return `<div class="verfoot">♡ v${esc(MY_VER)}${up ? ` <span class="vup">update 필요!</span> <small>v${esc(latestVer)}</small>` : ''}</div>`;
+  };
   function homeHtml() {
     if (!snapshot) return emptyBox(loading ? '대화를 읽는 중이에요…' : '불러오는 중…');
     const n = snapshot.note, turns = freshTurns(), left = Math.max(0, cycle - turns), due = turns >= cycle;
@@ -2428,7 +2453,7 @@
       <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label>
         ${n ? `<span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button>` : ''}</div>
       ${n ? '' : '<p class="muted" style="text-align:center;margin:10px 0 0">정리하면 지금까지의 이야기를 노트로 만들어 채팅 안에 보이지 않게 넣어 둬요.</p>'}</section>`;
-    if (!n) return hero;
+    if (!n) return hero + verFoot();
 
     // 노트 구성: AI가 실제로 읽는 노트 기준. 한 줄 색 막대 + 크기순 칩(누르면 그 칸으로)
     const injectedText = stripProof(noteMemory()), injected = injectedText.length;
@@ -2461,7 +2486,7 @@
         + (rows.length ? '<ul class="nrules">' + rows.slice(0, 6).join('') + '</ul>' : '<p class="muted">큰 변화 없음</p>')
         + '<button class="linkbtn" data-act="changes" style="margin:8px 0 4px">' + (rows.length > 6 ? '나머지 ' + (rows.length - 6) + '개 · ' : '') + '자세히 · 지난 회차</button>';
     })() : '';
-    return old + hero + castHtml + recent + donut;
+    return old + hero + castHtml + recent + donut + verFoot();
   }
 
   // ── 정리하기: 무엇을(이어서·노트만·처음부터) × 누가(설정한 AI·다른 AI 파일) 한 화면
@@ -2979,6 +3004,7 @@
   }
   // 폰·컴퓨터용 AI 호출: 연결이 끊기면 한 번 더, 답이 길어 잘리면 받은 만큼으로 이어서 씁니다.
   async function askModelRetry(system, input, label) {
+    askModelRetry.last = [system, input, label];
     for (let i = 0; ; i++) {
       try { return await askModel(system, input, label); }
       catch (e) {
@@ -2997,6 +3023,13 @@
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const raw = await askModelRetry(withRules(PHONE_PROMPT, etcRoll(true) + phoneRoll()), `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}\n${others ? `[이미 만든 다른 인물의 폰 — 이것과 겹치지 않게, 이 인물답게 다르게]\n${others}\n\n` : ''}${await etcLog(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 폰 속(메시지·메모·검색·사진·통화 등)에 특히 많이 반영할 것. 유저가 보낸 말은 지어내지 말 것')}${upd ? updateAsk(upd, '폰') : ''}`, `📱${name}${upd ? ' 갱신' : ''}`);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
+      // 기본 앱(메시지·통화·검색·일정·음악·사진·메모·비밀 메모)은 늘 채우게 했는데 거의 비었으면 답이 중간에 깨져 앞부분만 살아난 것
+      const baseFilled = d => ['messages', 'calls', 'search', 'calendar', 'music', 'album', 'memo', 'secret'].filter(k => (d?.[k] || []).length).length;
+      if (!upd && baseFilled(data) < 4) {
+        toast('답이 중간에 깨진 것 같아 한 번 더 만드는 중이에요…', 'ok', 3000);
+        try { const again = parseJsonLoose(await askModelRetry(...askModelRetry.last)); if (baseFilled(again) > baseFilled(data)) data = again; } catch (_) {}
+        if (baseFilled(data) < 4) toast('폰 내용이 일부만 왔어요(AI 답이 중간에 깨짐). 다시 만들기를 눌러 주세요.', 'err', 5000);
+      }
       phoneData = await phones(chatId); phoneData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from: upd ? upd.from : from, to, upto: to || turnEnd(), data: upd ? mergeRec(upd.data, data) : data };
       await setValue('phone:' + chatId, JSON.stringify(phoneData));
       nav.phScreen = 'home'; toast(`${name}의 폰이 열렸어요 📱`, 'ok', 2500);
@@ -3195,6 +3228,7 @@
   // 📱 폰 주사위: 얼마나 쓰는지·어디를 털어 보면 재밌는지만 흔들어요(개수는 안 정함). AI한테 맡기면 폰마다 앱 구성이 비슷해져서.
   const phoneRoll = () => ['\n[이번 폰 주사위 — 방향만, 개수는 이 인물답게]',
     `- 기본 앱 말고 이 인물만 깔아 둘 법한 앱(apps): ${dice([1, 2, 2, 3, 3, 4])}개 — 이 인물의 직업·취미·집착·비밀에서 나온 앱, 다른 인물과 겹치지 않게`,
+    `- 메모: ${dice([4, 5, 6, 6, 7, 8, 10])}개쯤 — 한 줄짜리 대충 쓴 메모부터 긴 글까지, 종류는 이 인물답게 제각각`,
     `- 이 인물의 폰 사용량: ${dice(['필요한 것만 쓰는 편', '보통', '많이 씀', '폰 중독'])}`,
     `- 이 폰에서 제일 털어 볼 맛 나는 곳: ${dice(['메시지', '메모', '비밀 메모', '검색 기록', '은행·카드 내역', '사진첩', '이 인물만 쓸 법한 앱', '통화 기록', '일정'])} — 이 인물의 집착·찌질함·웃긴 구석·숨긴 면이 여기에 몰려 있게`].join('\n');
   const etcRoll = lite => ['\n[이번 회차 주사위 — 만들 때마다 바뀌는 값. 위 지침에 적힌 개수·비율과 어긋나면 이 줄을 따른다]',
