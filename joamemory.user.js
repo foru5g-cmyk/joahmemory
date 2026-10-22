@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.33
+// @version      3.9.34
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -238,6 +238,9 @@
       const h = l.match(/^(?:##(?!#)|■)\s*(.+?)\s*$/);
       if (h) { sec = h[1]; who = ''; return l; }
       if (sec !== '인물') return l;
+      // 프로필 줄: 채팅엔 동물 이모지·성별·유저(PC) 표시만. '거친 선임' 같은 한마디 꼬리표는 화면에만(AI가 그 딱지대로만 연기하지 않게).
+      const pf = l.match(/^(\s*-?\s*프로필\s*[:：]\s*)(.*)$/);
+      if (pf) { const keep = pf[2].split(/\s*·\s*/).filter(x => x && (/^(여|남)$/.test(x) || /유저|PC|사용자/i.test(x) || !/[가-힣A-Za-z0-9]/.test(x))); return pf[1] + keep.join(' · '); }
       // "함께한 일"에서 날짜로그에 아직 그대로 있는 사건은 빼고 넣습니다(같은 제목 두 번 X). (요약)으로 묶여 사라진 사건만 남아요. 화면엔 그대로.
       const ws = l.match(/^(\s*-?\s*함께한 일\s*[:：]\s*)(.+)$/);
       //   같은 날짜에 이 인물이 나오는 사건이 날짜로그에 있으면 그 사건이 같은 일이라 봅니다(AI가 제목을 다른 말로 줄여 써도 걸러지게).
