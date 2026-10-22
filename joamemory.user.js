@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.39
+// @version      3.9.40
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -4969,7 +4969,9 @@
       const c = snap.note;
       const mine = fullNote?.memory ? { memory: fullNote.memory, full: true, upto: fullNote.upto, turns: fullNote.turns || (was?.upto === fullNote.upto ? was.turns : 0), at: fullNote.at || (was?.upto === fullNote.upto ? was.at : ''), by: DEVICE }
         : was ? { memory: was.memory, full: false, upto: was.upto, turns: was.turns, at: was.at, by: was.by } : null;
-      const same = !c || !mine || c.parked || (c.upto === mine.upto && (mine.full ? sameAsChat(mine.memory, c.memory) : chatShape(mine.memory) === chatShape(c.memory)));
+      // 정리 지점·정리한 시각까지 같으면 같은 정리본이에요. 업데이트로 채팅에 넣는 모양만 바뀐 경우(꼬리표 빼기 등)에 '다른 기기'로 잘못 묻지 않게.
+      const sameSave = !!(c && mine && c.at && mine.at && c.upto === mine.upto && Math.abs(Date.parse(c.at) - Date.parse(mine.at)) < 120e3); // 예전 버전은 두 시각이 몇 ms 달랐어요
+      const same = !c || !mine || c.parked || sameSave || (c.upto === mine.upto && (mine.full ? sameAsChat(mine.memory, c.memory) : chatShape(mine.memory) === chatShape(c.memory)));
       // 사파리는 화면으로 돌아오는 순간 뜨는 확인 창을 막거나 바로 닫기도 해서(그러면 '취소'로 처리돼 위험) 창 대신 패널 카드로 묻습니다.
       //   고르기 전에는 아무것도 바꾸지 않아요.
       if (!same) {
@@ -5182,9 +5184,11 @@
       const carrier = pickCarrier(now.all), parked = !!now.note?.parked || !injectOn;
       if (!carrier && !parked) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
       if (parked) await park(chatId, memory, draft.uptoId, draft.turns);
-      else await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns));
+      // 채팅 노트와 이 기기 전체본에 같은 정리 시각을 찍어요(같은 정리본인지 알아보는 기준).
+      const savedAt = new Date().toISOString();
+      if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId;
-      await saveFull(chatId, draft.uptoId, memory, draft.turns);
+      await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt);
       if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId });
       await setValue('edited:' + chatId, '[]');
       const oldId = now.note?.carrierId;
