@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.34
+// @version      3.9.36
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -2418,7 +2418,7 @@
   // 받침에 맞는 조사: josa('유진', '이', '가') → '유진이'
   const josa = (w, a, b) => { const c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; return w + (c >= 0 && c <= 11171 ? (c % 28 ? a : b) : b); };
 
-  // ── 홈 맨 아래 ♡ 버전 · 깃허브에 새 버전이 있으면 'update 필요!' (12시간에 한 번만 확인)
+  // ── 홈 맨 아래 ♡ 버전 · 깃허브에 새 버전이 있으면 'update 필요!' (6시간에 한 번, 파일 맨 앞 2KB만 받아서 확인)
   const MY_VER = (() => { try { return (typeof GM_info !== 'undefined' ? GM_info : GM.info)?.script?.version || ''; } catch (_) { return ''; } })();
   const UPDATE_URL = 'https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js';
   const verNum = v => String(v || '').split('.').map(x => parseInt(x, 10) || 0);
@@ -2426,9 +2426,9 @@
   let latestVer = '', verAsked = false;
   async function checkUpdate() {
     let saved = {}; try { saved = JSON.parse(String(await getValue('verCheck', '') || '{}')) || {}; } catch (_) {}
-    if (saved.ver && Date.now() - (saved.at || 0) < 12 * 3600e3) { latestVer = saved.ver; return; }
+    if (saved.ver && Date.now() - (saved.at || 0) < 6 * 3600e3) { latestVer = saved.ver; return; }
     if (!gmRequest) return;
-    const text = await new Promise(res => gmRequest({ method: 'GET', url: UPDATE_URL + '?t=' + Date.now(), timeout: 15000,
+    const text = await new Promise(res => gmRequest({ method: 'GET', url: UPDATE_URL + '?t=' + Date.now(), timeout: 15000, headers: { Range: 'bytes=0-2047' },
       onload: r => res(r.status >= 200 && r.status < 300 ? String(r.responseText || '') : ''), onerror: () => res(''), ontimeout: () => res('') }));
     const v = (text.slice(0, 2000).match(/@version\s+(\S+)/) || [])[1];
     if (v) { latestVer = v; await setValue('verCheck', JSON.stringify({ at: Date.now(), ver: v })); }
@@ -5570,7 +5570,7 @@
   let backAt = 0;
   const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || loading || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
   document.addEventListener('visibilitychange', comeBack);
-  window.addEventListener('pageshow', comeBack);
+  window.addEventListener('pageshow', comeBack);ac
   window.addEventListener('focus', comeBack);
   let lastPath = '';
   setInterval(() => {
