@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.36
+// @version      3.9.39
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -630,12 +630,12 @@
     return cleanOut(out.text);
   }
   // 정리 말고 따로 만드는 것(명대사·폰)에 쓰는 AI 호출. 설정한 모델 그대로, 비용은 정리 기록에 함께 적어요.
-  async function askModel(system, input, label) {
+  async function askModel(system, input, label, json = false) {
     const model = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
     let out; const waits = [4, 10];
     for (let k = 0; ; k++) {
-      try { out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input); break; }
+      try { out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input, json); break; }
       catch (e) {
         if (k >= waits.length || !/HTTP (429|500|502|503|504)\b/.test(String(e?.message))) throw e;
         toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
@@ -650,7 +650,7 @@
   // 답이 출력 한도에서 잘림 → run()이 범위를 반으로 줄여 한 번 더 해요.
   const cutError = () => Object.assign(new Error('정리 결과가 너무 길어서 잘렸어요. 노트 크기를 줄여 주세요.'), { cut: true });
   // 한 번에 받으면 긴 정리에서 서버가 3분쯤에 끊는 일이 있어 스트리밍(SSE)으로 끝까지 받습니다. 끝맺음 표시 없이 끝나면 실패로 봅니다.
-  async function askGemini(model, system, input) {
+  async function askGemini(model, system, input, json = false) {
     const key = String(await getValue('apiKey', '')).trim();
     if (!key) throw new Error('설정에서 Gemini API 키를 먼저 넣어 주세요.');
     const raw = await requestRaw('POST',
@@ -660,7 +660,8 @@
                 contents: [{ role: 'user', parts: [{ text: input }] }],
                 // 창작 RP 정리라 조절 가능한 필터는 끔(공식 설정). 끌 수 없는 금지 항목은 그대로 막혀요.
                 safetySettings: ['HARASSMENT', 'HATE_SPEECH', 'SEXUALLY_EXPLICIT', 'DANGEROUS_CONTENT', 'CIVIC_INTEGRITY'].map(c => ({ category: 'HARM_CATEGORY_' + c, threshold: 'OFF' })),
-                generationConfig: { maxOutputTokens: 65536 } } });
+                // ETC는 JSON 모드: 글 안 따옴표가 저절로 이스케이프돼서 답이 중간에 깨지지 않아요
+                generationConfig: { maxOutputTokens: 65536, ...(json ? { responseMimeType: 'application/json' } : {}) } } });
     let text = '', finish = '', u = {};
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
@@ -1873,16 +1874,6 @@
     .bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
     .bar-wrap i{display:block;width:60%;border-radius:4px 4px 0 0;background:var(--lilac)}.bar-col:last-child .bar-wrap i{background:var(--ink)}
     .bv{font-size:10px;color:var(--graphite);white-space:nowrap}.bl{font-size:11px;font-weight:700;color:var(--ink2)}.bd{font-size:10px;color:var(--graphite)}
-    .numpick{display:flex;flex-wrap:wrap;gap:6px}
-    .numpick button{min-width:44px;height:36px;padding:0 12px;border:1.5px solid var(--rule);border-radius:18px;background:var(--paper);font-size:14px;font-weight:700;color:var(--ink)}
-    .numpick button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
-    .ruleline{margin-top:10px;font-size:12.5px;color:var(--ok);font-weight:600}.ruleline svg{display:none}
-    .fixlist{display:flex;flex-direction:column;margin-top:8px}
-    .fx{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
-    .fx svg{display:none}
-    .fx .from{font-size:14px;color:var(--bad);text-decoration:line-through;min-width:28px;text-align:right}
-    .fx .to{font-size:14px;font-weight:800;color:var(--ink);min-width:28px}
-    .fx .ctx{flex:1;min-width:0;font-size:12px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .fixrow{display:flex;align-items:center;gap:8px;margin-top:10px}
     .fixrow input{width:84px;height:38px;border:1.5px solid var(--rule);border-radius:12px;padding:0 10px;font-size:15px;font-weight:700;background:var(--paper);outline:none}
     .fixrow span{font-size:13px;color:var(--graphite);flex:1}
@@ -2980,6 +2971,8 @@
   };
   // 답이 잘리거나 쉼표가 어긋나면 배열에 null 항목이 섞입니다. 그대로 그리면 x.title 같은 데서 터져서 미리 걸러요.
   //   칸 자체가 null인 것(insta:null = 인스타를 안 함)은 뜻이 있으니 그대로 둡니다.
+  // 메모·비밀 메모 본문을 AI가 body 대신 text·content·memo 같은 이름으로 쓴 경우도 body로 맞춥니다(화면이 빈칸으로 안 보이게)
+  const fixNoteBody = d => { for (const k of ['memo', 'secret']) if (Array.isArray(d?.[k])) d[k] = d[k].map(x => typeof x === 'string' ? { title: x.split('\n')[0].slice(0, 20), body: x } : x && !String(x.body || '').trim() ? { ...x, body: x.text || x.content || x.memo || x.note || '' } : x); return d; };
   const dropNulls = v => Array.isArray(v) ? v.filter(x => x != null).map(dropNulls)
     : (v && typeof v === 'object') ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dropNulls(x)])) : v;
   function parseJsonLoose(text) {
@@ -3006,12 +2999,15 @@
     throw new Error('복구 실패');
   }
   // 폰·컴퓨터용 AI 호출: 연결이 끊기면 한 번 더, 답이 길어 잘리면 받은 만큼으로 이어서 씁니다.
+  const SOFT_RETRY = '\n\n[이번 한 번만] 방금 안전 필터에 걸렸다. 말투·수위·드립은 그대로 두되, 성적인 말은 노골적인 단어 대신 암시·돌려 말하기·초성으로만 쓴다.';
   async function askModelRetry(system, input, label) {
     askModelRetry.last = [system, input, label];
+    let sys = system, soft = false;
     for (let i = 0; ; i++) {
-      try { return await askModel(system, input, label); }
+      try { return await askModel(sys, input, label, true); }
       catch (e) {
         if (e?.cut && e.partial) { toast('답이 길어서 받은 만큼만 보여 드려요', 'ok', 3000); return e.partial; }
+        if (!soft && /안전 필터/.test(String(e?.message))) { soft = true; sys = system + SOFT_RETRY; toast('안전 필터에 걸려서 살짝 돌려 말하게 다시 하는 중이에요…', 'ok', 3000); continue; }
         if (i < 1 && !/키를|안전 필터|거절|빈 답/.test(String(e?.message))) { toast('한 번 더 시도하는 중이에요…', 'ok', 2500); continue; }
         throw e;
       }
@@ -3025,13 +3021,14 @@
       const others = Object.entries(phoneData).filter(([n]) => n !== name).map(([n, r]) => `${n}: 팔로워 ${r.data?.insta?.followers || '-'} · 잔고 ${r.data?.bank?.balance || '-'} · 씀씀이 ${r.data?.bank?.spend || '-'} · 거래처 ${(r.data?.bank?.tx || []).map(t => t.title).slice(0, 6).join('/') || '-'} · 메모 ${(r.data?.memo || []).map(t => t.title).slice(0, 8).join('/') || '-'} · 아이디 ${r.data?.insta?.id || '-'}`).join('\n');
       const users = [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
       const raw = await askModelRetry(withRules(PHONE_PROMPT, etcRoll(true) + phoneRoll()), `[인물] ${name}\n${users.length ? `[유저] ${users.join(', ')} — 이 사람과의 일은 노트에 있던 일만, 이 사람이 보낸 메시지를 지어내지 말 것\n` : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공과의 일은 노트에 있던 일만\n'}\n${others ? `[이미 만든 다른 인물의 폰 — 이것과 겹치지 않게, 이 인물답게 다르게]\n${others}\n\n` : ''}${await etcLog(chatId, from, to, '이 장면들에서 이 인물이 겪고 느낀 일을 폰 속(메시지·메모·검색·사진·통화 등)에 특히 많이 반영할 것. 유저가 보낸 말은 지어내지 말 것')}${upd ? updateAsk(upd, '폰') : ''}`, `📱${name}${upd ? ' 갱신' : ''}`);
-      let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
+      let data; try { data = fixNoteBody(parseJsonLoose(raw)); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       // 기본 앱(메시지·통화·검색·일정·음악·사진·메모·비밀 메모)은 늘 채우게 했는데 거의 비었으면 답이 중간에 깨져 앞부분만 살아난 것
       const baseFilled = d => ['messages', 'calls', 'search', 'calendar', 'music', 'album', 'memo', 'secret'].filter(k => (d?.[k] || []).length).length;
-      if (!upd && baseFilled(data) < 4) {
+      const broken = d => baseFilled(d) < 4 || !(d?.memo || []).length || (d?.secret || []).some(x => !String(x?.body || '').trim());
+      if (!upd && broken(data)) {
         toast('답이 중간에 깨진 것 같아 한 번 더 만드는 중이에요…', 'ok', 3000);
-        try { const again = parseJsonLoose(await askModelRetry(...askModelRetry.last)); if (baseFilled(again) > baseFilled(data)) data = again; } catch (_) {}
-        if (baseFilled(data) < 4) toast('폰 내용이 일부만 왔어요(AI 답이 중간에 깨짐). 다시 만들기를 눌러 주세요.', 'err', 5000);
+        try { const again = fixNoteBody(parseJsonLoose(await askModelRetry(...askModelRetry.last))); if (!broken(again) || baseFilled(again) > baseFilled(data)) data = again; } catch (_) {}
+        if (broken(data)) toast('폰 내용이 일부만 왔어요(AI 답이 중간에 깨짐). 다시 만들기를 눌러 주세요.', 'err', 5000);
       }
       phoneData = await phones(chatId); phoneData[name] = { at: Date.now(), turns: snapshot.note?.turns || 0, from: upd ? upd.from : from, to, upto: to || turnEnd(), data: upd ? mergeRec(upd.data, data) : data };
       await setValue('phone:' + chatId, JSON.stringify(phoneData));
@@ -3117,7 +3114,7 @@
         <button class="ph-make" data-act="phmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>${busyNow ? '꾸미는 중…' : '📱 폰 열어 보기'}</button>
         <small>AI를 1번 불러요 · 노트에 맞춰 성격대로 · 기억 노트엔 안 들어가요</small></div>`;
     else {
-      const sc = nav.phScreen || 'home', ins = d.insta || {}, posts = ins.posts || [], dms = d.dms || [], msgs = d.messages || [], mk = marketOf(d), items = mk.items || [], memo = d.memo || [], album = d.album || [], bank = d.bank || null, secret = d.secret || [];
+      const sc = nav.phScreen || 'home', ins = d.insta || {}, posts = ins.posts || [], dms = d.dms || [], msgs = d.messages || [], mk = marketOf(d), items = mk.items || [], memo = fixNoteBody({ memo: d.memo }).memo || [], album = d.album || [], bank = d.bank || null, secret = fixNoteBody({ secret: d.secret }).secret || [];
       const [scr, arg] = sc.split(':'), at = Number(arg);
       if (scr === 'home') {
         const app = (key, label, cls, emo, n) => `<button class="ph-app" data-act="phapp" data-arg="${key}"><i class="${cls}">${PH_ICON[key] || emo}</i><span>${label}</span>${n ? `<em>${n}</em>` : ''}</button>`;
@@ -3651,7 +3648,7 @@
         ...(fakeC ? [`(새 댓글은 '${myNick}' 닉네임을 똑같이 따라 쓴 다른 사람의 댓글이다(원래 주인이 쓴 게 아님). 댓글러들은 이걸 알 수도 모를 수도 있다. 이번 반응: ${dice(anon
           ? ['대부분 속지만 한 명이 아이피가 다르다고 의심', '아이피 보고 바로 사칭 의심, 몇 명은 그래도 믿음', '원래 주인이 등판해 부정하고 누가 진짜냐로 싸움', '분탕이 사칭에 사칭을 얹어 난장판', '반반: 속는 쪽과 의심하는 쪽이 싸움']
           : ['아무도 눈치 못 채고 원래 주인 말로 받아들임', '대부분 속고 한 명만 갸웃', '원래 주인이 등판해 부정하고 누가 진짜냐로 싸움', '분탕이 사칭에 사칭을 얹어 난장판', '반반: 속는 쪽과 의심하는 쪽이 싸움'])}. 속은 사람은 원래 주인이 한 말로 받아들인다)`] : []),'(대댓글의 to에는 위에 나온 작성자 표시(닉네임(아이피))를 그대로 쓴다. 댓글 내용을 to에 쓰지 않는다)', hide ? '(새 댓글 쓴 사람은 익명이다. 댓글러들은 이 사람이 누군지 전혀 모르고, 유저나 노트 속 인물과 엮어 짐작하거나 이름을 부르거나 "본인 등판"처럼 반응하지 않는다. 그냥 지나가던 아무나 단 댓글로 대한다. 말투·글솜씨로 정체를 짐작하는 말은 쓰지 않는다. 단 댓글 안에서 본인이 스스로 누구(유저 본인·노트 속 특정 인물)라고 밝히면, 정체보다 댓글 내용 자체에 반응한다(음지면 내용 갖고 시비·조롱·드립도 그대로). 믿고 신기해하는 쪽, 반신반의하며 떠보는 쪽이 섞이고, 사칭 의심은 많아야 한 명. 정병·망상병·주작 몰이는 아주 가끔만.)' : real ? `(새 댓글은 ${me}이(가) 실명으로 썼다. 댓글러들은 그게 누군지 알아보고 "본인 등판"처럼 반응한다. 단, ${me}의 말을 대신 더 쓰지는 않는다)` : `(새 댓글은 '${myNick}'이라는 닉네임으로 달렸다. 댓글러들은 누군지 전혀 모른다. 말투·글솜씨로 의심하거나 유저·노트 속 인물과 엮어 부르지 않고, 그냥 그 닉네임을 쓰는 낯선 사람으로 대한다. 단 댓글 안에서 본인이 스스로 누구(유저 본인·노트 속 특정 인물)라고 밝히면, 정체보다 댓글 내용 자체에 반응한다(음지면 내용 갖고 시비·조롱·드립도 그대로). 믿고 신기해하는 쪽, 반신반의하며 떠보는 쪽이 섞이고, 사칭 의심은 많아야 한 명. 정병·망상병·주작 몰이는 아주 가끔만. 그 사람 말을 대신 더 쓰지 않는다)`, '', '[기억 노트]', hide || !real ? noUserNote(await etcMemory(chatIdFromPath())) : await etcMemory(chatIdFromPath())].join('\n');
-      const raw = await askModel(withRules(REPLY_PROMPT, ETC_KO + etcRoll(true)), ctx, '💬대댓글');
+      const raw = await askModelRetry(withRules(REPLY_PROMPT, ETC_KO + etcRoll(true)), ctx, '💬대댓글');
       let list; try { const t = String(raw).replace(/^```\w*\n?|\n?```$/g, ''), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
       // to는 실제 있는 작성자(글쓴이·댓글러·앞 대댓글러)만. 모르는 말(댓글 내용 등)이면 내 댓글에 단 걸로 봅니다.
       const known = new Set([tagOf(p), ...p.comments.map(tagOf)]), myTag = tagOf(mine);
@@ -5570,7 +5567,7 @@
   let backAt = 0;
   const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || loading || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
   document.addEventListener('visibilitychange', comeBack);
-  window.addEventListener('pageshow', comeBack);ac
+  window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
   let lastPath = '';
   setInterval(() => {
