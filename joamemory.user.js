@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.41
+// @version      3.9.44
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -579,6 +579,7 @@
   // 단계별 정리: 기존 노트는 프로그램이 들고 있고, AI는 바뀐 항목만 냅니다(mergeNote가 끼워 넣음).
   const DELTA_RULE = `\n\n[출력 — 이번엔 바뀐 것만] 이 규칙이 위 [매번 할 일]·[출력]과 "노트 전체를 쓴다"는 다른 모든 안내보다 우선한다.
 - 기존 기억은 프로그램이 그대로 보관한다. 새 로그 때문에 달라진 것만 쓴다. 출력하지 않은 칸·항목은 기존 그대로 남는다.
+- 새 로그와 상관없는 예전 항목은 지침 형식(대사 넣기 등)에 맞추려고 다시 쓰지 않는다. 형식만 다른 예전 항목은 그대로 둔다.
 - 항목 = "▸ 제목" 블록 하나, 또는 인물 칸의 "【이름】" 블록 하나(그 아래 줄 전부).
 - 바뀌거나 보탤 항목은 그 항목 전체를 다시 쓴다(안 바뀐 줄·근거 줄도 포함). 같은 항목이면 제목·이름을 기존 기억과 한 글자도 다르지 않게 쓴다. 제목을 바꾸면 새 항목이 하나 더 생긴다.
 - 새 항목은 새 제목으로 쓴다. 지울 항목(끝난 상태, 다른 항목에 합친 것, 닫혀서 옮긴 것)은 제목 줄만 쓰고 끝에 " (삭제)"를 붙인다. 예: "▸ [2026.03.14-세라가 레온에게 사과함] (삭제)", "【이름】 (삭제)".
@@ -765,8 +766,8 @@
     for (const l of String(memory).split('\n')) {
       if (!/^\s*-?\s*근거\s*[:：]/.test(l)) continue;
       for (const m of l.matchAll(/「([^」]{4,})」|["“]([^"“”]{4,})["”]/g)) {
-        const q = norm(m[1] ?? splitTr(m[2])[0]);
-        if (source.includes(q) || prev.includes(q)) ok++; else bad++;
+        const parts = cutDots(m[1] ?? splitTr(m[2])[0]).map(norm);
+        if (parts.every(q => source.includes(q) || prev.includes(q))) ok++; else bad++;
       }
     }
     return { ok, bad };
@@ -1774,6 +1775,7 @@
     details.spgrp[open]>summary::after{transform:rotate(90deg)}
     .sprow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:0 0 10px 44px}
     .sprow .addrs{margin:0}.spto{font-size:13.5px;color:var(--graphite);white-space:nowrap}
+    .addr-new{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.3px;color:#FF6F91;margin-left:2px;vertical-align:super}
     .addrs .addr{white-space:nowrap;font-size:14px;font-weight:500;color:var(--ink2);background:linear-gradient(transparent 60%,var(--sky) 60%);padding:0 2px}
     .spc .addr{font-size:14px;font-weight:700;background:linear-gradient(transparent 55%,var(--sky) 55%);padding:0 2px}
     .spc .reg{font-size:12.5px;color:var(--graphite);white-space:nowrap}
@@ -2163,7 +2165,14 @@
   }
   // 말투(존댓말·반말)는 제목 옆 작은 태그, 아래 줄엔 호칭 칩만
   const regTag = c => { const r = [...new Set(c.chips.map(x => x.reg).filter(Boolean))].join(' / '); return r ? ` <span class="reg-tag">${esc(r)}</span>` : ''; };
-  const addrHtml = c => `<div class="addrs">${c.chips.flatMap(x => x.addr).map(a => `<span class="addr">「${esc(a)}」</span>`).join('')}</div>`;
+  const addrsOf = mem => new Set(String(splitSections(mem).find(x => x.key === '인물')?.body || '').split('\n')
+    .filter(l => /→|->/.test(l) && !/^\s*-?\s*(근거|번역)\s*[:：]/.test(l)).flatMap(l => [...l.matchAll(/「([^」]+)」/g)].map(m => m[1].trim())));
+  let newAddrKey = '', newAddrSet = new Set();
+  const newAddrs = () => { const h = histList[histList.length - 1], n = snapshot?.note, key = (n?.upto || '') + '|' + (h?.at || '');
+    if (key === newAddrKey) return newAddrSet; newAddrKey = key;
+    if (!h?.before || !n || h.afterUpto !== n.upto) return (newAddrSet = new Set());
+    const old = addrsOf(h.before); return (newAddrSet = new Set([...addrsOf(noteMemory())].filter(a => !old.has(a)))); };
+  const addrHtml = c => `<div class="addrs">${c.chips.flatMap(x => x.addr).map(a => `<span class="addr">「${esc(a)}」${newAddrs().has(a) ? '<i class="addr-new">NEW</i>' : ''}</span>`).join('')}</div>`;
   // 노트에 나오는 인물 이름 (빠진 인물 확인용)
   function namesIn(memory) {
     const body = splitSections(memory).find(s => s.key === '인물')?.body || '';
@@ -4655,9 +4664,10 @@
   // src: 이번에 읽은 대화 원문(공백 뺀 것). 있으면 근거 인용이 실제로 있는지 표시합니다.
   const squash = t => String(t || '').replace(/[\s"“”'‘’「」]/g, '');
   // 근거가 원문에 있는지: 「지문」·"대사" 조각마다 확인하고, 대사 끝 괄호 번역은 원문 모양이 달라서 빼고 봅니다.
+  const cutDots = t => { const p = String(t).split(/\s*(?:…|\.{2,})\s*/).filter(x => x.replace(/[\s\p{P}]/gu, '').length >= 2); return p.length ? p : [t]; };
   const evBodyOf = q => String(q).replace(/^\s*[（(][^)）]*턴[^)）]*[)）]\s*/, '');
   const evFound = (q, src) => { const b = evBodyOf(q), segs = [...b.matchAll(/「([^」]*)」|["“]([^"“”]*)["”]?/g)].map(x => x[1] ?? splitTr(x[2])[0]).filter(s => s.trim());
-    return (segs.length ? segs : [splitTr(b.replace(/^["“]|["”]$/g, ''))[0]]).every(s => src.includes(squash(s))); };
+    return (segs.length ? segs : [splitTr(b.replace(/^["“]|["”]$/g, ''))[0]]).flatMap(cutDots).every(s => src.includes(squash(s))); };
   function changesHtml(ch, src = '') {
     if (!changeCount(ch)) return emptyBox('바뀐 내용이 없어요.');
     const ev = q => { if (!q) return src ? '<p class="chg-ev bad">⚠ 근거 줄이 없어요 — 직접 확인해 주세요</p>' : '';
@@ -5042,7 +5052,16 @@
       const n = snapshot.note;
       if (mode === 'tidy' && !n) { toast('다시 정리할 노트가 없어요. 먼저 "지금 정리"를 눌러 주세요.', 'info', 3000); return; }
       if (mode === 'new' && !snapshot.fresh.length) { if (n) mode = 'tidy'; else { toast('정리할 대화가 아직 없어요.', 'info', 2500); return; } }
-      const oldList = n ? splitSections(noteMemory()) : [];
+      // 기존 노트는 근거까지 든 전체본으로. 이 기기에 없으면 정리 기록·구글 백업에서 채팅 노트와 같은 정리본을 찾아요(이번 정리에만 쓰고 저장은 안 함).
+      //   전체본 없이 채팅 노트(근거 빠짐)로 이어 정리하면 예전 근거가 '못 찾음'으로 뜨고 바뀐 것도 많아 보여요.
+      let baseMem = n ? noteMemory() : '', noFull = false;
+      if (n && !(fullNote && fullNote.upto === n.upto)) {
+        const h = histList[histList.length - 1], g = h?.afterUpto === n.upto && sameAsChat(h.after, n.memory) ? null : nav.gsOn ? await gsPeek(chatId) : null;
+        if (h?.afterUpto === n.upto && sameAsChat(h.after, n.memory)) baseMem = h.after;
+        else if (g && g.upto === n.upto && sameAsChat(g.memory, n.memory)) baseMem = g.memory;
+        else noFull = true;
+      }
+      const oldList = n ? splitSections(baseMem) : [];
       const fixed = oldList.find(x => x.key === FIXED)?.body || '';
       // 명대사는 이 정리에서 만들지 않는 칸(명대사 탭에서 따로 만듦)이라 AI에게 보내지 않고, 결과에 그대로 다시 붙입니다.
       const prev = joinSections(oldList.filter(x => ![FIXED, '직전 장면', '명대사'].includes(x.key)));
@@ -5067,6 +5086,7 @@
       }
       // 이어서 정리할 기존 노트가 있으면 바뀐 것만 받아 끼워 넣습니다. 처음·전체 다시·형식 다시는 노트 전체를 받아요.
       const delta = mode === 'new' && !!base;
+      if (noFull && mode !== 'rebuild') sub += ' ⚠ 이 기기에 근거가 든 전체본이 없어서(다른 기기에서 정리했거나 구글 백업이 없음) 채팅 속 노트로 이어 정리했어요. 예전 사건의 근거·명대사는 이번 결과에 빠질 수 있어요.';
       if (opts.export) {
         // 다른 AI 채팅에 붙여 넣을 정리 요청: 지침 + 입력 + 출력 안내. 파일로 받고 클립보드에도 복사.
         const text = EXT_HEAD + `\n\n════════ 정리 지침 ════════\n\n${await buildSystem(delta)}\n\n════════ 정리할 자료 ════════\n\n${buildInput(base, msgs, fixed, edited, from)}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL;
@@ -5114,15 +5134,15 @@
       parsed.sort((a, b) => (SECTIONS.findIndex(s => s.key === a.key) + 99) % 99 - (SECTIONS.findIndex(s => s.key === b.key) + 99) % 99);
       draft = {
         sections: parsed, uptoId, turns,
-        evidence: checkEvidence(memory, msgs, prev),
+        evidence: checkEvidence(memory, whole, prev),
         madeUp: checkNames(memory, msgs, prev),
         kept: keep.kept,
-        lost: (() => { const now = namesIn(memory); return snapshot.note ? namesIn(noteMemory()).filter(x => !now.some(y => sameName(x, y))) : []; })(),
-        gone: snapshot.note ? lostCore(noteMemory(), memory) : [],
+        lost: (() => { const now = namesIn(memory); return snapshot.note ? namesIn(baseMem).filter(x => !now.some(y => sameName(x, y))) : []; })(),
+        gone: snapshot.note ? lostCore(baseMem, memory) : [],
         askNames: askPairs(memory),
         sub,
         // 정리 전 노트(바뀐 것 비교·되돌리기용), 이번에 읽은 원문(바뀐 것의 근거가 실제로 있는지 확인용)
-        before: n ? { memory: noteMemory(), upto: n.upto, turns: n.turns } : null,
+        before: n ? { memory: baseMem, upto: n.upto, turns: n.turns } : null,
         source: squash(msgs.map(m => stripBlocks(msgText(m))).join(' ')),
       };
       nav.view = 'preview'; quiet();
