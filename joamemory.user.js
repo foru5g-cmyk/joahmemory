@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.52
+// @version      3.9.53
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -4759,6 +4759,7 @@
         ${(draft.strong || []).length ? `<div class="hidebox strongbox" style="margin-top:10px"><span><b>⚠ 원문에 없는 센 말 ${draft.strong.length}개</b><br>${draft.strong.map(x => `「${esc(x.word)}」 <small>${esc(x.key)} · …${esc(x.line)}…</small> <button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">고치기</button>`).join('<br>')}<br>대화에 한 번도 안 나온 말이에요. AI가 감정·성격에 딱지를 붙였을 수 있어요. 원문에 맞는 말로 고쳐 주세요.</span></div>` : ''}
         ${draft.madeUp?.length ? `<div class="hidebox" style="margin-top:10px"><span><b>원문에서 못 찾은 호칭·별명 ${draft.madeUp.length}개</b><br>${draft.madeUp.map(w => `「${esc(w)}」<button class="linkbtn" data-act="dropname" data-arg="${esc(w)}">지우기</button>`).join(' ')}${draft.madeUp.length > 1 ? ` <button class="linkbtn" data-act="dropname" data-arg="">모두 지우기</button>` : ''}<br>대화에 나온 적 없는 말이에요. AI가 지어냈을 수 있어요. 진짜 쓰는 호칭이면 그냥 두세요.</span></div>` : ''}
         ${ev.ok + ev.bad ? `<div class="muted" style="margin-top:8px">근거 확인 · 원문에서 찾음 <b style="color:var(--ok)">${ev.ok}</b>${ev.bad ? ` · 못 찾음 <b style="color:var(--bad)">${ev.bad}</b> (고쳐 쓴 인용일 수 있어요)` : ''}</div>` : ''}
+        <div class="muted" style="margin-top:6px;font-size:11.5px">감정선·명대사·근거·프로필 꼬리표는 화면에만 있고 채팅엔 안 들어가요. 빨간 경고는 채팅에 들어가는 내용만 봐요.</div>
       </div>
       ${(() => { if (!draft.before || draft.restore) return '';
         const after = joinSections(draft.sections), ch = changesOf(draft.before.memory, after), n = changeCount(ch);
@@ -5153,7 +5154,7 @@
         sections: parsed, uptoId, turns,
         evidence: checkEvidence(memory, whole, prev),
         madeUp: checkNames(memory, msgs, prev),
-        strong: checkStrong(memory, whole.map(m => stripBlocks(msgText(m))).join('\n')),
+        strong: checkStrong(stripProof(memory), whole.map(m => stripBlocks(msgText(m))).join('\n')),
         kept: keep.kept,
         lost: (() => { const now = namesIn(memory); return snapshot.note ? namesIn(baseMem).filter(x => !now.some(y => sameName(x, y))) : []; })(),
         gone: snapshot.note ? lostCore(baseMem, memory) : [],
