@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.53
+// @version      3.9.54
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -728,15 +728,27 @@
   // 지어낸 호칭·별명 찾기: 인물 칸의 「호칭」·"별명 ○○" 가운데 기존 노트에도, 이번 원문에도 없는 말.
   const NO_ADDR = /^(없음|없다|미상|불명|모름|호칭\s*없음|-+|—+|\?+|x)?$/i; // AI가 호칭 자리에 쓴 빈칸 표시
   // 원문에 없는 센 말: AI가 감정·성격에 붙인 딱지(집착·강박 등)가 대화 원문에 한 번도 없으면 칸·줄과 함께 알려 줘요(고치기는 사용자가).
-  const STRONG = ['집착', '강박', '통제', '소유욕', '독점욕', '광기', '비정상', '병적', '얀데레', '집요'];
+  const STRONG = ['집착', '강박', '통제', '소유욕', '독점욕', '광기', '비정상', '병적', '얀데레', '집요', '포식자', '사냥감', '먹잇감', '맹수', '소유물', '지배욕', '광적', '구속', '감금'];
   function checkStrong(memory, source) {
     const out = [];
     for (const sec of splitSections(memory)) for (const l of sec.body.split('\n')) {
       if (/^\s*-?\s*(근거|번역)\s*[:：]/.test(l)) continue;
-      for (const w of STRONG) { const j = l.indexOf(w); if (j < 0 || source.includes(w)) continue;
-        out.push({ word: w, key: sec.key, line: l.slice(Math.max(0, j - 14), j + w.length + 14).trim() }); }
+      const ws = STRONG.filter(w => l.includes(w) && !source.includes(w)); if (!ws.length) continue;
+      { const j = l.indexOf(ws[0]); out.push({ word: ws.join('·'), key: sec.key, line: l.slice(Math.max(0, j - 14), j + ws[0].length + 20).trim() }); }
     }
     return out;
+  }
+  async function fixStrong(memory, srcText) {
+    const lines = memory.split('\n'), idx = [], bad = STRONG.filter(w => !srcText.includes(w));
+    lines.forEach((l, k) => { if (!/^\s*-?\s*(근거|번역)\s*[:：]/.test(l) && bad.some(w => l.includes(w))) idx.push(k); });
+    if (!idx.length) return { memory, n: 0, changes: [] };
+    const sys = '너는 RP 기억 노트 교정 담당이다. [고칠 줄]마다 [원문에 없는 말]에 든 감정·성격 이름을 빼고, 그 자리를 [대화 원문]에서 그 인물이 실제로 보인 행동이나 말로 바꿔 쓴다. 줄 앞 기호·이름·「호칭」·말투·괄호 표시(자각 등)·날짜와 나머지 사실은 그대로 둔다. 새 사실을 지어내지 않는다. 출력은 JSON 배열 하나: 입력과 같은 순서·같은 개수의 고친 줄(문자열).';
+    const input = '[고칠 줄]\n' + idx.map((k, n) => (n + 1) + '. ' + lines[k]).join('\n') + '\n\n[원문에 없는 말] ' + bad.join(', ') + '\n\n[대화 원문]\n' + srcText.slice(-60000);
+    const out = parseJsonLoose(await askModel(sys, input, '✏️센 말 고치기', true));
+    if (!Array.isArray(out) || out.length !== idx.length) return { memory, n: 0, changes: [] };
+    const keyAt = k => { for (let q = k; q >= 0; q--) { const h = lines[q].match(/^(?:##(?!#)|■)\s*(.+?)\s*$/); if (h) return ALIAS[h[1]] || h[1]; } return ''; };
+    const changes = []; idx.forEach((k, j) => { const t = String(out[j] || '').trim(); if (t && t !== lines[k] && !bad.some(w => t.includes(w))) { changes.push({ key: keyAt(k), before: lines[k], after: t }); lines[k] = t; } });
+    return { memory: lines.join('\n'), n: changes.length, changes };
   }
   function checkNames(memory, freshMessages, prevMemory) {
     const norm = s => String(s).replace(/\s+/g, '');
@@ -1030,6 +1042,8 @@
     header{flex-shrink:0;display:flex;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 16px) 10px 6px 22px}
     .htitle{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
     .htitle b{font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sfx{margin-top:10px;border:1px solid var(--rule);border-radius:12px;padding:10px 12px;background:var(--paper)}.sfx summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink2);list-style:none}.sfx summary::after{content:' ▾';color:var(--graphite)}.sfx[open] summary::after{content:' ▴'}
+    .sfx-row{border-top:1px solid var(--rule);margin-top:10px;padding-top:8px}.sfx-row small{font-size:11px;color:var(--graphite)}.sfx-row p{margin:4px 0;font-size:13px;line-height:1.5}.sfx-b{color:var(--graphite);text-decoration:line-through;opacity:.7}.sfx-a{color:var(--ink)}.sfx-note{font-size:11.5px;color:var(--graphite)}.sfx-btns{display:flex;gap:12px;justify-content:flex-end;margin-top:4px}
     .strongbox, .strongbox b{color:var(--bad)}.strongbox small{color:var(--ink2)}
     .verfoot{text-align:center;font-size:11px;color:var(--graphite);margin:22px 0 8px;letter-spacing:.2px}
     .verfoot .vup{border:0;cursor:pointer;background:#FF6F91;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:4px}
@@ -4756,6 +4770,7 @@
         ${lost.length ? `<div class="hidebox" style="margin-top:10px"><span><b>빠진 인물 ${lost.length}명</b> · ${lost.map(esc).join(', ')}<br>예전 노트엔 있었는데 새 노트에 없어요. 해당 칸을 눌러 다시 적어 주세요.</span></div>` : ''}
         ${(draft.askNames || []).length ? `<div class="hidebox" style="margin-top:10px"><span><b>같은 사람인가요?</b><br>${draft.askNames.map(([a, b], i) => `【${esc(a)}】 · 【${esc(b)}】 <button class="linkbtn" data-act="namesame" data-arg="${i}">같은 사람</button> <button class="linkbtn" data-act="namediff" data-arg="${i}">다른 사람</button>`).join('<br>')}<br>이름이 비슷해서 물어봐요. 같은 사람이면 한 사람으로 합치고, 고른 답은 이 방에서 기억해요.</span></div>` : ''}
         ${(draft.gone || []).length ? `<div class="hidebox" style="margin-top:10px"><span><b>빠진 핵심 ${draft.gone.length}개</b><br>${draft.gone.map(x => '· ' + esc(x)).join('<br>')}<br>예전 노트엔 있었는데 새 노트에서 이유 없이 사라졌어요. 끝난 게 아니면 그 칸을 눌러 다시 적거나, 다시 정리해 주세요.</span></div>` : ''}
+        ${(draft.strongChanges || []).length ? `<details class="sfx"><summary>${(n => n ? `✏️ 센 말 ${n}줄을 원문 행동으로 바꿨어요` : "✏️ 센 말 고친 것을 원래대로 돌렸어요")(draft.strongChanges.filter(x => !x.undone).length)}</summary>${draft.strongChanges.map((x, j) => `<div class="sfx-row"><small>${esc(x.key)}</small>${x.undone ? `<p>${esc(x.before)}</p><p class="sfx-note">원래 문장으로 되돌렸어요</p>` : `<p class="sfx-b">${esc(x.before)}</p><p class="sfx-a">${esc(x.after)}</p>`}<div class="sfx-btns">${x.undone ? '' : `<button class="linkbtn" data-act="sfxundo" data-arg="${j}">원래 문장으로</button>`}<button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">수정하기</button></div></div>`).join('')}</details>` : ''}
         ${(draft.strong || []).length ? `<div class="hidebox strongbox" style="margin-top:10px"><span><b>⚠ 원문에 없는 센 말 ${draft.strong.length}개</b><br>${draft.strong.map(x => `「${esc(x.word)}」 <small>${esc(x.key)} · …${esc(x.line)}…</small> <button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">고치기</button>`).join('<br>')}<br>대화에 한 번도 안 나온 말이에요. AI가 감정·성격에 딱지를 붙였을 수 있어요. 원문에 맞는 말로 고쳐 주세요.</span></div>` : ''}
         ${draft.madeUp?.length ? `<div class="hidebox" style="margin-top:10px"><span><b>원문에서 못 찾은 호칭·별명 ${draft.madeUp.length}개</b><br>${draft.madeUp.map(w => `「${esc(w)}」<button class="linkbtn" data-act="dropname" data-arg="${esc(w)}">지우기</button>`).join(' ')}${draft.madeUp.length > 1 ? ` <button class="linkbtn" data-act="dropname" data-arg="">모두 지우기</button>` : ''}<br>대화에 나온 적 없는 말이에요. AI가 지어냈을 수 있어요. 진짜 쓰는 호칭이면 그냥 두세요.</span></div>` : ''}
         ${ev.ok + ev.bad ? `<div class="muted" style="margin-top:8px">근거 확인 · 원문에서 찾음 <b style="color:var(--ok)">${ev.ok}</b>${ev.bad ? ` · 못 찾음 <b style="color:var(--bad)">${ev.bad}</b> (고쳐 쓴 인용일 수 있어요)` : ''}</div>` : ''}
@@ -5140,7 +5155,13 @@
       let whole = msgs; try { whole = await readAll(chatId); } catch (_) {}
       const keep = keepMissingPeople(dropUserQuotes(fixTrQuotes(raw, whole), msgs), prev);
       try { NAME_PAIRS = JSON.parse(String(await getValue('names:' + chatId, '') || 'null')) || { same: [], diff: [] }; } catch (_) { NAME_PAIRS = { same: [], diff: [] }; }
-      const dup = mergeDupPeople(keep.memory, prev), memory = dup.memory;
+      const dup = mergeDupPeople(keep.memory, prev); let memory = dup.memory;
+      // 원문에 없는 센 말(집착·강박 등)이 채팅에 들어갈 줄에 있으면 그 줄만 AI가 원문 행동으로 다시 씀
+      let strongFixed = 0, strongChanges = [];
+      { const srcText = whole.map(m => stripBlocks(msgText(m))).join('\n'), chatPart = stripProof(memory);
+        if (checkStrong(chatPart, srcText).length) { toast('원문에 없는 센 말을 원문 행동으로 고치는 중이에요…', 'ok', 3000);
+          try { const view = splitSections(memory), keepView = view.filter(x => VIEW_ONLY.includes(x.key)), rest = joinSections(view.filter(x => !VIEW_ONLY.includes(x.key)));
+            const r = await fixStrong(rest, srcText); if (r.n) { memory = joinSections([...splitSections(r.memory), ...keepView]); strongFixed = r.n; strongChanges = r.changes; } } catch (_) {} } }
       if (dup.merged.length) toast(`같은 사람으로 보이는 인물을 하나로 합쳤어요 · ${dup.merged.join(', ')}`, 'info', 5000);
       if (summarize.last) { await recordUsage(chatId, { at: Date.now(), from, to: turns, chars: memory.length, ...summarize.last }); usage = await usageOf(chatId); }
       const off = await offSections();
@@ -5154,6 +5175,7 @@
         sections: parsed, uptoId, turns,
         evidence: checkEvidence(memory, whole, prev),
         madeUp: checkNames(memory, msgs, prev),
+        ...(strongFixed ? { strongFixed, strongChanges } : {}),
         strong: checkStrong(stripProof(memory), whole.map(m => stripBlocks(msgText(m))).join('\n')),
         kept: keep.kept,
         lost: (() => { const now = namesIn(memory); return snapshot.note ? namesIn(baseMem).filter(x => !now.some(y => sameName(x, y))) : []; })(),
@@ -5453,6 +5475,7 @@
         if (act === 'namesame') { const m = mergeDupPeople(joinSections(draft.sections), draft.before?.memory || ''); draft.sections = splitSections(m.memory); if (m.merged.length) toast('한 사람으로 합쳤어요 · ' + m.merged.join(', '), 'ok', 3000); }
         draft.askNames = askPairs(joinSections(draft.sections));
       } return keepScroll(render);
+      case 'sfxundo': { const x = draft?.strongChanges?.[Number(arg)]; if (x && !x.undone) { const s = draft.sections.find(z => z.key === x.key); if (s && s.body.includes(x.after)) { s.body = s.body.replace(x.after, () => x.before); x.undone = true; } } return keepScroll(render); }
       case 'getupdate': window.open(UPDATE_URL, '_blank'); return;
       case 'dropname': if (draft) { draft.sections = dropNames(draft.sections, arg ? [arg] : draft.madeUp || []); draft.madeUp = (draft.madeUp || []).filter(w => arg && w !== arg); } return keepScroll(render);
       case 'bdanon': nav.bdAnon = el.checked; { const keep = out(nav.bdReplyTo != null ? 'bdCmtR' : 'bdCmt')?.value || ''; keepScroll(render); const i = out(nav.bdReplyTo != null ? 'bdCmtR' : 'bdCmt'); if (i) i.value = keep; } return;
