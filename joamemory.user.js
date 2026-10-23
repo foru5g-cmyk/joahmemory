@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.47
+// @version      3.9.48
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1776,7 +1776,7 @@
     .sprow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:0 0 10px 44px}
     .sprow .addrs{margin:0}.spto{font-size:13.5px;color:var(--graphite);white-space:nowrap}
     .chg-ev.none{font-size:11.5px;color:var(--graphite);opacity:.8}
-    .addr-new{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.3px;color:#FF6F91;margin-left:2px;vertical-align:super}
+    .addr-new{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.3px;color:#FF6F91;margin:0 4px 0 1px;position:relative;top:-.75em;line-height:1}
     .addrs .addr{white-space:nowrap;font-size:14px;font-weight:500;color:var(--ink2);background:linear-gradient(transparent 60%,var(--sky) 60%);padding:0 2px}
     .spc .addr{font-size:14px;font-weight:700;background:linear-gradient(transparent 55%,var(--sky) 55%);padding:0 2px}
     .spc .reg{font-size:12.5px;color:var(--graphite);white-space:nowrap}
@@ -2173,7 +2173,7 @@
     if (key === newAddrKey) return newAddrSet; newAddrKey = key;
     if (!h?.before || !n || h.afterUpto !== n.upto) return (newAddrSet = new Set());
     const old = addrsOf(h.before); return (newAddrSet = new Set([...addrsOf(noteMemory())].filter(a => !old.has(a)))); };
-  const addrHtml = c => `<div class="addrs">${c.chips.flatMap(x => x.addr).map(a => `<span class="addr">「${esc(a)}」${newAddrs().has(a) ? '<i class="addr-new">NEW</i>' : ''}</span>`).join('')}</div>`;
+  const addrHtml = c => `<div class="addrs">${c.chips.flatMap(x => x.addr).map(a => `<span class="addr">「${esc(a)}」</span>${newAddrs().has(a) ? '<i class="addr-new">NEW</i>' : ''}`).join('')}</div>`;
   // 노트에 나오는 인물 이름 (빠진 인물 확인용)
   function namesIn(memory) {
     const body = splitSections(memory).find(s => s.key === '인물')?.body || '';
