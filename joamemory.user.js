@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.61
+// @version      3.9.62
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1519,7 +1519,7 @@
     .bt-opts small{font-size:11px;color:var(--graphite)}.bt-win{color:#1F7A4D;font-size:11px;margin-left:4px}.bt-me{font-style:normal;font-size:10.5px;color:var(--ink2);margin-left:4px}
     .bt-res{margin:8px 0 0;font-size:12.5px;color:var(--ink2)}.bt-cmts{margin-top:8px}.bt-pick{font-style:normal;font-size:10.5px;margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--mist);color:var(--graphite)}
     .tk-body{padding:8px 14px 4px;background:var(--paper)}.tk-line{display:flex;gap:8px;align-items:flex-start;margin:0;padding:6px 0;font-size:13.5px;line-height:1.5}.tk-line .av{flex:none;width:28px;height:28px;font-size:14px}.tk-host{background:var(--mist)}
-    .tk-line b{font-weight:700;margin-right:4px}.tk-line.host b{color:var(--graphite)}.tk-act{font-style:normal;font-size:11px;color:var(--graphite);margin-left:4px}
+    .tk-line b{font-weight:800;margin-right:4px}.tk-line.host{background:#FFFBE6;border-radius:8px;padding:6px 8px;margin:2px -8px}.tk-line.host b{color:var(--ink);background:#FFE98A;padding:0 5px;border-radius:4px}.tk-host{background:#FFE98A}.tk-act{font-style:normal;font-size:11px;color:var(--graphite);margin-left:4px}
     .lv-stk{margin:2px 0;font-size:34px;line-height:1.2}
     .lv-hint{margin:4px 14px 0;font-size:11px;color:var(--graphite);text-align:center}
     .lv-in{animation:lvIn .25s ease both}@keyframes lvIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -4135,7 +4135,7 @@
         upd.segments = [...upd.segments, ...segs]; upd.upto = turnEnd(); }
       else talkData = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, upto: to || turnEnd(), show: data.show || '토크쇼', host: data.host || '진행자', guests, segments: segs };
       await setValue('talk:' + chatId, JSON.stringify(talkData));
-      nav.tkSeg = null; toast(upd ? '다음 코너가 녹화됐어요 🎤' : '토크쇼가 녹화됐어요 🎤', 'ok', 2500);
+      nav.tkSeg = upd ? upd.segments.length - segs.length : 0; toast(upd ? '다음 코너가 녹화됐어요 🎤' : '토크쇼가 녹화됐어요 🎤', 'ok', 2500);
     } catch (e) { toast('토크쇼 만들기 실패 · ' + errMsg(e), 'err'); }
     finally { busyNow = false; render(); }
   }
@@ -4147,14 +4147,14 @@
     if (!talkData && busyNow && genProg) return head + genCard();
     const picker = `<div class="tl-who">${names.map(n => `<button data-act="tkpick" data-arg="${esc(n)}" aria-pressed="${picked.includes(n)}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     if (!talkData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 토크쇼</b><small>게스트를 1~2명 고르면 진행자가 사건·소문·관계를 꼬치꼬치 캐물어요 · 인물은 자기 말투·아는 만큼만 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>${picker}<button class="ph-make" data-act="tkrange"${picked.length ? '' : ' disabled'}>🎤 ${picked.length ? picked.join(' · ') + ' 녹화 시작' : '게스트를 골라 주세요'}</button></div></div>${sheet}`;
-    const d = talkData, [c1, c2] = boardColors(d.show), segs = d.segments || [], n = Number.isInteger(nav.tkSeg) && segs[nav.tkSeg] ? nav.tkSeg : segs.length - 1, seg = segs[n];
+    const d = talkData, [c1, c2] = boardColors(d.show), segs = d.segments || [], n = Number.isInteger(nav.tkSeg) && segs[nav.tkSeg] ? nav.tkSeg : 0, seg = segs[n];
     const tv = `<div class="lv-tv" style="background:linear-gradient(135deg,${c1},${c2})"><b>🎤 ${esc(d.show)}</b><small>진행 ${esc(d.host)} · 게스트 ${d.guests.map(esc).join(', ')}</small><span class="lv-live">REC</span></div>`;
     const tabs = `<div class="bd-menu">${segs.map((s, i) => `<button data-act="tkseg" data-arg="${i}" aria-pressed="${i === n}">${esc(s.title || (i + 1) + '코너')}</button>`).join('')}</div>`;
     const line = l => { const w = String(l.who || '').trim();
       if (w === '자막') return `<p class="lv-sub">${esc(l.text)}</p>`;
       if (w === '시청자') return `<p class="lv-don"><span>📩 시청자</span>${esc(l.text)}</p>`;
       const guest = d.guests.find(g => canon(g) === canon(w)), host = !guest;
-      return `<p class="tk-line${host ? ' host' : ''}">${guest ? avatar(guest) : '<span class="av tk-host">🎙</span>'}<span><b>${esc(w)}</b>${l.act ? `<i class="tk-act">(${esc(l.act)})</i>` : ''}<br>${esc(l.text)}</span></p>`; };
+      return `<p class="tk-line${host ? ' host' : ''}">${guest ? avatar(guest) : '<span class="av tk-host">🎙</span>'}<span><b${guest ? ` style="color:${avColor(guest)[1]}"` : ''}>${esc(w)}</b>${l.act ? `<i class="tk-act">(${esc(l.act)})</i>` : ''}<br>${esc(l.text)}</span></p>`; };
     const body = `<div class="tk-body">${seg ? seg.lines.map(line).join('') : ''}</div>`;
     const next = n === segs.length - 1 ? `<div class="lv-next"><b>🎬 여기서 녹화 끝</b><small>더 보고 싶을 때만 눌러요 · 누르기 전엔 이어지지 않아요</small><br><button class="btn sm pri" data-act="tkmore" style="margin-top:8px"${busyNow ? ' disabled' : ''}>다음 코너 녹화 (AI 1번)</button></div>` : '';
     return head + genCard() + `<div class="bd">${tv}${tabs}${body}${next}<p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p></div>`
@@ -5704,7 +5704,7 @@
     const el = e.target.closest('[data-act]');
     if (!el || el.disabled) return;
     const act = el.dataset.act, arg = el.dataset.arg;
-    const keepScroll = fn => { const y = out('main').scrollTop; fn(); out('main').scrollTop = y; };
+    const keepScroll = fn => { const m = out('main'), y = m.scrollTop, STRIP = '.bd-menu,.bd-tabs,.bd-spots', xs = [...m.querySelectorAll(STRIP)].map(el => el.scrollLeft); fn(); m.scrollTop = y; [...m.querySelectorAll(STRIP)].forEach((el, i) => { el.scrollLeft = xs[i] || 0; }); };
     switch (act) {
       case 'toggle': return toggleSheet();
       case 'close': return openSheet(false);
