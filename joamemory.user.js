@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.60
+// @version      3.9.61
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -4156,7 +4156,7 @@
       const guest = d.guests.find(g => canon(g) === canon(w)), host = !guest;
       return `<p class="tk-line${host ? ' host' : ''}">${guest ? avatar(guest) : '<span class="av tk-host">🎙</span>'}<span><b>${esc(w)}</b>${l.act ? `<i class="tk-act">(${esc(l.act)})</i>` : ''}<br>${esc(l.text)}</span></p>`; };
     const body = `<div class="tk-body">${seg ? seg.lines.map(line).join('') : ''}</div>`;
-    const next = `<div class="lv-next"><b>🎬 다음 코너</b><button class="btn sm pri" data-act="tkmore"${busyNow ? ' disabled' : ''}>이어서 녹화 (AI 1번)</button></div>`;
+    const next = n === segs.length - 1 ? `<div class="lv-next"><b>🎬 여기서 녹화 끝</b><small>더 보고 싶을 때만 눌러요 · 누르기 전엔 이어지지 않아요</small><br><button class="btn sm pri" data-act="tkmore" style="margin-top:8px"${busyNow ? ' disabled' : ''}>다음 코너 녹화 (AI 1번)</button></div>` : '';
     return head + genCard() + `<div class="bd">${tv}${tabs}${body}${next}<p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p></div>`
       + `<p class="muted" style="text-align:center;margin:10px 0 4px">${d.turns}턴 시점에 녹화 · <button class="linkbtn" data-act="tkreset">다른 게스트로 다시</button></p>${sheet}`;
   }
@@ -5320,7 +5320,7 @@
       if (!same) {
         const key = c.upto + '|' + c.at + '|' + chatShape(c.memory).length;
         if (nav.devAsk?.key !== key) { nav.devAsk = { key, chatId, c, mine }; pageToast('다른 기기에서 정리한 기억이 들어왔어요 · 조아메모리를 열어 골라 주세요'); }
-      } else if (nav.devAsk?.chatId === chatId) nav.devAsk = null;
+      } else if (nav.devAsk?.chatId === chatId && (!c || nav.devAsk.key !== c.upto + '|' + c.at + '|' + chatShape(c.memory).length)) nav.devAsk = null; // 고르기 전엔 카드를 두고, 채팅 노트가 실제로 바뀌었을 때만 닫음
       nav.gsOn = !!String(await getValue('gsUrl', '')).trim();
       // ① 사본: 이 기기가 채팅 노트를 볼 때마다(정리를 안 했어도) 최신 노트 사본을 이 브라우저에 남겨요. 언제·어느 기기가 저장했는지도 같이.
       if (snap.note && !snap.note.parked) {
@@ -5661,7 +5661,7 @@
   function toggleSheet() {
     const on = !isOpen();
     openSheet(on);
-    if (on) { nav = fresh(); quiet(); render(); refresh(); }
+    if (on) { Object.assign(nav, fresh(), { bdRange: false, gsSheet: false, etcSheet: false }); quiet(); render(); refresh(); }
   }
 
   root.addEventListener('change', async e => {
@@ -5958,8 +5958,8 @@
   window.addEventListener('focus', comeBack);
   let lastPath = '';
   setInterval(() => {
-    if (location.pathname === lastPath) return;
-    lastPath = location.pathname;
+    const nowChat = chatIdFromPath() || location.pathname; if (nowChat === lastPath) return;
+    lastPath = nowChat;
     openSheet(false);
     snapshot = null; draft = null; nav = fresh();
     inlineBtn.remove();
