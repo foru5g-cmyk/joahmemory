@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.63
+// @version      3.9.64
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -1664,6 +1664,26 @@
     .dm-b.me{align-self:flex-end;background:linear-gradient(135deg,#7B3FF2,#3797F0);color:#fff}.dm-b.them{align-self:flex-start;background:#efefef;color:#000}
     .dm-input{display:flex;align-items:center;gap:8px;margin:6px 12px 16px;border:1px solid #dbdbdb;border-radius:22px;padding:6px 8px}.dm-input span{flex:1;font-size:13px;color:#8e8e93}
     .dm-input i{font-style:normal;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px}.dm-input i:first-child{background:#3797F0}
+    /* 💬 단톡방(카톡 느낌): 왼쪽 프사+이름, 시점 인물은 오른쪽 노란 말풍선 */
+    .ph-screen.kk{background:#B2C7D9}
+    .kk-top{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 8px;background:#fff;font-size:20px;font-weight:800}.kk-top span{font-size:16px;font-weight:400;color:#555}
+    .kk-list{background:#fff}
+    .kk-room{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;text-align:left;padding:9px 14px;font:inherit;color:#000}
+    .kk-avs{width:48px;height:48px;flex-shrink:0;display:grid;gap:2px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}.kk-avs .av,.kk-avs .ph-anon{width:100%;height:100%;font-size:11px;border-radius:40%}
+    .kk-avs.n1{grid-template-columns:1fr;grid-template-rows:1fr}.kk-avs.n1 .av{font-size:20px}.kk-avs.n2{grid-template-rows:1fr;align-content:center}.kk-avs.n3 .av:first-child,.kk-avs.n3 .ph-anon:first-child{grid-column:1/3;width:50%;justify-self:center}
+    .kk-rt{flex:1;min-width:0}.kk-rt b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kk-rt b small{color:#8a9aa8;font-weight:400;margin-left:4px}.kk-rt p{margin:2px 0 0;font-size:13px;color:#6b7680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .kk-rr{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}.kk-rr small{font-size:11px;color:#8a9aa8}.kk-rr em{font-style:normal;background:#F03E3E;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
+    .kk-nav{flex-shrink:0;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;height:44px;padding:0 6px}.kk-nav b{text-align:center;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kk-nav b small{color:#5a6b7a;font-weight:400;margin-left:4px}
+    .kk-nav>button{border:0;background:transparent;font-size:30px;line-height:1;color:#000;padding:0 0 4px}.kk-pov{display:flex;justify-content:center;align-items:center;padding:0!important}.kk-pov .av,.kk-pov .ph-anon{width:28px;height:28px;font-size:13px;border-radius:40%}
+    .kk-body{display:flex;flex-direction:column;padding:6px 10px 12px;gap:3px}
+    .kk-day{align-self:center;background:rgba(0,0,0,.14);color:#fff;font-size:11px;border-radius:12px;padding:3px 10px;margin:6px 0}
+    .kk-msg{display:flex;align-items:flex-start;gap:8px;max-width:100%}.kk-msg .av,.kk-msg .ph-anon,.kk-sp{width:38px;height:38px;flex-shrink:0;border-radius:40%}.kk-sp{display:inline-block;visibility:hidden}
+    .kk-col{display:flex;flex-direction:column;min-width:0;max-width:78%}.kk-nm{font-size:12px;color:#3d4a56;margin:2px 0 3px}
+    .kk-row{display:flex;align-items:flex-end;gap:4px}.kk-row time{font-size:10px;color:#5a6b7a;white-space:nowrap;flex-shrink:0}.kk-bs{display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:0}
+    .kk-b{background:#fff;color:#000;border-radius:4px 14px 14px 14px;padding:7px 10px;font-size:14px;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere;white-space:pre-wrap}
+    .kk-msg.me{flex-direction:row-reverse}.kk-msg.me .kk-row{flex-direction:row-reverse}.kk-msg.me .kk-bs{align-items:flex-end}.kk-msg.me .kk-b{background:#FEE500;border-radius:14px 4px 14px 14px}
+    .kk-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;width:150px;height:110px;background:#e2e8ee;border-radius:12px;color:#333}.kk-photo i{font-style:normal;font-size:40px;font-family:var(--emoji);line-height:1}.kk-photo small{font-size:11px;color:#5a6b7a;margin-top:6px}
+    .kk-input{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 10px 14px;background:#fff}.kk-input span{flex:1;height:34px;background:#f2f3f5;border-radius:17px}.kk-input i{font-style:normal;color:#555;font-size:20px;width:24px;text-align:center}
     .im-search{margin:4px 12px 6px;background:#f2f2f7;border-radius:10px;padding:7px 10px;font-size:13px;color:#8e8e93}
     .mk-me{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:6px solid #f2f2f7}.mk-me span{display:flex;flex-direction:column}.mk-me b{font-size:15px}
     .mk-me small,.mk-seller small{font-size:12px;color:#8e8e93}.mk-me em{font-style:normal;color:#319E45;font-weight:700}
@@ -2662,7 +2682,7 @@
     a.download = name; document.body.appendChild(a); a.click(); a.remove();
   }
   // 백업에 담는 이 방의 기기 저장값. 노트 자리(full·parked·moved)는 불러올 때 확인 화면 → 넣기로 다시 만들어져서 되살리지 않아요.
-  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'usage'];
+  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'gc', 'usage'];
   async function backupData() {
     const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId) return null;
     const store = {};
@@ -2852,7 +2872,7 @@
     if (nav.gsOn) gsSave(true);
   }
   // ETC 비우기: 커뮤·폰·컴퓨터·뉴스·위키·실시간톡을 골라 이 방에서 지워요. 기억 노트·명대사·정리 기록은 그대로.
-  const ETC_PARTS = [['board', '🗨 커뮤니티'], ['phone', '📱 폰'], ['pc', '💻 컴퓨터'], ['news', '📰 뉴스'], ['wiki', '📚 위키'], ['live', '📺 실시간톡'], ['bet', '🎲 베팅'], ['talk', '🎤 토크쇼']];
+  const ETC_PARTS = [['board', '🗨 커뮤니티'], ['phone', '📱 폰'], ['gc', '💬 단톡방'], ['pc', '💻 컴퓨터'], ['news', '📰 뉴스'], ['wiki', '📚 위키'], ['live', '📺 실시간톡'], ['bet', '🎲 베팅'], ['talk', '🎤 토크쇼']];
   function etcSheetHtml() {
     return `<div class="rsheet" data-act="etcclose"><div class="rbox gsbox" data-act="noop">
       <b>ETC 비우기</b><small>고른 것만 이 방에서 지워요 · 기억 노트·명대사·정리 기록은 그대로</small>
@@ -2879,7 +2899,7 @@
   }
   // ── ETC 기기끼리 맞추기 (기본 꺼짐) ──
   //   켜면: ETC가 바뀔 때마다 8초 뒤 구글에 올리고(여러 번 바뀌면 한 번만), 다른 기기 ETC가 더 최신이면 카드로 알려요(말없이 덮어쓰지 않음).
-  const ETC_SYNC_KEYS = ['board', 'phone', 'pc', 'news', 'wiki', 'live', 'quotes', 'etcnames'];
+  const ETC_SYNC_KEYS = ['board', 'phone', 'gc', 'pc', 'news', 'wiki', 'live', 'quotes', 'etcnames'];
   let etcUpTimer = null;
   etcHook = async key => {
     const chatId = chatIdFromPath(); if (!chatId || !key.endsWith(':' + chatId)) return;
@@ -2946,7 +2966,7 @@
     if (!snapshot?.note) return emptyBox('아직 정리한 기록이 없어요.');
     const totalUsd = usage.reduce((a, r) => a + (r.usd || 0), 0), runs = usage.filter(r => !r.label).length;
     // 무엇에·어느 모델로 썼는지 나눠서(ETC 포함). 라벨 앞 이모지로 종류를 묶어요
-    const KIND = { '🗨': '커뮤니티', '📱': '폰', '💻': '컴퓨터', '📰': '뉴스', '📚': '위키', '📺': '실시간톡', '✨': '명대사', '✏': '센 말 고침' };
+    const KIND = { '🗨': '커뮤니티', '📱': '폰', '💬': '단톡방', '💻': '컴퓨터', '📰': '뉴스', '📚': '위키', '📺': '실시간톡', '✨': '명대사', '✏': '센 말 고침' };
     const kindOf = r => !r.label ? '정리' : KIND[[...String(r.label).trim()][0]] || String(r.label).replace(/^[^\p{L}]+/u, '').trim() || '기타';
     const modelName = id => { for (const [fam, list] of MODELS) for (const [mid, nm] of list) if (mid === id) return `${fam} ${nm.replace(/\s*\(.*\)$/, '')}`; return id || '?'; };
     const sumBy = key => { const m = new Map(); for (const r of usage) { const k = key(r); const v = m.get(k) || { n: 0, usd: 0, unk: 0 }; v.n++; if (r.usd == null) v.unk++; else v.usd += r.usd; m.set(k, v); } return [...m].sort((a, b) => b[1].usd - a[1].usd); };
@@ -3374,7 +3394,7 @@
     `- 터무니없는 거짓 루머: ${dice([0, 1, 1, 2])}개`,
     `- 씨앗 ${Math.random().toString(36).slice(2, 8)} — 씨앗이 다르면 글감·말투·화제도 달라야 한다. 지난번에 썼을 법한 소재는 피한다`]].join('\n');
   // etc 탭: 📱 폰 / 💻 컴퓨터. 고른 인물은 둘이 같이 씁니다(nav.phWho).
-  const DEVICES = [['phone', '📱 폰'], ['pc', '💻 컴퓨터'], ['board', '🗨 커뮤니티'], ['news', '📰 뉴스'], ['wiki', '📚 위키'], ['live', '📺 실시간톡'], ['bet', '🎲 베팅'], ['talk', '🎤 토크쇼']];
+  const DEVICES = [['phone', '📱 폰'], ['gc', '💬 단톡방'], ['pc', '💻 컴퓨터'], ['board', '🗨 커뮤니티'], ['news', '📰 뉴스'], ['wiki', '📚 위키'], ['live', '📺 실시간톡'], ['bet', '🎲 베팅'], ['talk', '🎤 토크쇼']];
   // 노트가 없으면 인물 목록 대신 직접 추가한 이름(+ 이미 만든 폰·컴퓨터 주인)
   let etcNames = [];
   const etcPeople = () => [...new Set([...(snapshot?.note ? people().keys() : []), ...etcNames, ...Object.keys(phoneData), ...Object.keys(pcData)])];
@@ -3522,7 +3542,7 @@
   }
   function genView() {
     const g = genProg, s = Math.floor((Date.now() - g.t0) / 1000), tm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    const name = { board: '커뮤니티', more: '새 글', phone: '폰', pc: '컴퓨터', news: '뉴스', wiki: '위키', live: '실시간톡', bet: '베팅판', talk: '토크쇼', summary: '기억 노트' }[g.kind] || '';
+    const name = { board: '커뮤니티', more: '새 글', phone: '폰', gc: '단톡방', pc: '컴퓨터', news: '뉴스', wiki: '위키', live: '실시간톡', bet: '베팅판', talk: '토크쇼', summary: '기억 노트' }[g.kind] || '';
     const board = g.kind === 'board' || g.kind === 'more'; let info;
     if (g.kind === 'summary') { // 정리: 읽는 중 → 쓰는 중(글자 수 · 지난 정리 대비 %)
       info = !g.chars ? (s < 8 ? 'AI에게 대화와 기억 노트를 보내는 중…' : s < 30 ? 'AI가 대화를 읽고 정리하는 중…' : 'AI가 정리하는 중이에요 · 대화가 길면 첫 글자까지 1분 넘게 걸려요')
@@ -4159,6 +4179,63 @@
     const next = n === segs.length - 1 ? `<div class="lv-next"><b>🎬 여기서 녹화 끝</b><small>더 보고 싶을 때만 눌러요 · 누르기 전엔 이어지지 않아요</small><br><button class="btn sm pri" data-act="tkmore" style="margin-top:8px"${busyNow ? ' disabled' : ''}>다음 코너 녹화 (AI 1번)</button></div>` : '';
     return head + genCard() + `<div class="bd">${tv}${tabs}${body}${next}<p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p></div>`
       + `<p class="muted" style="text-align:center;margin:10px 0 4px">${d.turns}턴 시점에 녹화 · <button class="linkbtn" data-act="tkreset">다른 게스트로 다시</button></p>${sheet}`;
+  }
+  // ── 💬 단톡방: 유저가 빠진 NPC들만의 메신저 방. 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
+  //    큰 방 하나 + 못 하는 말을 하는 작은 방 0~2개. 유저 속마음은 인물 칸 → 줄·감정선 자각·인지·비밀 범위 안에서만.
+  const GC_PROMPT = "너는 RP 세계 속 NPC들이 유저(사용자 캐릭터) 몰래 쓰는 메신저 단톡방을 유출 캡처처럼 만든다. 인물은 전부 [기억 노트] 인물 칸의 사람들이고, 예시 문장 없이 이 이야기 디테일로 새로 짓는다.\n[지킬 것]\n- ★ 최우선: 유저는 어느 방에도 없다. 유저의 대사·행동·속마음을 지어내지 않는다. 유저 이야기는 NPC들이 '본 만큼·들은 만큼'만 한다(노트의 사건·대사·관계 범위).\n- 방 구성: 큰 방 하나(유저와 얽힌 주요 NPC 3~6명, 모자라면 노트의 모든 NPC) + 작은 방 0~2개(큰 방에서 못 하는 말을 하는 둘셋만의 방: 같은 비밀을 아는 사람끼리, 유저를 두고 경쟁하는 둘, 뒷담화 상대 등). 작은 방은 큰 방과 시간이 겹쳐도 된다(큰 방에선 '응 알겠어', 작은 방에선 '쟤 왜 저럼').\n- 성격·말투: 노트의 말투·말버릇·「호칭」·존댓말/반말 그대로. 메신저 버릇도 그 사람답게 — 덜렁대면 오타·연타, 무뚝뚝하면 단답·마침표, 다정하면 이모티콘, 장난스러우면 ㅋㅋ·줄임말, 격식 있으면 맞춤법 반듯. 모든 인물이 같은 말투면 실패다. 읽씹·늦답·혼자 떠들기·갑자기 사진 올리기도 성격대로.\n- 유저에 대한 속마음은 노트에 적힌 만큼만: 인물 칸 → 줄의 태도와 감정선의 지금 단계·자각 상태를 그대로 따른다. (자각)이면 본인이 대놓고 또는 에둘러 말할 수 있고, (무자각)이면 본인은 모른 채 유저 얘기만 유난히 많이 하고 남들이 놀린다, (부정)이면 아니라고 우기고 화제를 돌린다, (숨김)이면 큰 방에선 티 안 내고 작은 방에서만 샌다. 작은 방이나 밤늦은 시간엔 평소보다 솔직해져서 속마음·약한 소리·고민(인물 칸 고민 줄)이 나와도 된다. 단 내용은 노트의 → 줄·감정선·고민 범위 안에서만. 노트에 없는 감정·고백·새 사건을 만들지 않는다.\n- 인지·비밀: '모름'인 사람 앞에서는 그 얘기를 하지 않는다(아는 사람끼리의 작은 방에서만). 숨기는 사람은 둘러대거나 말을 돌린다(티 나게). 관계·호칭·계급·직책은 노트 그대로.\n- 화제 섞기: 유저 뒷담화·칭찬·걱정이 중심이지만 전체의 절반쯤. 나머지는 NPC끼리의 일상(밥·일·돈·잠·날씨), 서로 싸우고 놀리기, 지난 사건(날짜로그) 뒷이야기, 열린 떡밥(서사 고리)에 대한 각자의 계획·예측, 뜬금없는 딴소리, 사진 공유. 일어나지 않은 일을 일어난 것처럼 쓰지 않는다(계획·예측은 계획·예측으로).\n- 시점: 노트 현재상태의 기준 시점 당일~며칠 전. 시간은 '오후 9:41'처럼. 큰 방 40~70줄, 작은 방 10~25줄. 한 줄은 짧게(길면 두세 줄로 끊어 연달아 보냄).\n- photo가 있는 줄은 사진 메시지다: emoji 하나 + 찍힌 것 10자 안팎(photo). text는 비우거나 짧은 한마디.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"rooms\":[{\"name\":\"방 이름(그들이 지은 것, 유저 이름은 넣지 않음)\",\"members\":[\"정본명\"],\"day\":\"날짜 또는 오늘\",\"thread\":[{\"from\":\"정본명\",\"text\":\"말\",\"time\":\"오후 9:41\"},{\"from\":\"정본명\",\"emoji\":\"📷\",\"photo\":\"찍힌 것\",\"text\":\"\",\"time\":\"오후 9:42\"}]}]}";
+  const GC_MORE = "\n\n[이번엔 '이어서'] 아래 [지금까지 대화]의 각 방 마지막 줄 뒤에 이어질 새 메시지만 만든다(큰 방 20~35줄, 작은 방 6~15줄). 같은 방 이름·같은 멤버 그대로, 새 방은 만들지 않는다. 이미 나온 화제·드립을 되풀이하지 않고 새 각도로(시간이 조금 흐른 뒤여도 된다). 출력은 같은 형식 {\"rooms\":[...]} 하나만, thread에는 새 줄만.";
+  const gcRoll = () => ['\n[이번 회차 주사위 — 만들 때마다 바뀌는 값]',
+    `- 이모티콘·ㅋㅋ·ㅠㅠ가 붙는 줄 비율: ${dice(['거의 없음', '열 줄에 한 줄쯤', '넷에 하나쯤', '절반쯤'])} (사람마다 성격대로 치우치게)`,
+    `- 큰 방 분위기: ${dice(['평화로운 잡담', '유저 얘기로 들끓음', '둘이 싸우는 중이고 나머지는 눈치', '한 명이 혼자 떠들고 다들 읽씹', '밤늦게 잠 못 든 둘셋만 깨어 있음', '사진 자랑 대회', '누가 큰 실수를 해서 놀림당하는 중'])}`,
+    `- 씨앗 ${Math.random().toString(36).slice(2, 8)} — 씨앗이 다르면 화제·드립도 달라야 한다`].join('\n');
+  const gcOf = async chatId => { try { return JSON.parse(String(await getValue('gc:' + chatId, 'null')) || 'null'); } catch (_) { return null; } };
+  let gcData = null;
+  async function makeGc(from = 0, to = 0, more = false) {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || !snapshot) return;
+    const upd = more && gcData?.rooms?.length ? gcData : null;
+    busyNow = true; startGen('gc'); render(); toast(upd ? '단톡방을 이어서 엿보는 중이에요… (20~40초)' : '단톡방을 엿보는 중이에요… (30초~1분)');
+    try {
+      const base = upd && !snapshot.note ? [await etcMemory(chatId, upd.from, upd.to)] : await etcBase(chatId, from, to);
+      const sofar = upd ? ['', '[지금까지 대화]', upd.rooms.map(r => '# ' + r.name + ' (' + (r.members || []).join(', ') + ')\n' + r.thread.slice(-40).map(l => l.from + ': ' + (l.photo ? '[사진: ' + l.photo + '] ' : '') + (l.text || '')).join('\n')).join('\n\n')] : [];
+      const raw = await askModelRetry(withRules(GC_PROMPT, ETC_LANG + gcRoll()) + (upd ? GC_MORE : ''), [etcWho('대사·속마음'), '', ...base, ...sofar].join('\n'), upd ? '💬단톡방 이어서' : '💬단톡방');
+      let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
+      const users = etcUsers(), isU = x => users.some(u => canon(x) === canon(u));
+      const rooms = (data.rooms || []).map(r => ({ name: String(r?.name || '단톡방'), members: (r?.members || []).map(x => canon(String(x))).filter(m => m && !isU(m)), day: String(r?.day || ''),
+        thread: (r?.thread || []).filter(l => l && (l.text || l.photo) && l.from && !isU(l.from)).map(l => ({ from: canon(String(l.from)), text: String(l.text || ''), time: String(l.time || ''), ...(l.photo ? { photo: String(l.photo), emoji: String(l.emoji || '📷') } : {}) })) })).filter(r => r.thread.length);
+      if (!rooms.length) throw new Error('대화가 오지 않았어요. 한 번 더 눌러 주세요.');
+      if (upd) { // 같은 방(이름, 아니면 같은 멤버)에 이어 붙임. 못 찾은 방은 버림(새 방은 안 만들기로 했으니)
+        const same = (a, b) => a.length === b.length && a.every(m => b.includes(m));
+        for (const r of rooms) { const o = upd.rooms.find(x => x.name === r.name) || upd.rooms.find(x => same(x.members, r.members)); if (o) o.thread.push(...r.thread); }
+        upd.upto = turnEnd(); }
+      else { gcData = { at: Date.now(), turns: snapshot.note?.turns || 0, from, to, upto: to || turnEnd(), rooms }; nav.gcRoom = null; }
+      await setValue('gc:' + chatId, JSON.stringify(gcData));
+      toast(upd ? '새 메시지가 왔어요 💬' : '단톡방이 열렸어요 💬', 'ok', 2500);
+    } catch (e) { toast('단톡방 만들기 실패 · ' + errMsg(e), 'err'); }
+    finally { busyNow = false; render(); }
+  }
+  function gcHtml() {
+    const head = devSeg();
+    if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
+    const sheet = nav.bdRange && nav.rgKind === 'gc' ? rangeSheet(gcData ? '다시 만들기' : '만들기') : '';
+    if (!gcData && busyNow && genProg) return head + genCard();
+    if (!gcData) return head + genCard() + '<div class="bd"><div class="bd-empty"><b>유저 빠진 단톡방</b><small>NPC들끼리 몰래 떠드는 단톡 · 성격·말투·아는 만큼만 · 유저 얘기는 노트에 있던 일만 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="gcrange">💬 단톡방 엿보기</button></div></div>' + sheet;
+    const d = gcData, rooms = d.rooms || [], room = Number.isInteger(nav.gcRoom) ? rooms[nav.gcRoom] : null;
+    const clk = phClock(), bar = '<div class="ph-status"><b>' + clk.t + '</b>' + PH_STATUS + '</div>';
+    const face = n => people().has(n) || PROF.has(n) ? avatar(n) : '<span class="av ph-anon">' + esc([...String(n || '?')][0]) + '</span>';
+    let inner, pov = '';
+    if (!room) {
+      inner = bar + '<div class="kk-top"><b>채팅</b><span>✎</span></div><div class="ph-body kk-list">' + rooms.map((r, i) => { const last = r.thread[r.thread.length - 1] || {};
+        return '<button class="kk-room" data-act="gcroom" data-arg="' + i + '"><span class="kk-avs n' + (Math.min(4, r.members.length) || 1) + '">' + (r.members.length ? r.members.slice(0, 4) : ['?']).map(face).join('') + '</span><span class="kk-rt"><b>' + esc(r.name) + '<small>' + (r.members.length || '') + '</small></b><p>' + esc(last.photo ? '사진을 보냈습니다.' : last.text) + '</p></span><span class="kk-rr"><small>' + esc(last.time) + '</small><em>' + r.thread.length + '</em></span></button>'; }).join('') + '</div>';
+    } else {
+      // 시점 인물(오른쪽 노란 말풍선) = 이 방을 누구 폰으로 보는지. 오른쪽 위 프사를 누르면 다음 사람으로.
+      const ms = room.members; pov = ms.includes(nav.gcPov) ? nav.gcPov : ms[0] || ''; const next = ms[(ms.indexOf(pov) + 1) % (ms.length || 1)] || '';
+      const th = room.thread, line = (l, i) => { const me = l.from === pov, first = i === 0 || th[i - 1].from !== l.from, lastOf = i === th.length - 1 || th[i + 1].from !== l.from || th[i + 1].time !== l.time;
+        const b = (l.photo ? '<span class="kk-photo"><i>' + esc(l.emoji) + '</i><small>' + esc(l.photo) + '</small></span>' : '') + (l.text ? '<span class="kk-b">' + esc(l.text) + '</span>' : '');
+        return '<div class="kk-msg' + (me ? ' me' : '') + '">' + (me ? '' : first ? face(l.from) : '<span class="kk-sp"></span>') + '<div class="kk-col">' + (!me && first ? '<small class="kk-nm">' + esc(l.from) + '</small>' : '') + '<div class="kk-row"><span class="kk-bs">' + b + '</span>' + (lastOf ? '<time>' + esc(l.time) + '</time>' : '') + '</div></div></div>'; };
+      inner = bar + '<div class="kk-nav"><button data-act="gcroom" data-arg="">‹</button><b>' + esc(room.name) + '<small>' + (ms.length || '') + '</small></b><button class="kk-pov" data-act="gcpov" data-arg="' + esc(next) + '" title="' + esc(pov) + '의 폰으로 보는 중 · 누르면 다음 사람">' + face(pov) + '</button></div><div class="ph-body kk-body">' + (room.day ? '<p class="kk-day">' + esc(room.day) + '</p>' : '') + th.map(line).join('') + '</div><div class="kk-input"><i>+</i><span></span><i>#</i></div>';
+    }
+    const foot = '<p class="muted" style="text-align:center;margin:10px 0 0">' + d.turns + '턴 시점에 만든 단톡방' + (d.from ? ' · ' + d.from + '~' + d.to + '턴 대화 참고' : '') + (pov ? ' · ' + esc(pov) + '의 폰으로 보는 중(오른쪽 위 프사를 누르면 바뀜)' : '') + ' · <button class="linkbtn" data-act="devimg" data-arg="phone">이미지로 저장</button> · <button class="linkbtn" data-act="gcmore"' + (busyNow ? ' disabled' : '') + '>이어서 엿보기 (AI 1번)</button> · <button class="linkbtn" data-act="gcrange">다시 만들기</button></p>';
+    return head + genCard() + '<div class="iphone"><i class="ph-island"></i><div class="ph-screen kk">' + inner + '</div><i class="ph-homebar" data-act="gcroom" data-arg=""></i></div>' + foot + sheet + devImgSheet();
   }
   const etcUsers = () => [...PROF.entries()].filter(([, v]) => v.isUser).map(([n]) => n);
   const etcWho = what => { const u = etcUsers(); return u.length ? '[유저] ' + u.join(', ') + ' — 이 사람의 ' + what + '은(는) 만들지 말 것' : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공의 ' + what + '은(는) 만들지 말 것'; };
@@ -5231,7 +5308,7 @@
       : nav.view === 'run' ? runHtml()
       : nav.view === 'changes' ? changesView(histList)
       : nav.tab === 'timeline' ? timelineHtml()
-      : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'talk' ? talkHtml() : phoneHtml())
+      : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
       : nav.tab === 'story' ? memoryHtml(STORY_TABS)
       : nav.tab === 'now' ? memoryHtml(NOW_TABS)
       : nav.tab === 'people' ? peopleHtml()
@@ -5303,7 +5380,7 @@
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산 try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산 try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { lastSeenMap = JSON.parse(String(await getValue('lastseen:' + chatId, '') || '{}')) || {}; } catch (_) { lastSeenMap = {}; }
       // 다른 기기(폰↔컴)에서 정리해 넣은 노트가 채팅에 들어와 있으면 항상 묻습니다.
@@ -5757,6 +5834,10 @@
       case 'btpick': { const [i, k] = String(arg).split('|').map(Number), m = betData?.markets?.[i]; if (m && !m.result) { m.my = m.my === k ? null : k; await setValue('bet:' + chatIdFromPath(), JSON.stringify(betData)); } return keepScroll(render); }
       case 'tkpick': { const p = nav.tkPick || []; nav.tkPick = p.includes(arg) ? p.filter(x => x !== arg) : [...p, arg].slice(-2); return keepScroll(render); }
       case 'tkrange': nav.rgKind = 'talk'; nav.bdRange = true; return keepScroll(render);
+      case 'gcrange': nav.rgKind = 'gc'; nav.bdRange = true; return keepScroll(render);
+      case 'gcroom': nav.gcRoom = arg === '' ? null : Number(arg); return keepScroll(render);
+      case 'gcpov': nav.gcPov = arg; return keepScroll(render);
+      case 'gcmore': return makeGc(0, 0, true);
       case 'tkmore': return makeTalk(null, 0, 0, true);
       case 'tkseg': nav.tkSeg = Number(arg); return keepScroll(render);
       case 'tkreset': if (!confirm('지금 토크쇼를 지우고 다른 게스트로 새로 녹화할까요?')) return; talkData = null; await setValue('talk:' + chatIdFromPath(), ''); nav.tkPick = []; nav.tkSeg = null; return render();
@@ -5780,6 +5861,7 @@
         if (k === 'live' && b - a + 1 > 5) { toast('실시간톡은 한 화에 최대 5턴이에요 (추천 2턴).', 'err', 3000); return; }
         if (k === 'live') { if (liveData && !confirm(a + '~' + b + '턴으로 실시간톡을 처음부터 다시 만들까요? (지난 화가 지워져요)')) return; nav.bdRange = false; return makeLive(a, b); }
         if (k === 'talk') { nav.bdRange = false; return makeTalk((nav.tkPick || []).slice(0, 2), a, b); }
+        if (k === 'gc') { if (gcData && !confirm(a + '~' + b + '턴 대화로 단톡방을 처음부터 다시 만들까요? (지금 대화가 지워져요)')) return; nav.bdRange = false; return makeGc(a, b); }
         if (k === 'news') { if (newsData && !confirm(`${a}~${b}턴 대화를 참고해서 뉴스를 다시 만들까요? (AI를 1번 불러요)`)) return; nav.bdRange = false; return makeNews(a, b); }
         if (ex && !confirm(`${a}~${b}턴 대화를 참고해서 ${lab}을(를) 다시 만들까요? (AI를 1번 불러요)`)) return;
         nav.bdRange = false; return k === 'phone' ? makePhone(who, a, b) : k === 'pc' ? makePc(who, a, b) : makeBoard(a, b); }
