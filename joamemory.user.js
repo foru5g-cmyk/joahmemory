@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.65
+// @version      3.9.66
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -48,10 +48,10 @@
   // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다.
   const stripBlocks = t => String(t || '').replace(V3_RE, '').replace(V2_RE, '').replace(V1_RE, '').replace(/\n*\[\/\/\]: # "MEMO_NOTE v3[\s\S]*$/, '');
 
-  const DEFAULT_MODEL = 'gemini-3.5-flash';
+  const DEFAULT_MODEL = 'gemini-3.8-flash';
   // 설정에서 버튼으로 고르는 모델. 단가는 priceOf에 있습니다.
   const MODELS = [
-    ['Gemini', [['gemini-4-argon', '4 Argon (최신)'], ['gemini-3.5-flash', '3.5 Flash (기본)'], ['gemini-3.8-flash', '3.8 Flash'], ['gemini-3.7-flash', '3.7 Flash'], ['gemini-3.6-flash', '3.6 Flash'],
+    ['Gemini', [['gemini-4-argon', '4 Argon'], ['gemini-3.5-flash', '3.5 Flash'], ['gemini-3.8-flash', '3.8 Flash (기본)'], ['gemini-3.7-flash', '3.7 Flash'], ['gemini-3.6-flash', '3.6 Flash'],
       ['gemini-3.5-flash-lite', '3.5 Flash-Lite'], ['gemini-3.1-flash-lite', '3.1 Flash-Lite'], ['gemini-3.1-pro-preview', '3.1 Pro'], ['gemini-2.5-pro', '2.5 Pro']]],
     ['Claude', [['claude-fable-5-1', 'Fable 5.1 (가장 똑똑함)'], ['claude-opus-5-5', 'Opus 5.5'], ['claude-opus-5', 'Opus 5'], ['claude-sonnet-5-5', 'Sonnet 5.5'], ['claude-sonnet-5', 'Sonnet 5'], ['claude-haiku-5-5', 'Haiku 5.5 (가장 쌈)'], ['claude-haiku-4-5', 'Haiku 4.5']]],
   ];
@@ -2318,7 +2318,7 @@
   let CANON = [];
   const canon = x => { x = String(x || '').trim(); if (!x || CANON.includes(x)) return x; const hit = CANON.filter(n => sameName(n, x) || (!pairHas(NAME_PAIRS.diff, n, x) && nameForms(n).some(a => nameForms(x).some(b => looseName(a, b))))); return hit.length === 1 ? hit[0] : x; };
   function personsIn(body) {
-    const list = []; let cur = null;
+    const list = [], foreign = []; let cur = null;
     for (const raw of String(body || '').split('\n')) {
       const l = raw.trim();
       if (!l || isNone(l)) continue;
@@ -2358,6 +2358,8 @@
       // "서윤 → 유진: …"(새 형식)과 "→ 유진: …"(예전 형식) 둘 다 읽습니다. 앞 이름이 이 인물이 아니면 관계 줄이 아니에요.
       const r0 = l.match(/^(?:(.+?)\s*)?(?:→|->)\s*(.+?)\s*[:：]\s*(.*)$/);
       const r = r0 && (!r0[1] || sameName(r0[1], cur.name)) ? [r0[0], r0[2], r0[3]] : null;
+      // 남이 이 사람을 부르는 줄("가브리엘 → 데이지:")이 이 블록에 있으면 설명에 섞지 말고 말하는 사람 쪽 관계로 옮겨요
+      if (!r && r0 && r0[1] && r0[1].length <= 24) { foreign.push({ from: r0[1].trim(), to: r0[2], text: r0[3].trim() }); cur.last = null; continue; }
       if (r) {
         const rel = { to: canon(r[1]), text: r[2].trim(), quote: '' };
         if (cur.rels.some(x => x.to === rel.to && x.text === rel.text)) { cur.last = null; continue; } // 같은 줄 두 번 방지
@@ -2371,6 +2373,8 @@
         else cur.desc += (cur.desc ? ' · ' : '') + bullet(part);
       }
     }
+    for (const f of foreign) { const p = list.find(x => sameName(x.name, f.from)), rel = { to: canon(f.to), text: f.text, quote: '' };
+      if (p && !p.rels.some(x => x.to === rel.to)) p.rels.push(rel); }
     return list;
   }
   const isNewPeople = body => /^\s*【/m.test(String(body || ''));
@@ -4429,7 +4433,7 @@
       const keysAll = ok.length === posted.length ? [...new Set([...okKeys, ...batch.map(c => c.key)])] : okKeys;
       ltmDone = [...new Set([...ltmDone, ...keysAll])].slice(-400); await setValue('ltmdone:' + chatId, JSON.stringify(ltmDone));
       const leftover = batch.filter(c => !keysAll.includes(c.key));
-      ltmQ = leftover.length ? { turns: turnsQ, cands: leftover, kind: 'move' } : null; await setValue('ltmq:' + chatId, ltmQ ? JSON.stringify(ltmQ) : ''); ltmGroups = null; nav.ltmG = 1;
+      ltmQ = leftover.length ? { turns: turnsQ, cands: leftover, kind: 'move' } : null; await setValue('ltmq:' + chatId, ltmQ ? JSON.stringify(ltmQ) : ''); ltmGroups = null; nav.ltmSel = null;
       let dropped = 0; ltmDropFromNote.removed = []; try { dropped = await ltmDropFromNote(chatId, keysAll); } catch (e) { toast('노트에서 빼기 실패 · ' + errMsg(e), 'err'); }
       if (dropped) { // 카드마다 원래 사건을 붙여 둬요(지울 때·카드가 사라졌을 때 되살리기용)
         const left = [...ltmDropFromNote.removed], orig = ok.map(c => ({ title: c.title, items: [] }));
@@ -4628,13 +4632,13 @@
       if (n) h += '<div class="hidebox" style="margin:0 0 12px"><span><b>노트에서 뺐는데 크랙 장기기억에 카드가 없는 사건 ' + n + '개</b><br>카드가 안 생겼거나 크랙에서 지워졌어요. 원래 글은 이 기기에 보관돼 있어요.<br><button class="linkbtn" data-act="ltmrecover"' + (busyNow ? ' disabled' : '') + '>노트에 되살리기</button></span></div>'; }
     h += '<div class="meta"><span>' + items.length + '개</span><span><button class="linkbtn" data-act="ltmpick">' + (nav.ltmPick ? '닫기' : '미리 조금 옮기기') + '</button> · <button class="linkbtn" data-act="ltmload">새로고침</button></span></div>';
     if (nav.ltmPick) { const ev = ltmNoteEvents(), dis = busyNow ? ' disabled' : '';
-      const gs = (ltmGroups?.groups || ltmGroupLocal(ev.slice(0, 36))).slice(0, 6), k = Math.min(gs.length, nav.ltmG || 1), n = gs.length ? gs[k - 1].to + 1 : 0;
+      const gs = (ltmGroups?.groups || ltmGroupLocal(ev.slice(0, 36))).slice(0, 6), sel = (nav.ltmSel || [0]).filter(i => i < gs.length), k = sel.length, n = sel.reduce((a, i) => a + gs[i].to - gs[i].from + 1, 0);
       const range = g => { const a = ltmSplit(ev[g.from])[0], z = ltmSplit(ev[g.to])[0]; return a && z && a !== z ? a + '~' + z.replace(/^\d{4}\./, '') : a || z; };
-      const grp = (g, i) => { const on = i < k, items = ev.slice(g.from, g.to + 1), r = range(g);
-        return '<button data-act="ltmg" data-arg="' + (i + 1) + '" aria-pressed="' + on + '"><div class="gh">' + (r ? '<time>' + esc(r) + '</time>' : '') + '<b>' + esc(g.label || ltmSplit(items[0])[1]) + '</b><em>' + items.length + '개</em></div>'
+      const grp = (g, i) => { const on = sel.includes(i), items = ev.slice(g.from, g.to + 1), r = range(g);
+        return '<button data-act="ltmg" data-arg="' + i + '" aria-pressed="' + on + '"><div class="gh">' + (r ? '<time>' + esc(r) + '</time>' : '') + '<b>' + esc(g.label || ltmSplit(items[0])[1]) + '</b><em>' + items.length + '개</em></div>'
           + (on ? '<ul>' + items.map(c => '<li>' + esc(ltmSplit(c)[1]) + '</li>').join('') + '</ul>' : '') + '</button>'; };
       h += '<div class="ltm-move"><h4>미리 조금 옮기기</h4>'
-        + (ev.length ? '<p class="ltm-note">' + (ltmGrouping ? 'AI가 같은 장소·같은 사건끼리 묶는 중… 지금은 날짜로 묶은 추천이에요.' : ltmGroups?.ai ? '같은 장소·같은 사건·이어진 날짜끼리 묶은 추천이에요. 오래된 것부터, 누른 묶음까지 옮겨요.' : '날짜가 이어지는 사건끼리 묶은 추천이에요. 오래된 것부터, 누른 묶음까지 옮겨요.') + '</p>'
+        + (ev.length ? '<p class="ltm-note">' + (ltmGrouping ? 'AI가 같은 장소·같은 사건끼리 묶는 중… 지금은 날짜로 묶은 추천이에요.' : ltmGroups?.ai ? '같은 장소·같은 사건·이어진 날짜끼리 묶은 추천이에요. 누른 묶음만 옮겨요(다시 누르면 빠져요).' : '날짜가 이어지는 사건끼리 묶은 추천이에요. 누른 묶음만 옮겨요(다시 누르면 빠져요).') + '</p>'
           + '<div class="ltm-grp">' + gs.map(grp).join('') + '</div>'
           + '<button class="btn ltm-go wide" data-act="ltmmove"' + dis + '>' + k + '묶음 · 사건 ' + n + '개 옮기기</button>'
           + '<details class="ltm-how"><summary>어떻게 옮겨지나요? ›</summary><ol>'
@@ -6019,7 +6023,8 @@
         sub = '다른 AI로 정리한 결과예요. ' + sub;
       } else {
         startGen('summary', expectSummaryChars()); render(); // 홈에 진행 카드(시간·글자 수·지난 정리 대비 %)
-        try { raw = await summarize(base, msgs, fixed, edited, from, delta); }
+        const ts = Date.now();
+        try { raw = await summarize(base, msgs, fixed, edited, from, delta); console.info('[조아메모리] 정리 · AI 답 ' + ((Date.now() - ts) / 1000).toFixed(1) + '초 · ' + String(raw).length + '자'); }
         catch (e) {
           // 새 대화가 길어 답이 잘리면 앞쪽 절반 턴만 정리합니다. 나머지는 다음 정리 때 이어져요.
           const users = msgs.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0);
@@ -6040,7 +6045,7 @@
       let whole = msgs; try { whole = await readAll(chatId); } catch (_) {}
       const keep = keepMissingPeople(dropUserQuotes(fixTrQuotes(raw, whole), msgs), prev);
       try { NAME_PAIRS = JSON.parse(String(await getValue('names:' + chatId, '') || 'null')) || { same: [], diff: [] }; } catch (_) { NAME_PAIRS = { same: [], diff: [] }; }
-      const dup = mergeDupPeople(keep.memory, prev); let memory = dup.memory;
+      const dup = mergeDupPeople(keep.memory, prev); let memory = dup.memory.replace(/^(\s*-\s*)([^:：\n]{1,12}?)\s*[:：]\s*\2\s*[:：]\s*/gm, '$1$2: '); // 같은 라벨 두 번 → 한 번
       { const oldSh = splitSections(prev || '').find(x => x.key === SHELF); if (oldSh && !splitSections(memory).some(x => x.key === SHELF)) memory = joinSections([...splitSections(memory), oldSh]); } // 처음부터 다시 정리해도 먼지 쌓인 곳은 그대로
       const stale = base ? expireItems(memory, msgs.map(m => stripBlocks(msgText(m))).join('\n'), turns, lastSeenMap) : { seen: {}, expired: [] };
       if (base) memory = stale.memory;
@@ -6119,8 +6124,9 @@
     if (!chatId || !draft || busyNow) return;
     const memory = joinSections(draft.sections), cleanOld = !!ui('[data-opt="clean"]')?.checked;
     busyNow = true; render(); toast('채팅에 넣는 중…');
+    const t0 = Date.now(), lap = w => console.info('[조아메모리] 넣기 · ' + w + ' ' + ((Date.now() - t0) / 1000).toFixed(1) + '초');
     try {
-      const now = await readSinceLastNote(chatId, 6);
+      const now = await readSinceLastNote(chatId, 6); lap('대화 확인');
       // 정리하는 사이 마지막으로 정리한 메시지가 리롤·삭제됐으면 묻습니다(그 답을 기준으로 다음 정리가 이어지므로).
       if (draft.uptoId && !draft.restore && !now.all.some(m => msgId(m) === draft.uptoId)
         && !confirm('정리하는 사이 마지막 대화가 리롤되거나 지워졌어요. 그래도 이 결과를 넣을까요? (취소하면 아무것도 바뀌지 않아요)')) { toast('넣지 않았어요. 노트는 그대로예요.', 'info', 3000); return; }
@@ -6141,22 +6147,22 @@
       // 채팅 노트와 이 기기 전체본에 같은 정리 시각을 찍어요(같은 정리본인지 알아보는 기준).
       const savedAt = new Date().toISOString();
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
-      ownUpto = draft.uptoId;
+      ownUpto = draft.uptoId; lap('채팅에 쓰기');
       await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt);
       if (draft.lastSeen) { lastSeenMap = draft.lastSeen; await setValue('lastseen:' + chatId, JSON.stringify(lastSeenMap)); }
       if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId });
       await setValue('edited:' + chatId, '[]');
       const oldId = now.note?.carrierId;
-      if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) {
+      if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) (async () => { // 예전 노트 지우기는 뒤에서(기다리지 않아요)
         try {
           const old = await readMessage(chatId, oldId), cleaned = stripBlocks(msgText(old)).trimEnd();
           if (cleaned !== msgText(old)) await writeMessage(chatId, oldId, cleaned);
         } catch (_) { /* 예전 노트 정리가 실패해도 새 노트는 이미 들어감 */ }
-      }
+      })();
       const ltmNew = draft.before && !draft.restore && String(await getValue('ltmAsk', 'on')) !== 'off' ? await ltmQueue(chatId, draft.before.memory, memory, draft.turns) : 0;
       draft = null; nav = fresh();
       toast(parked ? '저장했어요. 채팅에는 안 넣었어요(채팅에 넣기 꺼짐).' : '넣었어요. 이제 앱에서 이어서 RP하면 돼요.', 'ok', 3500);
-      await refresh();
+      await refresh(); lap('다시 읽기');
       if (ltmNew) { nav.view = 'ltm'; ltmLoad(); render(); }
       if (String(await getValue('gsUrl', '')).trim()) gsSave(true); // 구글 백업을 켜 뒀으면 넣을 때마다 자동으로
     } catch (e) { toast('넣기 실패 · ' + e.message, 'err'); }
@@ -6336,11 +6342,11 @@
       case 'ltmskip': ltmQ = null; await setValue('ltmq:' + chatIdFromPath(), ''); return render();
       case 'ltmedit': nav.ltmEdit = arg || null; return keepScroll(render);
       case 'ltmpick': nav.ltmPick = !nav.ltmPick; if (nav.ltmPick) ltmGroupAI(); return keepScroll(render);
-      case 'ltmg': nav.ltmG = Number(arg); return keepScroll(render);
+      case 'ltmg': { const i = Number(arg), cur = nav.ltmSel || [0]; nav.ltmSel = cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i].sort((a, b) => a - b); return keepScroll(render); }
       case 'ltmpicked': { const keys = [...root.querySelectorAll('[data-ltmpick]:checked')].map(el => el.dataset.ltmpick); if (!keys.length) return toast('옮길 사건을 골라 주세요.', 'err');
         const all = ltmNoteEvents(); ltmQ = { turns: snapshot?.note?.turns || 0, cands: all.filter(c => keys.includes(c.key)), kind: 'move' }; nav.ltmPick = false; return ltmAdd(); }
       case 'ltmmanual': nav.ltmManual = !nav.ltmManual; return keepScroll(render);
-      case 'ltmmove': { const ev = ltmNoteEvents(), gs = ltmGroups?.groups || ltmGroupLocal(ev), k = Math.min(gs.length, nav.ltmG || 1), cands = gs.length ? ev.slice(0, gs[k - 1].to + 1) : ev.slice(0, 3); if (!cands.length) return toast('옮길 사건이 없어요.', 'err');
+      case 'ltmmove': { const ev = ltmNoteEvents(), gs = ltmGroups?.groups || ltmGroupLocal(ev), cands = (nav.ltmSel || [0]).filter(i => gs[i]).flatMap(i => ev.slice(gs[i].from, gs[i].to + 1)); if (!cands.length) return toast('옮길 묶음을 골라 주세요.', 'err');
         if (!confirm('오래된 사건 ' + cands.length + '개를 장기기억으로 옮길까요?\n' + LTM_BATCH + '개씩 나눠 AI를 ' + Math.ceil(cands.length / LTM_BATCH) + '번 불러요. 몇 장으로 나눌지는 AI가 정하고, 옮긴 사건은 노트에서 빠져요.')) return;
         ltmQ = { turns: snapshot?.note?.turns || 0, cands, kind: 'move' }; nav.ltmPick = false; return ltmAdd(); }
       case 'ltmsave': return ltmSave(arg);
@@ -6522,7 +6528,7 @@
       case 'relinline': if (arg === '') { nav.inlineRel = null; nav.part = null; nav.lines = false; } else { nav.inlineRel = Number(arg); nav.key = '인물'; nav.lines = true; nav.relMode = 's'; nav.part = Number(arg); } return keepScroll(render);
       case 'reldel': if (!confirm('이 줄을 지울까요?')) return; root.querySelectorAll('[data-rel]').forEach(x => x.remove()); out('editor').value = ''; return saveEdit();
       case 'editpart': nav.part = arg === 'new' || arg === 'all' ? arg : Number(arg); render(); out('main').scrollTop = 0; return;
-      case 'pvEdit': nav.view = 'pvEdit'; nav.key = arg; render(); return;
+      case 'pvEdit': nav.view = 'pvEdit'; nav.key = arg; nav.part = null; nav.lines = false; render(); return;
       case 'back':
         if (nav.view === 'preview') { if (!confirm('정리한 결과를 버릴까요?')) return; draft = null; nav.view = null; }
         else if ((nav.view === 'pvEdit' || nav.view === 'edit') && nav.part != null && editHasList(nav.key)) nav.part = null; // 항목 편집 → 목록으로
@@ -6594,7 +6600,7 @@
   let placeTimer = null;
   new MutationObserver(() => {
     if (inlineBtn.isConnected || placeTimer) return;
-    placeTimer = setTimeout(() => { placeTimer = null; placeInlineButton(); }, 60);
+    placeTimer = setTimeout(() => { placeTimer = null; placeInlineButton(); }, 200);
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   // 방을 옮기면 초기화하고 가볍게 다시 확인
