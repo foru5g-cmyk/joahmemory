@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.71
+// @version      3.9.72
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -829,15 +829,20 @@
     return out;
   }
   async function fixStrong(memory, srcText) {
-    const lines = memory.split('\n'), idx = [], bad = STRONG.filter(w => !srcText.includes(w));
-    lines.forEach((l, k) => { if (!/^\s*-?\s*(근거|번역)\s*[:：]/.test(l) && bad.some(w => l.includes(w))) idx.push(k); });
-    if (!idx.length) return { memory, n: 0, changes: [] };
+    const lines = memory.split('\n'), bad = STRONG.filter(w => !srcText.includes(w)), changes = [];
     const sys = '너는 RP 기억 노트 교정 담당이다. [고칠 줄]마다 [원문에 없는 말]에 든 감정·성격 이름을 빼고, 그 자리를 [대화 원문]에서 그 인물이 실제로 보인 행동이나 말로 바꿔 쓴다. 줄 앞 기호·이름·「호칭」·말투·괄호 표시(자각 등)·날짜와 나머지 사실은 그대로 둔다. 새 사실을 지어내지 않는다. 출력은 JSON 배열 하나: 입력과 같은 순서·같은 개수의 고친 줄(문자열).';
-    const input = '[고칠 줄]\n' + idx.map((k, n) => (n + 1) + '. ' + lines[k]).join('\n') + '\n\n[원문에 없는 말] ' + bad.join(', ') + '\n\n[대화 원문]\n' + srcText.slice(-60000);
-    const out = parseJsonLoose(await askModel(sys, input, '✏️센 말 고치기', true));
-    if (!Array.isArray(out) || out.length !== idx.length) return { memory, n: 0, changes: [] };
     const keyAt = k => { for (let q = k; q >= 0; q--) { const h = lines[q].match(/^(?:##(?!#)|■)\s*(.+?)\s*$/); if (h) return ALIAS[h[1]] || h[1]; } return ''; };
-    const changes = []; idx.forEach((k, j) => { const t = String(out[j] || '').trim(); if (t && t !== lines[k] && !bad.some(w => t.includes(w))) { changes.push({ key: keyAt(k), before: lines[k], after: t }); lines[k] = t; } });
+    // 답 모양이 어긋나거나(줄 수가 다름·앞에 설명이 붙음) 고친 줄에 또 센 말이 있으면 남은 줄만 한 번 더 고쳐요
+    for (let tries = 0; tries < 2; tries++) {
+      const idx = []; lines.forEach((l, k) => { if (!/^\s*-?\s*(근거|번역)\s*[:：]/.test(l) && bad.some(w => l.includes(w))) idx.push(k); });
+      if (!idx.length) break;
+      const input = '[고칠 줄]\n' + idx.map((k, n) => (n + 1) + '. ' + lines[k]).join('\n') + '\n\n[원문에 없는 말] ' + bad.join(', ') + '\n\n[대화 원문]\n' + srcText.slice(-60000);
+      let out; try { const t = await askModel(sys, input, '✏️센 말 고치기', true);
+        // 줄 안에 {{user}} 같은 중괄호가 있으면 parseJsonLoose가 { }만 보고 깨져서, 배열 [ ]부터 먼저 읽어요
+        try { out = JSON.parse(t.slice(t.indexOf('['), t.lastIndexOf(']') + 1)); } catch (_) { out = parseJsonLoose(t); } } catch (_) { continue; }
+      if (!Array.isArray(out) || out.length !== idx.length) continue;
+      idx.forEach((k, j) => { const t = String(out[j] || '').trim(); if (t && t !== lines[k] && !bad.some(w => t.includes(w))) { changes.push({ key: keyAt(k), before: lines[k], after: t }); lines[k] = t; } });
+    }
     return { memory: lines.join('\n'), n: changes.length, changes };
   }
   function checkNames(memory, freshMessages, prevMemory) {
@@ -5681,7 +5686,6 @@
         ${(draft.askNames || []).length ? `<div class="hidebox" style="margin-top:10px"><span><b>같은 사람인가요?</b><br>${draft.askNames.map(([a, b], i) => `【${esc(a)}】 · 【${esc(b)}】 <button class="linkbtn" data-act="namesame" data-arg="${i}">같은 사람</button> <button class="linkbtn" data-act="namediff" data-arg="${i}">다른 사람</button>`).join('<br>')}<br>이름이 비슷해서 물어봐요. 같은 사람이면 한 사람으로 합치고, 고른 답은 이 방에서 기억해요.</span></div>` : ''}
         ${(draft.gone || []).length ? `<div class="hidebox" style="margin-top:10px"><span><b>빠진 핵심 ${draft.gone.length}개</b><br>${draft.gone.map(x => '· ' + esc(x)).join('<br>')}<br>예전 노트엔 있었는데 새 노트에서 사라졌어요. 다 쓴 소모품·이사한 예전 집은 일부러 지운 걸 수 있어요. 끝난 게 아니면 그 칸을 눌러 다시 적거나, 다시 정리해 주세요.</span></div>` : ''}
         ${(draft.strongChanges || []).length ? `<details class="sfx"><summary>${(n => n ? `✏️ 센 말 ${n}줄을 원문 행동으로 바꿨어요` : "✏️ 센 말 고친 것을 원래대로 돌렸어요")(draft.strongChanges.filter(x => !x.undone).length)}</summary>${draft.strongChanges.map((x, j) => `<div class="sfx-row"><small>${esc(x.key)}</small>${x.undone ? `<p>${esc(x.before)}</p><p class="sfx-note">원래 문장으로 되돌렸어요</p>` : `<p class="sfx-b">${esc(x.before)}</p><p class="sfx-a">${esc(x.after)}</p>`}<div class="sfx-btns">${x.undone ? '' : `<button class="linkbtn" data-act="sfxundo" data-arg="${j}">원래 문장으로</button>`}<button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">수정하기</button></div></div>`).join('')}</details>` : ''}
-        ${(draft.strong || []).length ? `<div class="hidebox strongbox" style="margin-top:10px"><span><b>⚠ 원문에 없는 센 말 ${draft.strong.length}개</b><br>${draft.strong.map(x => `「${esc(x.word)}」 <small>${esc(x.key)} · …${esc(x.line)}…</small> <button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">고치기</button>`).join('<br>')}<br>대화에 한 번도 안 나온 말이에요. AI가 감정·성격에 딱지를 붙였을 수 있어요. 원문에 맞는 말로 고쳐 주세요.</span></div>` : ''}
         ${draft.madeUp?.length ? `<div class="hidebox" style="margin-top:10px"><span><b>원문에서 못 찾은 호칭·별명 ${draft.madeUp.length}개</b><br>${draft.madeUp.map(w => `「${esc(w)}」<button class="linkbtn" data-act="dropname" data-arg="${esc(w)}">지우기</button>`).join(' ')}${draft.madeUp.length > 1 ? ` <button class="linkbtn" data-act="dropname" data-arg="">모두 지우기</button>` : ''}<br>대화에 나온 적 없는 말이에요. AI가 지어냈을 수 있어요. 진짜 쓰는 호칭이면 그냥 두세요.</span></div>` : ''}
         ${ev.ok + ev.bad ? `<div class="muted" style="margin-top:8px">근거 확인 · 원문에서 찾음 <b style="color:var(--ok)">${ev.ok}</b>${ev.bad ? ` · 못 찾음 <b style="color:var(--bad)">${ev.bad}</b> (고쳐 쓴 인용일 수 있어요)` : ''}</div>` : ''}
         <div class="muted" style="margin-top:6px;font-size:11.5px">감정선·명대사·근거·프로필 꼬리표는 화면에만 있고 채팅엔 안 들어가요. 빨간 경고는 채팅에 들어가는 내용만 봐요.</div>
