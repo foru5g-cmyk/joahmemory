@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.66
+// @version      3.9.67
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -602,7 +602,7 @@
       const alts = blk => [...String(blk.lines[0]).matchAll(/(?:별명|가명|본명|새 이름|다른 이름|개명)\s*[:：]?\s*([^\s·,()（）「」]{2,20})/g)].map(m => m[1]);
       const A = blocks[i], B = blocks[j]; if (!sameName(A.name, B.name) && !alts(A).includes(B.name) && !alts(B).includes(A.name)) continue;
       const keep = rank(A.name) >= rank(B.name) ? A : B, drop = keep === A ? B : A;
-      for (const l of drop.lines.slice(1)) if (l.trim() && !/^\s*프로필\s*[:：]/.test(l) && !keep.lines.includes(l)) keep.lines.push(l);
+      for (const l of drop.lines.slice(1)) if (l.trim() && !/^\s*-?\s*프로필\s*[:：]/.test(l) && !keep.lines.includes(l)) keep.lines.push(l);
       merged.push(`${drop.name} → ${keep.name}`); blocks.splice(blocks.indexOf(drop), 1);
       if (drop === A) { i--; break; } j--;
     }
@@ -2320,7 +2320,7 @@
   function personsIn(body) {
     const list = [], foreign = []; let cur = null;
     for (const raw of String(body || '').split('\n')) {
-      const l = raw.trim();
+      const l = raw.trim().replace(/^[-•]\s+(?!【)/, ''); // 줄 앞 "- "는 떼고 읽어요(노트 관리에서 고친 줄도 호칭·프로필로 알아보게)
       if (!l || isNone(l)) continue;
       const h = l.match(/^【(.+?)】\s*(.*)$/);
       if (h) {
@@ -3167,6 +3167,9 @@
       const names = [...people().keys()].sort((a, b) => b.length - a.length), groups = new Map();
       for (const b of bl) { const loc = locOf(b), g = names.find(n => personAlias(n).some(a => loc.includes(a))) || (b.title ? '놓인 곳' : '메모');
         if (!groups.has(g)) groups.set(g, []); groups.get(g).push(b); }
+      // 동그라미 순서: 인물(인물 칸 순서) → 놓인 곳 → 메모 → 먼지쌓인곳
+      { const order = [...people().keys()], rank = g => g === '놓인 곳' ? 1e3 : g === '메모' ? 1e3 + 1 : (order.indexOf(g) + 1e3) % 1e3;
+        const sorted = [...groups].sort((a, b) => rank(a[0]) - rank(b[0])); groups.clear(); for (const [g, l] of sorted) groups.set(g, l); }
       const dusty = blocksOf(bodyOf(SHELF)).filter(b => b.title).reverse().map(b => ({ ...b, shelf: true })); if (dusty.length) groups.set(SHELF, dusty); // 맨 끝 동그라미
       return seg + head(`${bl.length}개 물건 · 지금 가진 사람별로`) + (groups.size ? groupHtml(groups, b => b.shelf ? shelfRow(b) : b.title
         ? foldOrRow(`<b>${esc(itemName(b.title))}${pillSt(itemStatus(b))}</b>`, locOf(b) ? whereIcon(locOf(b)) + locOf(b) : '', itemBody(b, true)) : blkHtml(b, li)) : emptyBox('아직 내용이 없어요.'));
@@ -6049,6 +6052,17 @@
       { const oldSh = splitSections(prev || '').find(x => x.key === SHELF); if (oldSh && !splitSections(memory).some(x => x.key === SHELF)) memory = joinSections([...splitSections(memory), oldSh]); } // 처음부터 다시 정리해도 먼지 쌓인 곳은 그대로
       const stale = base ? expireItems(memory, msgs.map(m => stripBlocks(msgText(m))).join('\n'), turns, lastSeenMap) : { seen: {}, expired: [] };
       if (base) memory = stale.memory;
+      // AI가 빼 버린 소지품은 먼지쌓인곳으로, 통째로 사라진 인지 정보는 예전 글 그대로 다시 붙여요(전체 다시 정리해도 안 날아가게)
+      let carried = { items: 0, facts: 0 };
+      if (prev) { const P = splitSections(prev), N = splitSections(memory), sq = t => String(t || '').replace(/\s+/g, ''), get = k => { let x = N.find(y => y.key === k); if (!x) { x = { key: k, body: '' }; N.push(x); } return x; };
+        const have = sq((N.find(x => x.key === '소지품')?.body || '') + (N.find(x => x.key === SHELF)?.body || ''));
+        const lostInv = itemBlocks(P.find(x => x.key === '소지품')?.body || '').items.filter(it => { const n = sq(String(it.key).replace(/\s*\(삭제\)\s*$/, '').replace(/\s*\(.*\)\s*$/, '')); return n && !have.includes(n); });
+        if (lostInv.length) { const sh = get(SHELF); sh.body = [sh.body.trim(), ...lostInv.flatMap(it => [...it.lines.filter(l => !/치운 때/.test(l)), '- 치운 때: ' + turns + '턴'])].filter(Boolean).join('\n'); carried.items = lostInv.length; }
+        const nFacts = sq(N.find(x => x.key === '인지·비밀')?.body || '');
+        const lostFacts = itemBlocks(P.find(x => x.key === '인지·비밀')?.body || '').items.filter(it => { const t = sq(String(it.key).split(/[:：]/)[0]); return t && !nFacts.includes(t); });
+        if (lostFacts.length) { const kf = get('인지·비밀'); kf.body = [kf.body.trim(), ...lostFacts.flatMap(it => it.lines)].filter(Boolean).join('\n'); carried.facts = lostFacts.length; }
+        if (carried.items || carried.facts) memory = joinSections(N.filter(x => x.body.trim()));
+        if (carried.items || carried.facts) toast([carried.items ? '빠진 소지품 ' + carried.items + '개는 먼지쌓인곳으로' : '', carried.facts ? '빠진 인지 정보 ' + carried.facts + '개는 예전 글로 지켰어요' : ''].filter(Boolean).join(' · '), 'info', 5000); }
       // 원문에 없는 센 말(집착·강박 등)이 채팅에 들어갈 줄에 있으면 그 줄만 AI가 원문 행동으로 다시 씀
       let strongFixed = 0, strongChanges = [];
       { const srcText = whole.map(m => stripBlocks(msgText(m))).join('\n'), chatPart = stripProof(memory);
