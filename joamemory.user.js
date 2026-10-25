@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.67
+// @version      3.9.68
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  앱으로 RP하다가 웹에서 열면, 지난 정리 이후 대화만 읽어 기억을 이어서 정리하고 숨김 노트로 넣어 줍니다.
@@ -4913,7 +4913,7 @@
     const evsAll = blocksOf(bodyOf('날짜로그')).map(b => {
       const packed = /\(요약\)/.test(b.title || ''), m = (b.title || '').replace(/\s*\(요약\)\s*$/, '').match(/^\[?([^\]\-]+?)\s*-\s*(.+?)\]?$/);
       const q = b.lines.find(l => /^근거\s*[:：]/.test(l));
-      return { raw: b.title || '', date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, lines: b.lines.filter(notProofLine),
+      return { raw: b.title || '', date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, lines: evMeta2(b.lines.filter(notProofLine)),
         quote: q ? q.replace(/^근거\s*[:：]\s*/, '').replace(/^["“]|["”]$/g, '') : '',
         // 나온 사람 = 제목·행동 줄에 이름이 있는 사람. "장소 · 그 자리 인물 나열" 줄과 근거 줄은 세지 않습니다(같은 파티에 있었을 뿐인 사람 X).
         all: (b.title || '') + ' ' + b.lines.filter(l => notProofLine(l) && !metaOf(l))
@@ -4956,7 +4956,7 @@
         <span class="tl-ppl">${peopleIn(e).map(n => avatar(n)).join('')}</span>${quoteHtml(e.quote)}</li>`;
     // 예전 사건은 접어서: 날짜·제목·📍👥 줄만 보이고, 누르면 본문이 펼쳐져요(남의 사건 줄은 원래 짧아서 그대로).
     const evLiFold = e => { if (isSide(e)) return evLi(e);
-      const [first, ...rest] = e.lines, meta = first && metaOf(first) ? first : '';
+      const [first, ...rest] = e.lines, meta = first && (metaOf(first) || /^/.test(first)) ? first : '';
       return `<li class="${e.packed ? 'old ' : ''}tl-ev-fold"><details><summary><span class="tl-date">${esc(e.date || '날짜 미상')}${e.packed ? ' · 줄여 둠' : ''}${memTag(e)}</span>
         <b class="tl-title">${esc(e.title)}</b>${meta ? evBody(meta) : ''}</summary>${(meta ? rest : e.lines).map(evBody).join('')}
         <span class="tl-ppl">${peopleIn(e).map(n => avatar(n)).join('')}</span>${quoteHtml(e.quote)}</details></li>`; };
@@ -5384,6 +5384,15 @@
   //   화면에선 다른 줄과 같은 ⤷ 화살표로, 이름만 굵게 구분합니다(화살표 모양을 하나로).
   // "장소 · 루루 · 네이선 힐 · …"처럼 장소+그 자리 인물 나열만 있는 줄 → { place, who[] }. 아니면 null.
   //   장소 이름 안에도 '·'가 있을 수 있어서(401호 욕실·게스트룸) 뒤에서부터 인물만 이어진 데까지를 인물, 그 앞 전부를 장소로 봅니다.
+  // AI가 장소와 인물을 두 줄로 나눠 쓴 경우("미줄라 카페" / "나나, 가브리엘 케인, 타일러") 한 줄 📍👥로 합쳐요
+  //   인물 줄: 쉼표로 나눈 짧은 이름들이고 그중 하나는 노트 인물. 장소 줄: 화살표·문장 끝 없이 짧은 줄
+  function evMeta2(lines) {
+    const [a, b] = lines; if (!a || !b || metaOf(a)) return lines;
+    const names = String(b).split(/\s*[,，·]\s*/).map(x => x.trim()).filter(Boolean);
+    const isPpl = names.length && names.every(x => [...x].length <= 16 && !/[.!?。→:：]/.test(x)) && names.some(x => [...people().keys()].some(n => n === x || personAlias(n).includes(x)));
+    const isPlace = [...String(a)].length <= 45 && !/→|[.!?。]|[다요함음됨]\s*$/.test(a);
+    return isPpl && isPlace ? ['\u0001' + String(a).replace(/^📍\s*/, '').trim() + '\u0002' + names.join(', '), ...lines.slice(2)] : lines;
+  }
   function metaOf(l) {
     const bits = String(l).split(/\s*(?:[·,，]|→)\s*/).map(x => x.trim()).filter(Boolean).map((x, i, a) => i === a.length - 1 ? x.replace(/\s*(?:등|외(?:\s*\d+\s*명)?|일행)\s*$/, '').trim() : x).filter(Boolean), isWho = x => x.length <= 16 && [...people().keys()].some(n => n === x || personAlias(n).includes(x));
     let k = bits.length; while (k > 0 && isWho(bits[k - 1])) k--;
@@ -5393,6 +5402,8 @@
   const evBody = l => { const r = String(l).match(/^[⤿ㄴ↳]\s*(.+)$/); if (r) { const n = r[1].match(/^(.{1,16}?)\s*[:：]\s*(.+)$/);
       return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b> ${esc(n[2])}` : esc(r[1])}</p>`; }
     // "장소 · 루루 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 루루, 네이선 힐, …
+    const pm = String(l).match(/^\u0001(.*)\u0002(.*)$/); // 장소 줄 + 인물 줄을 합친 것(evMeta2)
+    if (pm) return `<p class="tl-meta">${pm[1] ? `📍 ${esc(pm[1])} · ` : ''}👥 ${esc(pm[2])}</p>`;
     const meta = metaOf(l);
     if (meta) return `<p class="tl-meta">${meta.place ? `📍 ${esc(meta.place)} · ` : ''}👥 ${esc(meta.who.join(', '))}</p>`;
     const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && placeHead(parts[0]);
