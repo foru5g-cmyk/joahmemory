@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.72
+// @version      3.9.73
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -2433,8 +2433,10 @@
     if (!list.length && newFormat()) for (const x of persons()) if (x.outfit) list.push({ name: x.name, text: x.outfit, quote: x.outfitQ?.quote || '', tr: x.outfitQ?.tr || '' });
     return list;
   }
+  // 괄호 안 쉼표에서 잘려 짝이 안 맞는 괄호: 혼자 남은 ")"는 지우고, 안 닫힌 "("는 닫아요
+  const fixParen = w => { let o = 0, s = ''; for (const c of w) { if (c === '(' || c === '（') o++; else if (c === ')' || c === '）') { if (!o) continue; o--; } s += c; } return s + ')'.repeat(o); };
   const wearHtml = t => {
-    const it = String(t).split(/\s*[·,，]\s*/).filter(Boolean), chips = a => `<div class="wear">${a.map(w => `<span>${esc(w)}</span>`).join('')}</div>`;
+    const it = String(t).split(/\s*[·,，]\s*/).map(fixParen).filter(Boolean), chips = a => `<div class="wear">${a.map(w => `<span>${esc(w)}</span>`).join('')}</div>`;
     if (it.length < 5) return chips(it);
     const G = [['의복', []], ['신발', []], ['장신구', []], ['모습', []]];
     for (const w of it) G[/신발|버선|짚신|꽃신|구두|양말|맨발/.test(w) ? 1 : /노리개|팔찌|가락지|반지|목걸이|귀걸이|비녀|금방울|매듭|노끈|손수건|패물|장신구|시계|안경|댕기|방울/.test(w) ? 2 : /단정|정돈|머리|헝클|젖|찢|흐트|땀|상태|묶/.test(w) ? 3 : 0][1].push(w);
