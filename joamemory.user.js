@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.70
+// @version      3.9.71
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -4538,7 +4538,7 @@
     const ls = bb.lines.filter(l => !/^(근거|번역)\s*[:：]/.test(l)), hist = ls.filter(l => /^(내력|입수|이력)\s*[:：]/.test(l));
     const state = ls.filter(l => !hist.includes(l)).map(l => l.replace(/^상태\s*[:：]\s*/, '')).join(' · ');
     const [turn, ...why] = String(when).split(/\s*·\s*/);
-    return fold('<b>' + esc(itemName(b.title)) + pill + '</b>', state, '<p class="tl-meta">📍 ' + esc((turn ? turn + ' 때 ' : '') + (placed ? '치움' : fate) + (why.length ? ' · ' + why.join(' · ') : '')) + '</p>'
+    return fold('<b>' + esc(itemName(b.title)) + pill + '</b>', state, '<p class="tl-meta">📍 ' + esc((turn ? turn + ' 때 ' : '') + (placed ? '치움' : fate) + (loc ? ' · 원래 ' + loc : '') + (why.length ? ' · ' + why.join(' · ') : '')) + '</p>'
       + hist.map(l => { const m = l.match(/^(\S+)\s*[:：]\s*(.*)$/); return '<p class="pnt"><i>' + esc(m[1]) + '</i>' + esc(m[2]) + '</p>'; }).join(''));
   }
   // ── 노트 관리: 고치는 곳은 여기 한 곳 ──
