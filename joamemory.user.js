@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.69
+// @version      3.9.70
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  ෆRP정리하기ෆ
+// @description  랙시들의 RP정리하기🚀
 // @match        https://crack.wrtn.ai/*
 // @noframes
 // @grant        GM_xmlhttpRequest
