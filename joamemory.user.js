@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.73
+// @version      3.9.74
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -218,6 +218,7 @@
   const PROOF_LINE = /^\s*-?\s*(?:(?:근거|번역)\s*[:：]|\[닫힘\])/;
   const SHELF = '먼지쌓인곳'; // 자동 정리로 소지품에서 치운 것. 상태 › 소지품 옆 카테고리에서 보고 다시 꺼낼 수 있어요(채팅 노트엔 안 들어감)
   const VIEW_ONLY = ['명대사', '감정선', SHELF];
+  const shelfNames = m => itemBlocks(splitSections(m).find(x => x.key === SHELF)?.body || '').items.map(it => String(it.key).replace(/\s*\(.*\)\s*$/, '').trim()).filter(Boolean);
   let NO_INJ = new Set(); // 주입 관리에서 끈 항목 "칸|항목키"(방마다). 정리·화면엔 그대로, 채팅 노트와 크기 계산에서만 빠져요
   //   인물 칸의 프로필 줄(동물 이모지·특징)은 화면 표시용이고, 유저 캐릭터 블록은 유저 프로필이 따로 들어가니 뺍니다.
   // 글 맨 앞(또는 [ 뒤)의 날짜 "2027.09.14" · "1년차 03.14"만 꺼냅니다. 범위(~)·미상은 ''.
@@ -273,16 +274,19 @@
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => l.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
     const lines = stripProof(memory).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim());
+    // 먼지쌓인곳은 이름만 한 줄로: 이미 지나간 물건을 처음인 것처럼 또 주지 않게(본문은 화면에만)
+    const shelf = shelfNames(memory).slice(-30).map(clean);
     return '\n\n' + [
       `[//]: # "MEMO_NOTE v3 upto=${uptoId} turns=${turns} at=${at}${by ? ` by=${String(by).replace(/[\s"]/g, '_')}` : ''}`,
       // 안내는 짧은 줄 여러 개로. 첫 줄 뒤 안내 줄은 "※ "로 시작해 읽을 때 본문에서 뺍니다(parseNote).
       ...[`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
-        `※ 읽는 법: ■ 칸 · ▸ 항목 · 【이름】 인물 · 'A → B: 「호칭」·말투 · 태도' = A가 B를 그렇게 부르고 대함(반대 방향은 따로) · '전환' = 그 관계가 바뀐 계기와 그 뒤 태도 · '함께한 일' = 그 인물이 기억하는 지난 일 · '향후 계획' = 그 인물이 하려는 일 · '고민' = 그 인물이 지금 붙잡고 있는 걱정 · '내력' = 그 물건이 거쳐 온 일 ·→ 줄 끝 괄호 = 그 인물이 자기 감정을 알아챘는지(자각=알아챔 / 무자각=본인은 아직 모름 / 부정=알면서 인정 안 함 / 숨김=알지만 티 안 냄). 무자각·부정은 그 상태 그대로 연기하고, 아직 모르는 마음을 아는 것처럼 말하지 않음`,
-        `※ 프로필 줄 끝에 '유저(PC)'가 붙은 인물은 사용자가 직접 연기하는 캐릭터 — 그 인물의 대사·행동·속마음을 대신 쓰지 않음. 프로필 줄은 화면 표시용`,
-        `※ 우선순위: 이후 채팅 대화 > 이 노트. 현재상태는 정리한 때의 값이라, 대화에서 바뀌었으면 대화를 따름`,
-        `※ 아는 것: 인물은 자기가 아는 만큼만 말하고 행동함(이 노트를 읽은 것은 극중에서 알게 된 것이 아님). '모름'은 모르는 대로, '오해'는 믿는 대로, '의심'은 떠보기만, 소문 들음 ≠ 앎`,
-        `※ 쓰는 법: 지금 장면에 맞는 것만 자연스럽게. 지난 일을 뜬금없이 꺼내거나 기록된 말을 그대로 되풀이하지 않음. 기록된 감정·습관은 매번 같은 반응·행동을 하라는 뜻이 아님. 열린 서사 고리(약속·떡밥)는 이야기가 그쪽으로 흘러갈 때만 다룸(억지로 꺼내거나 서둘러 풀지 않음). 노트에 없는 지난 일은 확정하지 않음`,
-        `※ 답변 형식·길이는 평소대로. 이 노트의 내용·형식을 답변에 옮기거나 언급하지 않음`,
+        `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기`,
+        `※ 프로필 끝 '유저(PC)' = 사용자 캐릭터. 대사·행동·속마음 대신 안 씀`,
+        `※ 이후 대화·OOC 정정 > 이 노트. 현재상태는 정리 시점 값`,
+        `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
+        `※ 지금 장면에 필요한 것만. 지난 일·열린 고리 억지로 꺼내거나 끝내지 않음. 기록된 말·반응·물건 되풀이 안 함. 노트에 없는 과거는 지어내지 않음`,
+        `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
+        ...(shelf.length ? [`※ 이미 지나간 물건(지금 없음 · 같은 걸 또 주거나 꺼내지 않음): ${shelf.join(', ')}`] : []),
         ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
@@ -348,6 +352,19 @@
       const old = itemBlocks(sh.body).items.filter(x => !gone.some(g => itemKey(g.key) === itemKey(x.key)));
       sh.body = [...old, ...gone.map(g => ({ lines: [...g.lines.filter(l => !/^\s*-?\s*치운 때\s*[:：]/.test(l)), '- 치운 때: ' + turns + '턴' + (g.why ? ' · ' + g.why : '')] }))].slice(-60).flatMap(x => x.lines).join('\n'); }
     return { memory: joinSections(list.filter(x => x.body.trim())), seen, expired };
+  }
+  // 먼지쌓인곳에 있던 물건이 로그에 다시 나와 소지품에 다시 적혔으면, 먼지쌓인곳 쪽 옛 복사본을 지웁니다(두 군데에 뜨지 않게).
+  //   AI는 먼지쌓인곳을 못 보고(정리 입력에서 빠짐) 새 물건처럼 적기 때문이에요. 이름이 완전히 같을 때만 같은 물건으로 봅니다(끝 괄호의 가진 사람·장소는 무시).
+  function dropShelfDups(memory) {
+    const list = splitSections(memory), inv = list.find(x => x.key === '소지품'), sh = list.find(x => x.key === SHELF);
+    if (!inv || !sh) return { memory, moved: [] };
+    const nm = k => String(k || '').replace(/\s*\(삭제\)\s*$/, '').replace(/\s*\(.*\)\s*$/, '').replace(/\s+/g, '');
+    const have = itemBlocks(inv.body).items.filter(it => !it.del).map(it => nm(it.key)).filter(Boolean), moved = [];
+    const sb = itemBlocks(sh.body);
+    sb.items = sb.items.filter(it => { const n = nm(it.key); if (n && have.includes(n)) { moved.push(String(it.key).replace(/\s*\(.*\)\s*$/, '')); return false; } return true; });
+    if (!moved.length) return { memory, moved };
+    sh.body = [...sb.head, ...sb.items.flatMap(x => x.lines)].join('\n').trim();
+    return { memory: joinSections(list.filter(x => x.body.trim())), moved };
   }
   // 정리 뒤 빠진 핵심: 예전 노트엔 있었는데 새 노트에서 이유 없이 사라진 것만(닫힌 서사 고리처럼 끝난 건 빼요).
   //   AI가 제목을 살짝 바꿔 쓰는 일이 있어서 같은 칸 안에 그 말(또는 같은 날짜)이 있으면 남은 것으로 봐요.
@@ -651,8 +668,11 @@
       : '(새 로그 없음 — 기존 기억을 지침의 형식·규칙대로 다시 정리만 한다. 내용을 빼거나 지어내지 않는다. 근거가 없는 항목은 근거 줄 없이 둔다.)';
     const mine = edited.length ? `\n\n[사용자가 직접 고친 칸]\n${edited.join(', ')} — 기존 기억의 이 칸 내용은 사용자가 손으로 고친 것이라 사실로 그대로 두고, 새 로그로 바뀐 것만 보탠다.` : '';
     const size = prevMemory ? `\n\n[현재 노트 크기] 채팅 주입 기준 ${fmt(stripProof(prevMemory).length)}자 / 한도 ${fmt(NOTE_LIMIT)}자` : '';
+    // 치운 물건은 이름만 알려 줘요: 로그에 다시 나오면 같은 이름으로 소지품에 적게(다른 칸·다른 이름으로 새로 생기지 않게)
+    const shelf = prevMemory ? shelfNames(prevMemory) : [];
+    const dusty = shelf.length ? `\n\n[치운 물건] ${shelf.join(', ')} — 예전에 소지품에서 치운 물건. 새 로그에 다시 나오면 이 이름 그대로 ■ 소지품에 다시 쓴다(인물 등 다른 칸에 쓰지 않음). 안 나오면 쓰지 않는다.` : '';
     if (prevMemory) prevMemory = joinSections(splitSections(prevMemory).filter(x => x.key !== SHELF));
-    return `[고정 설정]\n${fixed || '(없음)'}${mine}${size}\n\n[기존 기억]\n${prevMemory || '(없음)'}\n\n[새 RP 로그]\n${log}`;
+    return `[고정 설정]\n${fixed || '(없음)'}${mine}${size}${dusty}\n\n[기존 기억]\n${prevMemory || '(없음)'}\n\n[새 RP 로그]\n${log}`;
   }
   const editedKeys = async chatId => { try { return JSON.parse(String(await getValue('edited:' + chatId, '[]')) || '[]'); } catch (_) { return []; } };
   // 단계별 정리: 기존 노트는 프로그램이 들고 있고, AI는 바뀐 항목만 냅니다(mergeNote가 끼워 넣음).
@@ -1279,6 +1299,7 @@
     .notice{font-size:13px;line-height:1.6;color:var(--ink2);background:var(--butter);border-radius:12px;padding:10px 14px;margin-bottom:16px}
     .ltm-row{display:flex;align-items:center;gap:10px;width:100%;margin:12px 0 0;padding:11px 14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);font:inherit;font-size:13px;color:var(--ink2);text-align:left;cursor:pointer}
     .ltm-row b{font-weight:700;color:var(--ink);white-space:nowrap}.ltm-row span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ltm-row em{font-style:normal;font-weight:700;color:var(--ink)}.ltm-row i{font-style:normal;color:var(--graphite);font-size:16px}
+.comp-mng{margin-left:8px;padding:3px 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);font:inherit;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer}
     .btn.ltm-go{background:var(--lilac);border-color:#9D8CEB;color:#4B3F8A}.btn.ltm-go:disabled{opacity:.5}
     .ltm-cnt{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:12.5px;color:var(--ink2)}.ltm-cnt span{margin-right:2px}
     .ltm-cnt button{height:30px;min-width:44px;padding:0 12px;border:0;border-radius:999px;background:var(--mist);color:var(--ink2);font:inherit;font-size:13px;font-weight:600}.ltm-cnt button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
@@ -1303,7 +1324,12 @@
     .ltm-card .ltm-date{display:inline-block;font-size:11.5px;color:var(--graphite);background:var(--mist);border-radius:999px;padding:2px 8px;margin-bottom:8px}
     .ltm-card p{margin:0;font-size:13px;line-height:1.65;color:var(--ink2);word-break:keep-all;overflow-wrap:anywhere;padding-left:12px;text-indent:-12px}.ltm-card p::before{content:'· ';color:var(--graphite)}
     .ltm-card .ltm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px;color:var(--graphite)}
-    .ltm-card input,.ltm-card textarea{width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;background:var(--paper);color:var(--ink)}.ltm-card textarea{margin-top:6px;resize:vertical}
+    .ltm-card input:not([type=checkbox]),.ltm-card textarea{width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;background:var(--paper);color:var(--ink)}.ltm-card textarea{margin-top:6px;resize:vertical}
+.ltm-card .ltm-chk{float:right;width:18px;height:18px;margin:0 0 4px 8px;accent-color:var(--ink);pointer-events:none}
+.ltm-card.pick{cursor:pointer;transition:border-color .15s,background .15s}
+.ltm-card.pick.on{border-color:var(--ink);background:var(--mist)}
+.ltm-card.dim{opacity:.45}
+.ltm-selbar{position:sticky;top:0;z-index:2;background:var(--paper);padding:8px 0;border-bottom:1px solid var(--rule)}
     .ltm-pick{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--rule);font-size:13px}.ltm-pick input{margin-top:3px}.ltm-pick b{display:block;font-weight:700;word-break:keep-all}.ltm-pick small{display:block;color:var(--graphite);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 
     .hero2{display:flex;flex-direction:column;align-items:center;padding:6px 0 4px}
@@ -2702,21 +2728,21 @@
         ${over ? `<circle cx="80" cy="80" r="${R}" class="over" stroke-dasharray="${(C * overP).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/>` : ''}</svg>
       ${busyNow && genProg ? `<div class="ringtext busy"><b class="gp-time">${genView().tm}</b><span>정리하는 중</span><small class="gp-mini">${genMini()}</small></div>`
         : `<div class="ringtext">${over ? `<b>+${over}</b><span>턴 넘었어요</span>` : due ? '<b>정리할<br>때예요</b>' : `<b>${left}</b><span>턴 남았어요</span>`}<small>${turns} / ${cycle}</small></div>`}</div>`;
+    const injectedText = n ? stripProof(noteMemory()) : '', injected = injectedText.length, pc = Math.min(100, Math.round(injected / NOTE_LIMIT * 100));
     const hero = `<section class="hero2">${ring}
       <p class="hero-sub">${n ? `1~${n.turns}턴을 기억하고 있어요` : '아직 정리한 기억이 없어요'}</p>
       ${n?.at ? `<p class="hero-meta">마지막 정리 · ${esc(new Date(n.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${n.by ? ` · ${esc(n.by)}${n.by === DEVICE ? ' (이 기기)' : ''}` : ''}</p>` : ''}
-      <div class="hero-btns"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리하기'}</button></div>
+      <div class="hero-btns"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리하기'}</button>
+</div>
       <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label>
         ${n ? `<span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button>` : ''}</div>
       ${n ? '' : '<p class="muted" style="text-align:center;margin:10px 0 0">정리하면 지금까지의 이야기를 노트로 만들어 채팅 안에 보이지 않게 넣어 둬요.</p>'}</section>`;
     if (!n) return hero + verFoot();
 
     // 노트 구성: AI가 실제로 읽는 노트 기준. 한 줄 색 막대 + 크기순 칩(누르면 그 칸으로)
-    const injectedText = stripProof(noteMemory()), injected = injectedText.length;
     const parts = splitSections(injectedText).map(x => ({ key: x.key, len: x.body.length })).filter(x => x.len).sort((a, b) => b.len - a.len);
     const total = parts.reduce((a, x) => a + x.len, 0) || 1;
-    const pc = Math.min(100, Math.round(injected / NOTE_LIMIT * 100));
-    const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>노트 ${pc}% 참</span><span class="comp-n"><b>${fmt(injected)}</b> / ${fmt(NOTE_LIMIT)}자</span></div>
+    const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>노트 ${pc}% 참</span><span class="comp-n"><b>${fmt(injected)}</b> / ${fmt(NOTE_LIMIT)}자<button class="comp-mng" data-act="notes">📝 관리</button></span></div>
       <div class="nc-g" role="img" aria-label="노트 ${fmt(injected)}자 / ${fmt(NOTE_LIMIT)}자"><i style="width:${pc}%"></i><u></u></div>
       <p class="nc-line">${parts.map(x => `${esc(x.key)} ${Math.round(x.len / total * 100)}%`).join(' · ')}<span class="nc-more">자세히</span></p></summary>
       <div class="nc-rows">${parts.map(x => `<button data-act="jump" data-arg="${tabFor(x.key)}|${esc(x.key)}"><i style="background:${secInfo(x.key).color}"></i>${esc(x.key)}</button><span class="nc-bar"><i style="width:${Math.max(2, x.len / total * 100).toFixed(1)}%;background:${secInfo(x.key).color}"></i></span><span class="nc-num">${fmt(x.len)}자</span>`).join('')}</div>
@@ -2744,10 +2770,9 @@
         + (rows.length ? '<ul class="nrules">' + rows.slice(0, 6).join('') + '</ul>' : '<p class="muted">큰 변화 없음</p>')
         + '<button class="linkbtn" data-act="changes" style="margin:8px 0 4px">' + (rows.length > 6 ? '나머지 ' + (rows.length - 6) + '개 · ' : '') + '자세히 · 지난 회차</button>';
     })() : '';
-    // 장기기억 한 줄: 노트가 차는 것과 같은 이야기라 용량 막대 바로 아래에. 누르면 장기기억 화면
+    // 장기기억 한 줄: 노트가 차는 것과 같은 이야기라 노트 N% 참 바로 아래에. 누르면 장기기억 화면
     const ltmRow = '<button class="ltm-row" data-act="ltmopen"><b>🧠 장기기억</b><span>' + (ltmQ?.cands?.length ? '<em>줄어든 사건 ' + ltmQ.cands.length + '개 남길까요?</em>' : ltmData && !ltmData.err ? '카드 ' + ltmData.items.length + '장' : '노트에서 덜어 낸 옛 사건 보관') + '</span><i>›</i></button>';
-    const notesRow = '<button class="ltm-row" data-act="notes"><b>📝 노트 관리</b><span>고치기 · 채팅에 넣고 빼기</span><i>›</i></button>';
-    return old + hero + castHtml + recent + donut + ltmRow + notesRow + verFoot();
+    return old + hero + castHtml + recent + donut + ltmRow + verFoot();
   }
 
   // ── 정리하기: 무엇을(이어서·노트만·처음부터) × 누가(설정한 AI·다른 AI 파일) 한 화면
@@ -2810,7 +2835,7 @@
     a.download = name; document.body.appendChild(a); a.click(); a.remove();
   }
   // 백업에 담는 이 방의 기기 저장값. 노트 자리(full·parked·moved)는 불러올 때 확인 화면 → 넣기로 다시 만들어져서 되살리지 않아요.
-  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'gc', 'usage'];
+  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'gc', 'usage', 'ltmorig', 'ltmdone']; // ltmorig: 장기기억으로 옮긴 원래 사건(되돌리기용) · ltmdone: 이미 옮긴 사건
   async function backupData() {
     const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId) return null;
     const store = {};
@@ -4383,6 +4408,8 @@
   //    ponytail: 크랙 API 형식(GET/POST/PATCH/DELETE …/summaries, type longTerm)은 크랙 웹이 쓰는 그대로. 바뀌면 여기만 고치면 돼요.
   const LTM_T = 20, LTM_S = 300, LTM_BATCH = 12, ltmUrl = chatId => API_A + chatId + '/summaries';
   const ltmFit = (t, n) => { const a = [...String(t || '').trim()]; return (a.length > n ? a.slice(0, n).join('') : a.join('')).trim(); };
+  // 제목: 띄어쓰기·쉼표·특수문자까지 다 세어 20자. 넘으면 단어 중간이 아니라 마지막 쉼표·띄어쓰기에서 끊어요
+  const ltmFitTitle = t => { t = String(t || '').trim(); if ([...t].length <= LTM_T) return t; const head = ltmFit(t, LTM_T), cut = Math.max(head.lastIndexOf(','), head.lastIndexOf(' ')); return (cut >= 6 ? head.slice(0, cut) : head).replace(/[,\s]+$/, '').trim(); };
   const ltmFitBody = t => { t = String(t || '').trim(); if ([...t].length <= LTM_S) return t;
     const head = ltmFit(t, LTM_S), cut = Math.max(head.lastIndexOf(' / '), head.lastIndexOf('. '), head.lastIndexOf('.\n'));
     return (cut > LTM_S * 0.6 ? head.slice(0, cut + 1) : head).trim(); };
@@ -4396,17 +4423,21 @@
         items.push(...(d.summaries || [])); cursor = d.nextCursor || ''; if (!cursor || !(d.summaries || []).length) break;
       }
       ltmData = { chatId, at: Date.now(), items: items.map(x => ({ id: String(x.id || x._id || ''), title: String(x.title || ''), summary: String(x.summary || ''), at: String(x.createdAt || x.updatedAt || '') })) };
-    } catch (e) { ltmData = { chatId, at: Date.now(), items: [], err: e.message }; }
+      setValue('ltmcache:' + chatId, JSON.stringify(ltmData)); // 다음에 탭을 열면 이걸 먼저 보여 주고 뒤에서 새로 읽어요
+    } catch (e) { if (ltmData?.chatId !== chatId || ltmData.err) ltmData = { chatId, at: Date.now(), items: [], err: e.message }; else toast('장기기억 새로 읽기 실패 · ' + e.message, 'err'); }
     render();
   }
   // 줄인 사건 찾기: 예전 날짜로그엔 있었는데 새 노트에서 (요약)으로 묶여 사라졌거나 글이 많이 짧아진 사건 → 원래 글을 후보로
   function ltmCands(before, after) {
     const items = m => itemBlocks(splitSections(m).find(x => x.key === '날짜로그')?.body || '').items, plain = it => it.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('\n').trim();
     const o = items(before), n = items(after);
-    return o.filter(it => !/\(요약\)/.test(it.key) && plain(it).length > 40).filter(it => { const x = n.find(y => itemKey(y.key) === itemKey(it.key)); return !x || plain(x).length < plain(it).length * 0.7; })
+    // 제목만 바뀐 사건(AI가 이어 쓰며 제목을 고침)은 내용이 새 노트에 그대로 있으니 후보가 아니에요
+    const alive = it => n.some(y => plain(y).length >= plain(it).length * 0.7 && shrunkOnly(plain(y), plain(it)));
+    return o.filter(it => !/\(요약\)/.test(it.key) && plain(it).length > 40).filter(it => { const x = n.find(y => itemKey(y.key) === itemKey(it.key)); return x ? plain(x).length < plain(it).length * 0.7 : !alive(it); })
       .map(it => ({ key: itemKey(it.key), name: String(it.key).replace(/\s*\(삭제\)\s*$/, '').trim(), text: plain(it) }));
   }
   async function ltmQueue(chatId, before, after, turns) {
+    if (stripProof(before).length < NOTE_LIMIT * 0.9) return 0; // 노트가 90% 밑이면 날짜로그를 줄이지 않으니(mergeNote) 장기기억 후보도 안 잡아요
     let done = []; try { done = JSON.parse(String(await getValue('ltmdone:' + chatId, '[]')) || '[]'); } catch (_) {}
     const cands = ltmCands(before, after).filter(c => !done.includes(c.key));
     if (!cands.length) return 0;
@@ -4414,7 +4445,7 @@
     await setValue('ltmq:' + chatId, JSON.stringify(ltmQ));
     return cands.length;
   }
-  const LTM_PROMPT = "너는 롤플레잉 기억 노트의 옛 사건들을 사이트의 장기기억 카드로 옮긴다. 장기기억은 나중에 AI가 대화 내용과 비슷한 카드를 제목으로 찾아 꺼내 쓰는 기억이다. 그래서 제목은 '검색어', 본문은 '다시 이어 쓸 때 필요한 사실'이다.\n[카드 나누기 — 네가 정한다] 입력의 ▸ 사건을 읽고 몇 장으로 남길지 스스로 정한다. 관계가 바뀐 장면(고백·거절·폭로·계약·이별·죽음·큰 약속)은 한 장에 촘촘히. 자잘하거나 이어지는 사건은 같은 줄기(한 갈등의 시작→전개→끝)·같은 장소·연속된 며칠끼리 묶어 한 장에 2~4개. 카드 수는 대략 입력 사건 수의 1/3~1/2(사건이 1~2개면 1장). 묶은 카드는 본문 날짜를 '첫 날짜~마지막 날짜'로 쓰고, 사건마다 핵심 전환(누가 무엇을 해서 무엇이 바뀜) 한 덩어리씩. 카드마다 keys에 담은 ▸ 제목을 입력 그대로 전부 넣고, 어떤 사건도 빠뜨리지 않는다.\n[title] 공백 포함 20자 이내, 20자에 가깝게. 그 장면을 다른 장면과 구별해 주는 장소·물건·선물·사건·핵심 행동 키워드를 쉼표로 잇는다(예: 검은등대,은반지,비밀계약). 날짜·감정어·조사·특수기호는 넣지 않는다. 유저 이름은 넣지 않고, 거의 모든 카드에 나오는 주인공 이름도 넣지 않는다(검색 구별이 안 됨). 그 장면에만 나오는 인물이 중심이면 그 이름은 넣는다.\n[summary] 공백·줄바꿈 포함 300자 이내, 250~290자를 목표. 맨 앞에 날짜를 연도까지 YYYY.MM.DD로(입력의 사건 제목·본문에 있는 연도를 그대로, 시간대가 있으면 뒤에 붙임) 쓰고 마침표. 같은 날짜의 카드가 여럿일 수 있으니 연도를 빼지 않는다. 그 뒤는 ' / '로 나눈 덩어리 4~6개: 누가 먼저 무엇을 했고 → 상대가 어떻게 했고 → 무엇이 바뀌었는지 순서대로. 앞쪽일수록 중요한 것(관계 변화·약속·고백·거절·폭로·은폐 → 상호작용 연쇄 → 거짓말·소문의 내용 → 구체적 행동·호칭 변화 → 나중에 다시 불릴 대사 하나쯤 따옴표로 → 물건·장소의 정확한 이름). 인물은 이름으로 쓰고 대명사를 쓰지 않는다. 종결은 명사형(확인, 약속, 거절)으로 줄이고 → 와 · 로 잇는다.\n[사실] 입력에 있는 것만, 입력의 무게 그대로. 시도와 완료, 약속과 실행, 사실과 소문·거짓말을 구분한다. 감정은 이름 대신 그걸 보여 준 행동·대사로. 입력에 없는 합의·동의·평가·결론 문장을 보태지 않고, 사건을 무난하게 바꾸지 않는다. 숫자·수량은 그대로. 근거·번역 줄은 넣지 않는다. 한국어로 쓴다.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"cards\":[{\"keys\":[\"입력의 ▸ 제목 그대로\"],\"title\":\"\",\"summary\":\"\"}]}";
+  const LTM_PROMPT = "너는 롤플레잉 기억 노트의 옛 사건들을 사이트의 장기기억 카드로 옮긴다. 장기기억은 나중에 AI가 대화 내용과 비슷한 카드를 제목으로 찾아 꺼내 쓰는 기억이다. 그래서 제목은 '검색어', 본문은 '다시 이어 쓸 때 필요한 사실'이다.\n[카드 나누기 — 네가 정한다] 입력의 ▸ 사건을 읽고 몇 장으로 남길지 스스로 정한다. 관계가 바뀐 장면(고백·거절·폭로·계약·이별·죽음·큰 약속)은 한 장에 촘촘히. 자잘하거나 이어지는 사건은 같은 줄기(한 갈등의 시작→전개→끝)·같은 장소·연속된 며칠끼리 묶어 한 장에 2~3개. 카드 수는 대략 입력 사건 수의 1/2(사건이 1~2개면 1장, 10개면 5장쯤). 많이 묶어 장면이 흐려지는 것보다 장을 나누는 쪽을 고른다. 묶은 카드는 본문 날짜를 '첫 날짜~마지막 날짜'로 쓰고, 사건마다 핵심 전환(누가 무엇을 해서 무엇이 바뀜) 한 덩어리씩. 카드마다 keys에 담은 ▸ 제목을 입력 그대로 전부 넣고, 어떤 사건도 빠뜨리지 않는다.\n[title] 띄어쓰기·쉼표·특수문자까지 전부 세어 20자 이내(넘으면 잘림), 15~20자. 그 장면을 다른 장면과 구별해 주는 장소·물건·선물·사건·핵심 행동 키워드를 쉼표로 잇는다(예: 검은등대,은반지,비밀계약). 날짜·감정어·조사·특수기호는 넣지 않는다. 유저 이름은 넣지 않고, 거의 모든 카드에 나오는 주인공 이름도 넣지 않는다(검색 구별이 안 됨). 그 장면에만 나오는 인물이 중심이면 그 이름은 넣는다.\n[summary] 공백·줄바꿈 포함 300자 이내, 250~290자를 목표. 맨 앞에 날짜를 연도까지 YYYY.MM.DD로(입력의 사건 제목·본문에 있는 연도를 그대로, 시간대가 있으면 뒤에 붙임) 쓰고 마침표. 같은 날짜의 카드가 여럿일 수 있으니 연도를 빼지 않는다. 그 뒤는 ' / '로 나눈 덩어리 4~6개: 누가 먼저 무엇을 했고(원인) → 상대가 어떻게 반응했고(감정이 드러난 행동·표정·말) → 무엇이 바뀌었는지(결과·관계 변화) 순서대로. 앞쪽일수록 중요한 것(관계 변화·약속·고백·거절·폭로·은폐 → 상호작용 연쇄 → 거짓말·소문의 내용 → 구체적 행동·호칭 변화 → 나중에 다시 불릴 결정적인 NPC 대사가 있으면 하나만 짧게 따옴표로(유저 캐릭터의 대사는 인용하지 않고 행동으로만 씀) → 물건·장소의 정확한 이름). 인물은 이름으로 쓰고 대명사를 쓰지 않는다. 종결은 명사형(확인, 약속, 거절)으로 줄이고 → 와 · 로 잇는다.\n[사실] 입력에 있는 것만, 입력의 무게 그대로. 시도와 완료, 약속과 실행, 사실과 소문·거짓말을 구분한다. 감정 반응은 빠뜨리지 않되 감정 이름만 쓰지 말고 그걸 보여 준 행동·표정·대사로. 관계 진전을 보여 준 스킨십은 입력에 있을 때만 쓴다. 입력에 없는 합의·동의·평가·결론 문장을 보태지 않고, 사건을 무난하게 바꾸지 않는다. 숫자·수량은 그대로. 근거·번역 줄은 넣지 않는다. 한국어로 쓴다.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"cards\":[{\"keys\":[\"입력의 ▸ 제목 그대로\"],\"title\":\"\",\"summary\":\"\"}]}";
   async function ltmAdd() {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !ltmQ?.cands?.length) return;
     if (ltmQ.cands.length > LTM_BATCH) { // 묶음이 크면 앞 12개만 먼저, 나머지는 큐에 남겨 이어서
@@ -4423,21 +4454,22 @@
     const batch = ltmQ.cands, turnsQ = ltmQ.turns;
     busyNow = true; startGen('ltm'); render(); toast('장기기억으로 옮기는 중… 사건 ' + batch.length + '개' + (ltmAdd.rest ? ' (뒤에 ' + ltmAdd.rest.length + '개 더)' : ''));
     try {
-      const raw = await askModelRetry(LTM_PROMPT, batch.map(c => '▸ ' + (c.name || c.key) + '\n' + c.text).join('\n\n'), '🧠장기기억');
+      const users = etcUsers(); // 유저 캐릭터 이름: 이 사람 대사는 카드에 인용하지 않게
+      const raw = await askModelRetry(LTM_PROMPT, (users.length ? '[유저 캐릭터] ' + users.join(', ') + '\n\n' : '') + batch.map(c => '▸ ' + (c.name || c.key) + '\n' + c.text).join('\n\n'), '🧠장기기억');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
-      let cards = (data.cards || []).map(c => ({ keys: (Array.isArray(c?.keys) ? c.keys : [c?.key]).map(k => itemKey(String(k || ''))).filter(Boolean), title: ltmFit(c?.title, LTM_T), summary: String(c?.summary || '').trim() })).filter(c => c.title && c.summary);
+      let cards = (data.cards || []).map(c => ({ keys: (Array.isArray(c?.keys) ? c.keys : [c?.key]).map(k => itemKey(String(k || ''))).filter(Boolean), title: ltmFitTitle(c?.title), summary: String(c?.summary || '').trim() })).filter(c => c.title && c.summary);
       if (!cards.length) throw new Error('카드가 오지 않았어요. 한 번 더 눌러 주세요.');
       const over = cards.filter(c => [...c.summary].length > LTM_S);
       if (over.length) { // 넘친 카드만 다시 줄이기(사실은 그대로). 그래도 넘치면 덩어리 경계에서 끊어요.
         toast('카드 ' + over.length + '장이 300자를 넘어 다시 줄이는 중…');
         try { const r2 = parseJsonLoose(await askModelRetry(LTM_PROMPT + '\n\n[다시 줄이기] 아래 카드들은 summary가 300자를 넘었다. 사건·이름·숫자·대사는 하나도 빼지 말고 표현만 줄여 250~290자로 다시 쓴다. keys·title은 그대로 둔다. 같은 형식 {"cards":[...]}로만 낸다.', JSON.stringify({ cards: over }), '🧠장기기억 줄이기'));
-          for (const c of r2.cards || []) { const o = cards.find(x => x.title === ltmFit(c?.title, LTM_T)); if (o && c?.summary && [...String(c.summary).trim()].length <= LTM_S) o.summary = String(c.summary).trim(); } } catch (_) {}
+          for (const c of r2.cards || []) { const o = cards.find(x => x.title === ltmFitTitle(c?.title)); if (o && c?.summary && [...String(c.summary).trim()].length <= LTM_S) o.summary = String(c.summary).trim(); } } catch (_) {}
         cards = cards.map(c => ({ ...c, summary: ltmFitBody(c.summary) }));
       }
       const have = new Set((ltmData?.items || []).map(x => x.title)), posted = [];
       for (const c of cards) { if (!have.has(c.title)) await crack('POST', ltmUrl(chatId), { type: 'longTerm', title: c.title, summary: c.summary }); posted.push(c); }
       // 확인: 크랙 목록을 다시 읽어 제목이 실제로 있는 카드만 인정해요
-      ltmData = null; await ltmLoad();
+      await ltmLoad(); // 목록을 비우지 않고 다시 읽어요(화면이 "불러오는 중"으로 깜빡이지 않게)
       const now = new Set((ltmData?.items || []).map(x => x.title)), ok = posted.filter(c => now.has(c.title));
       if (!ok.length) throw new Error('크랙 장기기억에 카드가 생기지 않았어요. 노트는 그대로 뒀어요');
       // AI가 keys를 못 맞춘 사건은 카드가 전부 확인됐을 때만 같이 빼요
@@ -4447,10 +4479,13 @@
       const leftover = batch.filter(c => !keysAll.includes(c.key));
       ltmQ = leftover.length ? { turns: turnsQ, cands: leftover, kind: 'move' } : null; await setValue('ltmq:' + chatId, ltmQ ? JSON.stringify(ltmQ) : ''); ltmGroups = null; nav.ltmSel = null;
       let dropped = 0; ltmDropFromNote.removed = []; try { dropped = await ltmDropFromNote(chatId, keysAll); } catch (e) { toast('노트에서 빼기 실패 · ' + errMsg(e), 'err'); }
-      if (dropped) { // 카드마다 원래 사건을 붙여 둬요(지울 때·카드가 사라졌을 때 되살리기용)
-        const left = [...ltmDropFromNote.removed], orig = ok.map(c => ({ title: c.title, items: [] }));
-        for (const o of orig) { const mine = left.filter(it => ok.find(c => c.title === o.title).keys.includes(itemKey(it.key))); o.items.push(...mine.map(it => ({ key: itemKey(it.key), lines: it.lines }))); for (const it of mine) left.splice(left.indexOf(it), 1); }
-        for (const it of left) (orig.find(o => !o.items.length) || orig[orig.length - 1]).items.push({ key: itemKey(it.key), lines: it.lines });
+      { // 카드마다 원래 사건을 붙여 둬요(지울 때·카드가 사라졌을 때 되살리기용). 정리에서 이미 노트에서 빠진 사건도 큐에 있던 원래 글로 보관해요
+        const rm = ltmDropFromNote.removed || [], orig = ok.map(c => ({ title: c.title, items: [] }));
+        // 보관은 늘 더 긴 원본으로: 정리에서 한 줄로 줄어든 사건은 노트 속 줄어든 글 대신 줄기 전 글(c.text)을 두고, 근거 줄만 노트 것에서 붙여요
+        const left = batch.filter(c => keysAll.includes(c.key)).map(c => { const r = rm.find(it => itemKey(it.key) === c.key), rBody = r ? r.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('\n').trim() : '';
+          return { key: c.key, lines: r && rBody.length >= String(c.text).length ? r.lines : ['▸ ' + (c.name || c.key), ...String(c.text).split('\n'), ...(r ? r.lines.filter(l => PROOF_LINE.test(l)) : [])] }; });
+        for (const o of orig) { const mine = left.filter(it => ok.find(c => c.title === o.title).keys.includes(it.key)); o.items.push(...mine); for (const it of mine) left.splice(left.indexOf(it), 1); }
+        for (const it of left) (orig.find(o => !o.items.length) || orig[orig.length - 1]).items.push(it);
         ltmOrig = [...ltmOrig.filter(o => !orig.some(x => x.title === o.title)), ...orig].slice(-200); await setValue('ltmorig:' + chatId, JSON.stringify(ltmOrig));
       }
       toast('사건 ' + total + '개 → 장기기억 카드 ' + ok.length + '장 🧠' + (dropped ? ' · 노트에서 ' + dropped + '개 뺐어요' : '') + (ok.length < posted.length ? ' · ' + (posted.length - ok.length) + '장은 안 생겨서 그 사건은 노트에 뒀어요' : ''), ok.length < posted.length ? 'err' : 'ok', 4500);
@@ -4488,20 +4523,34 @@
   async function ltmSave(id) {
     const chatId = chatIdFromPath(), title = ltmFit(ui('[data-ltm="title"]')?.value, LTM_T), summary = ltmFit(ui('[data-ltm="summary"]')?.value, LTM_S);
     if (!chatId || !title || !summary) return toast('제목과 내용을 적어 주세요.', 'err');
-    try { await crack('PATCH', ltmUrl(chatId) + '/' + encodeURIComponent(id), { title, summary }); nav.ltmEdit = null; toast('고쳤어요.', 'ok', 2000); ltmData = null; await ltmLoad(); }
+    const it = (ltmData?.items || []).find(x => x.id === id);
+    try { await crack('PATCH', ltmUrl(chatId) + '/' + encodeURIComponent(id), { title, summary }); nav.ltmEdit = null; toast('고쳤어요.', 'ok', 2000);
+      // 제목을 바꿔도 보관한 원래 사건과 이어지게
+      if (it && it.title !== title && ltmOrig.some(o => o.title === it.title)) { ltmOrig = ltmOrig.map(o => o.title === it.title ? { ...o, title } : o); await setValue('ltmorig:' + chatId, JSON.stringify(ltmOrig)); }
+      if (it) Object.assign(it, { title, summary }); render(); ltmLoad(); } // 화면은 바로 고치고, 크랙 목록은 뒤에서 다시 읽어요
     catch (e) { toast('고치기 실패 · ' + errMsg(e), 'err'); }
   }
-  async function ltmDel(id) {
-    const chatId = chatIdFromPath(), it = (ltmData?.items || []).find(x => x.id === id);
-    if (!chatId || !it || !confirm('장기기억 "' + it.title + '"을(를) 지울까요? (크랙에서 지워져요)')) return;
-    const o = ltmOrig.find(x => x.title === it.title && x.items?.length);
-    const back = o && confirm('이 카드로 옮겼던 원래 사건 ' + o.items.length + '개가 보관돼 있어요. 노트(날짜로그)에 다시 넣을까요?\n확인 = 노트에 되살리고 지움 · 취소 = 그냥 지움');
+  // back = 되돌리기(원래 사건을 노트에 되살리고 카드 지움) · 아니면 그냥 삭제. 여러 장도 한 번에, 확인 창은 한 번만
+  async function ltmDel(ids, back = false) {
+    const chatId = chatIdFromPath(), list = (ltmData?.items || []).filter(x => [].concat(ids).includes(x.id));
+    const origOf = it => ltmOrig.find(x => x.title === it.title && x.items?.length), os = list.map(origOf).filter(Boolean), n = os.reduce((a, o) => a + o.items.length, 0);
+    if (!chatId || !list.length || (back && !n)) return;
+    const name = list.length > 1 ? '카드 ' + list.length + '장' : '"' + list[0].title + '" 카드';
+    if (!confirm(back ? name + '을(를) 지우고 원래 사건 ' + n + '개를 노트(날짜로그)에 되살릴까요?'
+      : '장기기억 ' + name + '을(를) 지울까요? (크랙에서 지워져요' + (n ? ' · 보관한 원래 사건도 같이 지워져요' : '') + ')')) return;
+    busyNow = true; render(); const gone = [];
     try {
-      await crack('DELETE', ltmUrl(chatId) + '/' + encodeURIComponent(id));
-      if (back) { await ltmRestore(chatId, o.items); ltmDone = ltmDone.filter(k => !o.items.some(x => x.key === k)); await setValue('ltmdone:' + chatId, JSON.stringify(ltmDone)); }
-      if (o) { ltmOrig = ltmOrig.filter(x => x !== o); await setValue('ltmorig:' + chatId, JSON.stringify(ltmOrig)); }
-      toast(back ? '지우고 사건 ' + o.items.length + '개를 노트에 되살렸어요.' : '지웠어요.', 'ok', 3000); ltmData = null; await ltmLoad(); if (back) { await refresh(); if (nav.gsOn) gsSave(true); }
-    } catch (e) { toast('지우기 실패 · ' + errMsg(e), 'err'); }
+      for (const it of list) { await crack('DELETE', ltmUrl(chatId) + '/' + encodeURIComponent(it.id)); gone.push(it); }
+    } catch (e) { toast('지우기 실패 · ' + errMsg(e) + (gone.length ? ' (' + gone.length + '장은 지워짐)' : ''), 'err'); }
+    try {
+      const done = gone.map(origOf).filter(Boolean), items = done.flatMap(o => o.items);
+      if (back && items.length) { await ltmRestore(chatId, items); ltmDone = ltmDone.filter(k => !items.some(x => x.key === k)); await setValue('ltmdone:' + chatId, JSON.stringify(ltmDone)); }
+      if (done.length) { ltmOrig = ltmOrig.filter(x => !done.includes(x)); await setValue('ltmorig:' + chatId, JSON.stringify(ltmOrig)); }
+      if (gone.length) toast(back ? gone.length + '장 지우고 사건 ' + items.length + '개를 노트에 되살렸어요.' : gone.length + '장 지웠어요.', 'ok', 3000);
+      ltmData.items = ltmData.items.filter(x => !gone.includes(x)); nav.ltmBack = null; ltmGroups = null;
+      if (back && items.length) { await refresh(); if (nav.gsOn) gsSave(true); }
+    } catch (e) { toast('되살리기 실패 · ' + errMsg(e), 'err'); }
+    finally { busyNow = false; render(); ltmLoad(); }
   }
   // 사건 제목 → [날짜, 제목]: "[2019.07.14-오두막에서 …]" · "[1년차 03.14-…]" · "[2026.03.01~2026.03.05-…]"
   const ltmSplit = c => { const t = String(c.name || c.key).replace(/^\[|\]$/g, ''), i = t.indexOf('-'); return i > 0 && i <= 24 && /\d/.test(t.slice(0, i)) ? [t.slice(0, i).trim(), t.slice(i + 1).trim()] : ['', t]; };
@@ -4628,7 +4677,7 @@
         const top = pm ? '<p class="nl"><i>이름</i>' + ce('n', pm[1]) + '</p><p class="nl"><i>설명</i>' + ce('d', pm[2].replace(/^[·\-]\s*/, '')) + '</p>'
           : on ? '<p class="nl"><i>제목</i>' + (d ? ce('T', t) : ce('t', head.replace(/^▸\s*/, ''))) + '</p>' : '';
         return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + it.lines.map((l, j) => j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('')
-          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' : '') + '</div>' + (sec === SHELF ? '<p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
+          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
       }).join('');
     }
     return h;
@@ -4654,7 +4703,10 @@
     if (ltmData.err) return h + emptyBox('장기기억을 읽지 못했어요 · ' + esc(ltmData.err) + '<br><button class="linkbtn" data-act="ltmload">다시 읽기</button>');
     { const have = new Set(items.map(x => x.title)), lost = ltmOrig.filter(o => o.items?.length && !have.has(o.title)), n = lost.reduce((a, o) => a + o.items.length, 0);
       if (n) h += '<div class="hidebox" style="margin:0 0 12px"><span><b>노트에서 뺐는데 크랙 장기기억에 카드가 없는 사건 ' + n + '개</b><br>카드가 안 생겼거나 크랙에서 지워졌어요. 원래 글은 이 기기에 보관돼 있어요.<br><button class="linkbtn" data-act="ltmrecover"' + (busyNow ? ' disabled' : '') + '>노트에 되살리기</button></span></div>'; }
-    h += '<div class="meta"><span>' + items.length + '개</span><span><button class="linkbtn" data-act="ltmpick">' + (nav.ltmPick ? '닫기' : '미리 조금 옮기기') + '</button> · <button class="linkbtn" data-act="ltmload">새로고침</button></span></div>';
+    // 골라서 되돌리기: 원래 사건이 보관된 카드만 고를 수 있어요. nav.ltmBack = 고른 카드 id 목록(끄면 null)
+    const backable = items.filter(x => x.id && ltmOrig.some(o => o.title === x.title && o.items?.length)).map(x => x.id), picked = (nav.ltmBack || []).filter(id => backable.includes(id));
+    h += nav.ltmBack ? '<div class="meta ltm-selbar"><span><b>' + picked.length + '장</b> 고름 · 되돌릴 수 있는 카드 ' + backable.length + '장</span><span><button class="linkbtn" data-act="ltmtickall">' + (picked.length === backable.length ? '전체 해제' : '전체 선택') + '</button> · <button class="linkbtn" data-act="ltmbackall"' + (busyNow || !picked.length ? ' disabled' : '') + '><b>되돌리기</b></button> · <button class="linkbtn" data-act="ltmbacksel">취소</button></span></div>'
+      : '<div class="meta"><span>' + items.length + '개</span><span><button class="linkbtn" data-act="ltmpick">' + (nav.ltmPick ? '닫기' : '미리 조금 옮기기') + '</button> · <button class="linkbtn" data-act="ltmload">새로고침</button>' + (backable.length ? ' · <button class="linkbtn" data-act="ltmbacksel">골라서 되돌리기</button>' : '') + '</span></div>';
     if (nav.ltmPick) { const ev = ltmNoteEvents(), dis = busyNow ? ' disabled' : '';
       const gs = (ltmGroups?.groups || ltmGroupLocal(ev.slice(0, 36))).slice(0, 6), sel = (nav.ltmSel || [0]).filter(i => i < gs.length), k = sel.length, n = sel.reduce((a, i) => a + gs[i].to - gs[i].from + 1, 0);
       const range = g => { const a = ltmSplit(ev[g.from])[0], z = ltmSplit(ev[g.to])[0]; return a && z && a !== z ? a + '~' + z.replace(/^\d{4}\./, '') : a || z; };
@@ -4676,7 +4728,7 @@
     if (!items.length) return h + emptyBox('아직 장기기억이 없어요. 정리 결과를 넣을 때 줄어든 사건이 있으면 여기서 물어볼게요.');
     return h + items.map(x => nav.ltmEdit === x.id
       ? '<div class="ltm-card"><input data-ltm="title" maxlength="' + LTM_T + '" value="' + esc(x.title) + '"><textarea data-ltm="summary" maxlength="' + LTM_S + '" rows="8">' + esc(x.summary) + '</textarea><div class="ltm-foot"><span>제목 20자 · 내용 300자</span><span><button class="linkbtn" data-act="ltmsave" data-arg="' + esc(x.id) + '">저장</button> · <button class="linkbtn" data-act="ltmedit" data-arg="">취소</button></span></div></div>'
-      : '<div class="ltm-card"><h4>' + esc(x.title) + '</h4>' + bodyHtml(x.summary) + '<div class="ltm-foot"><span>' + cnt(x.summary) + '자' + (when(x) ? ' · ' + when(x) : '') + (ltmOrig.some(o => o.title === x.title && o.items?.length) ? ' · 원문 보관 중(지울 때 노트로 되살리기 가능)' : '') + '</span><span>' + (x.id ? '<button class="linkbtn" data-act="ltmedit" data-arg="' + esc(x.id) + '">수정</button> · <button class="linkbtn" data-act="ltmdel" data-arg="' + esc(x.id) + '">삭제</button>' : '카드 번호를 못 읽어 수정·삭제 불가') + '</span></div></div>').join('');
+      : (nav.ltmBack && backable.includes(x.id) ? '<div class="ltm-card pick' + (picked.includes(x.id) ? ' on' : '') + '" data-act="ltmtick" data-arg="' + esc(x.id) + '"><h4><input type="checkbox" class="ltm-chk" tabindex="-1"' + (picked.includes(x.id) ? ' checked' : '') + '>' : '<div class="ltm-card' + (nav.ltmBack ? ' dim' : '') + '"><h4>') + esc(x.title) + '</h4>' + bodyHtml(x.summary) + '<div class="ltm-foot"><span>' + cnt(x.summary) + '자' + (when(x) ? ' · ' + when(x) : '') + (ltmOrig.some(o => o.title === x.title && o.items?.length) ? ' · 원문 보관 중(지울 때 노트로 되살리기 가능)' : '') + '</span><span>' + (x.id ? (ltmOrig.some(o => o.title === x.title && o.items?.length) ? '<button class="linkbtn" data-act="ltmback" data-arg="' + esc(x.id) + '">되돌리기</button> · ' : '') + '<button class="linkbtn" data-act="ltmedit" data-arg="' + esc(x.id) + '">수정</button> · <button class="linkbtn" data-act="ltmdel" data-arg="' + esc(x.id) + '">삭제</button>' : '카드 번호를 못 읽어 수정·삭제 불가') + '</span></div></div>').join('');
   }
 
   const etcWho = what => { const u = etcUsers(); return u.length ? '[유저] ' + u.join(', ') + ' — 이 사람의 ' + what + '은(는) 만들지 말 것' : '[유저] 노트에 표시 없음 — RP 상대로 보이는 주인공의 ' + what + '은(는) 만들지 말 것'; };
@@ -5034,7 +5086,7 @@
     map: '서로 어떻게 보는지 · 방향마다 한 줄 · 바뀐 계기는 (변화: …)',
     speech: '누가 누구를 뭐라 부르는지 · 존댓말·반말 · 이름을 눌러 펼치기',
     know: `정보 하나 = 칸 하나 · 인물마다 ${KNOW.join('·')} 중 하나 · 숨김은 누가 누구에게 · 모르는 비밀을 아는 척하는 사고 방지`,
-    feel: '방향별 감정 변화 기록 · 날짜·계기·자각 · ★ = 큰 전환점 · 채팅 노트에도 들어감(폰↔컴 어디서 정리해도 이어짐)',
+    feel: '방향별 감정 변화 기록 · 날짜·계기·자각 · ★ = 큰 전환점 · 화면에만 있고 채팅엔 안 들어감(AI는 인물 칸 → 줄·전환 줄로 지금 마음을 봄)',
   };
   const descHtml = k => DESC[k] ? `<p class="secdesc">${esc(DESC[k])}</p>` : '';
 
@@ -5926,10 +5978,11 @@
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산 try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
+      try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { lastSeenMap = JSON.parse(String(await getValue('lastseen:' + chatId, '') || '{}')) || {}; } catch (_) { lastSeenMap = {}; }
-      if (ltmData?.chatId !== chatId) ltmData = null;
+      if (ltmData?.chatId !== chatId) { try { ltmData = JSON.parse(String(await getValue('ltmcache:' + chatId, '') || 'null')); } catch (_) { ltmData = null; } }
       try { ltmQ = JSON.parse(String(await getValue('ltmq:' + chatId, '') || 'null')); } catch (_) { ltmQ = null; }
       try { ltmDone = JSON.parse(String(await getValue('ltmdone:' + chatId, '[]')) || '[]'); } catch (_) { ltmDone = []; }
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); }
@@ -6091,6 +6144,7 @@
       { const oldSh = splitSections(prev || '').find(x => x.key === SHELF); if (oldSh && !splitSections(memory).some(x => x.key === SHELF)) memory = joinSections([...splitSections(memory), oldSh]); } // 처음부터 다시 정리해도 먼지 쌓인 곳은 그대로
       const stale = base ? expireItems(memory, msgs.map(m => stripBlocks(msgText(m))).join('\n'), turns, lastSeenMap) : { seen: {}, expired: [] };
       if (base) memory = stale.memory;
+      { const back = dropShelfDups(memory); if (back.moved.length) { memory = back.memory; toast('먼지쌓인곳에서 다시 나온 물건 ' + back.moved.length + '개는 소지품으로 합쳤어요 · ' + back.moved.join(', '), 'info', 5000); } }
       // AI가 빼 버린 소지품은 먼지쌓인곳으로, 통째로 사라진 인지 정보는 예전 글 그대로 다시 붙여요(전체 다시 정리해도 안 날아가게)
       let carried = { items: 0, facts: 0 };
       if (prev) { const P = splitSections(prev), N = splitSections(memory), sq = t => String(t || '').replace(/\s+/g, ''), get = k => { let x = N.find(y => y.key === k); if (!x) { x = { key: k, body: '' }; N.push(x); } return x; };
@@ -6398,8 +6452,8 @@
         catch (err) { toast('꺼내기 실패 · ' + errMsg(err), 'err'); } finally { busyNow = false; render(); } return; }
       case 'ncfold': { const d = el.closest('details'); if (d) { d.open = false; d.scrollIntoView({ block: 'nearest' }); } return; } // 홈 노트 구성 접기
       case 'tab': nav.tab = arg; nav.view = null; quiet(); render(); out('main').scrollTop = 0; return;
-      case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData) ltmLoad(); render(); out('main').scrollTop = 0; return;
-      case 'ltmload': ltmData = null; return ltmLoad();
+      case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); render(); out('main').scrollTop = 0; return;
+      case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return ltmAdd();
       case 'ltmskip': ltmQ = null; await setValue('ltmq:' + chatIdFromPath(), ''); return render();
       case 'ltmedit': nav.ltmEdit = arg || null; return keepScroll(render);
@@ -6413,6 +6467,11 @@
         ltmQ = { turns: snapshot?.note?.turns || 0, cands, kind: 'move' }; nav.ltmPick = false; return ltmAdd(); }
       case 'ltmsave': return ltmSave(arg);
       case 'ltmdel': return ltmDel(arg);
+      case 'ltmback': return ltmDel(arg, true);
+      case 'ltmbacksel': nav.ltmBack = nav.ltmBack ? null : []; return keepScroll(render);
+      case 'ltmtick': { const cur = nav.ltmBack || []; nav.ltmBack = cur.includes(arg) ? cur.filter(x => x !== arg) : [...cur, arg]; return keepScroll(render); }
+      case 'ltmtickall': { const all = (ltmData?.items || []).filter(x => x.id && ltmOrig.some(o => o.title === x.title && o.items?.length)).map(x => x.id); nav.ltmBack = (nav.ltmBack || []).filter(id => all.includes(id)).length === all.length ? [] : all; return keepScroll(render); }
+      case 'ltmbackall': { const ids = nav.ltmBack || []; if (!ids.length) return toast('되돌릴 카드를 골라 주세요.', 'err'); return ltmDel(ids, true); }
       case 'ltmrecover': { const cid = chatIdFromPath(), have = new Set((ltmData?.items || []).map(x => x.title)), lost = ltmOrig.filter(o => o.items?.length && !have.has(o.title));
         const items = lost.flatMap(o => o.items); if (!cid || !items.length || busyNow) return;
         if (!confirm('크랙 장기기억에 카드가 없는 사건 ' + items.length + '개를 노트(날짜로그)에 되살릴까요?')) return;
