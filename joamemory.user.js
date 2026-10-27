@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.75
+// @version      3.9.76
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -274,7 +274,7 @@
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => l.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
     const lines = stripProof(memory).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim());
-    // 먼지쌓인곳은 이름만 한 줄로: 이미 지나간 물건을 처음인 것처럼 또 주지 않게(본문은 화면에만)
+    // 먼지쌓인곳은 이름만 한 줄로: 목록에서만 뺀 물건이라 없어진 걸로 연기하지 않게, 다시 나오면 처음 보는 것처럼 굴지 않게(본문은 화면에만)
     const shelf = shelfNames(memory).slice(-30).map(clean);
     return '\n\n' + [
       `[//]: # "MEMO_NOTE v3 upto=${uptoId} turns=${turns} at=${at}${by ? ` by=${String(by).replace(/[\s"]/g, '_')}` : ''}`,
@@ -286,7 +286,7 @@
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 지금 장면에 필요한 것만. 지난 일·열린 고리 억지로 꺼내거나 끝내지 않음. 기록된 말·반응·물건 되풀이 안 함. 노트에 없는 과거는 지어내지 않음`,
         `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
-        ...(shelf.length ? [`※ 이미 지나간 물건(지금 없음 · 같은 걸 또 주거나 꺼내지 않음): ${shelf.join(', ')}`] : []),
+        ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
         ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
@@ -442,13 +442,15 @@
     }
     return { head, items };
   }
+  const delOk = it => it.lines.slice(1).some(l => /^\s*-?\s*(?:근거|이유)\s*[:：]/.test(l));
+  let delKept = []; // 근거 없이 지우려다 남겨 둔 항목(정리 뒤 알림)
   function mergeHooks(oldBody, newBody) {
     const o = hookItems(oldBody), n = hookItems(newBody);
     if (!o.items.length || !n.items.length) return n.items.length || n.head.some(l => l.trim() && !isNone(l)) ? newBody : oldBody;
     const out = o.items.filter(x => x.open); // 지난번에 닫힌 고리는 이번엔 정리(닫힘은 '이번 정리 기간에 끝난 것만' 남기는 규칙)
     for (const it of n.items) {
       const i = out.findIndex(x => x.key === it.key);
-      if (it.del) { if (i >= 0) out.splice(i, 1); } else if (i >= 0) out[i] = it; else out.push(it);
+      if (it.del) { if (i >= 0) { if (delOk(it)) out.splice(i, 1); else delKept.push(it.key); } } else if (i >= 0) out[i] = it; else out.push(it);
     }
     return [...(n.head.some(l => l.trim()) ? n.head : o.head), ...out.flatMap(x => x.lines)].join('\n').trim();
   }
@@ -466,6 +468,7 @@
       if (!n.items.length && !o.items.length) { old.body = d.body; continue; }
       if (n.head.some(l => l.trim() && !isNone(l))) o.head = n.head;
       const guard = roomy && d.key === '날짜로그';
+      let packAt = -1; const keysBefore = new Set(o.items.map(x => itemKey(x.key)));
       const packing = noPack && d.key === '날짜로그' && n.items.some(it => isPack(it) && !o.items.some(x => itemKey(x.key) === itemKey(it.key)));
       for (const it of n.items) {
         // 소지품·장소는 제목 끝 괄호(가진 사람·장소/조직)가 바뀌어도 같은 물건·장소로 봅니다: "은빛 라이터 (가브리엘 케인)" → "은빛 라이터 (나나)"가 두 개로 안 생기게
@@ -480,9 +483,11 @@
         if (packing && (it.del || (isPack(it) && i < 0))) continue;
         // 짧아진 사건: 새 글이 예전 글을 줄인 것뿐이면(두 글자 조각 70% 이상 겹침) 예전 글을 두고, 새 내용이 많으면 사실을 고친 것으로 보고 받아요.
         if (guard && i >= 0 && !it.del && it.lines.join('').length < o.items[i].lines.join('').length && shrunkOnly(o.items[i].lines.join(' '), it.lines.join(' '))) continue;
-        if (it.del) { if (i >= 0) o.items.splice(i, 1); }
+        if (it.del) { if (i >= 0) { if (delOk(it) || (d.key === '날짜로그' && n.items.some(isPack))) { if (d.key === '날짜로그') packAt = packAt < 0 ? i : Math.min(packAt, i); o.items.splice(i, 1); } else delKept.push(it.key.replace(/\s*\(삭제\)\s*$/, '')); } }
         else if (i >= 0) o.items[i] = it; else o.items.push(it);
       }
+      if (packAt >= 0) { const packs = o.items.filter(x => isPack(x) && !keysBefore.has(itemKey(x.key)));
+        if (packs.length) { o.items = o.items.filter(x => !packs.includes(x)); o.items.splice(Math.min(packAt, o.items.length), 0, ...packs); } }
       old.body = [...o.head, ...o.items.flatMap(x => x.lines)].join('\n').trim();
     }
     return joinSections(list.filter(s => s.body.trim()));
@@ -685,16 +690,23 @@
 - 새 항목은 새 제목으로 쓴다. 지울 항목(끝난 상태, 다른 항목에 합친 것, 닫혀서 옮긴 것)은 제목 줄만 쓰고 끝에 " (삭제)"를 붙인다. 예: "▸ [2026.03.14-세라가 레온에게 사과함] (삭제)", "【이름】 (삭제)".
 - ▸·【】 항목이 없는 칸(줄거리 등)은 바뀌었으면 칸 전체를 다시 쓴다.
 - 서사 고리는 고리 하나("- [열림]/[닫힘] … 제목:" 줄과 그 아래 근거 줄)가 항목이다. 바뀌거나 새로 생기거나 이번에 닫힌 고리만 쓴다. 열린 고리에 "(마지막 언급: …)"이 아직 없으면 그 고리도 이번에 붙여서 쓴다. 같은 고리면 제목을 기존 기억과 한 글자도 다르지 않게 쓴다. 지울 고리(다른 고리에 합친 것 등)는 "- [열림] 제목 (삭제)"처럼 쓴다. 안 쓴 고리는 그대로 남는다.
-- ■ 줄거리와 ■ 현재상태의 "▸ 기준 시점·장소"는 매번 쓴다.
+- ■ 줄거리는 매번 쓴다.
+- ■ 현재상태는 매번 칸 전체를 쓴다(20턴 사이 바뀐 값을 놓치지 않게). 기존 ▸ 소제목을 하나도 빠뜨리지 않고 다시 쓰고, 안 바뀐 줄은 한 글자도 바꾸지 않고 옮긴다. 끝난 소제목은 그냥 빼지 말고 아래 지우기 규칙대로 (삭제)와 근거를 쓴다(그냥 빼면 지워지지 않고 남는다).
 - 이어지는 사건은 합친다: 새 로그의 일이 기존 날짜로그 마지막 사건(또는 마지막 두세 개 중 하나)과 같은 날·같은 장면으로 이어지면 새 사건을 만들지 않는다. 그 기존 사건 항목 전체를 다시 쓰되 제목 줄은 기존과 한 글자도 다르지 않게 두고, 기존 줄·근거 줄은 그대로 둔 채 새로 일어난 일을 한 단계에 한 줄씩 새 줄로 덧붙인다(→로 한 줄에 길게 잇지 않는다).
 - 새 사건은 날짜가 바뀌었거나, 자리를 떠나 다른 곳에서 다시 만났거나, 앞 일과 상관없는 별개 용건일 때만 만든다. 한 장면 안의 짧은 이동이나 시간 흐름(저녁 → 밤)으로는 나누지 않는다.
 - 끝난 사건을 한 줄로 줄일 때는 그 사건 항목 전체(제목 줄은 기존과 한 글자도 다르지 않게, ⤿·근거 줄 포함)를 다시 쓴다.
 - 날짜로그를 (요약)으로 묶을 때는 묶은 새 항목을 쓰고, 묶여 들어간 옛 사건마다 "(삭제)" 줄을 쓴다.
 - 감정선은 새 단계가 생긴 "▸ 인물 → 상대" 항목만, 기존 단계까지 포함해 전체를 쓴다.
-- ■ 칸 이름 줄은 그 칸에서 하나라도 출력할 때만 쓴다.`;
+- ■ 칸 이름 줄은 그 칸에서 하나라도 출력할 때만 쓴다.
+- 기존 항목 점검: 출력 전에 기존 기억의 항목마다 속으로 유지 / 갱신 / 종료를 정한다(판정표는 쓰지 않는다). 새 로그로 값이 바뀐 항목(위치·소유·복장·몸 상태·관계·호칭·인지·약속의 진행)은 빠짐없이 갱신해서 쓴다. 다 나은 부상·풀린 오해·끝난 제약처럼 끝난 항목은 종료로 지운다. 변화 근거가 없는 항목은 유지(출력하지 않음).
+- 지울 땐 근거: "(삭제)" 제목 줄 바로 아래에 지우는 이유 한 줄을 꼭 쓴다. 새 로그 때문에 끝났으면 "- 근거: (N턴) 「끝났음을 보여 주는 원문 한 조각」"(원문 글자 그대로, 요약·의역 금지). 다른 항목에 합쳤거나 (요약)으로 묶었거나 중복이면 "- 이유: ○○에 합침" / "- 이유: (요약)으로 묶음" / "- 이유: 중복". 이 줄이 없는 (삭제)는 프로그램이 적용하지 않는다.`;
+  // 덧붙임 규칙(전체 정리·바뀐 것만 정리 모두)
+  const EXTRA_RULE = `\n\n[덧붙임 규칙]
+- 현재상태에는 곧 낡는 일회성 장면 상태(앉은 자리·자세·손에 든 컵·순간 표정)를 쓰지 않는다. 다음 장면에도 이어질 상태만 쓴다.
+- 한 번의 허락·동의를 늘 허락한 것처럼 넓히지 않는다. 약속·합의는 실제로 정한 범위·조건 그대로 쓴다.`;
   async function buildSystem(delta = false) {
     const off = await offSections();
-    return PROMPT.replace(/\{LIMIT\}/g, fmt(NOTE_LIMIT)).replace(/\{CYCLE\}/g, cycle) + (off.length ? `\n\n[이번 정리에서 만들지 않는 칸] ${off.join('·')} — 이 칸은 출력하지 않는다.` : '') + (delta ? DELTA_RULE : '');
+    return PROMPT.replace(/\{LIMIT\}/g, fmt(NOTE_LIMIT)).replace(/\{CYCLE\}/g, cycle) + (off.length ? `\n\n[이번 정리에서 만들지 않는 칸] ${off.join('·')} — 이 칸은 출력하지 않는다.` : '') + EXTRA_RULE + (delta ? DELTA_RULE : '');
   }
   const cleanOut = t => String(t).replace(/^```\w*\n?|\n?```$/g, '').trim();
 
@@ -1063,7 +1075,7 @@
       const label = info.turn ? `${info.turn}턴${info.role === 'assistant' ? ' 답변' : ''}` : '시작';
       const text = `${label} · ${done ? '정리됨' : '대기'}`;
       if (b.textContent !== text) b.textContent = text;
-      b.style.cssText = 'display:flex;width:fit-content;align-items:center;height:20px;padding:0 8px;margin:0 0 6px;border-radius:10px;font:600 11px/1 -apple-system,system-ui,sans-serif;' +
+      b.style.cssText = 'display:flex;width:fit-content;align-items:center;height:20px;padding:0 8px;margin:0 0 6px;border-radius:10px;font:600 11px/1 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;' +
         (done ? 'background:#F4F4F5;color:#8B8B93' : 'background:#ECE8FB;color:#111113');
     });
     // 새 말풍선이 생겼는데 번호가 없으면 잠시 뒤 다시 셉니다.
@@ -1116,15 +1128,17 @@
   const TABS = [['home', '홈'], ['timeline', '타임라인'], ['now', '상태'], ['people', '인물'], ['phone', 'etc'], ['settings', '설정']];
   const STORY_TABS = ['명대사', '세계관', FIXED]; // 줄거리·날짜로그·서사 고리는 타임라인 탭에
   const NOW_TABS = ['현재상태', '소지품', '장소·조직']; // 옷차림은 현재상태의 인물 카드 안에
-  const PEOPLE_TABS = [['list', '인물'], ['map', '관계도'], ['speech', '호칭·말투'], ['know', '인지'], ['feel', '감정선']];
+  const PEOPLE_TABS = [['list', '인물'], ['map', '관계도'], ['feel', '감정선'], ['speech', '호칭·말투'], ['know', '인지']];
   const tabFor = k => (['줄거리', '이정표', '날짜로그', '서사 고리', '명대사', '세계관', FIXED].includes(k) ? 'timeline' : STORY_TABS.includes(k) ? 'story' : NOW_TABS.includes(k) ? 'now' : 'people');
 
-  if (!document.getElementById('memo-note-font')) {
+  // 글꼴: Pretendard. jsDelivr가 막히는 곳에선 구글 Noto Sans KR로 (쓰일 때만 내려받아요).
+  [['memo-note-font', 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'],
+   ['memo-note-font2', 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400..800&display=swap']].forEach(([id, href]) => {
+    if (document.getElementById(id)) return;
     const font = document.createElement('link');
-    font.id = 'memo-note-font'; font.rel = 'stylesheet';
-    font.href = 'https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap';
+    font.id = id; font.rel = 'stylesheet'; font.href = href;
     (document.head || document.documentElement).appendChild(font);
-  }
+  });
   const host = document.createElement('div');
   host.id = 'memo-note-host';
   document.documentElement.appendChild(host);
@@ -1136,8 +1150,8 @@
       --paper:#FFFFFF;--ink:#1F1D24;--ink2:#4A4752;--graphite:#8A8792;--pencil:#BAB7C2;--mist:#F4F3F6;--rule:#E7E5EB;
       --lilac:#E6E0FA;--sky:#DCEAF8;--blush:#F9E0EA;--apricot:#FBE4D4;--sage:#DFEFE5;--butter:#F7EDCB;
       --mark:var(--lilac);--ok:#2F7A55;--bad:#B23E57;
-      --serif:'Gowun Batang','AppleMyungjo','Nanum Myeongjo','Noto Serif KR',serif;
-      --sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+      --sans:'Pretendard Variable','Pretendard','Noto Sans KR','Apple SD Gothic Neo',system-ui,sans-serif;--serif:var(--sans);
+      -webkit-font-smoothing:antialiased}
     *{box-sizing:border-box;font-family:var(--sans);-webkit-tap-highlight-color:transparent}
     button{font:inherit;color:inherit;cursor:pointer}
     button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -1344,7 +1358,8 @@
     .bigring.due .ringtext b{color:#4B3F8A}
     .hero-run.due{background:#E6E0FA;border-color:#9D8CEB;color:#4B3F8A}
     .ringtext{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-    .bigring.busy svg{animation:jm-spin 1.4s linear infinite}@keyframes jm-spin{to{transform:rotate(360deg)}}
+    .bigring.busy svg{animation:jm-spin 1.4s linear infinite}
+    .bigring.busy .fill{stroke:#9D8CEB}.bigring.busy.rebuild .fill{stroke:#3FB98F}@keyframes jm-spin{to{transform:rotate(360deg)}}
     .ringtext.busy .gp-mini:empty{display:none}
     .ringtext b{font-size:46px;font-weight:800;letter-spacing:-1.5px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
     .bigring.due .ringtext b{font-size:22px;line-height:1.3;letter-spacing:-.4px}
@@ -1352,7 +1367,8 @@
     .ringtext small{font-size:11.5px;color:var(--graphite);margin-top:4px;font-variant-numeric:tabular-nums}
     .hero-sub{margin:10px 0 2px;font-size:14px;color:var(--ink2)}.hero-meta{margin:0 0 14px;font-size:11.5px;color:var(--pencil)}.hero-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}.hero-foot .inj-sw{margin:0}.hero-dot{color:var(--rule)}.hero-reset{border:0;background:none;padding:0;font-size:12px;color:var(--pencil);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
     .inj-sw{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:12px;color:var(--graphite);cursor:pointer}.inj-sw input{display:none}.inj-sw i{width:26px;height:15px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.inj-sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s}.inj-sw input:checked+i{background:var(--ink)}.inj-sw input:checked+i::after{left:13px}.inj-sw small{color:var(--bad);font-size:11px}
-    .hero-run{min-width:180px}
+    .hero-run{min-width:180px;background:var(--ink);border-color:var(--ink);color:#fff}
+    .hero-run.due{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 0 0 4px #E6E0FA}
     .hero-btns{display:flex;flex-direction:column;align-items:center;gap:8px}
     .hero-renew{height:36px;border:0;background:transparent;font-size:13px;color:var(--graphite);text-decoration:underline;text-underline-offset:3px}
     @media (prefers-reduced-motion:reduce){.bigring .fill{transition:none}}
@@ -2724,10 +2740,10 @@
     const n = snapshot.note, turns = freshTurns(), left = Math.max(0, cycle - turns), due = turns >= cycle;
     // 큰 진행 링: 다음 정리까지
     const R = 64, C = 2 * Math.PI * R, done = Math.min(turns, cycle) / cycle, over = Math.max(0, turns - cycle), overP = Math.min(1, over / cycle);
-    const ring = `<div class="bigring${due ? ' due' : ''}${busyNow ? ' busy' : ''}">
+    const ring = `<div class="bigring${due ? ' due' : ''}${busyNow ? ' busy' + (runningMode === 'rebuild' ? ' rebuild' : '') : ''}">
       <svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="${R}" class="track"/>
-        <circle cx="80" cy="80" r="${R}" class="fill" stroke-dasharray="${(C * done).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/>
-        ${over ? `<circle cx="80" cy="80" r="${R}" class="over" stroke-dasharray="${(C * overP).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/>` : ''}</svg>
+        <circle cx="80" cy="80" r="${R}" class="fill" stroke-dasharray="${(C * (busyNow ? 0.28 : done)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/>
+        ${over && !busyNow ? `<circle cx="80" cy="80" r="${R}" class="over" stroke-dasharray="${(C * overP).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/>` : ''}</svg>
       ${busyNow && genProg ? `<div class="ringtext busy"><b class="gp-time">${genView().tm}</b><span>정리하는 중</span><small class="gp-mini">${genMini()}</small></div>`
         : `<div class="ringtext">${over ? `<b>+${over}</b><span>턴 넘었어요</span>` : due ? '<b>정리할<br>때예요</b>' : `<b>${left}</b><span>턴 남았어요</span>`}<small>${turns} / ${cycle}</small></div>`}</div>`;
     const injectedText = n ? stripProof(noteMemory()) : '', injected = injectedText.length, pc = Math.min(100, Math.round(injected / NOTE_LIMIT * 100));
@@ -5788,7 +5804,7 @@
     const sw = key => `<input type="checkbox" class="switch" data-set="${key}">`;
     // 설정은 위 알약 탭으로 하나씩: 정리·AI / 칸·화면 / 도구 / 지침. 다른 칸도 화면에는 있어서(숨김) 저장할 때 같이 저장돼요.
     const cur = ['ai', 'view', 'tool', 'backup'].includes(nav.setTab) ? nav.setTab : 'ai';
-    const tabs = [['ai', '정리 · AI'], ['view', '칸 · 화면'], ['tool', '도구'], ['backup', '백업·정리 방법']];
+    const tabs = [['ai', '정리'], ['view', '칸 · 화면'], ['tool', '기록'], ['backup', '백업']];
     let i = 0; const box = (title, info, body) => { const k = tabs[i++][0]; return `<section data-sec="${k}"${k === cur ? '' : ' hidden'}>${body}</section>`; };
     const seg = `<div class="seg">${tabs.map(([k, l]) => `<button data-act="stab" data-arg="${k}" aria-pressed="${k === cur}">${l}</button>`).join('')}</div>`;
     return seg + box('정리 · AI', `${cycle}턴마다 · ${fmt(NOTE_LIMIT)}자 · <span data-out="keyinfo"></span>`, `
@@ -5798,7 +5814,8 @@
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
         ${row('Gemini 키', `<span class="keybox"><input type="password" data-set="apiKey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button type="button" data-act="peek">보기</button></span>`)}
         ${row('Claude 키', `<span class="keybox"><input type="password" data-set="claudeKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"><button type="button" data-act="peek">보기</button></span>`)}
-        <p class="sfoot">쓸 모델 회사의 키만 넣으면 돼요. 키는 이 브라우저에만 저장돼요. Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).</p>`)
+        <p class="sfoot">쓸 모델 회사의 키만 넣으면 돼요. 키는 이 브라우저에만 저장돼요. Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).</p>
+        <div class="jump" style="margin-top:14px"><button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터</span></button></div>`)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
         ${row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
@@ -5812,7 +5829,6 @@
       + box('백업', '다른 방법으로 정리 · 이 방 전체 내보내기 · 불러오기', `
 
         <div class="jump"><button data-act="gsopen"><b>구글 드라이브 백업</b><span class="v">${nav.gsOn ? '연결됨 · 넣을 때마다 자동' : '연결하기'}</span></button>
-        <button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터</span></button>
         <button data-act="backup"><b>이 방 전체 내보내기</b><span class="v">파일 하나로</span></button>
         <button data-act="etcopen"><b>ETC 비우기</b><span class="v">커뮤·폰 등 · 기억 노트는 그대로</span></button>
         <label class="jumprow"><b>백업 불러오기</b><span class="v">백업·노트 파일 열기</span><input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div>
@@ -6072,9 +6088,11 @@
   }
 
   // mode: 'new' 지난 정리 뒤 대화로 이어서 / 'tidy' 지금 노트만 새 형식·규칙대로 다시 / 'rebuild' 채팅 전체로 처음부터
+  let runningMode = 'new';
   async function run(mode = 'new', opts = {}) {
     const chatId = chatIdFromPath();
     if (!chatId || busyNow) return;
+    runningMode = mode; // 정리 중 동그라미 색(처음부터 정리는 초록)
     if (mode === 'rebuild' && !opts.pasted && !confirm('채팅 전체를 처음부터 읽어서 노트를 새로 만들어요. 대화가 길면 비용과 시간이 꽤 들어요. 할까요?')) return;
     busyNow = true; render(); toast('대화를 읽는 중이에요…');
     try {
@@ -6149,7 +6167,8 @@
           raw = await summarize(base, msgs, fixed, edited, from, delta);
         }
       }
-      if (delta) raw = mergeNote(base, raw);
+      if (delta) { delKept = []; raw = mergeNote(base, raw);
+        if (delKept.length) toast(`근거 없이 지우려던 ${delKept.length}개는 남겨 뒀어요 · ${delKept.slice(0, 4).join(', ')}${delKept.length > 4 ? ' 외' : ''}`, 'info', 6000); }
       // 노트가 차서 끝난 사건을 한 줄로 줄였으면, 대사·이름·숫자·부정이 빠진 사건은 예전 글로 되돌려요
       let shrinkKept = [];
       if (base) ({ memory: raw, kept: shrinkKept } = guardShrink(base, raw));
@@ -6704,7 +6723,7 @@
         <circle cx="15" cy="15" r="${r}" fill="${due ? '#E6E0FA' : 'none'}" stroke="#E2E2E8" stroke-width="2"/>
         <circle cx="15" cy="15" r="${r}" fill="none" stroke="${due ? '#9D8CEB' : '#55536A'}" stroke-width="2" stroke-linecap="round"
           stroke-dasharray="${(c * p).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 15 15)"/></svg>
-      <span style="position:relative;font:700 ${txt.length > 1 ? 10.5 : 11.5}px/1 -apple-system,system-ui,sans-serif;color:${due ? '#4B3F8A' : '#3A3946'};letter-spacing:-.3px">${txt}</span>`;
+      <span style="position:relative;font:700 ${txt.length > 1 ? 10.5 : 11.5}px/1 'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif;color:${due ? '#4B3F8A' : '#3A3946'};letter-spacing:-.3px">${txt}</span>`;
   }
   paintInlineButton('', false);
 
@@ -6752,6 +6771,20 @@
   document.addEventListener('visibilitychange', comeBack);
   window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
+  // 새 답이 다 올라오면(말풍선 목록이 바뀌고 8초 동안 조용하면) 다시 읽어요. 노트가 밀려났으면 refresh가 자동 옮기기를 해요.
+  //   창을 안 열고 계속 채팅해도 노트가 크랙 AI가 읽는 최근 대화 안에 머물게. 답 하나에 한 번만(15초 간격).
+  let seenMsgs = '', settleTimer = null, settledAt = 0;
+  new MutationObserver(() => {
+    if (!chatIdFromPath()) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      const ids = chatIdFromPath() + '|' + [...document.querySelectorAll('[data-message-id],[data-message-group-id]')].map(e => e.getAttribute('data-message-id') || e.getAttribute('data-message-group-id')).join(',');
+      if (ids === seenMsgs) return;
+      const first = !seenMsgs; seenMsgs = ids;
+      if (first || busyNow || loading || moving || Date.now() - settledAt < 15000) return;
+      settledAt = Date.now(); refresh();
+    }, 8000);
+  }).observe(document.documentElement, { childList: true, subtree: true });
   let lastPath = '';
   setInterval(() => {
     const nowChat = chatIdFromPath() || location.pathname; if (nowChat === lastPath) return;
