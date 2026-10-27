@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.77
+// @version      3.9.78
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -2875,12 +2875,18 @@
     const n = snapshot?.note, turns = freshTurns();
     const opt = (group, val, title, sub, on = true) => `<button class="opt${nav[group] === val ? ' on' : ''}" data-act="${group}" data-arg="${val}"${on ? '' : ' disabled'}>
       <i></i><span><b>${title}</b><small>${sub}</small></span></button>`;
-    const contMode = n && !turns ? 'tidy' : 'new';
-    if (nav.runMode !== 'rebuild') nav.runMode = contMode;
+    const contMode = n && !turns ? 'tidy' : 'new', size = chunkSizeNow();
+    if (!['rebuild', 'chunk', 'chunkAll'].includes(nav.runMode) || (nav.runMode === 'chunk' && turns <= CHUNKS[0])) nav.runMode = contMode;
     return `<h4 class="sg">무엇을</h4><div class="opts">
         ${opt('runMode', contMode, '이어서 정리', contMode === 'tidy' ? '새 대화가 없어서 지금 노트를 새 형식으로 다듬어요' : n ? `지난 정리 뒤 새 대화 ${turns}턴` : `지금까지 ${turns}턴을 처음 정리`)}
+        ${opt('runMode', 'chunk', `나눠서 이어 정리 · ${size}턴씩`, turns > size ? `밀린 ${turns}턴을 ${size}턴씩 ${Math.ceil(turns / size)}번에 나눠 차례로 정리하고 넣어요 · 한 번에 할 때보다 디테일이 덜 빠져요` : `밀린 ${turns}턴이 ${size}턴 안이라 한 번에 정리돼요 · 아래에서 더 작게 고르면 나눠요`, turns > CHUNKS[0])}
         ${opt('runMode', 'rebuild', '처음부터 정리', '채팅 전체를 다시 읽어 싹 새로 만들어요 · 길면 다른 AI로 하는 게 싸요')}
+        ${opt('runMode', 'chunkAll', `처음부터 나눠서 정리 · ${size}턴씩`, `1턴부터 ${size}턴씩 차례로 다시 정리해 쌓아요 · 디테일이 가장 많이 남지만 오래 걸리고 AI 요청이 여러 번이에요`)}
       </div>
+      ${nav.runMode.startsWith('chunk') ? `<h4 class="sg">몇 턴씩</h4><div class="opts">
+        ${CHUNKS.map(c => opt('chunkSize', String(c), `${c}턴씩`, (nav.runMode === 'chunk' ? `${Math.ceil(turns / c)}번에 나눠요 · ` : '') + (c <= 20 ? '디테일이 가장 많이 남아요 · 요청이 가장 많아요' : c <= 30 ? '디테일 많이 · 요청 조금 많이' : c <= 50 ? '디테일과 비용의 중간' : '요청이 적어 싸요 · 디테일은 조금 덜'))).join('')}
+        <label class="opt${CHUNKS.includes(size) ? '' : ' on'}"><i></i><span><b>직접 정하기 <input type="number" inputmode="numeric" min="5" max="1000" data-out="chunkCustom" value="${CHUNKS.includes(size) ? '' : size}" placeholder="예: 40" style="width:72px"> 턴씩</b><small>5~1000턴 사이 아무 숫자</small></span></label>
+      </div>` : ''}
       <h4 class="sg">누가</h4><div class="opts">
         ${opt('runBy', 'api', '설정한 AI', `${esc(nav.modelLabel || '설정의 모델')}${nav.hasKey ? '' : ' · 키가 없어요 (설정에서 넣기)'}`, nav.hasKey)}
         ${opt('runBy', 'file', '다른 AI · 키 없이', 'ChatGPT·Gemini·Claude 채팅에 파일로 맡겨요 · 싸게')}
@@ -2888,7 +2894,13 @@
       ${nav.runBy === 'file' ? `<ol class="steps">
         <li><b>① 요청 파일 받기</b>로 .txt를 받아 AI 채팅에 올리고 보내요. 끊기면 "계속".</li>
         <li>AI가 준 결과를 .txt로 저장해요. (파일로 못 주면 메모장에 붙여 저장)</li>
-        <li><b>② 결과 파일 불러오기</b>로 열면 바로 채팅에 들어가요.</li></ol>` : ''}
+        <li><b>② 결과 파일 불러오기</b>로 열면 바로 채팅에 들어가요.</li>
+        ${nav.runMode.startsWith('chunk') ? `<li>나눠서 정리는 ①을 누르면 ${size}턴씩 묶음 요청이 여러 개 생겨요. <b>같은 AI 대화창</b>에 1번부터 차례로 붙여 보내고(답이 끝날 때마다 다음 번호), <b>마지막 결과만</b> ②로 불러와요.</li>` : ''}</ol>
+      ${nav.extParts?.length && nav.runMode.startsWith('chunk') ? `<h4 class="sg">묶음 요청 ${nav.extParts.length}개 · 차례로 복사해 보내요</h4>
+      <button class="btn pri" data-act="extpartall" style="width:100%;margin:0 0 8px">${nav.extParts.length}개 파일로 한 번에 받기</button>
+      <p class="muted" style="margin:0 0 10px;font-size:12.5px">받은 파일을 같은 AI 대화창에 1번부터 차례로 올려요(답이 끝나면 다음 번호). 크롬이 "여러 파일 다운로드"를 물으면 허용해 주세요.</p><div class="opts">
+        ${nav.extParts.map((t, i) => `<div class="opt${(nav.extCopied || []).includes(i) ? ' on' : ''}" style="display:flex;gap:8px;align-items:center"><button class="btn sm${(nav.extCopied || []).includes(i) ? '' : ' pri'}" data-act="extpart" data-arg="${i}" style="flex:1">${i + 1}번 복사${(nav.extCopied || []).includes(i) ? ' ✓' : ''}</button><button class="btn sm" data-act="extpartdl" data-arg="${i}">파일</button><small class="muted">${fmt(t.length)}자</small></div>`).join('')}
+      </div>` : ''}` : ''}
 `;
   }
 
@@ -3820,7 +3832,8 @@
       const bar = c.querySelector('.gp-bar'); bar.classList.toggle('ind', !v.pct); bar.firstElementChild.style.width = (v.pct || 35) + '%'; });
   }
   const genCard = () => { if (!busyNow || !genProg) return ''; const v = genView();
-    return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p></div>`; };
+    const ch = chunkRun && g.kind === 'summary' ? `<p class="gp-info">나눠서 정리 · ${chunkRun.done + 1}번째 묶음${chunkRun.total ? ` / ${chunkRun.total}` : ''}${chunkRun.stop ? ' · 이 묶음까지 넣고 멈춰요' : ` · <button class="linkbtn" data-act="chunkstop">멈추기</button>`}</p>` : '';
+    return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p>${ch}</div>`; };
   // AI가 글의 게시판 칸을 이름 그대로 안 쓰면(“음지”, “잿더미 뒤편(음지)”, “[음지] 잿더미 뒤편”, “음지 게시판”, 띄어쓰기 다름) 메인에만 뜨고 게시판엔 0개
   //   → 그 회차 게시판 목록에서 맞는 게시판을 찾아요(이름은 매번 달라도 됨). 순서: 같은 이름 → 기호·띄어쓰기 빼고 같음 → 이름이 들어 있음 → 분위기(자유·익명·음지)가 들어 있음.
   const fitBoard = (boards, x) => {
@@ -5892,7 +5905,7 @@
         ${row('Gemini 키', `<span class="keybox"><input type="password" data-set="apiKey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button type="button" data-act="peek">보기</button></span>`)}
         ${row('Claude 키', `<span class="keybox"><input type="password" data-set="claudeKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"><button type="button" data-act="peek">보기</button></span>`)}
         <p class="sfoot">쓸 모델 회사의 키만 넣으면 돼요. 키는 이 브라우저에만 저장돼요. Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).</p>
-        <div class="jump" style="margin-top:14px"><button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터</span></button></div>`)
+        <div class="jump" style="margin-top:14px"><button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터 · 나눠서</span></button></div>`)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
         ${row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
@@ -6031,7 +6044,7 @@
       bottom.innerHTML = `<div class="actions"><button class="btn" data-act="back">버리기</button><button class="btn pri" data-act="apply"${busyNow ? ' disabled' : ''}>채팅에 넣기</button></div>`;
     else if (nav.view === 'edit' || nav.view === 'pvEdit') bottom.innerHTML = '';
     else if (nav.view === 'run') bottom.innerHTML = nav.runBy === 'file'
-      ? `<div class="actions" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="extget"${busyNow ? ' disabled' : ''}>① 요청 파일 받기</button>
+      ? `<div class="actions" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="extget"${busyNow ? ' disabled' : ''}>${String(nav.runMode).startsWith('chunk') ? '① 묶음 요청 만들기' : '① 요청 파일 받기'}</button>
           <label class="btn pri"${busyNow ? ' style="opacity:.4;pointer-events:none"' : ''}>② 결과 파일 불러오기<input type="file" accept=".txt,text/plain" data-out="extfile" hidden></label></div>`
       : `<div class="actions one"><button class="btn pri" data-act="go"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리 시작'}</button></div>`;
     else bottom.innerHTML = inSettings ? `<div class="actions one"><button class="btn pri" data-act="save">저장</button></div>` : '';
@@ -6174,7 +6187,7 @@
     const chatId = chatIdFromPath();
     if (!chatId || busyNow) return;
     runningMode = mode; // 정리 중 동그라미 색(처음부터 정리는 초록)
-    if (mode === 'rebuild' && !opts.pasted && !confirm('채팅 전체를 처음부터 읽어서 노트를 새로 만들어요. 대화가 길면 비용과 시간이 꽤 들어요. 할까요?')) return;
+    if (mode === 'rebuild' && !opts.pasted && !opts.chunk && !confirm('채팅 전체를 처음부터 읽어서 노트를 새로 만들어요. 대화가 길면 비용과 시간이 꽤 들어요. 할까요?')) return;
     busyNow = true; render(); toast('대화를 읽는 중이에요…');
     try {
       snapshot = await readSinceLastNote(chatId, 40);
@@ -6193,12 +6206,16 @@
       const oldList = n ? splitSections(baseMem) : [];
       const fixed = oldList.find(x => x.key === FIXED)?.body || '';
       // 명대사는 이 정리에서 만들지 않는 칸(명대사 탭에서 따로 만듦)이라 AI에게 보내지 않고, 결과에 그대로 다시 붙입니다.
-      const prev = joinSections(oldList.filter(x => ![FIXED, '직전 장면', '명대사'].includes(x.key)));
+      // 처음부터 나눠서 정리의 첫 묶음은 예전 노트를 기준으로 쓰지 않아요(앞 턴 노트에 뒤 턴 인물·물건이 미리 들어가지 않게). 고정 설정만 그대로.
+      const prev = mode === 'rebuild' && opts.chunk ? '' : joinSections(oldList.filter(x => ![FIXED, '직전 장면', '명대사'].includes(x.key)));
+      // 나눠서 정리: 앞에서부터 opts.limit턴까지만(그 턴의 AI 답까지)
+      const firstTurns = list => { if (!opts.limit) return list; const users = list.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0); return users.length > opts.limit ? list.slice(0, users[opts.limit]) : list; };
       const edited = await editedKeys(chatId);
       let msgs, base, uptoId, turns, from, sub;
       if (mode === 'rebuild') {
         msgs = await readAll(chatId);
         if (!msgs.length) { toast('읽을 대화가 없어요.', 'info', 2500); return; }
+        { const cut = msgs.cut; msgs = firstTurns(msgs); msgs.cut = cut; }
         base = ''; uptoId = msgId(msgs[msgs.length - 1]); turns = msgs.filter(m => msgRole(m) === 'user').length; from = 1;
         sub = `채팅 전체(1~${turns}턴)로 처음부터 다시 만들었어요. 문장을 새로 써서 '바뀐 것'이 실제보다 많아 보여요. 칸을 누르면 고칠 수 있어요.`;
         if (msgs.cut) sub += ' ⚠ 대화가 길어서 최근 2,000개 메시지(약 1,000턴)만 읽었어요. 그 앞 내용은 빠졌고 턴 수도 실제보다 적어요.';
@@ -6208,18 +6225,37 @@
         sub = `1~${n.turns}턴 노트를 새 형식으로 다시 정리했어요. 새 대화는 읽지 않았어요.`;
         toast('노트를 새 형식으로 다시 정리하는 중이에요…');
       } else {
-        msgs = snapshot.fresh; base = oldList.length ? prev : ''; uptoId = msgId(msgs[msgs.length - 1]);
-        from = (n?.turns || 0) + 1; turns = (n?.turns || 0) + freshTurns();
+        msgs = firstTurns(snapshot.fresh); base = oldList.length ? prev : ''; uptoId = msgId(msgs[msgs.length - 1]);
+        from = (n?.turns || 0) + 1; turns = (n?.turns || 0) + msgs.filter(m => msgRole(m) === 'user').length;
         sub = n ? `이전 기억(1~${n.turns}턴) + 새 대화(${from}~${turns}턴)를 합쳤어요. 칸을 누르면 고칠 수 있어요.` : `처음부터 ${turns}턴을 정리했어요. 칸을 누르면 고칠 수 있어요.`;
-        toast(snapshot.complete ? `새 대화 ${freshTurns()}턴을 정리하는 중이에요… (1~2분)` : '대화가 길어서 최근 2,000개 메시지까지만 읽었어요. 정리 중…');
+        toast(snapshot.complete ? `새 대화 ${turns - from + 1}턴을 정리하는 중이에요… (1~2분)` : '대화가 길어서 최근 2,000개 메시지까지만 읽었어요. 정리 중…');
       }
       // 이어서 정리할 기존 노트가 있으면 바뀐 것만 받아 끼워 넣습니다. 처음·전체 다시·형식 다시는 노트 전체를 받아요.
       const delta = mode === 'new' && !!base;
       if (noFull && mode !== 'rebuild') sub += ' ⚠ 이 기기에 근거가 든 전체본이 없어서(다른 기기에서 정리했거나 구글 백업이 없음) 채팅 속 노트로 이어 정리했어요. 예전 사건의 근거·명대사는 이번 결과에 빠질 수 있어요.';
+      if (opts.export && opts.parts) {
+        // 다른 AI로 나눠서 정리: 묶음(opts.parts턴)마다 요청을 하나씩 만들어 같은 AI 대화창에 차례로 보내요.
+        //   1번에만 지침 전체, 2번부터는 그 묶음 대화만. AI는 매번 지금까지의 노트 전체를 다시 쓰고, 마지막 결과만 불러오면 돼요.
+        const size = opts.parts, users = msgs.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0);
+        const groups = []; for (let k = 0; k < users.length; k += size) groups.push(msgs.slice(k ? users[k] : 0, users[k + size] ?? msgs.length));
+        if (!groups.length) { toast('정리할 대화가 없어요.', 'info', 2500); return; }
+        const sys = await buildSystem(false), N = groups.length;
+        const parts = groups.map((g, j) => {
+          const f = from + j * size, t = f + g.filter(m => msgRole(m) === 'user').length - 1, tag = `[나눠서 정리 · ${N}묶음 중 ${j + 1}번째 · ${f}~${t}턴]`;
+          return j === 0
+            ? EXT_HEAD + `\n\n${tag}\n${N > 1 ? `이 대화창에 2번째부터 ${N}번째 묶음까지 차례로 더 보낼 거야. 묶음마다 그때까지의 노트 전체를 같은 형식으로 다시 출력해 줘.\n` : ''}\n════════ 정리 지침 ════════\n\n${sys}\n\n════════ 정리할 자료 ════════\n\n${buildInput(base, g, fixed, edited, f)}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL
+            : `${tag}\n바로 앞에서 네가 출력한 노트가 지금까지의 기억 노트다. 처음 받은 정리 지침 그대로, 아래 새 대화를 그 노트에 반영해 노트 전체를 다시 출력해.\n- 앞 노트의 사건·인물·대사·근거를 지우거나 줄이지 않는다. 새로 생긴 일은 더하고, 바뀐 것만 고친다.\n- 새 대화가 앞 노트의 마지막 사건과 같은 날짜·같은 장면으로 이어지면 새 사건을 따로 만들지 않고 그 사건에 이어 쓴다. 날짜로그는 날짜 순서를 지킨다.\n- 출력 형식은 처음과 같다(===NOTE START=== ~ ===NOTE END=== 코드블록 하나).${j === N - 1 ? '\n- 이게 마지막 묶음이다. 노트 전체를 끝까지 출력한다.' : ''}\n\n════════ 새 대화 ════════\n\n${buildInput('', g, '', edited, f)}\n\n════════ 자료 끝 ════════`;
+        });
+        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub: `${N}묶음으로 나눠 정리한 결과예요. ` + sub, noteUpto: n?.upto || '', chunk: !!opts.chunk }));
+        nav.extParts = parts; nav.extCopied = []; render();
+        out('main').querySelector('[data-act="extpart"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        toast(`요청 ${N}개를 만들었어요. 1번부터 차례로 복사해 같은 AI 대화창에 보내고, 마지막 결과만 불러오면 돼요.`, 'ok', 6000);
+        return;
+      }
       if (opts.export) {
         // 다른 AI 채팅에 붙여 넣을 정리 요청: 지침 + 입력 + 출력 안내. 파일로 받고 클립보드에도 복사.
         const text = EXT_HEAD + `\n\n════════ 정리 지침 ════════\n\n${await buildSystem(delta)}\n\n════════ 정리할 자료 ════════\n\n${buildInput(base, msgs, fixed, edited, from)}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL;
-        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '' }));
+        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '', chunk: !!opts.chunk }));
         downloadText(`조아메모리-정리요청-${turns}턴.txt`, text);
         let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch (_) {}
         toast(`정리 요청 파일을 받았어요${copied ? '(클립보드에도 복사됨)' : ''}. AI 채팅에 올리고, 받은 노트를 아래 칸에 붙여 넣어 주세요.`, 'ok', 6000);
@@ -6341,6 +6377,33 @@
       injectOn = !injectOn; await setValue('inject', injectOn ? 'on' : 'off'); if (!n.parked) await setValue('parked:' + chatId, '');
       toast('바꾸기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
+  }
+
+  // 나눠서 정리: 밀린 대화를 정리 주기(cycle)턴씩 잘라 "정리 → 채팅에 넣기"를 차례로 되풀이해요.
+  //   묶음마다 이어서 정리(바뀐 것만 끼워 넣기)라 한 번에 수백 턴을 줄 때보다 장면·대사가 덜 빠져요. 멈추기는 지금 묶음을 넣은 뒤 멈춰요.
+  //   fromStart: 처음 묶음은 채팅 1턴부터 새로 만들고(예전 노트는 안 씀), 그 뒤는 이어서 정리. 묶음 크기는 정리 창에서 고름(CHUNKS).
+  const CHUNKS = [20, 30, 50, 100];
+  const chunkSizeNow = () => { const v = Math.round(Number(nav.chunkSize)); return v >= 5 && v <= 1000 ? v : 50; };
+  let chunkRun = null; // { done, total, stop }
+  async function runChunks(fromStart) {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow) return;
+    const size = chunkSizeNow(), left = fromStart ? 0 : freshTurns(), rounds = Math.ceil(left / size);
+    if (!confirm(fromStart ? `채팅 전체를 1턴부터 ${size}턴씩 차례로 다시 정리해요. 묶음마다 AI 요청이 1번씩 들고, 대화가 길면 꽤 오래 걸려요. 할까요?\n(중간에 "멈추기"를 누르면 그 묶음까지 넣고 멈춰요)`
+      : `밀린 ${left}턴을 ${size}턴씩 ${rounds}번에 나눠 정리하고 넣어요. AI 요청이 ${rounds}번 들어요. 할까요?\n(중간에 "멈추기"를 누르면 그 묶음까지 넣고 멈춰요)`)) return;
+    chunkRun = { done: 0, total: rounds, stop: false };
+    try {
+      for (let first = fromStart; ; first = false) {
+        if (!first) { snapshot = await readSinceLastNote(chatId, 40); if (!freshTurns()) break; }
+        draft = null;
+        await run(first ? 'rebuild' : 'new', { limit: size, chunk: true });
+        if (!draft) { toast(`나눠서 정리를 멈췄어요(${chunkRun.done}묶음 넣음). 다시 누르면 이어서 해요.`, 'err', 5000); break; }
+        await apply();
+        if (draft) break; // 넣기 실패(apply가 알림을 띄움)
+        chunkRun.done++;
+        if (chunkRun.stop) { toast(`${chunkRun.done}묶음까지 넣고 멈췄어요. 다시 누르면 이어서 해요.`, 'info', 4000); break; }
+      }
+      if (!chunkRun.stop) toast(`나눠서 정리 끝 · ${chunkRun.done}묶음을 차례로 넣었어요.`, 'ok', 4000);
+    } finally { chunkRun = null; render(); }
   }
 
   async function apply() {
@@ -6488,15 +6551,17 @@
   }
 
   root.addEventListener('change', async e => {
+    if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); nav.extParts = null; await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) await importBackup(f); return; }
     if (e.target.dataset?.out === 'extfile') {
       const file = e.target.files?.[0]; e.target.value = '';
       if (!file) return;
       const text = normalizeImported(await file.text()), problem = checkImported(text);
       if (problem) { toast(problem, 'err', 5000); return; }
-      let mode = nav.runMode || 'new'; try { mode = JSON.parse(String(await getValue('ext:' + chatIdFromPath(), '') || 'null'))?.mode || mode; } catch (_) {}
+      let mode = nav.runMode || 'new', chunk = false; try { const ext = JSON.parse(String(await getValue('ext:' + chatIdFromPath(), '') || 'null')); mode = ext?.mode || mode; chunk = !!ext?.chunk; } catch (_) {}
+      if (mode.startsWith('chunk')) mode = mode === 'chunkAll' ? 'rebuild' : 'new';
       nav.view = null; nav.tab = 'home';
-      await run(mode, { pasted: text });
+      await run(mode, { pasted: text, chunk });
       // 불러온 결과는 바로 채팅에 넣습니다. 빠진 인물·빠진 핵심 경고가 있을 때만 미리보기에서 멈춰요.
       if (draft && nav.view === 'preview' && !(draft.lost || []).length && !(draft.gone || []).length && !(draft.askNames || []).length) await apply();
       return;
@@ -6730,13 +6795,13 @@
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
         nav.hasKey = !!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim();
         nav.runBy = nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
-        nav.runMode = 'new';
+        nav.runMode = 'new'; nav.extParts = null; nav.chunkSize = String(await getValue('chunkSize', '50'));
         // 키가 있으면 '정리하기'는 고르는 창 없이 바로 이어서 정리합니다. 키가 없거나 '다른 방법'을 누를 때만 창을 띄워요.
         if (nav.hasKey && !arg) return run('new');
         nav.view = 'run'; render(); out('main').scrollTop = 0; return;
       }
       case 'runBy': nav.runBy = arg; await setValue('runBy', arg); return render();
-      case 'runMode': nav.runMode = arg; return render();
+      case 'runMode': nav.runMode = arg; nav.extParts = null; return render();
       case 'backup': return exportBackup();
       case 'gsave': return gsSave();
       case 'gload': return gsLoad();
@@ -6757,8 +6822,21 @@
       case 'lostskip': { const l = nav.lostAsk; if (l) await setValue('lostSkip:' + l.chatId, l.key); nav.lostAsk = null; return render(); }
       case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
-      case 'go': { const mode = nav.runMode; nav.view = null; nav.tab = 'home'; return run(mode); }
-      case 'extget': return run(nav.runMode, { export: true });
+      case 'go': { const mode = nav.runMode; nav.view = null; nav.tab = 'home'; return mode === 'chunk' || mode === 'chunkAll' ? runChunks(mode === 'chunkAll') : run(mode); }
+      case 'chunkstop': if (chunkRun) { chunkRun.stop = true; toast('지금 묶음을 넣고 멈출게요.', 'info', 2500); } return;
+      case 'extget': { const m = nav.runMode; // 나눠서 정리를 파일로: 이번 묶음(cycle턴)만 요청 파일로
+        return m === 'chunk' ? run('new', { export: true, parts: chunkSizeNow() }) : m === 'chunkAll' ? run('rebuild', { export: true, parts: chunkSizeNow(), chunk: true }) : run(m, { export: true }); }
+      case 'extpart': { const i = Number(arg), t = nav.extParts?.[i]; if (!t) return;
+        let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (_) {}
+        if (!ok) downloadText(`조아메모리-나눠서-${i + 1}of${nav.extParts.length}.txt`, t);
+        nav.extCopied = [...new Set([...(nav.extCopied || []), i])]; render();
+        return toast(ok ? `${i + 1}번을 복사했어요. AI 대화창에 붙여 보내고, 답이 끝나면 ${i + 1 < nav.extParts.length ? `${i + 2}번을 복사해요` : '마지막 결과를 .txt로 저장해 ② 결과 파일 불러오기로 열어요'}.` : `${i + 1}번을 파일로 받았어요(복사가 막혀 있어요).`, 'ok', 5000); }
+      case 'extpartall': { const ps = nav.extParts || []; // 묶음 파일을 한 번에(번호 순서가 파일 이름에 들어가요)
+        for (let i = 0; i < ps.length; i++) { downloadText(`조아메모리-나눠서-${String(i + 1).padStart(2, '0')}of${ps.length}.txt`, ps[i]); await new Promise(r => setTimeout(r, 400)); }
+        nav.extCopied = ps.map((_, i) => i); render();
+        return toast(`${ps.length}개 파일을 받았어요. 같은 AI 대화창에 01번부터 차례로 올리고, 마지막 결과만 ②로 불러와요.`, 'ok', 6000); }
+      case 'extpartdl': { const i = Number(arg), t = nav.extParts?.[i]; if (t) downloadText(`조아메모리-나눠서-${i + 1}of${nav.extParts.length}.txt`, t); return; }
+      case 'chunkSize': nav.chunkSize = arg; nav.extParts = null; await setValue('chunkSize', arg); return render();
       case 'center': nav.center = arg; return keepScroll(render);
       case 'castpick': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'person': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
