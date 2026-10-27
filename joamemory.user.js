@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      3.9.78
+// @version      3.9.79
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -577,7 +577,8 @@
   // 채팅에 안 넣기(ETC만): 노트를 채팅에서 빼고 여기(기기)에만 보관합니다. 켜면 직전 AI 답변에 다시 넣어요.
   const parkedOf = async chatId => { try { const p = JSON.parse(String(await getValue('parked:' + chatId, '')) || 'null'); return p?.memory ? { ...p, carrierId: '', parked: true } : null; } catch (_) { return null; } };
   const park = (chatId, memory, upto, turns, at) => setValue('parked:' + chatId, JSON.stringify({ memory, upto, turns, at: at || new Date().toISOString() }));
-  async function readSinceLastNote(chatId, maxPages = 40) {
+  const MAX_PAGES = 200; // 대화 목록 한 쪽 50개 × 200쪽 = 1만 개(약 5,000턴)까지 읽어요. 더 길면 앞부분이 빠져요(list.cut)
+  async function readSinceLastNote(chatId, maxPages = MAX_PAGES) {
     const newestFirst = [], pk = await parkedOf(chatId);
     let cursor = '', note = null, reachedStart = false;
     for (let page = 0; page < maxPages; page++) {
@@ -1108,7 +1109,7 @@
   // ── 말풍선 위 턴 번호: 어디까지 정리됐는지 눈으로 확인 ──
   //    전체 대화를 순서대로 세서, 사용자 메시지마다 턴이 하나씩 올라갑니다. 노트의 턴 수에 맞춰 보정해요.
   let turnMap = new Map(), turnMapRoom = '', turnMapAt = 0, noteTurns = 0, badgeMiss = new Set();
-  async function readAll(chatId, maxPages = 40) {
+  async function readAll(chatId, maxPages = MAX_PAGES) {
     const out = []; let cursor = '';
     for (let page = 0; page < maxPages; page++) {
       const { list, next } = await listPage(chatId, cursor);
@@ -2837,11 +2838,13 @@
     // 노트 구성: AI가 실제로 읽는 노트 기준. 한 줄 색 막대 + 크기순 칩(누르면 그 칸으로)
     const parts = splitSections(injectedText).map(x => ({ key: x.key, len: x.body.length })).filter(x => x.len).sort((a, b) => b.len - a.len);
     const total = parts.reduce((a, x) => a + x.len, 0) || 1;
-    const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>노트 ${pc}% 참</span><span class="comp-n"><b>${fmt(injected)}</b> / ${fmt(NOTE_LIMIT)}자<button class="comp-mng" data-act="notes">📝 관리</button></span></div>
+    const realPc = Math.round(injected / NOTE_LIMIT * 100);
+    const fullBox = realPc >= 85 ? `<div class="notice" style="margin:10px 0 0"><b>노트가 ${realPc}% 찼어요${injected > NOTE_LIMIT ? ` · ${fmt(NOTE_LIMIT)}자를 넘었어요` : ''}</b><br><small>오래된 사건을 장기기억 카드로 옮기면 노트가 줄어요.</small> <button class="linkbtn" data-act="ltmfull"${busyNow ? ' disabled' : ''}>장기기억으로 옮기기 ›</button></div>` : '';
+    const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>노트 ${realPc}% 참</span><span class="comp-n"><b>${fmt(injected)}</b> / ${fmt(NOTE_LIMIT)}자<button class="comp-mng" data-act="notes">📝 관리</button></span></div>
       <div class="nc-g" role="img" aria-label="노트 ${fmt(injected)}자 / ${fmt(NOTE_LIMIT)}자"><i style="width:${pc}%"></i><u></u></div>
       <p class="nc-line">${parts.map(x => `${esc(x.key)} ${Math.round(x.len / total * 100)}%`).join(' · ')}<span class="nc-more">자세히</span></p></summary>
       <div class="nc-rows">${parts.map(x => `<button data-act="jump" data-arg="${tabFor(x.key)}|${esc(x.key)}"><i style="background:${secInfo(x.key).color}"></i>${esc(x.key)}</button><span class="nc-bar"><i style="width:${Math.max(2, x.len / total * 100).toFixed(1)}%;background:${secInfo(x.key).color}"></i></span><span class="nc-num">${fmt(x.len)}자</span>`).join('')}</div>
-      <p class="muted" style="margin:8px 0 0;display:flex;justify-content:space-between"><span>85% 넘으면 오래된 사건부터 한 줄로 줄여요</span><button class="linkbtn" data-act="ncfold">접기</button></p></details>`;
+      <p class="muted" style="margin:8px 0 0;display:flex;justify-content:space-between"><span>85% 넘으면 오래된 사건부터 한 줄로 줄여요</span><button class="linkbtn" data-act="ncfold">접기</button></p></details>${fullBox}`;
 
     const cast = [...people().keys()];
     const castHtml = cast.length ? `<div class="h3">등장인물</div><div class="cast-row">${cast.map(nm =>
@@ -2895,12 +2898,7 @@
         <li><b>① 요청 파일 받기</b>로 .txt를 받아 AI 채팅에 올리고 보내요. 끊기면 "계속".</li>
         <li>AI가 준 결과를 .txt로 저장해요. (파일로 못 주면 메모장에 붙여 저장)</li>
         <li><b>② 결과 파일 불러오기</b>로 열면 바로 채팅에 들어가요.</li>
-        ${nav.runMode.startsWith('chunk') ? `<li>나눠서 정리는 ①을 누르면 ${size}턴씩 묶음 요청이 여러 개 생겨요. <b>같은 AI 대화창</b>에 1번부터 차례로 붙여 보내고(답이 끝날 때마다 다음 번호), <b>마지막 결과만</b> ②로 불러와요.</li>` : ''}</ol>
-      ${nav.extParts?.length && nav.runMode.startsWith('chunk') ? `<h4 class="sg">묶음 요청 ${nav.extParts.length}개 · 차례로 복사해 보내요</h4>
-      <button class="btn pri" data-act="extpartall" style="width:100%;margin:0 0 8px">${nav.extParts.length}개 파일로 한 번에 받기</button>
-      <p class="muted" style="margin:0 0 10px;font-size:12.5px">받은 파일을 같은 AI 대화창에 1번부터 차례로 올려요(답이 끝나면 다음 번호). 크롬이 "여러 파일 다운로드"를 물으면 허용해 주세요.</p><div class="opts">
-        ${nav.extParts.map((t, i) => `<div class="opt${(nav.extCopied || []).includes(i) ? ' on' : ''}" style="display:flex;gap:8px;align-items:center"><button class="btn sm${(nav.extCopied || []).includes(i) ? '' : ' pri'}" data-act="extpart" data-arg="${i}" style="flex:1">${i + 1}번 복사${(nav.extCopied || []).includes(i) ? ' ✓' : ''}</button><button class="btn sm" data-act="extpartdl" data-arg="${i}">파일</button><small class="muted">${fmt(t.length)}자</small></div>`).join('')}
-      </div>` : ''}` : ''}
+        ${nav.runMode.startsWith('chunk') ? `<li>나눠서 정리는 ①을 누를 때마다 <b>${size}턴짜리 요청 하나</b>가 나와요. 요청마다 지금 노트가 들어 있어서 새 대화창·다른 AI에서도 따로 돼요. ②로 불러오면 노트에 합쳐지고 이 화면으로 돌아와요. 남은 턴이 없을 때까지 ①→② 반복.</li>` : ''}</ol>` : ''}
 `;
   }
 
@@ -4527,9 +4525,10 @@
   const ltmFitBody = t => { t = String(t || '').trim(); if ([...t].length <= LTM_S) return t;
     const head = ltmFit(t, LTM_S), cut = Math.max(head.lastIndexOf(' / '), head.lastIndexOf('. '), head.lastIndexOf('.\n'));
     return (cut > LTM_S * 0.6 ? head.slice(0, cut + 1) : head).trim(); };
-  let ltmData = null, ltmQ = null, ltmDone = [], ltmOrig = []; // ltmOrig: 카드 제목 → 노트에서 뺀 원래 사건(지울 때 되살리기)
+  let ltmData = null, ltmQ = null, ltmDone = [], ltmOrig = [], ltmLoading = 0; // ltmOrig: 카드 제목 → 노트에서 뺀 원래 사건(지울 때 되살리기) · ltmLoading: 크랙에서 새로 읽는 중
   async function ltmLoad() {
     const chatId = chatIdFromPath(); if (!chatId) return;
+    ltmLoading++; render();
     try {
       const items = []; let cursor = '';
       for (let i = 0; i < 25; i++) {
@@ -4539,7 +4538,7 @@
       ltmData = { chatId, at: Date.now(), items: items.map(x => ({ id: String(x.id || x._id || ''), title: String(x.title || ''), summary: String(x.summary || ''), at: String(x.createdAt || x.updatedAt || '') })) };
       setValue('ltmcache:' + chatId, JSON.stringify(ltmData)); // 다음에 탭을 열면 이걸 먼저 보여 주고 뒤에서 새로 읽어요
     } catch (e) { if (ltmData?.chatId !== chatId || ltmData.err) ltmData = { chatId, at: Date.now(), items: [], err: e.message }; else toast('장기기억 새로 읽기 실패 · ' + e.message, 'err'); }
-    render();
+    ltmLoading--; render();
   }
   // 줄인 사건 찾기: 예전 날짜로그엔 있었는데 새 노트에서 (요약)으로 묶여 사라졌거나 글이 많이 짧아진 사건 → 원래 글을 후보로
   function ltmCands(before, after) {
@@ -4550,16 +4549,26 @@
     return o.filter(it => !/\(요약\)/.test(it.key) && plain(it).length > 40).filter(it => { const x = n.find(y => itemKey(y.key) === itemKey(it.key)); return x ? plain(x).length < plain(it).length * 0.7 : !alive(it); })
       .map(it => ({ key: itemKey(it.key), name: String(it.key).replace(/\s*\(삭제\)\s*$/, '').trim(), text: plain(it) }));
   }
+  // 노트가 85%를 넘었을 때 옮길 후보: 오래된 사건부터 80% 밑이 될 만큼(최근 사건 10개는 노트에 둬요)
+  function ltmOldest(memory, done) {
+    const ev = ltmCands(memory, '').filter(c => !done.includes(c.key)).slice(0, -10), out = [];
+    let over = stripProof(memory).length - NOTE_LIMIT * 0.8;
+    for (const c of ev) { if (over <= 0) break; out.push(c); over -= c.text.length + c.name.length + 4; }
+    return out;
+  }
   async function ltmQueue(chatId, before, after, turns) {
-    if (stripProof(before).length < NOTE_LIMIT * 0.85) return 0; // 노트가 85% 밑이면 날짜로그를 줄이지 않으니(mergeNote) 장기기억 후보도 안 잡아요
+    const full = stripProof(after).length >= NOTE_LIMIT * 0.85;
+    if (stripProof(before).length < NOTE_LIMIT * 0.85 && !full) return 0; // 노트가 85% 밑이면 날짜로그를 줄이지 않으니(mergeNote) 장기기억 후보도 안 잡아요
     let done = []; try { done = JSON.parse(String(await getValue('ltmdone:' + chatId, '[]')) || '[]'); } catch (_) {}
-    const cands = ltmCands(before, after).filter(c => !done.includes(c.key));
+    let cands = ltmCands(before, after).filter(c => !done.includes(c.key)), kind;
+    // AI가 하나도 안 줄였는데 노트가 85%를 넘었으면: 오래된 사건부터 80% 밑이 될 만큼 옮길 후보로(최근 사건 10개는 노트에 둬요)
+    if (!cands.length && full) { cands = ltmOldest(after, done); kind = 'full'; }
     if (!cands.length) return 0;
-    ltmQ = { turns, cands: [...(ltmQ?.cands || []).filter(c => !cands.some(x => x.key === c.key)), ...cands] };
+    ltmQ = { turns, cands: [...(ltmQ?.cands || []).filter(c => !cands.some(x => x.key === c.key)), ...cands], ...(kind ? { kind } : {}) };
     await setValue('ltmq:' + chatId, JSON.stringify(ltmQ));
     return cands.length;
   }
-  const LTM_PROMPT = "너는 롤플레잉 기억 노트의 옛 사건들을 사이트의 장기기억 카드로 옮긴다. 장기기억은 나중에 AI가 대화 내용과 비슷한 카드를 제목으로 찾아 꺼내 쓰는 기억이다. 그래서 제목은 '검색어', 본문은 '다시 이어 쓸 때 필요한 사실'이다.\n[카드 나누기 — 네가 정한다] 입력의 ▸ 사건을 읽고 몇 장으로 남길지 스스로 정한다. 관계가 바뀐 장면(고백·거절·폭로·계약·이별·죽음·큰 약속)은 한 장에 촘촘히. 자잘하거나 이어지는 사건은 같은 줄기(한 갈등의 시작→전개→끝)·같은 장소·연속된 며칠끼리 묶어 한 장에 2~3개. 카드 수는 대략 입력 사건 수의 1/2(사건이 1~2개면 1장, 10개면 5장쯤). 많이 묶어 장면이 흐려지는 것보다 장을 나누는 쪽을 고른다. 묶은 카드는 본문 날짜를 '첫 날짜~마지막 날짜'로 쓰고, 사건마다 핵심 전환(누가 무엇을 해서 무엇이 바뀜) 한 덩어리씩. 카드마다 keys에 담은 ▸ 제목을 입력 그대로 전부 넣고, 어떤 사건도 빠뜨리지 않는다.\n[title] 띄어쓰기·쉼표·특수문자까지 전부 세어 20자 이내(넘으면 잘림), 15~20자. 그 장면을 다른 장면과 구별해 주는 장소·물건·선물·사건·핵심 행동 키워드를 쉼표로 잇는다(예: 검은등대,은반지,비밀계약). 날짜·감정어·조사·특수기호는 넣지 않는다. 유저 이름은 넣지 않고, 거의 모든 카드에 나오는 주인공 이름도 넣지 않는다(검색 구별이 안 됨). 그 장면에만 나오는 인물이 중심이면 그 이름은 넣는다.\n[summary] 공백·줄바꿈 포함 300자 이내, 260~295자로 꽉 채운다(250자 밑은 실패). 300자 칸을 남기지 말고 입력에 있는 행동·반응·대사·물건 이름을 더 넣어 채운다. 맨 앞에 날짜를 연도까지 YYYY.MM.DD로(입력의 사건 제목·본문에 있는 연도를 그대로, 시간대가 있으면 뒤에 붙임) 쓰고 마침표. 같은 날짜의 카드가 여럿일 수 있으니 연도를 빼지 않는다. 그 뒤는 ' / '로 나눈 덩어리 4~6개: 누가 먼저 무엇을 했고(원인) → 상대가 어떻게 반응했고(감정이 드러난 행동·표정·말) → 무엇이 바뀌었는지(결과·관계 변화) 순서대로. 앞쪽일수록 중요한 것(관계 변화·약속·고백·거절·폭로·은폐 → 상호작용 연쇄 → 거짓말·소문의 내용 → 구체적 행동·호칭 변화 → 나중에 다시 불릴 결정적인 NPC 대사가 있으면 하나만 짧게 따옴표로(유저 캐릭터의 대사는 인용하지 않고 행동으로만 씀) → 물건·장소의 정확한 이름). 인물은 이름으로 쓰고 대명사를 쓰지 않는다. 종결은 명사형(확인, 약속, 거절)으로 줄이고 → 와 · 로 잇는다.\n[사실] 입력에 있는 것만, 입력의 무게 그대로. 시도와 완료, 약속과 실행, 사실과 소문·거짓말을 구분한다. 감정 반응은 빠뜨리지 않되 감정 이름만 쓰지 말고 그걸 보여 준 행동·표정·대사로. 관계 진전을 보여 준 스킨십은 입력에 있을 때만 쓴다. 입력에 없는 합의·동의·평가·결론 문장을 보태지 않고, 사건을 무난하게 바꾸지 않는다. 숫자·수량은 그대로. 근거·번역 줄은 넣지 않는다. 한국어로 쓴다.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"cards\":[{\"keys\":[\"입력의 ▸ 제목 그대로\"],\"title\":\"\",\"summary\":\"\"}]}";
+  const LTM_PROMPT = "너는 롤플레잉 기억 노트의 옛 사건들을 사이트의 장기기억 카드로 옮긴다. 장기기억은 나중에 AI가 대화 내용과 비슷한 카드를 제목으로 찾아 꺼내 쓰는 기억이다. 그래서 제목은 '검색어', 본문은 '다시 이어 쓸 때 필요한 사실'이다.\n[카드 나누기 — 네가 정한다] 입력의 ▸ 사건을 읽고 몇 장으로 남길지 스스로 정한다. 관계가 바뀐 장면(고백·거절·폭로·계약·이별·죽음·큰 약속)은 한 장에 촘촘히. 자잘하거나 바로 이어지는 사건만 같은 장소·같은 날끼리 한 장에 2개까지 묶는다. 카드 수는 대략 입력 사건 수의 2/3(사건이 3개면 2장, 10개면 6~7장쯤). 짧게 압축하는 게 목적이 아니라, 카드만 읽어도 날짜로그에 있던 그 장면(장소·분위기·누가 무엇을 했고 상대가 어떤 표정·말로 반응했는지)이 생생하게 다시 떠오르게 하는 게 목적이다. 묶어서 장면이 흐려질 것 같으면 무조건 장을 나눈다. 묶은 카드는 본문 날짜를 '첫 날짜~마지막 날짜'로 쓰고, 사건마다 핵심 전환(누가 무엇을 해서 무엇이 바뀜) 한 덩어리씩. 카드마다 keys에 담은 ▸ 제목을 입력 그대로 전부 넣고, 어떤 사건도 빠뜨리지 않는다.\n[title] 띄어쓰기·쉼표·특수문자까지 전부 세어 20자 이내(넘으면 잘림), 15~20자. 그 장면을 다른 장면과 구별해 주는 장소·물건·선물·사건·핵심 행동 키워드를 쉼표로 잇는다(예: 검은등대,은반지,비밀계약). 날짜·감정어·조사·특수기호는 넣지 않는다. 유저 이름은 넣지 않고, 거의 모든 카드에 나오는 주인공 이름도 넣지 않는다(검색 구별이 안 됨). 그 장면에만 나오는 인물이 중심이면 그 이름은 넣는다.\n[summary] 공백·줄바꿈 포함 300자 이내, 260~295자로 꽉 채운다(250자 밑은 실패). 300자 칸을 남기지 말고 입력에 있는 행동·반응·대사·물건 이름을 더 넣어 채운다. 맨 앞에 날짜를 연도까지 YYYY.MM.DD로(입력의 사건 제목·본문에 있는 연도를 그대로, 시간대가 있으면 뒤에 붙임) 쓰고 마침표. 같은 날짜의 카드가 여럿일 수 있으니 연도를 빼지 않는다. 그 뒤는 ' / '로 나눈 덩어리 4~6개: 누가 먼저 무엇을 했고(원인) → 상대가 어떻게 반응했고(감정이 드러난 행동·표정·말) → 무엇이 바뀌었는지(결과·관계 변화) 순서대로. 앞쪽일수록 중요한 것(관계 변화·약속·고백·거절·폭로·은폐 → 상호작용 연쇄 → 거짓말·소문의 내용 → 구체적 행동·호칭 변화 → 나중에 다시 불릴 결정적인 NPC 대사가 있으면 하나만 짧게 따옴표로(유저 캐릭터의 대사는 인용하지 않고 행동으로만 씀) → 물건·장소의 정확한 이름). 인물은 이름으로 쓰고 대명사를 쓰지 않는다. 종결은 명사형(확인, 약속, 거절)으로 줄이고 → 와 · 로 잇는다.\n[사실] 입력에 있는 것만, 입력의 무게 그대로. 시도와 완료, 약속과 실행, 사실과 소문·거짓말을 구분한다. 감정 반응은 빠뜨리지 않되 감정 이름만 쓰지 말고 그걸 보여 준 행동·표정·대사로. 관계 진전을 보여 준 스킨십은 입력에 있을 때만 쓴다. 입력에 없는 합의·동의·평가·결론 문장을 보태지 않고, 사건을 무난하게 바꾸지 않는다. 숫자·수량은 그대로. 근거·번역 줄은 넣지 않는다. 한국어로 쓴다.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"cards\":[{\"keys\":[\"입력의 ▸ 제목 그대로\"],\"title\":\"\",\"summary\":\"\"}]}";
   async function ltmAdd() {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !ltmQ?.cands?.length) return;
     if (ltmQ.cands.length > LTM_BATCH) { // 묶음이 크면 앞 12개만 먼저, 나머지는 큐에 남겨 이어서
@@ -4819,8 +4828,11 @@
       return (m ? '<span class="ltm-date">' + esc(m[1].replace(/\.$/, '')) + '</span>' : '') + rest.split(/\s+\/\s+|\n+/).filter(x => x.trim()).map(x => '<p>' + esc(x.trim()) + '</p>').join(''); };
     const when = x => x.at ? new Date(x.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) + ' 넣음' : '';
     let h = '<p class="secdesc">크랙 자체 장기기억 · 제목 20자·내용 300자 · 이 방에서 AI가 대화와 비슷한 카드를 찾아 꺼내 써요 · 장기기억에 넣은 사건은 노트에서 빠져요(둘 다 불려 섞이지 않게)</p>';
+    if (ltmLoading && ltmData && !busyNow) h += '<div class="notice"><b>최신 목록 확인 중…</b> 지금 보이는 건 지난번 목록이에요. 다 읽으면 바뀌어요(카드가 많으면 몇 초 걸려요).</div>';
     if (ltmQ?.cands?.length && busyNow) h += genCard() + '<div class="notice"><b>장기기억으로 옮기는 중…</b> 사건 ' + ltmQ.cands.length + '개' + (ltmAdd.rest?.length ? ' (뒤에 ' + ltmAdd.rest.length + '개 더)' : '') + ' · 카드로 압축해 올리고 노트에서 빼요</div>';
     else if (ltmQ?.cands?.length && ltmQ.kind === 'move') h += '<div class="notice"><b>옮기다 멈춘 사건 ' + ltmQ.cands.length + '개</b><br><small>' + ltmQ.cands.map(c => esc(c.name || c.key)).join(' · ') + '</small><br><button class="linkbtn" data-act="ltmadd">이어서 옮기기</button> · <button class="linkbtn" data-act="ltmskip">그만두기</button></div>';
+    else if (ltmQ?.cands?.length && ltmQ.kind === 'full') h += '<div class="notice"><b>노트가 ' + Math.round(stripProof(noteMemory()).length / NOTE_LIMIT * 100) + '% 찼어요 · 오래된 사건 ' + ltmQ.cands.length + '개</b><br><small>' + ltmQ.cands.map(c => esc(c.name || c.key)).join(' · ') + '</small><br>장기기억 카드로 옮기고 노트에서 빼면 80% 밑으로 내려가요. <button class="linkbtn" data-act="ltmadd">장기기억으로 옮기기</button> · <button class="linkbtn" data-act="ltmskip">그냥 두기</button></div>';
+    else if (!ltmQ?.cands?.length && stripProof(noteMemory()).length >= NOTE_LIMIT * 0.85) h += '<div class="notice"><b>노트가 ' + Math.round(stripProof(noteMemory()).length / NOTE_LIMIT * 100) + '% 찼어요</b><br>오래된 사건을 장기기억 카드로 옮기면 노트가 줄어요. <button class="linkbtn" data-act="ltmfull"' + (busyNow ? ' disabled' : '') + '>옮길 사건 고르기</button></div>';
     else if (ltmQ?.cands?.length) h += '<div class="notice"><b>' + ltmQ.turns + '턴 정리에서 줄어든 사건 ' + ltmQ.cands.length + '개</b><br><small>' + ltmQ.cands.map(c => esc(c.name || c.key)).join(' · ') + '</small><br>노트에서 줄어든 사건이에요. 원래 글을 장기기억 카드로 남겨 둘까요? <button class="linkbtn" data-act="ltmadd">장기기억에 남기기</button> · <button class="linkbtn" data-act="ltmskip">그냥 두기</button></div>';
     if (!ltmData) return h + emptyBox('장기기억을 불러오는 중이에요…');
     if (ltmData.err) return h + emptyBox('장기기억을 읽지 못했어요 · ' + esc(ltmData.err) + '<br><button class="linkbtn" data-act="ltmload">다시 읽기</button>');
@@ -4841,7 +4853,7 @@
           + '<div class="ltm-grp">' + gs.map(grp).join('') + '</div>'
           + '<button class="btn ltm-go wide" data-act="ltmmove"' + dis + '>' + k + '묶음 · 사건 ' + n + '개 옮기기</button>'
           + '<details class="ltm-how"><summary>어떻게 옮겨지나요? ›</summary><ol>'
-          + '<li>AI가 큰 장면은 카드 한 장, 자잘한 건 2~4개씩 묶어 300자 카드로 만들어요.</li>'
+          + '<li>AI가 큰 장면은 카드 한 장, 자잘하게 이어진 건 2개씩 묶어 300자 카드로 만들어요.</li>'
           + '<li>크랙 장기기억에 올리고 노트에서는 빼요. 둘 다 불려 섞이지 않게요.</li>'
           + '<li>원래 글은 보관해 둬서, 카드를 지울 때 노트로 되살릴 수 있어요.</li>'
           + '<li>노트가 차서 사건을 줄일 때도 남길지 자동으로 물어봐요.</li></ol></details>'
@@ -6044,7 +6056,7 @@
       bottom.innerHTML = `<div class="actions"><button class="btn" data-act="back">버리기</button><button class="btn pri" data-act="apply"${busyNow ? ' disabled' : ''}>채팅에 넣기</button></div>`;
     else if (nav.view === 'edit' || nav.view === 'pvEdit') bottom.innerHTML = '';
     else if (nav.view === 'run') bottom.innerHTML = nav.runBy === 'file'
-      ? `<div class="actions" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="extget"${busyNow ? ' disabled' : ''}>${String(nav.runMode).startsWith('chunk') ? '① 묶음 요청 만들기' : '① 요청 파일 받기'}</button>
+      ? `<div class="actions" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="extget"${busyNow ? ' disabled' : ''}>${String(nav.runMode).startsWith('chunk') ? '① 다음 묶음 요청 받기' : '① 요청 파일 받기'}</button>
           <label class="btn pri"${busyNow ? ' style="opacity:.4;pointer-events:none"' : ''}>② 결과 파일 불러오기<input type="file" accept=".txt,text/plain" data-out="extfile" hidden></label></div>`
       : `<div class="actions one"><button class="btn pri" data-act="go"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리 시작'}</button></div>`;
     else bottom.innerHTML = inSettings ? `<div class="actions one"><button class="btn pri" data-act="save">저장</button></div>` : '';
@@ -6190,7 +6202,7 @@
     if (mode === 'rebuild' && !opts.pasted && !opts.chunk && !confirm('채팅 전체를 처음부터 읽어서 노트를 새로 만들어요. 대화가 길면 비용과 시간이 꽤 들어요. 할까요?')) return;
     busyNow = true; render(); toast('대화를 읽는 중이에요…');
     try {
-      snapshot = await readSinceLastNote(chatId, 40);
+      snapshot = await readSinceLastNote(chatId);
       const n = snapshot.note;
       if (mode === 'tidy' && !n) { toast('다시 정리할 노트가 없어요. 먼저 "지금 정리"를 눌러 주세요.', 'info', 3000); return; }
       if (mode === 'new' && !snapshot.fresh.length) { if (n) mode = 'tidy'; else { toast('정리할 대화가 아직 없어요.', 'info', 2500); return; } }
@@ -6218,7 +6230,7 @@
         { const cut = msgs.cut; msgs = firstTurns(msgs); msgs.cut = cut; }
         base = ''; uptoId = msgId(msgs[msgs.length - 1]); turns = msgs.filter(m => msgRole(m) === 'user').length; from = 1;
         sub = `채팅 전체(1~${turns}턴)로 처음부터 다시 만들었어요. 문장을 새로 써서 '바뀐 것'이 실제보다 많아 보여요. 칸을 누르면 고칠 수 있어요.`;
-        if (msgs.cut) sub += ' ⚠ 대화가 길어서 최근 2,000개 메시지(약 1,000턴)만 읽었어요. 그 앞 내용은 빠졌고 턴 수도 실제보다 적어요.';
+        if (msgs.cut) sub += ' ⚠ 대화가 길어서 최근 1만 개 메시지(약 5,000턴)만 읽었어요. 그 앞 내용은 빠졌고 턴 수도 실제보다 적어요.';
         toast(`채팅 전체 ${turns}턴을 처음부터 정리하는 중이에요… (몇 분 걸릴 수 있어요)`);
       } else if (mode === 'tidy') {
         msgs = []; base = prev; uptoId = n.upto; turns = n.turns; from = n.turns;
@@ -6228,37 +6240,20 @@
         msgs = firstTurns(snapshot.fresh); base = oldList.length ? prev : ''; uptoId = msgId(msgs[msgs.length - 1]);
         from = (n?.turns || 0) + 1; turns = (n?.turns || 0) + msgs.filter(m => msgRole(m) === 'user').length;
         sub = n ? `이전 기억(1~${n.turns}턴) + 새 대화(${from}~${turns}턴)를 합쳤어요. 칸을 누르면 고칠 수 있어요.` : `처음부터 ${turns}턴을 정리했어요. 칸을 누르면 고칠 수 있어요.`;
-        toast(snapshot.complete ? `새 대화 ${turns - from + 1}턴을 정리하는 중이에요… (1~2분)` : '대화가 길어서 최근 2,000개 메시지까지만 읽었어요. 정리 중…');
+        toast(snapshot.complete ? `새 대화 ${turns - from + 1}턴을 정리하는 중이에요… (1~2분)` : '대화가 길어서 최근 1만 개 메시지까지만 읽었어요. 정리 중…');
       }
       // 이어서 정리할 기존 노트가 있으면 바뀐 것만 받아 끼워 넣습니다. 처음·전체 다시·형식 다시는 노트 전체를 받아요.
       const delta = mode === 'new' && !!base;
       if (noFull && mode !== 'rebuild') sub += ' ⚠ 이 기기에 근거가 든 전체본이 없어서(다른 기기에서 정리했거나 구글 백업이 없음) 채팅 속 노트로 이어 정리했어요. 예전 사건의 근거·명대사는 이번 결과에 빠질 수 있어요.';
-      if (opts.export && opts.parts) {
-        // 다른 AI로 나눠서 정리: 묶음(opts.parts턴)마다 요청을 하나씩 만들어 같은 AI 대화창에 차례로 보내요.
-        //   1번에만 지침 전체, 2번부터는 그 묶음 대화만. AI는 매번 지금까지의 노트 전체를 다시 쓰고, 마지막 결과만 불러오면 돼요.
-        const size = opts.parts, users = msgs.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0);
-        const groups = []; for (let k = 0; k < users.length; k += size) groups.push(msgs.slice(k ? users[k] : 0, users[k + size] ?? msgs.length));
-        if (!groups.length) { toast('정리할 대화가 없어요.', 'info', 2500); return; }
-        const sys = await buildSystem(false), N = groups.length;
-        const parts = groups.map((g, j) => {
-          const f = from + j * size, t = f + g.filter(m => msgRole(m) === 'user').length - 1, tag = `[나눠서 정리 · ${N}묶음 중 ${j + 1}번째 · ${f}~${t}턴]`;
-          return j === 0
-            ? EXT_HEAD + `\n\n${tag}\n${N > 1 ? `이 대화창에 2번째부터 ${N}번째 묶음까지 차례로 더 보낼 거야. 묶음마다 그때까지의 노트 전체를 같은 형식으로 다시 출력해 줘.\n` : ''}\n════════ 정리 지침 ════════\n\n${sys}\n\n════════ 정리할 자료 ════════\n\n${buildInput(base, g, fixed, edited, f)}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL
-            : `${tag}\n바로 앞에서 네가 출력한 노트가 지금까지의 기억 노트다. 처음 받은 정리 지침 그대로, 아래 새 대화를 그 노트에 반영해 노트 전체를 다시 출력해.\n- 앞 노트의 사건·인물·대사·근거를 지우거나 줄이지 않는다. 새로 생긴 일은 더하고, 바뀐 것만 고친다.\n- 새 대화가 앞 노트의 마지막 사건과 같은 날짜·같은 장면으로 이어지면 새 사건을 따로 만들지 않고 그 사건에 이어 쓴다. 날짜로그는 날짜 순서를 지킨다.\n- 출력 형식은 처음과 같다(===NOTE START=== ~ ===NOTE END=== 코드블록 하나).${j === N - 1 ? '\n- 이게 마지막 묶음이다. 노트 전체를 끝까지 출력한다.' : ''}\n\n════════ 새 대화 ════════\n\n${buildInput('', g, '', edited, f)}\n\n════════ 자료 끝 ════════`;
-        });
-        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub: `${N}묶음으로 나눠 정리한 결과예요. ` + sub, noteUpto: n?.upto || '', chunk: !!opts.chunk }));
-        nav.extParts = parts; nav.extCopied = []; render();
-        out('main').querySelector('[data-act="extpart"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        toast(`요청 ${N}개를 만들었어요. 1번부터 차례로 복사해 같은 AI 대화창에 보내고, 마지막 결과만 불러오면 돼요.`, 'ok', 6000);
-        return;
-      }
       if (opts.export) {
         // 다른 AI 채팅에 붙여 넣을 정리 요청: 지침 + 입력 + 출력 안내. 파일로 받고 클립보드에도 복사.
+        //   나눠서(opts.step): 이번 묶음만 담아요. 요청마다 지금 노트가 들어 있어 어느 AI·새 대화창에서도 따로 돼요. 불러오면 노트에 합쳐 넣고 다음 묶음으로.
         const text = EXT_HEAD + `\n\n════════ 정리 지침 ════════\n\n${await buildSystem(delta)}\n\n════════ 정리할 자료 ════════\n\n${buildInput(base, msgs, fixed, edited, from)}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL;
-        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '', chunk: !!opts.chunk }));
-        downloadText(`조아메모리-정리요청-${turns}턴.txt`, text);
+        await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '', chunk: !!opts.chunk, step: !!opts.step }));
+        downloadText(opts.step ? `조아메모리-나눠서-${from}~${turns}턴.txt` : `조아메모리-정리요청-${turns}턴.txt`, text);
         let copied = false; try { await navigator.clipboard.writeText(text); copied = true; } catch (_) {}
-        toast(`정리 요청 파일을 받았어요${copied ? '(클립보드에도 복사됨)' : ''}. AI 채팅에 올리고, 받은 노트를 아래 칸에 붙여 넣어 주세요.`, 'ok', 6000);
+        toast(opts.step ? `${from}~${turns}턴 요청 파일을 받았어요${copied ? '(클립보드에도 복사됨)' : ''}. AI에 보내고 결과를 ②로 불러오면 노트에 합쳐지고, 다음 묶음을 만들 수 있어요.`
+          : `정리 요청 파일을 받았어요${copied ? '(클립보드에도 복사됨)' : ''}. AI 채팅에 올리고, 받은 노트를 아래 칸에 붙여 넣어 주세요.`, 'ok', 6000);
         return;
       }
       let raw;
@@ -6393,7 +6388,7 @@
     chunkRun = { done: 0, total: rounds, stop: false };
     try {
       for (let first = fromStart; ; first = false) {
-        if (!first) { snapshot = await readSinceLastNote(chatId, 40); if (!freshTurns()) break; }
+        if (!first) { snapshot = await readSinceLastNote(chatId); if (!freshTurns()) break; }
         draft = null;
         await run(first ? 'rebuild' : 'new', { limit: size, chunk: true });
         if (!draft) { toast(`나눠서 정리를 멈췄어요(${chunkRun.done}묶음 넣음). 다시 누르면 이어서 해요.`, 'err', 5000); break; }
@@ -6447,10 +6442,14 @@
         } catch (_) { /* 예전 노트 정리가 실패해도 새 노트는 이미 들어감 */ }
       })();
       const ltmNew = draft.before && !draft.restore && String(await getValue('ltmAsk', 'on')) !== 'off' ? await ltmQueue(chatId, draft.before.memory, memory, draft.turns) : 0;
-      draft = null; nav = fresh();
+      const step = draft.step; draft = null; nav = fresh();
       toast(parked ? '저장했어요. 채팅에는 안 넣었어요(채팅에 넣기 꺼짐).' : '넣었어요. 이제 앱에서 이어서 RP하면 돼요.', 'ok', 3500);
       await refresh(); lap('다시 읽기');
       if (ltmNew) { nav.view = 'ltm'; ltmLoad(); render(); }
+      else if (step && freshTurns()) { // 파일로 나눠서 정리 중: 다음 묶음 화면으로
+        nav.view = 'run'; nav.runMode = 'chunk'; nav.runBy = 'file'; nav.chunkSize = String(await getValue('chunkSize', '50')); render(); out('main').scrollTop = 0;
+        toast(`넣었어요. 남은 ${freshTurns()}턴 · ① 다음 묶음 요청 받기를 눌러요.`, 'ok', 5000);
+      }
       if (String(await getValue('gsUrl', '')).trim()) gsSave(true); // 구글 백업을 켜 뒀으면 넣을 때마다 자동으로
     } catch (e) { toast('넣기 실패 · ' + e.message, 'err'); }
     finally { busyNow = false; render(); }
@@ -6551,17 +6550,18 @@
   }
 
   root.addEventListener('change', async e => {
-    if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); nav.extParts = null; await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
+    if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) await importBackup(f); return; }
     if (e.target.dataset?.out === 'extfile') {
       const file = e.target.files?.[0]; e.target.value = '';
       if (!file) return;
       const text = normalizeImported(await file.text()), problem = checkImported(text);
       if (problem) { toast(problem, 'err', 5000); return; }
-      let mode = nav.runMode || 'new', chunk = false; try { const ext = JSON.parse(String(await getValue('ext:' + chatIdFromPath(), '') || 'null')); mode = ext?.mode || mode; chunk = !!ext?.chunk; } catch (_) {}
+      let mode = nav.runMode || 'new', chunk = false, step = false; try { const ext = JSON.parse(String(await getValue('ext:' + chatIdFromPath(), '') || 'null')); mode = ext?.mode || mode; chunk = !!ext?.chunk; step = !!ext?.step; } catch (_) {}
       if (mode.startsWith('chunk')) mode = mode === 'chunkAll' ? 'rebuild' : 'new';
       nav.view = null; nav.tab = 'home';
       await run(mode, { pasted: text, chunk });
+      if (draft) draft.step = step; // 나눠서 정리 중이면 넣은 뒤(apply) 다음 묶음 화면으로
       // 불러온 결과는 바로 채팅에 넣습니다. 빠진 인물·빠진 핵심 경고가 있을 때만 미리보기에서 멈춰요.
       if (draft && nav.view === 'preview' && !(draft.lost || []).length && !(draft.gone || []).length && !(draft.askNames || []).length) await apply();
       return;
@@ -6595,6 +6595,8 @@
     const el = e.target.closest('[data-act]');
     if (!el || el.disabled) return;
     const act = el.dataset.act, arg = el.dataset.arg;
+    // 장기기억 목록을 새로 읽는 중엔 옛 목록을 보고 옮기거나 지우지 않게 막아요
+    if (ltmLoading && /^ltm(add|picked|move|back|backall|del|save|recover)$/.test(act)) return toast('장기기억 최신 목록을 확인하는 중이에요. 몇 초 뒤에 다시 눌러 주세요.', 'info', 3000);
     const keepScroll = fn => { const m = out('main'), y = m.scrollTop, STRIP = '.bd-menu,.bd-tabs,.bd-spots', xs = [...m.querySelectorAll(STRIP)].map(el => el.scrollLeft); fn(); m.scrollTop = y; [...m.querySelectorAll(STRIP)].forEach((el, i) => { el.scrollLeft = xs[i] || 0; }); };
     switch (act) {
       case 'toggle': return toggleSheet();
@@ -6637,6 +6639,10 @@
       case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); render(); out('main').scrollTop = 0; return;
       case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return ltmAdd();
+      case 'ltmfull': { const cid = chatIdFromPath(), cands = ltmOldest(noteMemory(), ltmDone); if (!cid) return;
+        if (!cands.length) return toast('옮길 수 있는 오래된 사건이 없어요(최근 사건 10개는 노트에 둬요).', 'info', 3500);
+        ltmQ = { turns: snapshot?.note?.turns || 0, cands, kind: 'full' }; await setValue('ltmq:' + cid, JSON.stringify(ltmQ));
+        nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); render(); out('main').scrollTop = 0; return; }
       case 'ltmskip': ltmQ = null; await setValue('ltmq:' + chatIdFromPath(), ''); return render();
       case 'ltmedit': nav.ltmEdit = arg || null; return keepScroll(render);
       case 'ltmpick': nav.ltmPick = !nav.ltmPick; if (nav.ltmPick) ltmGroupAI(); return keepScroll(render);
@@ -6795,13 +6801,13 @@
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
         nav.hasKey = !!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim();
         nav.runBy = nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
-        nav.runMode = 'new'; nav.extParts = null; nav.chunkSize = String(await getValue('chunkSize', '50'));
+        nav.runMode = 'new'; nav.chunkSize = String(await getValue('chunkSize', '50'));
         // 키가 있으면 '정리하기'는 고르는 창 없이 바로 이어서 정리합니다. 키가 없거나 '다른 방법'을 누를 때만 창을 띄워요.
         if (nav.hasKey && !arg) return run('new');
         nav.view = 'run'; render(); out('main').scrollTop = 0; return;
       }
       case 'runBy': nav.runBy = arg; await setValue('runBy', arg); return render();
-      case 'runMode': nav.runMode = arg; nav.extParts = null; return render();
+      case 'runMode': nav.runMode = arg; return render();
       case 'backup': return exportBackup();
       case 'gsave': return gsSave();
       case 'gload': return gsLoad();
@@ -6824,19 +6830,9 @@
       case 'reset': return resetMemory();
       case 'go': { const mode = nav.runMode; nav.view = null; nav.tab = 'home'; return mode === 'chunk' || mode === 'chunkAll' ? runChunks(mode === 'chunkAll') : run(mode); }
       case 'chunkstop': if (chunkRun) { chunkRun.stop = true; toast('지금 묶음을 넣고 멈출게요.', 'info', 2500); } return;
-      case 'extget': { const m = nav.runMode; // 나눠서 정리를 파일로: 이번 묶음(cycle턴)만 요청 파일로
-        return m === 'chunk' ? run('new', { export: true, parts: chunkSizeNow() }) : m === 'chunkAll' ? run('rebuild', { export: true, parts: chunkSizeNow(), chunk: true }) : run(m, { export: true }); }
-      case 'extpart': { const i = Number(arg), t = nav.extParts?.[i]; if (!t) return;
-        let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (_) {}
-        if (!ok) downloadText(`조아메모리-나눠서-${i + 1}of${nav.extParts.length}.txt`, t);
-        nav.extCopied = [...new Set([...(nav.extCopied || []), i])]; render();
-        return toast(ok ? `${i + 1}번을 복사했어요. AI 대화창에 붙여 보내고, 답이 끝나면 ${i + 1 < nav.extParts.length ? `${i + 2}번을 복사해요` : '마지막 결과를 .txt로 저장해 ② 결과 파일 불러오기로 열어요'}.` : `${i + 1}번을 파일로 받았어요(복사가 막혀 있어요).`, 'ok', 5000); }
-      case 'extpartall': { const ps = nav.extParts || []; // 묶음 파일을 한 번에(번호 순서가 파일 이름에 들어가요)
-        for (let i = 0; i < ps.length; i++) { downloadText(`조아메모리-나눠서-${String(i + 1).padStart(2, '0')}of${ps.length}.txt`, ps[i]); await new Promise(r => setTimeout(r, 400)); }
-        nav.extCopied = ps.map((_, i) => i); render();
-        return toast(`${ps.length}개 파일을 받았어요. 같은 AI 대화창에 01번부터 차례로 올리고, 마지막 결과만 ②로 불러와요.`, 'ok', 6000); }
-      case 'extpartdl': { const i = Number(arg), t = nav.extParts?.[i]; if (t) downloadText(`조아메모리-나눠서-${i + 1}of${nav.extParts.length}.txt`, t); return; }
-      case 'chunkSize': nav.chunkSize = arg; nav.extParts = null; await setValue('chunkSize', arg); return render();
+      case 'extget': { const m = nav.runMode; // 나눠서 정리를 파일로: 이번 묶음만 요청 파일 하나로. 불러와 넣으면 다음 묶음을 그 노트 기준으로 만들어요
+        return m === 'chunk' ? run('new', { export: true, limit: chunkSizeNow(), step: true }) : m === 'chunkAll' ? run('rebuild', { export: true, limit: chunkSizeNow(), chunk: true, step: true }) : run(m, { export: true }); }
+      case 'chunkSize': nav.chunkSize = arg; await setValue('chunkSize', arg); return render();
       case 'center': nav.center = arg; return keepScroll(render);
       case 'castpick': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'person': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
