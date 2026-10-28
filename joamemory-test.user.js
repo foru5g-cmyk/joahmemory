@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         테스트
+// @name         조아메모리ෆ 테스트
 // @namespace    memo-note.test
-// @version      3.9.83
+// @version      3.9.84
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -3331,10 +3331,10 @@
       ${n?.at ? `<p class="hero-meta">마지막 정리 · ${esc(new Date(n.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${n.by ? ` · ${esc(n.by)}${n.by === DEVICE ? ' (이 기기)' : ''}` : ''}</p>` : ''}
       <div class="hero-btns"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리하기'}</button>
 </div>
-      <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label><span class="hero-dot">·</span><label class="inj-sw"><input type="checkbox" data-act="scenemode"${busyNow ? ' disabled' : ''}><i></i>웹 모드</label>
+      <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label><span class="hero-dot">·</span><label class="inj-sw"><input type="checkbox" data-act="scenemode"${sceneOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>웹 모드</label>
         ${n ? `<span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button>` : ''}</div>
       ${n ? '' : '<p class="muted" style="text-align:center;margin:10px 0 0">정리하면 지금까지의 이야기를 노트로 만들어 채팅 안에 보이지 않게 넣어 둬요.</p>'}</section>`;
-    if (!n) return hero + verFoot();
+    if (!n) return hero + (sceneOn ? `<p class="muted" style="text-align:center;margin:12px 0 0;font-size:13px">🌐 웹 모드 켜짐 · ${autoSumOn ? `${cycle}턴이 쌓이면 첫 기억을 알아서 만들어요` : '자동 정리 꺼짐 · 정리하기를 눌러 첫 기억을 만들어요'}</p>` : '') + verFoot();
 
     // 노트 구성: AI가 실제로 읽는 노트 기준. 한 줄 색 막대 + 크기순 칩(누르면 그 칸으로)
     const parts = splitSections(injectedText).map(x => ({ key: x.key, len: x.body.length })).filter(x => x.len).sort((a, b) => b.len - a.len);
@@ -6749,11 +6749,14 @@
   })();
   // 웹 모드 바꾸기: 정리 주기·노트 크기도 그 모드 기본으로. save면 이 방 선택으로 저장(새 방 기본값도)
   async function applyScene(on, chatId, save) {
+    if (save) sceneGen++; // 내가 바꾼 횟수(읽는 중이던 refresh가 되돌리지 않게)
     sceneOn = on; cycle = on ? 5 : 20; NOTE_LIMIT = on ? NO_LIMIT : 50000;
     if (save && chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); // 이 방만 · 다른 방은 안 바뀜
     try { repaintInline(); } catch (_) {}
   }
+  let sceneGen = 0;
   async function refresh() {
+    const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
     loading = true;
@@ -6764,7 +6767,7 @@
         let rs = null; try { rs = JSON.parse(String(await getValue('scene:' + chatId, '') || 'null')); } catch (_) {}
         const nn = snap.note, other = !!nn && !nn.parked && String(nn.by || '') !== DEVICE && (!rs || String(nn.at || '') > String(rs.at || ''));
         const want = other ? !!nn.web : rs ? !!rs.on : nn ? !!nn.web : false; // 처음 여는 방은 꺼짐
-        if (want !== sceneOn || (want && NOTE_LIMIT !== NO_LIMIT)) { const flip = want !== sceneOn; await applyScene(want, chatId, false); if (flip && other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
+        if (gen0 === sceneGen && (want !== sceneOn || (want && NOTE_LIMIT !== NO_LIMIT))) { const flip = want !== sceneOn; await applyScene(want, chatId, false); if (flip && other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
       }
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
@@ -7382,7 +7385,7 @@
       case 'wdopt': nav.wdOpt = !nav.wdOpt; return render();
       case 'autosum': autoSumOn = !!el.checked; await setValue('autoSum', autoSumOn ? 'on' : 'off');
         toast(autoSumOn ? '자동 정리를 켰어요 · 5턴마다 알아서 정리해요' : '자동 정리를 껐어요 · 이 기기에선 \'지금 바로 정리\'를 누를 때만 정리해요 · 기억 넣기는 그대로', 'ok', 4000); render(); if (autoSumOn) autoSum(); return;
-      case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; await applyScene(on, chatIdFromPath(), true);
+      case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; await applyScene(on, chatIdFromPath(), true); fixTab(); render();
         toast(on ? '웹 모드를 켰어요 · 이 방만 · 보낼 때마다 기억을 골라 넣어요' : '웹 모드를 껐어요 · 이 방만', 'ok', 3000); await refresh();
         if (on) { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
           if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { nav.tab = 'settings'; nav.setTab = 'ai'; nav.view = null; render(); out('main').scrollTop = 0; ui('[data-set="apiKey"]')?.focus();
