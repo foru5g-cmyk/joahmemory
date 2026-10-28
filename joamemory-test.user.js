@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         테스트
 // @namespace    memo-note.test
-// @version      3.9.81
+// @version      3.9.82
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -6664,7 +6664,7 @@
     if (!snapshot.note && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 5턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
-    { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') { setTimeout(() => refresh().then(autoSum), 10000); return; } }
+    { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') return; /* 답이 오면 말풍선이 바뀌어 다시 불려요 */ }
     autoBusy = true; repaintInline(); if (isOpen() && !nav.view) render();
     try {
       pageToast(freshTurns() + '턴이 쌓여서 기억을 갱신하는 중이에요…');
@@ -6726,17 +6726,21 @@
     const orig = WS.prototype.send, sendQ = new Map(); // sendQ: 방마다 보내기 순서
     const parseFrame = raw => { if (typeof raw !== 'string') return null; const m = /^42(\/[^,]+,)?(\d*)(\[.*)$/s.exec(raw); if (!m) return null;
       try { const a = JSON.parse(m[3]); return Array.isArray(a) && typeof a[0] === 'string' ? { event: a[0], payload: a[1] } : null; } catch (_) { return null; } };
+    const liveSock = new Map(); // 주소별로 지금 살아 있는 연결(핑 등 아무 프레임이나 보낼 때 기억)
     WS.prototype.send = function (data) {
+      if (this.readyState === 1) liveSock.set(this.url, this);
       const f = sceneOn && injectOn ? parseFrame(data) : null, chatId = chatIdFromPath();
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
       const slow = setTimeout(() => pageToast('기억 넣는 중… 곧 보내요'), 3000);
       const before = sendQ.get(chatId) || Promise.resolve();
-      const task = before.then(() => { moving = true; injPicking = true; repaintInline(); if (isOpen()) { ui('.wd')?.classList.add('picking'); const lv = ui('.wd-status'); if (lv && !lv.querySelector('.wd-live')) lv.insertAdjacentHTML('beforeend', '<span class="wd-live">기억 고르는 중…</span>'); } return Promise.race([prepareSend(chatId, said, f.event), new Promise(r => setTimeout(() => r('timeout'), 20000))]); })
+      const task = before.then(() => { moving = true; injPicking = true; repaintInline(); if (isOpen()) { ui('.wd')?.classList.add('picking'); const lv = ui('.wd-status'); if (lv && !lv.querySelector('.wd-live')) lv.insertAdjacentHTML('beforeend', '<span class="wd-live">기억 고르는 중…</span>'); } return Promise.race([prepareSend(chatId, said, f.event), new Promise(r => setTimeout(() => r('timeout'), Math.max(1000, 20000 - (Date.now() - t0))))]); })
         .then(r => { console.info('[조아메모리 실험판] 보내기 전 기억 고르기 · ' + r + ' · ' + (Date.now() - t0) + 'ms'); if (['timeout', 'no-full', 'no-carrier'].includes(r)) logErr('주입', { timeout: '기억 넣기가 오래 걸려(' + Math.round((Date.now() - t0) / 1000) + '초) 이번 메시지는 지난 기억 그대로 보냄', 'no-full': '이 기기에 전체 기억이 없어 채팅 속 일부 그대로 보냄(정리한 기기·구글 백업 필요)', 'no-carrier': '노트를 넣을 AI 답이 없어 그대로 보냄' }[r]); return logInj(chatId, f.event, said, r, Date.now() - t0); }, e => { console.info('[조아메모리 실험판] 보내기 전 기억 고르기 실패 · ' + e.message); logErr('주입', '기억 넣기 실패 · ' + e.message); return logInj(chatId, f.event, said, 'fail', Date.now() - t0); })
         .finally(() => { clearTimeout(slow); moving = false; injPicking = false; repaintInline(); if (isOpen()) refresh().then(render).catch(() => {}); 
-          if (sock.readyState !== 1) { pageToast('크랙 연결이 바뀌어 이 메시지가 안 보내졌을 수 있어요 · 다시 보내 주세요'); logErr('보내기', '기억을 넣는 사이 크랙 연결이 바뀌어 메시지가 안 보내졌을 수 있음'); return; }
-          orig.call(sock, data); });
+          const to = sock.readyState === 1 ? sock : liveSock.get(sock.url)?.readyState === 1 ? liveSock.get(sock.url) : null;
+          if (!to) { pageToast('크랙 연결이 끊겨 이 메시지가 안 보내졌어요 · 다시 보내 주세요'); logErr('보내기', '기억을 넣는 사이 크랙 연결이 끊겨 메시지가 안 보내짐'); return; }
+          if (to !== sock) logErr('보내기', '기억을 넣는 사이 크랙 연결이 바뀌어 새 연결로 보냄');
+          orig.call(to, data); });
       sendQ.set(chatId, task.catch(() => {}));
     };
   })();
