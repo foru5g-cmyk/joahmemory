@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         테스트
 // @namespace    memo-note.test
-// @version      3.9.84
+// @version      3.9.87
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -165,7 +165,7 @@
         onload: r => { if (r.status >= 200 && r.status < 300) return resolve(r.responseText || '');
           let msg = ''; try { const j = JSON.parse(r.responseText); msg = (Array.isArray(j) ? j[0] : j)?.error?.message || ''; } catch (_) {}
           reject(new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`)); },
-        ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')) });
+        ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
     });
   }
   function request(method, url, { body, headers = {}, timeout = 30000 } = {}) {
@@ -183,6 +183,7 @@
         },
         ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')),
         onerror: () => reject(new Error('네트워크 요청에 실패했어요.')),
+        onabort: () => reject(new Error('요청이 끊겼어요.')),
       });
     });
   }
@@ -1173,7 +1174,7 @@
       gmRequest({ method: 'PATCH', url, timeout: 30000, data: utf16Blob(json),
         headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + token(), platform: 'web' },
         onload: r => r.status >= 200 && r.status < 300 ? resolve() : reject(Object.assign(new Error(`HTTP ${r.status}`), { status: r.status })),
-        ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')) });
+        ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
     });
   }
   // 아이폰 Userscripts 앱은 확장 요청에 블롭을 못 실을 수 있어서, 페이지의 fetch로도 한 번 보내 봅니다(크랙 사이트가 자기 API를 부르는 것과 같은 길).
@@ -1267,7 +1268,9 @@
   // 7. 웹 화면에서 노트 가리기 (혹시 그려졌을 때)
   // ══════════════════════════════════════════════════════════════
   const pageStyle = document.createElement('style');
-  pageStyle.textContent = '.memo-note-hidden{display:none!important}';
+  pageStyle.textContent = '.memo-note-hidden{display:none!important}'
+    + '#memo-note-inline.jm-flash{animation:jm-flash 1s ease-in-out 2!important}@keyframes jm-flash{0%,100%{transform:scale(1);filter:none}50%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}}'
+    + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}';
   document.documentElement.appendChild(pageStyle);
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
   const NOTE_MARK = /\[\/\/\]: # ["(]|<!--MEMO_NOTE|MEMO_NOTE/;
@@ -1401,7 +1404,7 @@
   // 9. 화면 틀
   // ══════════════════════════════════════════════════════════════
   // 위 메뉴 5개. 기억(지난 이야기) / 상태(지금 값) / 인물 / 감정선(감정 변화)
-  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['now', '상태'], ['people', '인물'], ['fixed', '고정'], ['inj', '주입'], ['backup', '백업']]; // 웹 모드 메뉴
+  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['now', '상태'], ['people', '인물'], ['fixed', '고정'], ['inj', '주입'], ['phone', '기타']]; // 웹 모드 메뉴 · 백업은 설정 › 백업
   const TABS = [['home', '홈'], ['timeline', '타임라인'], ['now', '상태'], ['people', '인물'], ['phone', 'etc'], ['settings', '설정']];
   const STORY_TABS = ['명대사', '세계관', FIXED]; // 줄거리·날짜로그·서사 고리는 타임라인 탭에
   const NOW_TABS = ['현재상태', '소지품', '장소·조직']; // 옷차림은 현재상태의 인물 카드 안에
@@ -2706,6 +2709,7 @@
     .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
     .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
     .screen.fx-open nav.top{display:none!important}
+    .bk-info{margin:12px 2px 0}.bk-info summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--graphite);list-style:none}.bk-info summary::-webkit-details-marker{display:none}.bk-info summary::after{content:' ›'}.bk-info[open] summary::after{content:' ⌄'}.bk-info p{margin:8px 0 0;font-size:12.5px;line-height:1.6}
   </style>
   <button class="fab" data-act="toggle" aria-label="조아메모리 열기">${icon('mark', 'currentColor', 16)}<span data-out="fab">기억</span></button>
   <div class="under" data-act="close" aria-hidden="true"></div>
@@ -2739,7 +2743,7 @@
   }
   { let at = 0; ui('main') && ui('main').addEventListener('scroll', e => { const y = e.target.scrollTop, nv = ui('nav.top'); if (!nv) return; const hid = nv.classList.contains('dock-hide'); // at: 방향이 바뀐 자리
     if (y < 60) { nv.classList.remove('dock-hide'); at = y; } else if (hid) { if (y > at) at = y; else if (y < at - 24) { nv.classList.remove('dock-hide'); at = y; } } else { if (y < at) at = y; else if (y > at + 24) { nv.classList.add('dock-hide'); at = y; } } }, { passive: true }); }
-  const fixTab = () => { if (sceneOn && nav.ppl === 'feel') nav.ppl = 'list'; if (!sceneOn && ['backup', 'inj', 'fixed'].includes(nav.tab)) nav.tab = 'home'; if (sceneOn && nav.tab === 'phone') nav.tab = 'home'; };
+  const fixTab = () => { if (sceneOn && nav.ppl === 'feel') nav.ppl = 'list'; if (!sceneOn && ['backup', 'inj', 'fixed'].includes(nav.tab)) nav.tab = 'home'; };
   if (window.visualViewport) ['resize', 'scroll'].forEach(ev => window.visualViewport.addEventListener(ev, () => { if (isOpen()) fitScreen(); }));
   window.addEventListener('resize', () => { if (isOpen()) fitScreen(); });
   for (const ev of ['focusin', 'focusout']) root.addEventListener(ev, () => setTimeout(() => { if (isOpen()) fitScreen(); }, 350));
@@ -3300,21 +3304,24 @@
       <details class="il-fold"><summary>주입 기록 보기${logs.length ? ' · ' + logs.length + '개' : ''}</summary>${logCard}</details>
     </section>`;
   }
-  function backupHtml() {
+  function backupHtml(etc) {
     // 백업 한 화면: 파일로 받기 · 파일로 되돌리기 · 구글 드라이브(연결돼 있으면 넣을 때마다 자동)
     const dis = busyNow ? ' disabled' : '';
     return `<section class="bk">
-      <div class="bk-card"><div class="bk-h"><b>파일로 백업</b><small>이 방의 기억·정리 기록·명대사·ETC를 파일 하나로</small></div>
+      <div class="bk-card"><div class="bk-h"><b>💾 파일로 백업</b><small>이 방의 기억·정리 기록·명대사·ETC를 파일 하나로</small></div>
         <div class="bk-row"><button class="btn pri" data-act="backup"${dis}>백업 파일 받기</button>
         <label class="btn">백업 파일로 되돌리기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>
-      <div class="bk-card"><div class="bk-h"><b>구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · 정리해 넣을 때마다 자동으로 올라가요' : '연결하면 폰·컴퓨터가 같은 기억을 써요'}</small></div>
+      <div class="bk-card"><div class="bk-h"><b>✂️ 나눠서 · 다른 AI로 정리</b><small>밀린 턴을 묶음으로 나눠 이어 정리 · 처음부터 다시 · ChatGPT·Gemini·Claude 채팅에 파일로 맡기기</small></div>
+        <div class="bk-row"><button class="btn pri" data-act="runsheet" data-arg="chunk"${dis}>나눠서 이어 정리</button><button class="btn" data-act="runsheet" data-arg="pick"${dis}>다른 방법 고르기</button></div></div>
+      <div class="bk-card"><div class="bk-h"><b>☁️ 구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · 정리해 넣을 때마다 자동으로 올라가요' : '연결하면 폰·컴퓨터가 같은 기억을 써요'}</small></div>
         <div class="bk-row">${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>지금 올리기</button><button class="btn" data-act="gload"${dis}>드라이브에서 받기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div>
         ${nav.gsOn ? '<button class="linkbtn bk-more" data-act="gsopen">연결 설정</button>' : ''}</div>
-      <p class="muted bk-note">웹 모드의 전체 기억은 이 기기에 있어요. 다른 기기에서 쓰거나 브라우저를 지우기 전에 꼭 백업해 두세요.</p>
+      ${etc ? `<div class="bk-card"><div class="bk-h"><b>🧹 ETC 비우기</b><small>커뮤·폰·단톡 등만 지워요 · 기억 노트는 그대로</small></div>
+        <div class="bk-row"><button class="btn" data-act="etcopen"${dis}>비우기</button></div></div>` : ''}
+      ${sceneOn ? '<p class="muted bk-note">웹 모드의 전체 기억은 이 기기에 있어요. 다른 기기에서 쓰거나 브라우저를 지우기 전에 꼭 백업해 두세요.</p>' : ''}
     </section>`;
   }
   function homeHtml() {
-    if (sceneOn && nav.tab === 'phone') nav.tab = 'home';
     if (!snapshot) return emptyBox(loading ? '대화를 읽는 중이에요…' : '불러오는 중…');
     const n = snapshot.note, turns = freshTurns(), left = Math.max(0, cycle - turns), due = turns >= cycle;
     // 큰 진행 링: 다음 정리까지
@@ -3389,6 +3396,7 @@
     const rr = 15, rc = 2 * Math.PI * rr, injPc = lastInj ? Math.min(100, Math.round(lastInj.chars / INJ_MAX * 100)) : 0;
     const dash = `<section class="wd${injPicking ? ' picking' : ''}">
       <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
+      ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<div class="notice" style="margin:0 0 12px"><b>이 기기엔 전체 기억이 없어요</b><br><small>다른 기기(또는 예전 버전)에서 웹 모드로 정리한 방이라 채팅엔 고른 일부만 있어요. 그래서 이 기기에선 새로 고르기·이어서 정리가 안 돼요.</small><div class="bk-row" style="margin-top:10px"><label class="btn">백업 파일 불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label><button class="btn pri" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button></div></div>` : ''}
       <div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
@@ -6465,7 +6473,7 @@
         ${row('Gemini 키', `<span class="keybox"><input type="password" data-set="apiKey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button type="button" data-act="peek">보기</button></span>`)}
         ${row('Claude 키', `<span class="keybox"><input type="password" data-set="claudeKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"><button type="button" data-act="peek">보기</button></span>`)}
         <p class="sfoot">쓸 모델 회사의 키만 넣으면 돼요. 키는 이 브라우저에만 저장돼요. Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).</p>
-        <div class="jump" style="margin-top:14px"><button data-act="runsheet" data-arg="pick"${busyNow ? ' disabled' : ''}><b>다른 방법으로 정리</b><span class="v">다른 AI · 처음부터 · 나눠서</span></button></div>`)
+`)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
         ${row('웹 모드', sw('sceneMode'), '켜면 전체 기억은 이 기기에 두고, 채팅엔 지금 장면에 맞는 것만 5만 자까지 골라 넣어요 · 새 답마다 다시 고르고(이름·낱말 + 제미나이 의미 검색) · 5턴마다 자동 정리(키 필요) · 노트 크기 제한 없음(안 줄이고 장기기억으로 안 옮겨요) · 끄면 원래대로')}
@@ -6478,18 +6486,14 @@
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
         <button data-act="errlog"><b>오류 기록</b><span class="v">${errLog?.length ? `${errLog.length}개` : '없음'}</span></button>
         </div>`)
-      + box('백업', '다른 방법으로 정리 · 이 방 전체 내보내기 · 불러오기', `
-
-        <div class="jump"><button data-act="gsopen"><b>구글 드라이브 백업</b><span class="v">${nav.gsOn ? '연결됨 · 넣을 때마다 자동' : '연결하기'}</span></button>
-        <button data-act="backup"><b>이 방 전체 내보내기</b><span class="v">파일 하나로</span></button>
-        <button data-act="etcopen"><b>ETC 비우기</b><span class="v">커뮤·폰 등 · 기억 노트는 그대로</span></button>
-        <label class="jumprow"><b>백업 불러오기</b><span class="v">백업·노트 파일 열기</span><input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div>
+      + box('백업', '파일 · 나눠서 정리 · 구글 드라이브 · ETC 비우기', `
+        ${backupHtml(true)}
         ${nav.gsSheet ? gsSheetHtml() : ''}${nav.etcSheet ? etcSheetHtml() : ''}
-        <p class="muted" style="margin:10px 2px 0;font-size:12.5px;line-height:1.6">· 담기는 것: 기억 노트(근거·감정선까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
+        <details class="bk-info"><summary>자세히 · 무엇이 담기나요</summary><p class="muted">· 담기는 것: 기억 노트(근거·감정선까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
         · API 키는 담기지 않아요(파일이 새도 안전하게).<br>
         · 구글 드라이브를 연결해 두면 정리해서 넣을 때마다 자동으로 올라가고, 새 기기에서 방을 열면 불러올지 물어봐요.<br>
         · 받은 파일을 아이클라우드·구글 드라이브에 저장해 두면, 다른 기기에서 "백업 불러오기"로 열 수 있어요.<br>
-        · 불러오면 노트는 확인 화면을 거쳐 채팅에 넣고, ETC·명대사·기록은 이 기기에 바로 들어가요.</p>`);
+        · 불러오면 노트는 확인 화면을 거쳐 채팅에 넣고, ETC·명대사·기록은 이 기기에 바로 들어가요.</p></details>`);
   }
 
 
@@ -6664,6 +6668,7 @@
     if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview' || freshTurns() < cycle) return;
     autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; if (!autoSumOn) return;
     const once = k => { if (autoSum[k] === chatId) return; autoSum[k] = chatId; return true; };
+    if (snapshot.note?.sel && !(fullNote && fullNote.upto === snapshot.note.upto)) { if (once('nofull')) pageToast('이 기기엔 전체 기억이 없어 자동 정리를 건너뛰어요 · 조아메모리 홈에서 "처음부터 다시 만들기"를 눌러 주세요'); return; }
     if (!snapshot.note && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 5턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
@@ -6754,12 +6759,13 @@
     if (save && chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); // 이 방만 · 다른 방은 안 바뀜
     try { repaintInline(); } catch (_) {}
   }
-  let sceneGen = 0;
+  let sceneGen = 0, loadingAt = 0;
+  const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
   async function refresh() {
     const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
-    loading = true;
+    loading = true; loadingAt = Date.now();
     try {
       let snap = await readSinceLastNote(chatId);
       if (chatIdFromPath() !== chatId) return;
@@ -6767,7 +6773,7 @@
         let rs = null; try { rs = JSON.parse(String(await getValue('scene:' + chatId, '') || 'null')); } catch (_) {}
         const nn = snap.note, other = !!nn && !nn.parked && String(nn.by || '') !== DEVICE && (!rs || String(nn.at || '') > String(rs.at || ''));
         const want = other ? !!nn.web : rs ? !!rs.on : nn ? !!nn.web : false; // 처음 여는 방은 꺼짐
-        if (gen0 === sceneGen && (want !== sceneOn || (want && NOTE_LIMIT !== NO_LIMIT))) { const flip = want !== sceneOn; await applyScene(want, chatId, false); if (flip && other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
+        if (gen0 === sceneGen && (want !== sceneOn || (want && NOTE_LIMIT !== NO_LIMIT))) { const flip = want !== sceneOn; if (flip && snapshot) logErr('웹 모드', (want ? '켜짐' : '꺼짐') + '으로 바뀜 · 이유: ' + (other ? '다른 기기 노트(' + (nn.by || '?') + ')' : rs ? '이 방 선택(' + (rs.on ? '켬' : '끔') + ' ' + String(rs.at || '').slice(0, 16) + ')' : nn ? '노트 표시(web=' + (nn.web ? 1 : 0) + ')' : '새 방') + ' · 이 기기 ' + DEVICE); await applyScene(want, chatId, false); if (flip && other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
       }
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
@@ -6780,7 +6786,7 @@
           if (await moveNote(chatId, snap)) {
             snap = await readSinceLastNote(chatId);
             await setValue('moved:' + chatId, JSON.stringify({ at: Date.now(), from: behind }));
-            pageToast(`기억(1~${snap.note?.turns || '?'}턴)을 최근 AI 답변 쪽으로 옮겼어요`);
+            if (sceneOn) flashHeart(); else pageToast(`기억(1~${snap.note?.turns || '?'}턴)을 최근 AI 답변 쪽으로 옮겼어요`);
           }
         }
         catch (e) { toast('노트 옮기기 실패 · ' + e.message, 'err'); }
@@ -6900,7 +6906,7 @@
         else if (g && g.upto === n.upto && same(g.memory)) baseMem = g.memory;
         else noFull = true;
       }
-      if (noFull && n.sel) { toast('이 기기에 전체 기억이 없어요(채팅엔 장면에 맞춘 일부만 있어요). 정리한 기기에서 하거나 구글 백업을 연결해 주세요.', 'err', 7000); return; }
+      if (noFull && n.sel && !['rebuild', 'chunkAll'].includes(mode)) { toast('이 기기엔 전체 기억이 없어요(채팅엔 장면에 맞춘 일부만 있어요). 백업 파일을 불러오거나, 홈의 "처음부터 다시 만들기"로 이 기기에 새로 만들어 주세요.', 'err', 7000); return; }
       const oldList = n ? splitSections(baseMem) : [];
       const fixed = oldList.find(x => x.key === FIXED)?.body || '';
       // 명대사는 이 정리에서 만들지 않는 칸(명대사 탭에서 따로 만듦)이라 AI에게 보내지 않고, 결과에 그대로 다시 붙입니다.
@@ -7218,7 +7224,7 @@
     finally { busyNow = false; render(); }
   }
 
-  async function saveSettings(quiet) {
+  async function saveSettings(quiet, target) {
     const wasScene = sceneOn;
     cycle = Number(out('cyclepick').value) || cycle;
     NOTE_LIMIT = Number(out('limitpick').value) || NOTE_LIMIT;
@@ -7229,7 +7235,7 @@
     await setValue('model', ui('[data-set="model"]').value.trim() || DEFAULT_MODEL);
     await setValue('autoMove', ui('[data-set="autoMove"]').checked ? 'on' : 'off');
     await setValue('ltmAsk', ui('[data-set="ltmAsk"]').checked ? 'on' : 'off');
-    { const on = ui('[data-set="sceneMode"]').checked; // 웹 모드를 바꾸면 정리 주기·노트 크기도 그 모드 기본으로
+    if (!quiet || target?.dataset?.set === 'sceneMode') { const on = ui('[data-set="sceneMode"]').checked; // 웹 모드 스위치를 직접 눌렀을 때만 · 정리 주기·노트 크기도 그 모드 기본으로
       if (on !== sceneOn) { await applyScene(on, chatIdFromPath(), true);
         toast(on ? '이 방은 웹 모드를 켰어요 · 5턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
@@ -7253,7 +7259,7 @@
     if (ki) ki.textContent = `${mlabel} · ` + ([k?.value && 'Gemini', ck?.value && 'Claude'].filter(Boolean).join('·') + (k?.value || ck?.value ? ' 키 넣음' : '키 없음'));
     if (m && !m.value) { m.value = await getValue('model', DEFAULT_MODEL); pickModel(MODEL_IDS.includes(m.value) ? m.value : ''); }
     const a = ui('[data-set="autoMove"]'); if (a && !a.dataset.filled) { a.checked = String(await getValue('autoMove', 'on')) !== 'off'; a.dataset.filled = '1'; }
-    const sm = ui('[data-set="sceneMode"]'); if (sm && !sm.dataset.filled) { sm.checked = sceneOn; sm.dataset.filled = '1'; }
+    const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el && !el.dataset.filled) { el.checked = String(await getValue(key, 'on')) !== 'off'; el.dataset.filled = '1'; } }
@@ -7282,7 +7288,7 @@
       return;
     }
     if (e.target.dataset?.out === 'modelpick') { pickModel(e.target.value); if (!e.target.value) ui('[data-set="model"]')?.focus(); }
-    if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true); }
+    if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true, e.target); }
   });
   // 다른 AI가 준 결과(파일이든 붙여 넣은 글이든)를 바로 채팅에 넣어요
   async function importResult(raw) {
@@ -7559,7 +7565,7 @@
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
         nav.hasKey = !!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim();
         nav.runBy = nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
-        nav.runMode = 'new'; nav.chunkSize = String(await getValue('chunkSize', '50'));
+        nav.runMode = ['chunk', 'rebuild'].includes(arg) ? arg : 'new'; nav.chunkSize = String(await getValue('chunkSize', '50'));
         // 키가 있으면 '정리하기'는 고르는 창 없이 바로 이어서 정리합니다. 키가 없거나 '다른 방법'을 누를 때만 창을 띄워요.
         if (nav.hasKey && !arg) return run('new');
         nav.view = 'run'; render(); out('main').scrollTop = 0; return;
@@ -7649,6 +7655,8 @@
   // ══════════════════════════════════════════════════════════════
   // 보내기 버튼 바로 왼쪽에 들어가는 둥근 버튼: 링이 차오르고 가운데 숫자는 다음 정리까지 남은 턴.
   const inlineBtn = document.createElement('button');
+  { const d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML'); // 같은 그림이면 다시 안 넣기
+    Object.defineProperty(inlineBtn, 'innerHTML', { get() { return d.get.call(this); }, set(v) { if (this.__h === v) return; this.__h = v; d.set.call(this, v); } }); }
   inlineBtn.type = 'button';
   inlineBtn.id = 'memo-note-inline';
   inlineBtn.setAttribute('aria-label', '조아메모리 열기');
@@ -7660,7 +7668,7 @@
   function paintInlineButton(_label, due) {
     const turns = snapshot ? Math.min(freshTurns(), cycle) : 0, left = Math.max(0, cycle - turns);
     const r = 12.5, c = 2 * Math.PI * r, p = snapshot ? turns / cycle : 0;
-    inlineBtn.setAttribute('aria-label', snapshot ? (due ? '조아메모리 · 정리할 때예요' : `조아메모리 · 다음 정리까지 ${left}턴`) : '조아메모리 열기');
+    inlineBtn.setAttribute('aria-label', snapshot ? (due ? '조아메모리 · 정리할 때예요' : `조아메모리 · 다음 정리까지 ${left}턴`) : '조아메모리 열기'); inlineBtn.title = inlineBtn.getAttribute('aria-label');
     const over = snapshot ? Math.max(0, freshTurns() - cycle) : 0;
     const txt = !snapshot ? '' : over ? '+' + over : due ? '✓' : String(left);
     if (sceneOn) { // 웹 모드: 동그라미 그대로 · 상태는 움직임으로
@@ -7684,6 +7692,7 @@
       <span style="position:relative;font:700 ${txt.length > 1 ? 10.5 : 11.5}px/1 'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif;color:${due ? '#4B3F8A' : '#3A3946'};letter-spacing:-.3px">${txt}</span>`;
   }
   paintInlineButton('', false);
+  function flashHeart() { inlineBtn.classList.remove('jm-flash'); void inlineBtn.offsetWidth; inlineBtn.classList.add('jm-flash'); setTimeout(() => inlineBtn.classList.remove('jm-flash'), 2100); } // 기억을 옮겨 넣었을 때 반짝
   function repaintInline() { try { paintInlineButton('', snapshot ? freshTurns() >= cycle : false); } catch (_) {} }
 
   // 크랙 입력창 찾기: textarea·글 입력 칸 둘레에서 버튼이 3개 이상 모인 상자를 찾고,
@@ -7710,7 +7719,10 @@
   }
   function placeInlineButton() {
     if (!chatIdFromPath()) { inlineBtn.remove(); ui('.fab').classList.remove('show'); return; }
-    if (!inlineBtn.isConnected) { const anchor = findSendSpot(); if (anchor?.parentElement) anchor.parentElement.insertBefore(inlineBtn, anchor); }
+    if (!inlineBtn.isConnected) { const anchor = findSendSpot(); if (anchor?.parentElement) {
+      const kids = [...anchor.children].filter(k => k.matches?.('button') || k.querySelector?.('button')), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
+      if (!anchor.matches('button') && kids.length >= 2 && last) { anchor.insertBefore(inlineBtn, last); inlineBtn.style.margin = '0 4px 0 2px'; }
+      else anchor.parentElement.insertBefore(inlineBtn, anchor); } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
@@ -7728,7 +7740,7 @@
   })();
   // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
   let backAt = 0;
-  const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || loading || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
+  const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || (loading && !stuckLoad()) || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
   document.addEventListener('visibilitychange', comeBack);
   window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
@@ -7741,7 +7753,7 @@
     settleTimer = setTimeout(function settle() {
       const ids = chatIdFromPath() + '|' + [...document.querySelectorAll('[data-message-id],[data-message-group-id]')].map(e => e.getAttribute('data-message-id') || e.getAttribute('data-message-group-id')).join(',');
       if (ids === seenMsgs) return;
-      if (seenMsgs && (busyNow || loading || moving || Date.now() - settledAt < 4000)) { settleTimer = setTimeout(settle, 2000); return; } // 바쁠 땐 버리지 않고 조금 뒤 다시
+      if (seenMsgs && (busyNow || (loading && !stuckLoad()) || moving || Date.now() - settledAt < 4000)) { settleTimer = setTimeout(settle, 2000); return; } // 바쁠 땐 버리지 않고 조금 뒤 다시
       const first = !seenMsgs; seenMsgs = ids;
       if (first) return;
       settledAt = Date.now(); refresh().then(() => { repaintInline(); if (isOpen() && !nav.view) render(); }).then(autoSum);
