@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         테스트
 // @namespace    memo-note.test
-// @version      3.9.88
+// @version      3.9.89
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
-// @description  랙시들의 RP정리하기🚀
+// @description  11/01 삭제예정 *본판으로 파일 백업해주세요!*
 // @match        https://crack.wrtn.ai/*
 // @noframes
 // @grant        GM_xmlhttpRequest
