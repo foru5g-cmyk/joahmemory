@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         조아메모리ෆ 테스트
+// @name         테스트
 // @namespace    memo-note.test
 // @version      3.9.84
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
