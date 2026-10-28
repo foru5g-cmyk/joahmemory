@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         테스트
+// @name         조아메모리ෆ 테스트
 // @namespace    memo-note.test
-// @version      3.9.80
+// @version      3.9.81
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -2698,6 +2698,12 @@
     .fx-pickbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 8px}.fx-pickbar small{font-size:12px}
     .fx-pick label{display:flex;align-items:center;gap:8px;width:100%;cursor:pointer;min-width:0}.fx-pick label b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-pick input{accent-color:var(--acc);width:17px;height:17px;flex:0 0 17px}
     .fx-pin{font-style:normal;font-size:10px;margin-right:1px}
+    .screen:has(.fx-sheet) nav.top{display:none}
+    @media(max-width:480px){nav.top{gap:0;padding:5px}nav.top button,nav.top button.rail-set{padding:0 7px}nav.top button[aria-current="page"]{padding:0 11px 0 9px;gap:5px}}
+    .wd-ring.spin{animation:wd-spin 1s linear infinite}@keyframes wd-spin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){.wd-ring.spin{animation:wd-spin 3s linear infinite}}
+    .wd-top .wd-auto{justify-content:flex-start;flex-direction:row-reverse;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--graphite);white-space:nowrap}
+    .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
   </style>
   <button class="fab" data-act="toggle" aria-label="조아메모리 열기">${icon('mark', 'currentColor', 16)}<span data-out="fab">기억</span></button>
   <div class="under" data-act="close" aria-hidden="true"></div>
@@ -2718,8 +2724,9 @@
   function fitScreen() {
     const s = ui('.screen'), vv = window.visualViewport;
     if (WIDE.matches) { s.style.height = s.style.top = ''; return; } // 컴퓨터: 가운데 큰 창 (CSS가 크기를 정함)
-    if (vv) { s.style.height = vv.height + 'px'; s.style.top = vv.offsetTop + 'px'; }
-    else { s.style.height = window.innerHeight + 'px'; s.style.top = '0px'; }
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(root.activeElement?.tagName || ''); // 키보드가 올라올 때만 보이는 높이로, 평소엔 100dvh(아이폰 주소창 따라 늘고 줄어요)
+    if (vv && typing) { s.style.height = vv.height + 'px'; s.style.top = vv.offsetTop + 'px'; }
+    else { s.style.height = s.style.top = ''; }
   }
   const isOpen = () => host.classList.contains('open');
   if (matchMedia('(hover:hover) and (pointer:fine)').matches) { // 컴퓨터: 5초 쉬면 숨기기
@@ -2733,6 +2740,7 @@
   const fixTab = () => { if (sceneOn && nav.ppl === 'feel') nav.ppl = 'list'; if (!sceneOn && ['backup', 'inj', 'fixed'].includes(nav.tab)) nav.tab = 'home'; if (sceneOn && nav.tab === 'phone') nav.tab = 'home'; };
   if (window.visualViewport) ['resize', 'scroll'].forEach(ev => window.visualViewport.addEventListener(ev, () => { if (isOpen()) fitScreen(); }));
   window.addEventListener('resize', () => { if (isOpen()) fitScreen(); });
+  for (const ev of ['focusin', 'focusout']) root.addEventListener(ev, () => setTimeout(() => { if (isOpen()) fitScreen(); }, 350));
   let savedOverflow = null;
   function lockPage(on) {
     const de = document.documentElement, b = document.body;
@@ -2767,6 +2775,7 @@
     const t = out('ptoast'); t.innerHTML = icon('move', '#fff', 15) + `<span>${esc(text)}</span>`; t.classList.add('on');
     clearTimeout(pageToast.timer); pageToast.timer = setTimeout(() => t.classList.remove('on'), 3200);
   }
+  const limTxt = () => NOTE_LIMIT === NO_LIMIT ? '제한 없음' : fmt(NOTE_LIMIT) + '자'; // 웹 모드는 숫자 대신 '제한 없음'
   const freshTurns = () => (snapshot ? snapshot.fresh.filter(m => msgRole(m) === 'user').length : 0);
   let lastSeenMap = {}; // 인물 → 마지막으로 나온 턴(이 기기에만 · 인물 화면 알약)
   let fullNote = null; // { upto, memory } — 근거·번역까지 들어간 전체본
@@ -3334,7 +3343,7 @@
     // 웹 모드 카드: 채팅에 들어가는 크기 · 📌 고정한 사건 · 이번에 떠올린 기억(이유 · 📌 고정 · ✕ 이번엔 빼기)
     const injRow = (r, pinned) => { const [d, t] = nSplitTitle(r.title); return `<li><span class="ij-t">${d ? `<span class="tl-date">${esc(d)}</span> ` : ''}<b>${esc(t)}</b></span><small>${pinned ? '📌 고정 · 늘 들어가요' : esc(r.why)}</small><span class="inj-acts">${r.sec === '날짜로그' || pinned ? `<button class="ia${pinned ? ' on' : ''}" data-act="pin" data-arg="${esc(r.key)}" title="${pinned ? '고정 풀기' : '고정 · 늘 넣기'}" aria-label="${pinned ? '고정 풀기' : '고정'}">📌</button>` : ''}${pinned ? '' : `<button class="ia" data-act="injskip" data-arg="${esc(r.key)}" title="이번 장면에선 빼기" aria-label="이번 장면에선 빼기">✕</button>`}</span></li>`; };
     const injLine = !lastInj || !(sceneOn || !lastInj.all) ? '' : lastInj.all
-      ? `<p class="muted" style="margin:8px 2px 0;font-size:12.5px">🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 · 전체가 ${fmt(INJ_MAX)}자 안이라 전부 들어가요</p>`
+      ? `<p class="muted" style="margin:8px 2px 0;font-size:12.5px">🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 · 기억이 아직 적어서 전부 들어가요 <small>(채팅엔 장면에 맞는 것만 최대 ${fmt(INJ_MAX)}자 · 노트는 제한 없음)</small></p>`
       : `<details class="inj-card"${nav.injOpen !== false ? ' open' : ''}><summary data-act="injopen">${sceneOn ? `<b>이번 장면의 기억</b> <small>📌 고정 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>` : `🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 <small>/ 전체 ${fmt(lastInj.total)}자 · 📌 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>`}</summary>
         <p class="muted" style="margin:6px 0">필수 기억은 항상 넣고, 옛 일은 방금 쓴 말에 맞춰 골라요</p>
         ${lastInj.pinned.length ? `<h5>📌 고정한 사건</h5><ul class="inj-list">${lastInj.pinned.map(r => injRow(r, true)).join('')}</ul>` : ''}
@@ -3344,7 +3353,7 @@
       <div class="nc-g" role="img" aria-label="노트 ${fmt(injected)}자 / ${fmt(NOTE_LIMIT)}자"><i style="width:${pc}%"></i><u></u></div>
       <p class="nc-line">${parts.map(x => `${esc(x.key)} ${Math.round(x.len / total * 100)}%`).join(' · ')}<span class="nc-more">자세히</span></p></summary>
       <div class="nc-rows">${parts.map(x => `<button data-act="jump" data-arg="${tabFor(x.key)}|${esc(x.key)}"><i style="background:${secInfo(x.key).color}"></i>${esc(x.key)}</button><span class="nc-bar"><i style="width:${Math.max(2, x.len / total * 100).toFixed(1)}%;background:${secInfo(x.key).color}"></i></span><span class="nc-num">${fmt(x.len)}자</span>`).join('')}</div>
-      <p class="muted" style="margin:8px 0 0;display:flex;justify-content:space-between"><span>85% 넘으면 오래된 사건부터 한 줄로 줄여요</span><button class="linkbtn" data-act="ncfold">접기</button></p></details>${webBox}${sceneOn ? '' : injLine}${fullBox}`;
+      <p class="muted" style="margin:8px 0 0;display:flex;justify-content:space-between"><span>${NOTE_LIMIT === NO_LIMIT ? '제한 없음 · 안 줄이고 다 기억해요' : '85% 넘으면 오래된 사건부터 한 줄로 줄여요'}</span><button class="linkbtn" data-act="ncfold">접기</button></p></details>${webBox}${sceneOn ? '' : injLine}${fullBox}`;
 
     const cast = [...people().keys()];
     const fxNpc = fixItems(splitSections(noteMemory()).find(x => x.key === FIXED)?.body || '').map((it, i) => [it, i]).filter(([it]) => it.cat === 'NPC' && it.title.trim());
@@ -3377,11 +3386,11 @@
     // 웹 모드 대시보드: 상태 한 줄 · 자동 정리 타일 · 채팅에 넣는 기억 타일 · 기억 카드
     const rr = 15, rc = 2 * Math.PI * rr, injPc = lastInj ? Math.min(100, Math.round(lastInj.chars / INJ_MAX * 100)) : 0;
     const dash = `<section class="wd${injPicking ? ' picking' : ''}">
-      <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label><label class="inj-sw wd-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>주입</label></div>
+      <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
       <div class="wd-tiles">
-        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
-          <div><small>자동 정리</small>${busyNow ? '<b>…</b><em>정리 중</em>' : due ? '<b>지금</b><em>할 때예요</em>' : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button></div>
+        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
+          <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -5306,7 +5315,7 @@
     const groups = N_GROUPS.filter(([, ks]) => ks.some(has)); if (!groups.length) return emptyBox('노트가 비어 있어요.');
     if (!groups.some(([g]) => g === nav.ngrp)) nav.ngrp = groups[0][0];
     const now = stripProof(noteMemory()).length, dis = busyNow ? ' disabled' : '';
-    let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + fmt(NOTE_LIMIT) + '자' + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
+    let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
     const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
       : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
@@ -6405,7 +6414,7 @@
           const oldLog = blocksOf(sections().find(x => x.key === '날짜로그')?.body || ''), newLog = blocksOf(draft.sections.find(x => x.key === '날짜로그')?.body || '');
           const packedNow = newLog.filter(b => /\(요약\)/.test(b.title)).length - oldLog.filter(b => /\(요약\)/.test(b.title)).length;
           const shrunk = oldLog.filter(o => { const nb = newLog.find(x => x.title === o.title); return nb && nb.lines.join('').length < o.lines.join('').length; }).length;
-          return `<div class="sizecmp"><span>${before ? fmt(before) + '자 → ' : ''}<b>${fmt(after)}자</b> / ${fmt(NOTE_LIMIT)}</span>${packedNow > 0 || shrunk ? `<span class="packed">오래된 사건 ${packedNow > 0 ? `${packedNow}묶음 합침` : ''}${packedNow > 0 && shrunk ? ' · ' : ''}${shrunk ? `${shrunk}개 줄임` : ''}</span>` : ''}</div>`; })()}
+          return `<div class="sizecmp"><span>${before ? fmt(before) + '자 → ' : ''}<b>${fmt(after)}자</b> / ${limTxt()}</span>${packedNow > 0 || shrunk ? `<span class="packed">오래된 사건 ${packedNow > 0 ? `${packedNow}묶음 합침` : ''}${packedNow > 0 && shrunk ? ' · ' : ''}${shrunk ? `${shrunk}개 줄임` : ''}</span>` : ''}</div>`; })()}
         ${draft.shrinkKept?.length ? `<div class="notice" style="margin:10px 0 0"><b>원래 글 그대로 둔 사건 ${draft.shrinkKept.length}개</b><br><small>한 줄로 줄이다가 대사·이름·숫자가 빠져서 줄이지 않았어요</small>${draft.shrinkKept.slice(0, 6).map(t => { const m = t.replace(/^\[|\]$/g, '').match(/^([^-]+?)\s*-\s*(.+)$/); return `<br>· ${m ? `<small>${esc(m[1])}</small> ${esc(m[2])}` : esc(t)}`; }).join('')}${draft.shrinkKept.length > 6 ? `<br><small>외 ${draft.shrinkKept.length - 6}개</small>` : ''}</div>` : ''}
         ${kept.length ? `<div class="notice" style="margin:10px 0 0">이번 대화에 안 나온 인물 ${kept.length}명(${kept.map(esc).join(', ')})은 예전 기록 그대로 유지했어요.</div>` : ''}
         ${lost.length ? `<div class="hidebox" style="margin-top:10px"><span><b>빠진 인물 ${lost.length}명</b> · ${lost.map(esc).join(', ')}<br>예전 노트엔 있었는데 새 노트에 없어요. 해당 칸을 눌러 다시 적어 주세요.</span></div>` : ''}
@@ -6458,7 +6467,7 @@
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
         ${row('웹 모드', sw('sceneMode'), '켜면 전체 기억은 이 기기에 두고, 채팅엔 지금 장면에 맞는 것만 5만 자까지 골라 넣어요 · 새 답마다 다시 고르고(이름·낱말 + 제미나이 의미 검색) · 5턴마다 자동 정리(키 필요) · 노트 크기 제한 없음(안 줄이고 장기기억으로 안 옮겨요) · 끄면 원래대로')}
-        ${row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
+        ${sceneOn ? row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝').replace('<label class="srow"', '<label class="srow" hidden') : row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
         ${row('노트 자동 옮기기', sw('autoMove'))}
         ${row('말풍선 턴 번호', sw('badges'))}
         <p class="sfoot">칸을 끄면 다음 정리부터 그 칸을 만들지 않아요.</p>`)
@@ -6540,7 +6549,7 @@
     // 머리
     const tabName = nav.tab === 'settings' ? '설정' : '조아메모리ෆ';
     const inSettings = nav.tab === 'settings' && !nav.view;
-    let title = tabName, sub = inSettings ? '바꾼 뒤 아래 저장을 눌러 주세요' : n ? `1~${n.turns}턴 기억 · ${turns > cycle ? `정리할 때예요 (+${turns - cycle}턴)` : turns === cycle ? '정리할 때예요' : `다음 정리까지 ${cycle - turns}턴`}` : '아직 정리 전';
+    let title = tabName, sub = inSettings ? '바꾸면 바로 저장돼요' : n ? `1~${n.turns}턴 기억 · ${turns > cycle ? `정리할 때예요 (+${turns - cycle}턴)` : turns === cycle ? '정리할 때예요' : `다음 정리까지 ${cycle - turns}턴`}` : '아직 정리 전';
     const baseTitle = title, baseSub = sub; // 보기 화면에서도 머리는 앱 제목 그대로(뒤로는 메뉴 바로 아래 줄에)
     if (nav.view === 'person') { title = '인물'; sub = '이 사람에 관한 자료 모아 보기'; }
     if (nav.view === 'graph') { title = '전체 관계도'; sub = '확대해서 한눈에'; }
@@ -6608,7 +6617,7 @@
         ${nav.pasteBox ? '<div class="editwrap" style="margin-top:8px"><textarea data-out="pastebox" placeholder="AI가 준 답을 통째로 붙여 넣어요(■ 칸 제목부터 끝까지)" style="min-height:120px"></textarea><div class="actions one" style="margin-top:6px"><button class="btn pri" data-act="pastego">넣기</button></div></div>' : ''}
         <div style="text-align:center;margin-top:8px${busyNow ? ';opacity:.4;pointer-events:none' : ''}">${String(nav.runMode).startsWith('chunk') ? '<button class="linkbtn" data-act="extget">한 묶음씩 복사</button> · ' : ''}<button class="linkbtn" data-act="extget" data-arg="file">요청 파일로 받기</button> · <label class="linkbtn">답 파일 불러오기<input type="file" accept=".txt,text/plain" data-out="extfile" hidden></label></div>`
       : `<div class="actions one"><button class="btn pri" data-act="go"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리 시작'}</button></div>`;
-    else bottom.innerHTML = inSettings ? `<div class="actions one"><button class="btn pri" data-act="save">저장</button></div>` : '';
+    else bottom.innerHTML = '';
     // 폰: 위쪽 3칸(설정은 톱니). 컴퓨터: 왼쪽 세로 메뉴 4칸. 어느 쪽을 보일지는 CSS가 data-mode로 정합니다.
     // 인물·노트 보기 같은 화면에서도 위 메뉴는 그대로 둡니다. 고치는 중(편집·새 기억 확인)일 때만 숨겨요.
     ui('.screen').dataset.mode = ['edit', 'pvEdit', 'preview'].includes(nav.view) ? 'edit' : nav.view ? 'view' : nav.tab;
@@ -6645,13 +6654,17 @@
     } catch (_) { /* 예전 자리 정리가 실패해도 새 자리에는 이미 들어감 */ }
     return true;
   }
-  let autoBusy = false;
+  root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
+  let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
   async function autoSum() {
     const chatId = chatIdFromPath();
-    if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot?.note || snapshot.note.parked || nav.view === 'preview' || freshTurns() < cycle) return;
-    if (String(await getValue('autoSum', 'on')) === 'off') return;
+    if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview' || freshTurns() < cycle) return;
+    autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; if (!autoSumOn) return;
+    const once = k => { if (autoSum[k] === chatId) return; autoSum[k] = chatId; return true; };
+    if (!snapshot.note && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 5턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-    if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) return;
+    if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
+    { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') { setTimeout(() => refresh().then(autoSum), 10000); return; } }
     autoBusy = true; repaintInline(); if (isOpen() && !nav.view) render();
     try {
       pageToast(freshTurns() + '턴이 쌓여서 기억을 갱신하는 중이에요…');
@@ -6730,8 +6743,7 @@
   // 웹 모드 바꾸기: 정리 주기·노트 크기도 그 모드 기본으로. save면 이 방 선택으로 저장(새 방 기본값도)
   async function applyScene(on, chatId, save) {
     sceneOn = on; cycle = on ? 5 : 20; NOTE_LIMIT = on ? NO_LIMIT : 50000;
-    if (save) { await setValue('sceneMode', on ? 'on' : 'off'); await setValue('cycle', String(cycle)); await setValue('noteLimit', String(NOTE_LIMIT));
-      if (chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); }
+    if (save && chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); // 이 방만 · 다른 방은 안 바뀜
     try { repaintInline(); } catch (_) {}
   }
   async function refresh() {
@@ -6744,13 +6756,13 @@
       { // 웹 모드는 방을 따라가요: 이 방 선택 > (다른 기기가 더 나중에 정리했으면) 노트 표시 > 노트 표시 > 새 방 기본값
         let rs = null; try { rs = JSON.parse(String(await getValue('scene:' + chatId, '') || 'null')); } catch (_) {}
         const nn = snap.note, other = !!nn && !nn.parked && String(nn.by || '') !== DEVICE && (!rs || String(nn.at || '') > String(rs.at || ''));
-        const want = other ? !!nn.web : rs ? !!rs.on : nn ? !!nn.web : String(await getValue('sceneMode', 'off')) === 'on';
-        if (want !== sceneOn) { await applyScene(want, chatId, false); if (other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
+        const want = other ? !!nn.web : rs ? !!rs.on : nn ? !!nn.web : false; // 처음 여는 방은 꺼짐
+        if (want !== sceneOn || (want && NOTE_LIMIT !== NO_LIMIT)) { const flip = want !== sceneOn; await applyScene(want, chatId, false); if (flip && other) pageToast(want ? '다른 기기에서 웹 모드로 쓰던 방이라 웹 모드로 열었어요' : '다른 기기에서 앱 방식으로 쓰던 방이라 웹 모드를 껐어요'); }
       }
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
-      injectOn = String(await getValue('inject', 'on')) !== 'off';
+      injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off';
       if (injectOn && snap.note && !snap.note.parked && behind !== 0) await updateInjCtx(chatId, snap);
       if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && !(snap.note.web && !sceneOn) && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
@@ -7034,7 +7046,7 @@
     if (!draft || !out('count')) return;
     const memory = joinSections(draft.sections), block = buildBlock(memory, draft.uptoId, draft.turns);
     out('raw').textContent = block.trim();
-    out('count').textContent = `채팅에 들어가는 노트 ${fmt(stripProof(memory).length)}자 / ${fmt(NOTE_LIMIT)} · 근거 포함 전체 ${fmt(memory.length)}자 · 칸 ${draft.sections.length}개`;
+    out('count').textContent = `${sceneOn ? '전체 기억' : '채팅에 들어가는 노트'} ${fmt(stripProof(memory).length)}자 / ${limTxt()} · 근거 포함 전체 ${fmt(memory.length)}자 · 칸 ${draft.sections.length}개`;
   }
 
   async function toggleInject() {
@@ -7196,11 +7208,11 @@
     finally { busyNow = false; render(); }
   }
 
-  async function saveSettings() {
+  async function saveSettings(quiet) {
+    const wasScene = sceneOn;
     cycle = Number(out('cyclepick').value) || cycle;
-    await setValue('cycle', String(cycle));
     NOTE_LIMIT = Number(out('limitpick').value) || NOTE_LIMIT;
-    await setValue('noteLimit', String(NOTE_LIMIT));
+    if (!sceneOn) { await setValue('cycle', String(cycle)); await setValue('noteLimit', String(NOTE_LIMIT)); } // 웹 모드 값은 앱 방식 기본값에 안 섞어요
     const cleanKey = v => String(v || '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
     await setValue('apiKey', cleanKey(ui('[data-set="apiKey"]').value));
     await setValue('claudeKey', cleanKey(ui('[data-set="claudeKey"]').value));
@@ -7209,11 +7221,12 @@
     await setValue('ltmAsk', ui('[data-set="ltmAsk"]').checked ? 'on' : 'off');
     { const on = ui('[data-set="sceneMode"]').checked; // 웹 모드를 바꾸면 정리 주기·노트 크기도 그 모드 기본으로
       if (on !== sceneOn) { await applyScene(on, chatIdFromPath(), true);
-        toast(on ? '웹 모드를 켰어요 · 5턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
+        toast(on ? '이 방은 웹 모드를 켰어요 · 5턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
     turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
+    if (quiet) { if (wasScene !== sceneOn) render(); else fillSettings(); if (wasScene === sceneOn) toast('저장했어요', 'ok', 1200); return; } // 바로 저장: 화면은 그대로(입력 중인 칸 안 날아가게)
     toast('저장했어요.', 'ok', 2500);
     nav.tab = 'home';
     render();
@@ -7259,6 +7272,7 @@
       return;
     }
     if (e.target.dataset?.out === 'modelpick') { pickModel(e.target.value); if (!e.target.value) ui('[data-set="model"]')?.focus(); }
+    if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true); }
   });
   // 다른 AI가 준 결과(파일이든 붙여 넣은 글이든)를 바로 채팅에 넣어요
   async function importResult(raw) {
@@ -7358,8 +7372,15 @@
       case 'injsec': case 'injnum': { const cid = chatIdFromPath(); if (!cid) return; const [k, v] = String(arg).split('|');
         if (act === 'injsec') injSet = { ...injSet, secs: { ...injSet.secs, [k]: v } }; else injSet = { ...injSet, [k]: Number(v) };
         await setValue('injset:' + cid, JSON.stringify(injSet)); keepScroll(render); return reinject(cid); }
+      case 'wdopt': nav.wdOpt = !nav.wdOpt; return render();
+      case 'autosum': autoSumOn = !!el.checked; await setValue('autoSum', autoSumOn ? 'on' : 'off');
+        toast(autoSumOn ? '자동 정리를 켰어요 · 5턴마다 알아서 정리해요' : '자동 정리를 껐어요 · 이 기기에선 \'지금 바로 정리\'를 누를 때만 정리해요 · 기억 넣기는 그대로', 'ok', 4000); render(); if (autoSumOn) autoSum(); return;
       case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; await applyScene(on, chatIdFromPath(), true);
-        toast(on ? '웹 모드를 켰어요 · 보낼 때마다 기억을 골라 넣어요' : '웹 모드를 껐어요', 'ok', 3000); await refresh(); return render(); }
+        toast(on ? '웹 모드를 켰어요 · 이 방만 · 보낼 때마다 기억을 골라 넣어요' : '웹 모드를 껐어요 · 이 방만', 'ok', 3000); await refresh();
+        if (on) { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
+          if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { nav.tab = 'settings'; nav.setTab = 'ai'; nav.view = null; render(); out('main').scrollTop = 0; ui('[data-set="apiKey"]')?.focus();
+            return toast('웹 모드는 Gemini 키가 있어야 돌아가요 · 여기 키를 넣고 저장을 눌러 주세요', 'info', 6000); } }
+        return render(); }
       case 'pin': { e.preventDefault(); const cid = chatIdFromPath(); if (!cid || !arg) return;
         if (injPins.has(arg)) injPins.delete(arg); else injPins.add(arg);
         await setValue('pins:' + cid, JSON.stringify([...injPins]));
@@ -7635,7 +7656,7 @@
     if (sceneOn) { // 웹 모드: 동그라미 그대로 · 상태는 움직임으로
       const on = injectOn, spin = autoBusy || injPicking, acc = '#7B61D9';
       const chars = lastInj?.chars || (snapshot?.note ? stripProof(noteMemory()).length : 0);
-      const tip = !on ? '조아메모리 · 주입 꺼짐' : injPicking ? '조아메모리 · 기억 고르는 중' : autoBusy ? '조아메모리 · 자동 정리 중' : `조아메모리 · 채팅에 넣는 기억 ${fmt(chars)}자 · 자동 정리까지 ${left}턴`;
+      const tip = !on ? '조아메모리 · 주입 꺼짐' : injPicking ? '조아메모리 · 기억 고르는 중' : autoBusy ? '조아메모리 · 자동 정리 중' : `조아메모리 · 채팅에 넣는 기억 ${fmt(chars)}자 · ${autoSumOn ? '자동 정리까지' : '다음 정리까지(수동)'} ${left}턴`;
       inlineBtn.setAttribute('aria-label', tip); inlineBtn.title = tip;
       const H = 'M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z';
       inlineBtn.innerHTML = `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" style="display:block;position:absolute;inset:0;overflow:visible">
@@ -7690,7 +7711,8 @@
 
   // 방을 옮기면 초기화하고 가볍게 다시 확인
   (async () => {
-    sceneOn = String(await getValue('sceneMode', 'off')) === 'on';
+    sceneOn = false; // 웹 모드는 방에 들어가면 그 방 것으로(refresh)
+    if (String(await getValue('sceneMode', 'off')) === 'on') { await setValue('sceneMode', 'off'); await setValue('cycle', '20'); await setValue('noteLimit', '50000'); return; } // 예전 '모든 방' 값 정리
     const c = Number(await getValue('cycle', '20')); if (CYCLES.includes(c)) cycle = c;
     const l = Number(await getValue('noteLimit', '50000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
@@ -7706,13 +7728,14 @@
   new MutationObserver(() => {
     if (!chatIdFromPath()) return;
     clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => {
+    settleTimer = setTimeout(function settle() {
       const ids = chatIdFromPath() + '|' + [...document.querySelectorAll('[data-message-id],[data-message-group-id]')].map(e => e.getAttribute('data-message-id') || e.getAttribute('data-message-group-id')).join(',');
       if (ids === seenMsgs) return;
+      if (seenMsgs && (busyNow || loading || moving || Date.now() - settledAt < 4000)) { settleTimer = setTimeout(settle, 2000); return; } // 바쁠 땐 버리지 않고 조금 뒤 다시
       const first = !seenMsgs; seenMsgs = ids;
-      if (first || busyNow || loading || moving || Date.now() - settledAt < 15000) return;
-      settledAt = Date.now(); refresh().then(autoSum);
-    }, 8000);
+      if (first) return;
+      settledAt = Date.now(); refresh().then(() => { repaintInline(); if (isOpen() && !nav.view) render(); }).then(autoSum);
+    }, 3000);
   }).observe(document.documentElement, { childList: true, subtree: true });
   let lastPath = '';
   setInterval(() => {
