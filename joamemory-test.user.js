@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         테스트
 // @namespace    memo-note.test
-// @version      3.9.82
+// @version      3.9.83
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -2704,6 +2704,8 @@
     @media (prefers-reduced-motion:reduce){.wd-ring.spin{animation:wd-spin 3s linear infinite}}
     .wd-top .wd-auto{justify-content:flex-start;flex-direction:row-reverse;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--graphite);white-space:nowrap}
     .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
+    .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
+    .screen.fx-open nav.top{display:none!important}
   </style>
   <button class="fab" data-act="toggle" aria-label="조아메모리 열기">${icon('mark', 'currentColor', 16)}<span data-out="fab">기억</span></button>
   <div class="under" data-act="close" aria-hidden="true"></div>
@@ -6621,6 +6623,7 @@
     // 폰: 위쪽 3칸(설정은 톱니). 컴퓨터: 왼쪽 세로 메뉴 4칸. 어느 쪽을 보일지는 CSS가 data-mode로 정합니다.
     // 인물·노트 보기 같은 화면에서도 위 메뉴는 그대로 둡니다. 고치는 중(편집·새 기억 확인)일 때만 숨겨요.
     ui('.screen').dataset.mode = ['edit', 'pvEdit', 'preview'].includes(nav.view) ? 'edit' : nav.view ? 'view' : nav.tab;
+    ui('.screen').classList.toggle('fx-open', !!ui('.fx-sheet'));
     if (nav.tab === 'phone' && !nav.view) centerEmoji(main);
     if ((out('main')?.scrollTop || 0) < 60) ui('nav.top')?.classList.remove('dock-hide');
     out('tabs').innerHTML = (sceneOn ? WEB_TABS : TABS.filter(([k]) => k !== 'settings')).map(([k, l]) => `<button data-act="tab" data-arg="${k}" aria-label="${k === 'phone' ? '기타' : l}"${nav.tab === k ? ' aria-current="page"' : ''}>${k === 'phone' ? '기타' : l}</button>`).join('')
