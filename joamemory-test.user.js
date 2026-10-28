@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         테스트
 // @namespace    memo-note.test
-// @version      3.9.87
+// @version      3.9.88
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory-test.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1269,7 +1269,7 @@
   // ══════════════════════════════════════════════════════════════
   const pageStyle = document.createElement('style');
   pageStyle.textContent = '.memo-note-hidden{display:none!important}'
-    + '#memo-note-inline.jm-flash{animation:jm-flash 1s ease-in-out 2!important}@keyframes jm-flash{0%,100%{transform:scale(1);filter:none}50%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}}'
+    + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
     + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}';
   document.documentElement.appendChild(pageStyle);
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
@@ -3307,7 +3307,10 @@
   function backupHtml(etc) {
     // 백업 한 화면: 파일로 받기 · 파일로 되돌리기 · 구글 드라이브(연결돼 있으면 넣을 때마다 자동)
     const dis = busyNow ? ' disabled' : '';
+    const hl = histList || [], last = hl[hl.length - 1];
     return `<section class="bk">
+      <div class="bk-card"><div class="bk-h"><b>🕘 자동 백업</b><small>정리할 때마다(자동 정리 포함) 정리 전·후를 이 기기에 남겨요 · 방마다 최근 30번${hl.length ? ` · 지금 ${hl.length}개 · 마지막 ${esc(new Date(last.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))} (1~${last.to}턴 기억)` : ' · 아직 없어요'}</small></div>
+        <div class="bk-row"><button class="btn" data-act="changes"${hl.length ? '' : ' disabled'}>되돌릴 곳 고르기</button></div></div>
       <div class="bk-card"><div class="bk-h"><b>💾 파일로 백업</b><small>이 방의 기억·정리 기록·명대사·ETC를 파일 하나로</small></div>
         <div class="bk-row"><button class="btn pri" data-act="backup"${dis}>백업 파일 받기</button>
         <label class="btn">백업 파일로 되돌리기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>
@@ -6318,7 +6321,7 @@
   // ── 이번 회차에 바뀐 것: 정리 전 노트 ↔ 정리 후 노트 ──
   //    정리를 넣을 때마다 전·후 노트를 이 브라우저에 남깁니다(방마다 최근 8회). 비교 화면과 '이 노트로 되돌리기'에 씁니다.
   const historyOf = async chatId => { try { return JSON.parse(String(await getValue('hist:' + chatId, '[]')) || '[]'); } catch (_) { return []; } };
-  async function pushHistory(chatId, rec) { const list = await historyOf(chatId); list.push(rec); await setValue('hist:' + chatId, JSON.stringify(list.slice(-8))); }
+  async function pushHistory(chatId, rec) { const list = await historyOf(chatId); list.push(rec); await setValue('hist:' + chatId, JSON.stringify(list.slice(-30))); } // 자동 백업: 방마다 최근 30번
   const notProofLine = l => !/^\s*-?\s*(근거|번역|장면)\s*[:：]/.test(l);
   function changesOf(before, after) {
     const A = new Map(splitSections(before).map(s => [s.key, s.body])), B = new Map(splitSections(after).map(s => [s.key, s.body]));
@@ -6403,7 +6406,7 @@
     const tabs = `<div class="seg">${list.map((x, j) => `<button data-act="chgpick" data-arg="${j}" aria-pressed="${j === i}">${x.from + 1}~${x.to}턴</button>`).join('')}</div>`;
     return tabs + `<p class="secdesc">${d.getMonth() + 1}/${d.getDate()} 정리 · ${h.from + 1}~${h.to}턴을 더하면서 바뀐 것 · 근거 줄은 빼고 비교해요</p>`
       + changesHtml(changesOf(h.before, h.after))
-      + `<div class="jump" style="margin-top:14px"><button data-act="restore" data-arg="${i}"><b>이 정리 전 노트(1~${h.from}턴)로 되돌리기</b><span class="v">미리보기 후 넣기</span></button></div>`;
+      + `<div class="jump" style="margin-top:14px"><button data-act="restore" data-arg="${i}"><b>이 정리 전 노트(1~${h.from}턴)로 되돌리기</b><span class="v">미리보기 후 넣기 · 더 뒤 회차도 목록에 그대로 남아요</span></button></div>`;
   }
 
   // ── 정리 결과 미리보기 ──
@@ -7692,7 +7695,7 @@
       <span style="position:relative;font:700 ${txt.length > 1 ? 10.5 : 11.5}px/1 'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif;color:${due ? '#4B3F8A' : '#3A3946'};letter-spacing:-.3px">${txt}</span>`;
   }
   paintInlineButton('', false);
-  function flashHeart() { inlineBtn.classList.remove('jm-flash'); void inlineBtn.offsetWidth; inlineBtn.classList.add('jm-flash'); setTimeout(() => inlineBtn.classList.remove('jm-flash'), 2100); } // 기억을 옮겨 넣었을 때 반짝
+  function flashHeart() { inlineBtn.classList.remove('jm-flash'); void inlineBtn.offsetWidth; inlineBtn.classList.add('jm-flash'); setTimeout(() => inlineBtn.classList.remove('jm-flash'), 2500); } // 기억을 옮겨 넣었을 때 반짝
   function repaintInline() { try { paintInlineButton('', snapshot ? freshTurns() >= cycle : false); } catch (_) {} }
 
   // 크랙 입력창 찾기: textarea·글 입력 칸 둘레에서 버튼이 3개 이상 모인 상자를 찾고,
