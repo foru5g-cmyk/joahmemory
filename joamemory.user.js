@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.1
+// @version      4.0.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -6512,7 +6512,7 @@
     return seg + box('정리 · AI', `${cycle}턴마다 · ${fmt(NOTE_LIMIT)}자 · <span data-out="keyinfo"></span>`, `
         ${row('정리 주기', `<select data-out="cyclepick">${CYCLES.map(c => opt(c, `${c}턴마다`, cycle)).join('')}</select>`)}
         ${row('노트 크기', `<select data-out="limitpick">${LIMITS.map(c => opt(c, c === NO_LIMIT ? '제한 없음(웹 모드)' : `${fmt(c)}자`, NOTE_LIMIT)).join('')}</select>`, sceneOn ? '웹 모드는 제한 없음 · 안 줄이고 다 기억해요' : '기본 5만 자 · 85%부터 오래된 사건을 줄여요')}
-        ${row('모델', `<select data-out="modelpick">${MODELS.map(([group, list]) => `<optgroup label="${group}">${list.map(([id, label]) => `<option value="${id}">${label}</option>`).join('')}</optgroup>`).join('')}<option value="">직접 입력</option></select>`)}
+        ${row('모델', `<select data-out="modelpick">${MODELS.map(([group, list]) => `<optgroup label="${group}">${list.map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}</optgroup>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
         ${row('Gemini 키', `<span class="keybox"><input type="password" data-set="apiKey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button type="button" data-act="peek">보기</button></span>`)}
         ${row('Claude 키', `<span class="keybox"><input type="password" data-set="claudeKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"><button type="button" data-act="peek">보기</button></span>`)}
@@ -6806,10 +6806,12 @@
   // 웹 모드 바꾸기: 정리 주기·노트 크기도 그 모드 기본으로. save면 이 방 선택으로 저장(새 방 기본값도)
   async function applyScene(on, chatId, save) {
     if (save) sceneGen++; // 내가 바꾼 횟수(읽는 중이던 refresh가 되돌리지 않게)
-    sceneOn = on; cycle = on ? 10 : 20; NOTE_LIMIT = on ? NO_LIMIT : 50000; // 웹 모드 10턴마다
+    sceneOn = on; cycle = on ? 10 : 20; NOTE_LIMIT = on ? NO_LIMIT : 50000; // 웹 모드 10턴마다(기본)
+    { const c = Number(await getValue(on ? 'webCycle' : 'cycle', on ? '10' : '20')); if (CYCLES.includes(c)) cycle = c; } // 모드마다 저장해 둔 주기
     if (save && chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); // 이 방만 · 다른 방은 안 바뀜
     try { repaintInline(); } catch (_) {}
   }
+  let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
   let sceneGen = 0, loadingAt = 0; const gsTried = new Set(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
   const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
@@ -7301,10 +7303,11 @@
     cycle = Number(out('cyclepick').value) || cycle;
     NOTE_LIMIT = Number(out('limitpick').value) || NOTE_LIMIT;
     if (!sceneOn) { await setValue('cycle', String(cycle)); await setValue('noteLimit', String(NOTE_LIMIT)); } // 웹 모드 값은 앱 방식 기본값에 안 섞어요
+    else await setValue('webCycle', String(cycle)); // 웹 모드 주기는 따로 기억
     const cleanKey = v => String(v || '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
     await setValue('apiKey', cleanKey(ui('[data-set="apiKey"]').value));
     await setValue('claudeKey', cleanKey(ui('[data-set="claudeKey"]').value));
-    await setValue('model', ui('[data-set="model"]').value.trim() || DEFAULT_MODEL);
+    { const mv = ui('[data-set="model"]').value.trim(); if (mv) { await setValue('model', mv); curModel = mv; } } // 칸이 아직 비어 있으면(불러오기 전) 모델은 그대로
     await setValue('autoMove', ui('[data-set="autoMove"]').checked ? 'on' : 'off');
     await setValue('ltmAsk', ui('[data-set="ltmAsk"]').checked ? 'on' : 'off');
     if (!quiet || target?.dataset?.set === 'sceneMode') { const on = ui('[data-set="sceneMode"]').checked; // 웹 모드 스위치를 직접 눌렀을 때만 · 정리 주기·노트 크기도 그 모드 기본으로
@@ -7814,6 +7817,7 @@
     sceneOn = false; // 웹 모드는 방에 들어가면 그 방 것으로(refresh)
     if (String(await getValue('sceneMode', 'off')) === 'on') { await setValue('sceneMode', 'off'); await setValue('cycle', '20'); await setValue('noteLimit', '50000'); return; } // 예전 '모든 방' 값 정리
     const c = Number(await getValue('cycle', '20')); if (CYCLES.includes(c)) cycle = c;
+    curModel = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     const l = Number(await getValue('noteLimit', '50000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
   // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
