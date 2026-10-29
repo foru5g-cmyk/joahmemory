@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.0
+// @version      4.0.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -414,7 +414,7 @@
   async function wholeOf(chatId, n) { let f = null; try { f = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {} if (!(f?.memory && f.upto === n.upto)) return null;
     if (!n.sel && f.memory.length < String(n.memory || '').length * 0.7) return null; // 사본이 채팅 전체본보다 훨씬 작음 = 사본이 망가짐 → 채팅 노트를 다시 저장하게
     return f.memory; }
-  async function updateInjCtx(chatId, snap, memory, said = '') {
+  async function updateInjCtx(chatId, snap, memory, said = '', wait = false) { // wait: 새 임베딩을 기다려요(정리 직후)
     const chat = (snap?.all || []).filter(isChat).slice(-6);
     injCtx = { text: (chat.map(m => stripBlocks(msgText(m))).join('\n') + (said ? '\n' + said : '')).slice(-8000), said: String(said || ''), sim: {} }; // said: 지금 보내는 유저 말(맨 끝이라 의미 검색 질문에도 들어가요)
     try {
@@ -435,7 +435,7 @@
         (r?.embeddings || []).forEach((e, j) => { if (e?.values?.length) cache[hash(part[j].t)] = e.values.map(v => Math.round(v * 1000) / 1000); });
       } };
       const keep = {};
-      if (injCtx.said && need.length) { const c0 = cache; fetchDocs().then(async () => { const k = {}; for (const u of units) if (c0[hash(u.t)]) k[hash(u.t)] = c0[hash(u.t)]; await setValue('emb:' + chatId, JSON.stringify(k)); }).catch(() => {}); } // 보내는 중엔 기다리지 않아요(다음 번부터 써요)
+      if (injCtx.said && need.length && !wait) { const c0 = cache; fetchDocs().then(async () => { const k = {}; for (const u of units) if (c0[hash(u.t)]) k[hash(u.t)] = c0[hash(u.t)]; await setValue('emb:' + chatId, JSON.stringify(k)); }).catch(() => {}); } // 보내는 중엔 기다리지 않아요(다음 번부터 써요)
       else { await fetchDocs(); for (const u of units) if (cache[hash(u.t)]) keep[hash(u.t)] = cache[hash(u.t)]; await setValue('emb:' + chatId, JSON.stringify(keep)); } // 노트에서 빠진 사건의 임베딩은 지워요
       for (const u of units) if (!keep[hash(u.t)] && cache[hash(u.t)]) keep[hash(u.t)] = cache[hash(u.t)];
       const q = await request('POST', url('embedContent'), { headers, timeout: 2500,
@@ -5684,9 +5684,10 @@
         (owners.get(a) || owners.set(a, new Set()).get(a)).add(r[2].trim()); } }
     for (const [a, set] of owners) if (set.size === 1) { const who = [...set][0]; (m.get(who) || m.set(who, []).get(who)).push(a); }
     return (_calVal = m); };
+  const KO_SURNAME = '김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용예봉경사부';
   const personAlias = name => { const out = new Set([name, ...(altNames().get(name) || [])]), pool = namePool();
     // 이름 조각(영어 이름 포함)·이름 한 토막·뒤 두 글자로도 부르니까, 딱 이 사람에게만 맞을 때 별명으로 칩니다
-    for (const f of nameForms(name)) { out.add(f); const cand = [...f.split(/\s+/).filter(t => [...t].length >= 2), ...([...f].length >= 3 && /[가-힣]/.test(f) ? [[...f].slice(-2).join('')] : [])];
+    for (const f of nameForms(name)) { out.add(f); const cand = [...f.split(/\s+/).filter(t => [...t].length >= 2), ...([...f].length === 3 && /^[가-힣]{3}$/.test(f) && KO_SURNAME.includes(f[0]) ? [[...f].slice(-2).join('')] : [])]; // 김민준 → 민준 (베일리 → 일리 X)
       for (const c of cand) if (!pool.some(n => n !== name && nameForms(n).some(x => x.toLowerCase() === c.toLowerCase() || looseName(x, c)))) out.add(c); }
     return [...out]; };
   function timelineHtml() {
@@ -5714,7 +5715,7 @@
     const chips = `<div class="tl-who"><button data-act="tlwho" data-arg="" aria-pressed="${!who}"><span class="av tl-all">✦</span><small>전체</small></button>${names.map(n =>
       `<button data-act="tlwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     // 서사 고리는 여기 한 곳에만: 위엔 아직 끝나지 않은 일, 끝난 일은 접어서
-    const th = threads().filter(t => !who || has(t.title) || has(t.text) || has(t.quote)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
+    const th = threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
     // 열린 고리의 "(마지막 언급: 날짜 · N턴)"은 본문에서 떼어 제목 옆 알약으로. 100턴 넘게 안 나온 고리는 '오래됨'
     const nowTurn = (snapshot?.note?.turns || 0) + freshTurns();
     const thRow = t => { const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
@@ -7201,7 +7202,7 @@
       if (parked) await park(chatId, memory, draft.uptoId, draft.turns);
       // 채팅 노트와 이 기기 전체본에 같은 정리 시각을 찍어요(같은 정리본인지 알아보는 기준).
       const savedAt = new Date().toISOString();
-      if (!parked) await updateInjCtx(chatId, snapshot, memory);
+      if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId; lap('채팅에 쓰기');
       await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt);
