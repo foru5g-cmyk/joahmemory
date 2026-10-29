@@ -5682,7 +5682,8 @@
     for (const l of String(body).split('\n')) { const r = l.match(/^\s*-?\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]\s*(.*)$/); if (!r) continue;
       for (const x of r[3].matchAll(/「([^」]+)」/g)) { const a = x[1].replace(/\s*[(（].*$/, '').trim(); if ([...a].length < 2) continue;
         (owners.get(a) || owners.set(a, new Set()).get(a)).add(r[2].trim()); } }
-    for (const [a, set] of owners) if (set.size === 1) { const who = [...set][0]; (m.get(who) || m.set(who, []).get(who)).push(a); }
+    for (const [a, set] of owners) { const arr = [...set]; if (!arr.every(x => x === arr[0] || sameName(x, arr[0]))) continue; // 받는 사람이 같은 사람(표기만 다름)일 때만
+      for (const who of arr) (m.get(who) || m.set(who, []).get(who)).push(a); }
     return (_calVal = m); };
   const KO_SURNAME = '김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용예봉경사부';
   const personAlias = name => { const out = new Set([name, ...(altNames().get(name) || [])]), pool = namePool();
