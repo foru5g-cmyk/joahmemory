@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.3
+// @version      4.0.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -320,6 +320,7 @@
   const INJ_SEM = ['날짜로그', '소지품', '장소·조직', '인지·비밀', '이정표', '세계관', '호칭·말투', '관계·감정선'];
   const INJ_ON = [FIXED, '현재상태', '직전 장면', '서사 고리', '줄거리', '세계관', '소지품', '인물']; // 처음엔 늘 넣는 칸
   let injSet = { secs: {}, recent: 5, recall: 8 }; const secMode = k => injSet.secs[k] || (INJ_ON.includes(k) ? 'on' : 'auto');
+  let injSaidHits = new Set(); // 보낸 말이 직접 꺼낸 항목(드문 낱말·날짜)
   let injPicking = false, injCtx = { text: '', sim: {} }, lastInj = null, sceneOn = false, injPins = new Set(), injSkip = new Map(); // injPins: 📌 늘 넣는 사건(방마다 저장) · injSkip: ✕ 이번 장면에서 뺀 기억(유저가 그 일을 다시 직접 말하면 돌아와요) // sceneOn: 웹 모드(설정) // injCtx.text: 최근 대화 · sim: 항목 키 → 의미 점수(0~1, 가장 비슷한 게 1)
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
     const all = stripProof(memory), pool = [];
@@ -349,6 +350,7 @@
       const sm = injCtx.sim[itemKey(key)] || 0;
       why.set(itemKey(key), [hit.length ? '‘' + hit.slice(0, 3).join('·') + '’ 이야기가 나와서' : '', sm >= 0.5 ? '비슷한 장면이라서' : ''].filter(Boolean).join(' · ') || '지금 나온 인물이 있어서');
       const ai = injCtx.ai?.[itemKey(key)], saidHit = dayHit(key) || words(key).some(w => (df.get(w) || 0) <= rare && said && inSaid(w)), aiOk = ai != null && ai >= Math.max(70, (injCtx.aiTop || 0) - 20) && (ai >= (injKind === 'reroll' ? 90 : 80) || saidHit); // 확신(80+)하거나 보낸 말에 직접 나올 때만
+      if (saidHit) injSaidHits.add(itemKey(key));
       if (ai != null) { why.set(itemKey(key), (aiOk ? '지금 장면과 이어지는 일이라서' : '') + (hit.length ? (aiOk ? ' · ' : '') + '‘' + hit.slice(0, 3).join('·') + '’' : '')); return aiOk ? ai / 10 : 0; } // AI 재검토가 있으면 그 점수로(60 이상 · 1등보다 30 넘게 낮으면 빼요)
       return v + sm * 3; };
     const units = []; // { sec, i(항목 번호, -1 = 칸 머리글), text, pri, recall }
@@ -418,7 +420,7 @@
     return f.memory; }
   async function updateInjCtx(chatId, snap, memory, said = '', wait = false) { // wait: 새 임베딩을 기다려요(정리 직후)
     const chat = (snap?.all || []).filter(isChat).slice(-6);
-    injCtx = { text: (chat.map(m => stripBlocks(msgText(m))).join('\n') + (said ? '\n' + said : '')).slice(-8000), said: String(said || ''), sim: {} }; // said: 지금 보내는 유저 말(맨 끝이라 의미 검색 질문에도 들어가요)
+    injCtx = { text: (chat.map(m => stripBlocks(msgText(m))).join('\n') + (said ? '\n' + said : '')).slice(-8000), said: String(said || ''), sim: {}, lastAi: msgId([...(snap?.all || [])].reverse().find(m => msgRole(m) === 'assistant') || {}) || '' }; // lastAi: 어느 답을 보고 골랐는지 // said: 지금 보내는 유저 말(맨 끝이라 의미 검색 질문에도 들어가요)
     try {
       memory = memory || (snap?.note ? (await wholeOf(chatId, snap.note)) || snap.note.memory : '');
       if (!sceneOn || !memory || String(await getValue('semSearch', 'on')) === 'off') return; // 크기와 상관없이 늘 찾아요
@@ -923,7 +925,7 @@
 - ▸·【】 항목이 없는 칸(줄거리 등)은 바뀌었으면 칸 전체를 다시 쓴다.
 - 서사 고리는 고리 하나("- [열림]/[닫힘] … 제목:" 줄과 그 아래 근거 줄)가 항목이다. 바뀌거나 새로 생기거나 이번에 닫힌 고리만 쓴다. 열린 고리에 "(마지막 언급: …)"이 아직 없으면 그 고리도 이번에 붙여서 쓴다. 같은 고리면 제목을 기존 기억과 한 글자도 다르지 않게 쓴다. 지울 고리(다른 고리에 합친 것 등)는 "- [열림] 제목 (삭제)"처럼 쓴다. 안 쓴 고리는 그대로 남는다.
 - ■ 줄거리는 매번 쓴다.
-- ■ 현재상태는 매번 칸 전체를 쓴다(지난 정리 이후 바뀐 값을 놓치지 않게). 기존 ▸ 소제목을 하나도 빠뜨리지 않고 다시 쓰고, 안 바뀐 줄은 한 글자도 바꾸지 않고 옮긴다. 끝난 소제목은 그냥 빼지 말고 아래 지우기 규칙대로 (삭제)와 근거를 쓴다(그냥 빼면 지워지지 않고 남는다).
+- ■ 현재상태는 ▸ 소제목이 항목이다. 지난 정리 이후 값이 바뀐 소제목만 그 소제목 전체(안 바뀐 줄·근거 줄 포함)를 다시 쓰고, 안 바뀐 소제목은 쓰지 않는다(프로그램이 그대로 둔다). 기준 시점·장소·몸 상태·옷차림은 장면이 바뀌었으면 꼭 다시 본다. 끝난 소제목은 그냥 빼지 말고 아래 지우기 규칙대로 (삭제)와 근거를 쓴다.
 - 이어지는 사건은 합친다: 새 로그의 일이 기존 날짜로그 마지막 사건(또는 마지막 두세 개 중 하나)과 같은 날·같은 장면으로 이어지면 새 사건을 만들지 않는다. 그 기존 사건 항목 전체를 다시 쓰되 제목 줄은 기존과 한 글자도 다르지 않게 두고, 기존 줄·근거 줄은 그대로 둔 채 새로 일어난 일을 한 단계에 한 줄씩 새 줄로 덧붙인다(→로 한 줄에 길게 잇지 않는다).
 - 새 사건은 날짜가 바뀌었거나, 자리를 떠나 다른 곳에서 다시 만났거나, 앞 일과 상관없는 별개 용건일 때만 만든다. 한 장면 안의 짧은 이동이나 시간 흐름(저녁 → 밤)으로는 나누지 않는다.
 - 끝난 사건을 한 줄로 줄일 때는 그 사건 항목 전체(제목 줄은 기존과 한 글자도 다르지 않게, ⤿·근거 줄 포함)를 다시 쓴다.
@@ -941,6 +943,7 @@
 - 숫자·횟수·시간은 원문 값 그대로 씀. '약·최소·이상·쯤'도 지우지 않음.
 - 근거 줄은 [근거]에 적힌 칸에 더해, 현재상태의 옷차림·되풀이되는 습관·둘만의 것과 감정선 단계에도 붙임(형식 예시대로). 줄거리·이정표·세계관에는 붙이지 않음.
 - 사건마다 그 장면을 다시 생생하게 떠올리게 하는 원문 단서(몸짓·표정·감각·날씨·소리)를 2~3개(짧은 장면은 1개), 짧은 구절로 남김. 기본 지침의 '1~2개'보다 이 규칙이 우선함. 성관계 장면에는 남기지 않음.
+- 서사 고리 줄은 '- [열림] 종류 · 누가→누구 · 제목: …' 꼴로, 종류 다음에 그 약속·예정을 꺼낸 사람→받은 사람을 쓴다(둘이 함께 정했으면 '나나·니콜라스', 혼자 품은 목표면 이름 하나). 이미 있는 고리에 이게 없으면 이번에 그 고리를 고칠 때 붙인다.
 - 서사 고리: 이미 열려 있는 고리와 같은 약속·예정·일이 진행되거나 날짜·장소가 정해지면 새 고리를 만들지 않음. 그 고리를 제목 그대로 다시 써서 바뀐 것과 '지금:'·(마지막 언급)만 고치고, 원래 있던 내용(언제·누가 제안했는지·이어진 다른 약속)은 빼지 않음(예: '공연 및 작업실 초대'가 있는데 작업실 날짜가 정해지면 그 고리를 고침 · '작업실 방문' 고리를 새로 만들지 않음).
 - 성관계 장면은 빠뜨리지 않되 본문 1~2줄로, 어떤 관계였는지만 씀: 누가 이끌었는지, 동의·거부(원문 그대로), 드러난 성향(점잖은 말 한 단어씩), 피임 여부(원문에 있을 때), 그 뒤 달라진 것(관계·약속·임신 가능성). 동작·신체·감각 묘사와 노골적인 대사는 어느 칸에도 쓰지 않음.
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
@@ -1589,7 +1592,7 @@
     .knot.now{border-color:var(--pencil);border-style:dashed}
     .knot span{position:absolute;top:22px;left:50%;transform:translateX(-50%);font-size:11.5px;font-weight:700;color:var(--ink2);white-space:nowrap}
     .knot.now span{color:var(--graphite);font-weight:600}
-    .knot.start span{left:0;transform:none}
+    .knot.start span{left:0;transform:none}.knot.end span{left:auto;right:-6px;transform:none}
     .runrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
     .runrow span{font-size:14px;color:var(--ink2)}
     .runrow b{color:var(--ink)}
@@ -2596,7 +2599,7 @@
     .wd-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink2);padding:2px 2px 0}
     .wd-status span{margin-left:auto;font-weight:500;color:var(--graphite)}
     .wd-dot{flex:0 0 8px;height:8px;border-radius:50%;background:var(--pencil)}.wd-dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(63,185,143,.16)}
-    .wd-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px;color:var(--ink)}.nf-help>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}.nf-help>summary::-webkit-details-marker{display:none}.nf-help>summary b{font-size:15px;font-weight:800;color:var(--ink)}.nf-q{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;color:var(--graphite);background:var(--mist)}.nf-help[open] .nf-q{background:var(--acc,#7B61D9);border-color:transparent;color:#fff}.nf-more{margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--mist);font-size:12.5px;line-height:1.6;color:var(--graphite)}.nf-more p{margin:0 0 6px}.nf-more p:last-child{margin:0}.nf-more b{color:var(--ink)}.nf-sub{margin:6px 0 12px;font-size:12.5px;color:var(--graphite)}.nf-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf-opt{border:1px solid var(--rule);border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}.nf-opt b{font-size:14px;font-weight:800;color:var(--ink)}.nf-opt small{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--graphite)}.nf-ic{display:block;font-size:18px;margin-bottom:6px}.nf-tag{font-style:normal;font-size:10.5px;font-weight:800;margin-left:5px;padding:2px 6px;border-radius:999px;background:var(--mist);color:var(--acc-ink,#5B45B0);vertical-align:2px}.nf-opt .btn{width:100%;padding:9px 0;font-size:13.5px;text-align:center}.nf-foot{margin:12px 0 0;font-size:12px;color:var(--graphite)}@media (max-width:340px){.nf-opts{grid-template-columns:1fr}}.nf-pick{margin:12px 0 0;display:flex;flex-direction:column;gap:6px}.nf-pick>small{font-size:12px;color:var(--graphite)}.nf-pi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);font:inherit;text-align:left;cursor:pointer}.nf-pi b{font-size:13.5px;color:var(--ink)}.nf-pi small{font-size:11.5px;color:var(--graphite)}.nf-pi:hover{border-color:var(--acc)}.rvd{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px}.rvd-h b{font-size:15px;font-weight:800;color:var(--ink)}.rvd-h small{display:block;font-size:12px;color:var(--graphite);margin-top:2px}.rvd-c{margin-top:14px}.rvd-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.rvd-t span{font-size:11.5px;color:var(--graphite)}.rvd-t b{font-size:13.5px;color:var(--ink)}.rvd-k{font-style:normal;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--mist);color:var(--acc-ink)}.rvd-k[data-k="지움"]{background:#FBE4E2;color:#B4443F}.rvd-k[data-k="새로"]{background:#E3F4EA;color:#2F7D4F}.rvd-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rvd-b{border:1px solid var(--rule);border-radius:14px;padding:10px;min-width:0;font-size:12.5px;line-height:1.55;color:var(--ink)}.rvd-b>small{display:block;font-size:11px;font-weight:800;color:var(--graphite);margin-bottom:4px}.rvd-b p{margin:0 0 4px;padding:1px 3px;word-break:break-all}.rvd-b p.del{color:#B4443F;text-decoration:line-through;background:#FBE4E2;border-radius:4px}.rvd-b p.add{color:#2F7D4F;background:#E3F4EA;border-radius:4px}.rvd-b p.none{color:var(--pencil)}.rvd-b p.same{color:var(--pencil);font-size:11.5px}.rvd-b p.why{color:var(--graphite);background:var(--mist);border-radius:4px}@media (max-width:340px){.rvd-g{grid-template-columns:1fr}}li:has(>.tl-rv),.thr:has(>.tl-rv){position:relative;padding-right:40px}.rvbar{display:flex;margin:0 0 10px}.sechead:has(.rv-start),.meta:has(.rv-start){display:flex;align-items:center;gap:8px}.sechead .rv-start,.meta .rv-start{margin-left:auto}.rv-start{flex:none;border:1px solid var(--rule);border-radius:999px;background:var(--paper);padding:3px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--graphite);cursor:pointer}.rvbar-b{display:flex;align-items:center;gap:10px;flex:none}.rvbar-b .btn{padding:7px 14px;font-size:13px}.rvp{position:relative}.rvp.sel{outline-style:solid}.rv-ck{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid var(--acc);background:var(--paper);display:grid;place-items:center;font-style:normal;z-index:1}.rv-ck.on{background:var(--acc)}.rv-ck.on::after{content:'✓';color:#fff;font-size:13px;font-weight:800;line-height:1}.rv-start:disabled{opacity:.5;cursor:default}.rvbar.on{justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--mist)}.rvbar.on .linkbtn{flex:none;white-space:nowrap}.rvbar.on b{display:block;font-size:13.5px;color:var(--ink)}.rvbar.on small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.rvp{outline:2px dashed var(--acc);outline-offset:2px;cursor:pointer}.tl-rv{position:absolute;right:10px;bottom:10px;display:inline-grid;place-items:center;width:26px;height:26px;margin:0;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);font-size:12px;line-height:1;cursor:pointer;opacity:.75}.tl-rv:hover{opacity:1}.tl-rv:hover{color:var(--acc-ink)}.tl-rv:disabled{opacity:.5;cursor:default}
+    .wd-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px;color:var(--ink)}.nf-help>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}.nf-help>summary::-webkit-details-marker{display:none}.nf-help>summary b{font-size:15px;font-weight:800;color:var(--ink)}.nf-q{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;color:var(--graphite);background:var(--mist)}.nf-help[open] .nf-q{background:var(--acc,#7B61D9);border-color:transparent;color:#fff}.nf-more{margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--mist);font-size:12.5px;line-height:1.6;color:var(--graphite)}.nf-more p{margin:0 0 6px}.nf-more p:last-child{margin:0}.nf-more b{color:var(--ink)}.nf-sub{margin:6px 0 12px;font-size:12.5px;color:var(--graphite)}.nf-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf-opt{border:1px solid var(--rule);border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}.nf-opt b{font-size:14px;font-weight:800;color:var(--ink)}.nf-opt small{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--graphite)}.nf-ic{display:block;font-size:18px;margin-bottom:6px}.nf-tag{font-style:normal;font-size:10.5px;font-weight:800;margin-left:5px;padding:2px 6px;border-radius:999px;background:var(--mist);color:var(--acc-ink,#5B45B0);vertical-align:2px}.nf-opt .btn{width:100%;padding:9px 0;font-size:13.5px;text-align:center}.nf-foot{margin:12px 0 0;font-size:12px;color:var(--graphite)}@media (max-width:340px){.nf-opts{grid-template-columns:1fr}}.nf-pick{margin:12px 0 0;display:flex;flex-direction:column;gap:6px}.nf-pick>small{font-size:12px;color:var(--graphite)}.nf-pi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);font:inherit;text-align:left;cursor:pointer}.nf-pi b{font-size:13.5px;color:var(--ink)}.nf-pi small{font-size:11.5px;color:var(--graphite)}.nf-pi:hover{border-color:var(--acc)}.thw{display:block;margin:2px 0 2px;font-size:11.5px;font-weight:600;color:var(--graphite)}.rvd{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px}.rvd-h b{font-size:15px;font-weight:800;color:var(--ink)}.rvd-h small{display:block;font-size:12px;color:var(--graphite);margin-top:2px}.rvd-c{margin-top:14px}.rvd-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.rvd-t span{font-size:11.5px;color:var(--graphite)}.rvd-t b{font-size:13.5px;color:var(--ink)}.rvd-k{font-style:normal;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--mist);color:var(--acc-ink)}.rvd-k[data-k="지움"]{background:#FBE4E2;color:#B4443F}.rvd-k[data-k="새로"]{background:#E3F4EA;color:#2F7D4F}.rvd-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rvd-b{border:1px solid var(--rule);border-radius:14px;padding:10px;min-width:0;font-size:12.5px;line-height:1.55;color:var(--ink)}.rvd-b>small{display:block;font-size:11px;font-weight:800;color:var(--graphite);margin-bottom:4px}.rvd-b p{margin:0 0 4px;padding:1px 3px;word-break:break-all}.rvd-b p.del{color:#B4443F;text-decoration:line-through;background:#FBE4E2;border-radius:4px}.rvd-b p.add{color:#2F7D4F;background:#E3F4EA;border-radius:4px}.rvd-b p.none{color:var(--pencil)}.rvd-b p.same{color:var(--pencil);font-size:11.5px}.rvd-b p.why{color:var(--graphite);background:var(--mist);border-radius:4px}@media (max-width:340px){.rvd-g{grid-template-columns:1fr}}li:has(>.tl-rv),.thr:has(>.tl-rv){position:relative;padding-right:40px}.rvbar{display:flex;margin:0 0 10px}.sechead:has(.rv-start),.meta:has(.rv-start){display:flex;align-items:center;gap:8px}.sechead .rv-start,.meta .rv-start{margin-left:auto}.rv-start{flex:none;border:1px solid var(--rule);border-radius:999px;background:var(--paper);padding:3px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--graphite);cursor:pointer}.rvbar-b{display:flex;align-items:center;gap:10px;flex:none}.rvbar-b .btn{padding:7px 14px;font-size:13px}.rvp{position:relative}.rvp.sel{outline-style:solid}.rv-ck{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid var(--acc);background:var(--paper);display:grid;place-items:center;font-style:normal;z-index:1}.rv-ck.on{background:var(--acc)}.rv-ck.on::after{content:'✓';color:#fff;font-size:13px;font-weight:800;line-height:1}.rv-start:disabled{opacity:.5;cursor:default}.rvbar.on{justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--mist)}.rvbar.on .linkbtn{flex:none;white-space:nowrap}.rvbar.on b{display:block;font-size:13.5px;color:var(--ink)}.rvbar.on small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.rvp{outline:2px dashed var(--acc);outline-offset:2px;cursor:pointer}.tl-rv{position:absolute;right:10px;bottom:10px;display:inline-grid;place-items:center;width:26px;height:26px;margin:0;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);font-size:12px;line-height:1;cursor:pointer;opacity:.75}.tl-rv:hover{opacity:1}.tl-rv:hover{color:var(--acc-ink)}.tl-rv:disabled{opacity:.5;cursor:default}
     .wd-tile{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
     .wd-tile small{display:block;font-size:12px;font-weight:700;color:var(--graphite);margin-bottom:4px}
     .wd-tile b{font-size:30px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums;line-height:1}
@@ -3249,11 +3252,12 @@
     const turns = freshTurns(), covered = n.turns, now = covered + turns, span = Math.max(now, 1);
     const pct = t => (t / span * 100).toFixed(2);
     const knots = [...new Set(usage.map(r => r.to).filter(t => t > 0 && t <= covered).concat([covered]))].sort((a, b) => a - b);
+    const close = turns && turns / span < 0.2; // 정리한 곳과 지금이 가까우면 글자 하나로(겹치지 않게)
     return `<div class="thread" role="img" aria-label="${covered}턴까지 정리됨, 그 뒤로 ${turns}턴 쌓임">
       <i class="th-done" style="width:${pct(covered)}%"></i>
       ${turns ? `<i class="th-wait" style="left:${pct(covered)}%;width:${(pct(now) - pct(covered)).toFixed(2)}%"></i>` : ''}
-      ${knots.map((k, i) => `<b class="knot${i < knots.length - 1 ? ' small' : ''}" style="left:${pct(k)}%">${i === knots.length - 1 ? `<span>${k}턴</span>` : ''}</b>`).join('')}
-      ${turns ? `<b class="knot now" style="left:${pct(now)}%"><span>지금 ${now}턴</span></b>` : ''}</div>`;
+      ${knots.map((k, i) => `<b class="knot${i < knots.length - 1 ? ' small' : ''}${k / span > 0.8 ? ' end' : ''}" style="left:${pct(k)}%">${i === knots.length - 1 && !close ? `<span>${k}턴</span>` : ''}</b>`).join('')}
+      ${turns ? `<b class="knot now${now / span > 0.8 ? ' end' : ''}" style="left:${pct(now)}%"><span>${close ? `${covered}턴 정리 · ` : ''}지금 ${now}턴</span></b>` : ''}</div>`;
   }
 
   // 받침에 맞는 조사: josa('유진', '이', '가') → '유진이'
@@ -3332,7 +3336,7 @@
     const M = [['on', '항상'], ['auto', '나올 때만'], ['off', '끄기']];
     const row = k => `<div class="ij-row${have.has(k) ? '' : ' none'}"><span>${esc(k)}${have.has(k) ? '' : ' <small>비어 있음</small>'}</span><div class="ij-seg">${M.map(([v, l]) => `<button data-act="injsec" data-arg="${esc(k)}|${v}" aria-pressed="${secMode(k) === v}">${l}</button>`).join('')}</div></div>`;
     const num = (key, label, opts) => `<div class="ij-row"><span>${label}</span><div class="ij-seg">${opts.map(v => `<button data-act="injnum" data-arg="${key}|${v}" aria-pressed="${injSet[key] === v}">${v}</button>`).join('')}</div></div>`;
-    const RES = { written: '새로 골라 넣음', same: '바뀐 것 없음', generating: '다른 곳에서 답 쓰는 중 · 건너뜀', busy: '정리 중 · 건너뜀', timeout: '시간이 걸려 그냥 보냄', fail: '실패 · 그냥 보냄', 'no-full': '이 기기에 전체 기억 없음', 'no-note': '노트 없음', 'no-carrier': '넣을 답변 없음', moved: '방을 옮김' };
+    const RES = { written: '새로 골라 넣음', same: '바뀐 것 없음', ready: '미리 골라 둔 기억 그대로 · 바로 보냄', generating: '다른 곳에서 답 쓰는 중 · 건너뜀', busy: '정리 중 · 건너뜀', timeout: '시간이 걸려 그냥 보냄', fail: '실패 · 그냥 보냄', 'no-full': '이 기기에 전체 기억 없음', 'no-note': '노트 없음', 'no-carrier': '넣을 답변 없음', moved: '방을 옮김' };
     const hm = t => new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
     const logRow = x => `<li class="il-${x.res === 'written' ? 'on' : x.res === 'same' ? 'same' : 'skip'}"><span class="il-t">${hm(x.at)}</span><div><b>${x.kind === 'reroll' ? '↻ 다시 쓰기' : esc(x.said ? '“' + x.said + '”' : '보냄')}</b>
       <small>${RES[x.res] || esc(x.res)}${x.res === 'written' || x.res === 'same' ? ` · ${fmt(x.chars)}자${x.pinned ? ` · 📌 ${x.pinned}` : ''}` : ''}</small>
@@ -5747,12 +5751,14 @@
     const th = threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
     // 열린 고리의 "(마지막 언급: 날짜 · N턴)"은 본문에서 떼어 제목 옆 알약으로. 100턴 넘게 안 나온 고리는 '오래됨'
     const nowTurn = (snapshot?.note?.turns || 0) + freshTurns();
-    const thRow = t => { const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
+    const thRow = t => { let thWho = ''; const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
       const lm = String(t.text).match(/\s*[（(]마지막 언급\s*[:：]\s*([^)）]*)[)）]\s*$/), text = lm ? t.text.slice(0, lm.index).trim() : t.text;
       const turn = lm ? Number((lm[1].match(/(\d+)\s*턴/) || [])[1]) : 0, stale = !t.closed && turn && nowTurn - turn >= 100;
       const pill = t.closed || !lm ? '' : pillSt(stale ? `오래됨 · ${esc(lm[1])}` : `마지막 언급 ${esc(lm[1])}`, stale ? 'broken' : 'off');
       const hk = 'hook:' + itemKey(String(t.title).split('·').pop()), pick = nav.rvPick && !t.closed;
-      return `<div class="thr${stale ? ' thr-stale' : ''}${pick ? ' rvp' + (nav.rvSel?.has(hk) ? ' sel' : '') : ''}"${pick ? ` data-act="rvtoggle" data-arg="${esc(hk)}"` : ''}>${pick ? rvCk(hk) : ''}<b>${m ? `<em class="thk">${esc(m[1])}</em>${esc(m[2])}` : esc(t.title)}${pill}</b>${bitsOf(text).map(bitHtml).join('')}${quoteHtml(t.quote, t.tr)}</div>`; };
+      return `<div class="thr${stale ? ' thr-stale' : ''}${pick ? ' rvp' + (nav.rvSel?.has(hk) ? ' sel' : '') : ''}"${pick ? ` data-act="rvtoggle" data-arg="${esc(hk)}"` : ''}>${pick ? rvCk(hk) : ''}<b>${(() => { if (!m) return esc(t.title); const d = String(m[2]).match(/^([^·→]{1,20}?)\s*→\s*([^·]{1,20}?)\s*·\s*(.+)$/), g = !d && String(m[2]).match(/^([^·]{1,20}·[^·]{1,20}|[^·→\s][^·→]{0,15}?)\s*·\s*(.+)$/);
+        const who = d ? `${josa(d[1].trim(), '이', '가')} ${d[2].trim()}에게` : g && namesIn(sections().map(x => x.body).join('\n')).some(nm => g[1].includes(nm)) ? `${g[1].trim()}` : ''; // 누가 누구에게(이름일 때만)
+        thWho = who; return `<em class="thk">${esc(m[1])}</em>${esc(d ? d[3] : who ? g[2] : m[2])}`; })()}${pill}</b>${thWho ? `<small class="thw">${esc(thWho)}</small>` : ''}${bitsOf(text).map(bitHtml).join('')}${quoteHtml(t.quote, t.tr)}</div>`; };
     const upcoming = openTh.length || doneTh.length ? `<div class="tl-up"><div class="tl-up-h"><b>🪢 아직 끝나지 않은 일 ${openTh.length}</b></div>
       ${openTh.map(thRow).join('') || '<p>지금은 없어요.</p>'}
       ${doneTh.length ? `<details class="tl-done"><summary>끝난 일 ${doneTh.length}</summary>${doneTh.map(thRow).join('')}</details>` : ''}</div>` : '';
@@ -6783,6 +6789,13 @@
     let whole = await wholeOf(chatId, n);
     if (!whole && !n.sel) { await saveFull(chatId, n.upto, n.memory, n.turns, n.at); whole = n.memory; } // 채팅 노트가 전체(본판·처음)면 먼저 이 기기에 저장
     if (!whole) return 'no-full'; // 고른 일부만 있고 전체본이 없는 기기는 다시 고를 수 없어요(지금 든 것 그대로)
+    // 답이 온 뒤 미리 골라 넣어 둔 기억이 그대로 쓸 만하면 기다리지 않고 바로 보내요 · 보낸 말이 아직 안 넣은 옛일을 꺼냈을 때만 새로 골라요
+    if (kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
+      const keep = injCtx, before = new Set(lastInj?.keys || []); injCtx = { ...keep, said: String(said) }; injSaidHits = new Set();
+      try { selectInjection(whole); } catch (_) {}
+      const fresh = [...injSaidHits].filter(k => !before.has(k)); injCtx = keep;
+      if (!fresh.length) return 'ready';
+    }
     const lastUser = [...snap.all].reverse().find(m => msgRole(m) === 'user');
     injKind = kind; await updateInjCtx(chatId, snap, whole, kind === 'send' ? said : stripBlocks(msgText(lastUser || {}))); injKind = ''; lap(); // 리롤: 마지막 유저 말로 골라요
     // 노트 자리: 지금 자리(AI가 읽는 최근 답변 안)를 그대로 쓰고, 밀려났으면 전전으로. 리롤은 마지막 답이 바뀌니 마지막 답에는 안 넣어요.
