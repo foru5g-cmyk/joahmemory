@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.8
+// @version      4.0.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1060,7 +1060,7 @@
     if (pv === 'firebase' && !proj) throw new Error('설정에서 Firebase 프로젝트 ID를 먼저 넣어 주세요.');
     const raw = await requestRaw('POST', pv === 'vertex'
       ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
-      : pv === 'firebase' ? `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(proj)}/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
+      : pv === 'firebase' ? `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(proj)}/locations/global/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
       : `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`,
       { headers: { 'x-goog-api-key': key }, timeout: 600000, onProgress: raw => updateProg(raw),
         body: { systemInstruction: { parts: [{ text: system }] },
@@ -6614,7 +6614,7 @@
         ${Object.entries(KEYS).map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
         ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
-        ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 켜 두세요.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
+        ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요).', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
         </details>
 `)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
