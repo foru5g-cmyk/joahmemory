@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.6
+// @version      4.0.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -296,8 +296,8 @@
     const out = []; let cur = null;
     for (const l of String(body || '').split('\n')) {
       const m = l.match(/^▸\s*(.*)$/);
-      if (m) { const t = m[1].trim(), c = t.match(/^\[(NPC|지침|세계관|기타)(\|미주입)?\]\s*(.*)$/), only = FIX_CATS.includes(t);
-        cur = { cat: c ? c[1] : only ? t : '기타', title: c ? c[3] : only ? '' : t, off: !!(c && c[2]), text: [] }; out.push(cur); continue; }
+      if (m) { const t = m[1].trim(), c = t.match(/^\[(NPC|지침|세계관|기타)\]\s*(.*)$/), only = FIX_CATS.includes(t);
+        cur = { cat: c ? c[1] : only ? t : '기타', title: c ? c[2] : only ? '' : t, head: t, text: [] }; out.push(cur); continue; }
       if (!cur) { if (!l.trim()) continue; cur = { cat: '기타', title: '', text: [] }; out.push(cur); }
       cur.text.push(l);
     }
@@ -305,16 +305,7 @@
     return out.filter(it => it.title || it.text);
   }
   const fixClean = t => String(t).replace(/^▸/gm, '▹').replace(/^■/gm, '▪').replace(/^##(?!#)/gm, '#').replace(/^※/gm, '＊');
-  const fixJoin = items => items.filter(it => (it.title || it.text).trim()).map(it => '▸ [' + it.cat + (it.off ? '|미주입' : '') + '] ' + String(it.title || '').replace(/\s+/g, ' ').trim() + (it.text.trim() ? '\n' + fixClean(it.text.trim()) : '')).join('\n');
-  // 고정 설정 항목별 주입 스위치: '▸ [NPC|미주입] 이름' = 웹 모드에서 채팅에 안 넣어요(전체 사본엔 그대로). 앱 방식은 표시만 떼고 그대로 넣어요.
-  function fxInjPrep(memory) {
-    if (!/^▸\s*\[(?:NPC|지침|세계관|기타)\|미주입\]/m.test(memory)) return memory;
-    if (!sceneOn) return memory.replace(/^(▸\s*\[(?:NPC|지침|세계관|기타))\|미주입\]/gm, '$1]');
-    const list = splitSections(memory), sec = list.find(x => x.key === FIXED); if (!sec) return memory;
-    const keep = fixItems(sec.body).filter(it => !it.off);
-    if (keep.length) sec.body = fixJoin(keep); else list.splice(list.indexOf(sec), 1);
-    return joinSections(list);
-  }
+  const fixJoin = items => items.filter(it => (it.title || it.text).trim()).map(it => '▸ [' + it.cat + '] ' + String(it.title || '').replace(/\s+/g, ' ').trim() + (it.text.trim() ? '\n' + fixClean(it.text.trim()) : '')).join('\n');
   const INJ_AI_MODEL = 'gemini-3.5-flash-lite', INJ_AI_POOL = 40;
   const INJ_AI_GUIDE = `너는 롤플레이 기억 고르미다. said(유저가 방금 보낸 다음 행동)와 prev(직전 AI 답 = 지금 장면)를 보고, 후보 기억마다 이번 답을 쓰는 데 얼마나 필요한지 0~100 정수로 매긴다.
 - 낱말이 달라도 같은 물건·사람·장소·약속·비밀·사건이면(원인·뒷일·별칭·다른 표현 포함) 높게 준다. 예: said가 '우리 반지'면 반지를 건넨 일은 90 이상.
@@ -332,7 +323,6 @@
   let injSaidHits = new Set(); // 보낸 말이 직접 꺼낸 항목(드문 낱말·날짜)
   let injPicking = false, injCtx = { text: '', sim: {} }, lastInj = null, sceneOn = false, injPins = new Set(), injSkip = new Map(); // injPins: 📌 늘 넣는 사건(방마다 저장) · injSkip: ✕ 이번 장면에서 뺀 기억(유저가 그 일을 다시 직접 말하면 돌아와요) // sceneOn: 웹 모드(설정) // injCtx.text: 최근 대화 · sim: 항목 키 → 의미 점수(0~1, 가장 비슷한 게 1)
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
-    memory = fxInjPrep(memory);
     const all = stripProof(memory), pool = [];
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
@@ -503,7 +493,7 @@
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 지금 장면에 필요한 것만. 지난 일·열린 고리 억지로 꺼내거나 끝내지 않음. 기록된 말·반응·물건 되풀이 안 함. 노트에 없는 과거는 지어내지 않음`,
         ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(되풀이 금지와 상관없음)`] : []),
-        ...fixItems(splitSections(memory).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
+        ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
         ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
@@ -3299,6 +3289,7 @@
     const up = latestVer && newerVer(latestVer, MY_VER);
     return `<div class="verfoot">♡ v${esc(MY_VER)}${up ? ` <button class="vup" data-act="getupdate">update 필요!</button> <small>v${esc(latestVer)}</small>` : ''}</div>`;
   };
+  const fxOff = it => !!it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)); // 노트관리의 넣음/뺌과 같은 저장소
   function fixedHtml() {
     const items = fixItems((splitSections(noteMemory()).find(x => x.key === FIXED)?.body || '')), total = items.reduce((a, it) => a + it.title.length + it.text.length, 0);
     const flt = FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : '', shown = items.map((it, i) => [it, i]).filter(([it]) => !flt || it.cat === flt);
@@ -3306,7 +3297,7 @@
     return `<section class="bk fx">
       <div class="fx-top"><div><b>고정 설정</b><small>내가 쓰는 설정 · 주입을 켠 것만 매 턴 들어가요 · AI가 안 고쳐요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
       <div class="fx-seg"><button data-act="fxfilter" data-arg="" aria-pressed="${!flt}">전체 <small>${items.length}</small></button>${FIX_CATS.map(c => `<button data-act="fxfilter" data-arg="${c}" aria-pressed="${flt === c}">${c} <small>${cnt(c)}</small></button>`).join('')}</div>
-      ${shown.length ? `<ul class="fx-list">${shown.map(([it, i]) => `<li${it.off ? ' class="fx-off"' : ''}><details><summary><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small><button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!it.off}" aria-label="${it.off ? '채팅에 안 넣는 중 · 누르면 주입' : '채팅에 주입 중 · 누르면 빼기'}"><i></i></button></summary>
+      ${shown.length ? `<ul class="fx-list">${shown.map(([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details><summary><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
           <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">고치기</button></div></details></li>`).join('')}</ul>`
         : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : 'NPC·지침·세계관처럼 바뀌면 안 되는 설정을 유저노트처럼 넣어 두세요.<br>웹 모드에선 보낼 때마다 그대로 들어가요.'}</p>`}
       <div class="actions one"><button class="btn pri" data-act="fixopen" data-arg="new">+ 새로 추가</button></div>
@@ -3338,24 +3329,6 @@
     await saveEdit(); nav.view = null; nav.tab = 'fixed'; render();
   }
   let fxChain = Promise.resolve(); // 주입 동그라미: 화면 이동 없이 바로 저장(여러 번 눌러도 차례로)
-  function fxSetOff(i, off) {
-    fxChain = fxChain.then(async () => {
-      const chatId = chatIdFromPath(), n = snapshot?.note, y = out('main')?.scrollTop || 0;
-      try {
-        const cur = fixItems(editBody(FIXED)); if (!cur[i]) return; cur[i].off = off;
-        const body = fixJoin(cur);
-        if (!chatId || !n) { await fixSaveAll(body); return; }
-        const partOnly = n.sel && !(fullNote && fullNote.upto === n.upto), list = splitSections(noteMemory()), sec = list.find(x => x.key === FIXED);
-        if (sec) sec.body = body; else list.push({ key: FIXED, body });
-        if (n.parked) await park(chatId, joinSections(list), n.upto, n.turns, n.at);
-        else { const msg = await readMessage(chatId, n.carrierId); await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(joinSections(list), n.upto, n.turns, n.at || undefined, n.by || '', partOnly)); }
-        if (!partOnly) await saveFull(chatId, n.upto, joinSections(list), n.turns, n.at);
-        const ed = await editedKeys(chatId); if (!ed.includes(FIXED)) { ed.push(FIXED); await setValue('edited:' + chatId, JSON.stringify(ed)); }
-        await refresh(); if (nav.gsOn) gsSave(true);
-      } catch (e) { toast('저장 실패 · ' + e.message, 'err'); try { await refresh(); } catch (_) {} }
-      render(); if (out('main')) out('main').scrollTop = y;
-    });
-  }
   async function fixMerge(add) { // 고른 항목만 · 같은 카테고리·이름은 건너뛰고 붙여요
     const cur = fixItems(editBody(FIXED)), key = it => it.cat + '|' + it.title.replace(/\s+/g, '');
     const have = new Set(cur.map(key)), fresh = add.filter(it => !have.has(key(it)));
@@ -6932,7 +6905,7 @@
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       { const c = snap.note; // 다른 기기(폰)에서 고정 설정을 고쳤으면 채팅 노트 쪽이 최신 → 이 기기 전체 사본의 고정 설정도 그걸로
         if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto) { const fx = m => (splitSections(m).find(x => x.key === FIXED)?.body || '').trim(), a = fx(c.memory), b = fx(fullNote.memory);
-          if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fxInjPrep(fullNote.memory))))) { const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED); if (sec) sec.body = a; else list.unshift({ key: FIXED, body: a }); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); } } }
+          if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory)))) { const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED); if (sec) sec.body = a; else list.unshift({ key: FIXED, body: a }); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); } } }
       { const c = snap.note; // 분기한 방: 방 번호는 새것이지만 채팅 노트의 정리 시각은 그대로 → 이 기기의 다른 방에서 같은 정리본 전체를 찾아 이어 붙여요
         if (c?.sel && !c.parked && c.at && !(fullNote && fullNote.upto === c.upto)) { try {
           const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []);
@@ -7449,7 +7422,7 @@
     if (!out('editor')) return; // 항목 목록 화면에선 저장할 게 없어요
     if (root.querySelector('[data-rel]')) { const line = relCompose(); if (line == null) return toast('누가·누구에게를 서로 다른 사람으로 골라 주세요.', 'err'); out('editor').value = line; }
     if (nav.key === FIXED && nav.view === 'edit' && nav.fxEdit) {
-      const list = fixItems(editBody(FIXED)), it = { cat: nav.fxEdit.cat, title: String(out('fxtitle')?.value || '').trim(), text: out('editor').value, off: !!nav.fxEdit.off };
+      const list = fixItems(editBody(FIXED)), it = { cat: nav.fxEdit.cat, title: String(out('fxtitle')?.value || '').trim(), text: out('editor').value };
       if (nav.fxDel || !(it.title || it.text.trim())) { if (Number.isInteger(nav.part)) list.splice(nav.part, 1); } else if (Number.isInteger(nav.part)) list[nav.part] = it; else list.push(it);
       out('editor').value = fixJoin(list); nav.part = null; nav.fxDel = false;
     }
@@ -7923,10 +7896,13 @@
       case 'castpick': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'person': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'fxfilter': nav.fxFilter = arg; return render();
-      case 'fxinj': { e.preventDefault(); if (loading || !snapshot) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
-        const off = el.getAttribute('aria-pressed') === 'true'; // 지금 켜짐 → 끔
+      case 'fxinj': { e.preventDefault(); const cid = chatIdFromPath(); if (loading || !snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+        const it = fixItems(editBody(FIXED))[Number(arg)]; if (!it?.head) return; const key = FIXED + '|' + itemKey(it.head), off = !NO_INJ.has(key); // 노트관리의 넣음/뺌과 같은 것
+        if (off) NO_INJ.add(key); else NO_INJ.delete(key);
         el.setAttribute('aria-pressed', String(!off)); el.closest('li')?.classList.toggle('fx-off', off); // 바로 색부터 바꿔요
-        return fxSetOff(Number(arg), off); }
+        const y = out('main')?.scrollTop || 0;
+        fxChain = fxChain.then(async () => { try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); } render(); if (out('main')) out('main').scrollTop = y; });
+        return; }
       case 'fxnoop': return;
       case 'fxlibsave': { const body = editBody(FIXED).trim(); if (!body) return; let lib = []; try { lib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) {}
         const name = roomName() + ' · ' + new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' });
