@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.0.7
+// @version      4.0.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -20,6 +20,9 @@
 // @connect      contents-api.wrtn.ai
 // @connect      generativelanguage.googleapis.com
 // @connect      api.anthropic.com
+// @connect      aiplatform.googleapis.com
+// @connect      api.openai.com
+// @connect      firebasevertexai.googleapis.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
 // @connect      raw.githubusercontent.com
@@ -69,8 +72,13 @@
       ['gemini-3.5-flash-lite', '3.5 Flash-Lite'], ['gemini-3.1-flash-lite', '3.1 Flash-Lite'], ['gemini-3.1-pro-preview', '3.1 Pro'], ['gemini-2.5-pro', '2.5 Pro']]],
     ['Claude', [['claude-fable-5-1', 'Fable 5.1 (가장 똑똑함)'], ['claude-opus-5-5', 'Opus 5.5'], ['claude-opus-5', 'Opus 5'], ['claude-sonnet-5-5', 'Sonnet 5.5'], ['claude-sonnet-5', 'Sonnet 5'], ['claude-haiku-5-5', 'Haiku 5.5 (가장 쌈)'], ['claude-haiku-4-5', 'Haiku 4.5']]],
   ];
+  // Vertex = 같은 Gemini 모델을 구글 클라우드 키로(express 모드 API 키) · 이름 앞에 vertex:
+  MODELS.push(['Vertex', MODELS[0][1].map(([id, l]) => ['vertex:' + id, l])], ['Firebase', MODELS[0][1].map(([id, l]) => ['firebase:' + id, l])], ['OpenAI', [['gpt-5', 'GPT-5'], ['gpt-5-mini', 'GPT-5 mini'], ['gpt-4.1', 'GPT-4.1']]]);
   const MODEL_IDS = MODELS.flatMap(([, list]) => list.map(([id]) => id));
   const isClaude = model => /^claude-/.test(model);
+  const provOf = m => isClaude(m) ? 'claude' : /^vertex:/.test(m) ? 'vertex' : /^firebase:/.test(m) ? 'firebase' : /^(gpt-|o\d|chatgpt-)/.test(m) ? 'openai' : 'gemini';
+  const KEYS = { gemini: ['apiKey', 'Gemini 키', 'AIza…'], claude: ['claudeKey', 'Claude 키', 'sk-ant-…'], vertex: ['vertexKey', 'Vertex 키', 'AQ.… · 구글 클라우드 API 키'], firebase: ['firebaseKey', 'Firebase 키', 'AIza… · 웹 API 키'], openai: ['openaiKey', 'OpenAI 키', 'sk-…'] };
+  const keyOf = m => KEYS[provOf(m)][0];
   // 설정에서 켜고 끌 수 있는 칸. 끄면 정리할 때 AI가 그 칸을 만들지 않습니다.
   const OPTIONAL = [['감정선', 'secFeels', '두 사람의 감정이 어떻게 변해 왔는지'], ['소지품', 'secItems', '중요한 물건의 상태와 내력'], ['장소·조직', 'secPlaces', '다시 찾을 장소와 조직']];
   const offSections = async () => { const off = []; for (const [k, key] of OPTIONAL) if (String(await getValue(key, 'on')) === 'off') off.push(k); return off; };
@@ -1017,7 +1025,7 @@
       ? '\n\n[정정] 새 대화에 유저가 예전 기록을 바로잡은 말(OOC·"사실은 ~였다"·"그게 아니라"·"틀렸다")이 있다. 그 말이 가리키는 기존 사건·항목을 찾아 고친 내용으로 다시 쓴다. 그 사실이 들어 있는 모든 칸(인물·날짜로그·이정표·소지품 등)을 같이 고친다. 제목은 되도록 그대로 두고(제목에 틀린 말이 있으면 같은 날짜로 고친 제목), 새 사건으로 따로 만들지 않는다. 정정은 「바뀐 것만」 규칙의 예외다: 틀린 말이 들어 있는 옛 날짜로그 사건도 고친 글로 그 사건 전체를 다시 써서 출력한다. 가리키는 항목이 확실하지 않으면 고치지 않는다.' : '';
     const input = inputOverride || buildInput(cut.memory, freshMessages, fixed, edited, from) + fixHint + (cut.hidden.size ? `\n\n[날짜로그 목차] '${LOG_SKIP}'이 붙은 사건 ${cut.hidden.size}개는 본문을 안 보냈을 뿐 그대로 있다. 그 사건은 출력하지 않는다(고치지도 지우지도 않음). 새 대화의 일이 그 사건과 같은 일이면 새 사건으로 만들지 않는다.` : ''), system = await buildSystem(delta);
     const think = inputOverride ? 'low' : thinkLevel; // 🔍 다시 확인은 보는 양이 작아 늘 적게
-    const t0 = Date.now(), out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input, false, think).catch(e => /thinking/i.test(e.message) ? askGemini(model, system, input) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
+    const t0 = Date.now(), out = await askAny(model, system, input, false, think).catch(e => /thinking/i.test(e.message) ? askAny(model, system, input) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
     summarize.last = { model, inTok: out.inTok, outTok: out.outTok, cached: out.cached || 0, ms: Date.now() - t0 }; // cached: Gemini 자동 캐시 // ms: AI가 답하는 데 걸린 시간
     if (!out.text) throw new Error('AI가 빈 답을 보냈어요.');
     if (cut.hidden.size) console.info('[조아메모리] 정리 · 날짜로그 ' + cut.hidden.size + '개는 제목만 보냄(6만 자 넘어서)');
@@ -1029,7 +1037,7 @@
     // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
     let out; const waits = [4, 10];
     for (let k = 0; ; k++) {
-      try { out = isClaude(model) ? await askClaude(model, system, input) : await askGemini(model, system, input, json); break; }
+      try { out = await askAny(model, system, input, json); break; }
       catch (e) {
         if (k >= waits.length || !/HTTP (429|500|502|503|504)\b/.test(String(e?.message))) throw e;
         toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
@@ -1044,18 +1052,23 @@
   // 답이 출력 한도에서 잘림 → run()이 범위를 반으로 줄여 한 번 더 해요.
   const cutError = () => Object.assign(new Error('정리 결과가 너무 길어서 잘렸어요. 노트 크기를 줄여 주세요.'), { cut: true });
   // 한 번에 받으면 긴 정리에서 서버가 3분쯤에 끊는 일이 있어 스트리밍(SSE)으로 끝까지 받습니다. 끝맺음 표시 없이 끝나면 실패로 봅니다.
+  const askAny = (model, system, input, json = false, think = '') => ({ claude: askClaude, openai: askOpenAI }[provOf(model)] || askGemini)(model, system, input, json, think);
   async function askGemini(model, system, input, json = false, think = '') { // think: AI 생각 정도(low·medium·high)
-    const key = String(await getValue('apiKey', '')).trim();
-    if (!key) throw new Error('설정에서 Gemini API 키를 먼저 넣어 주세요.');
-    const raw = await requestRaw('POST',
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
+    const pv = provOf(model), id = model.replace(/^(vertex|firebase):/, ''); // Vertex express·Firebase AI Logic: 같은 요청 모양, 주소·키만 달라요
+    const key = String(await getValue(KEYS[pv][0], '')).trim(), proj = pv === 'firebase' ? String(await getValue('firebaseProject', '')).trim() : '';
+    if (!key) throw new Error(`설정에서 ${KEYS[pv][1]}를 먼저 넣어 주세요.`);
+    if (pv === 'firebase' && !proj) throw new Error('설정에서 Firebase 프로젝트 ID를 먼저 넣어 주세요.');
+    const raw = await requestRaw('POST', pv === 'vertex'
+      ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
+      : pv === 'firebase' ? `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(proj)}/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
+      : `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`,
       { headers: { 'x-goog-api-key': key }, timeout: 600000, onProgress: raw => updateProg(raw),
         body: { systemInstruction: { parts: [{ text: system }] },
                 contents: [{ role: 'user', parts: [{ text: input }] }],
                 // 창작 RP 정리라 조절 가능한 필터는 끔(공식 설정). 끌 수 없는 금지 항목은 그대로 막혀요.
                 safetySettings: ['HARASSMENT', 'HATE_SPEECH', 'SEXUALLY_EXPLICIT', 'DANGEROUS_CONTENT', 'CIVIC_INTEGRITY'].map(c => ({ category: 'HARM_CATEGORY_' + c, threshold: 'OFF' })),
                 // ETC는 JSON 모드: 글 안 따옴표가 저절로 이스케이프돼서 답이 중간에 깨지지 않아요
-                generationConfig: { maxOutputTokens: 65536, ...(json ? { responseMimeType: 'application/json' } : {}), ...(think && /^gemini-(3|4)/.test(model) ? { thinkingConfig: { thinkingLevel: think } } : {}) } } });
+                generationConfig: { maxOutputTokens: 65536, ...(json ? { responseMimeType: 'application/json' } : {}), ...(think && /^gemini-(3|4)/.test(id) ? { thinkingConfig: { thinkingLevel: think } } : {}) } } });
     let text = '', finish = '', u = {};
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
@@ -1098,9 +1111,30 @@
     return { text: text.trim(), inTok, outTok };
   }
 
+  // OpenAI Chat Completions(스트리밍). AI 생각 설정은 안 씀(모델 기본값).
+  async function askOpenAI(model, system, input, json = false) {
+    const key = String(await getValue('openaiKey', '')).trim();
+    if (!key) throw new Error('설정에서 OpenAI API 키를 먼저 넣어 주세요.');
+    const raw = await requestRaw('POST', 'https://api.openai.com/v1/chat/completions', {
+      timeout: 600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + key },
+      body: { model, stream: true, stream_options: { include_usage: true }, messages: [{ role: 'system', content: system }, { role: 'user', content: input }], ...(json ? { response_format: { type: 'json_object' } } : {}) } });
+    let text = '', finish = '', u = {};
+    for (const line of raw.split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+      if (j.error) throw new Error('OpenAI 오류 · ' + (j.error.message || '알 수 없음'));
+      const c = j.choices?.[0]; if (c?.delta?.content) text += c.delta.content; if (c?.finish_reason) finish = c.finish_reason;
+      if (j.usage) u = j.usage;
+    }
+    if (finish === 'length') throw Object.assign(cutError(), { partial: text.trim() });
+    if (finish === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
+    if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
+    return { text: text.trim(), inTok: Number(u.prompt_tokens) || 0, outTok: Number(u.completion_tokens) || 0, cached: Number(u.prompt_tokens_details?.cached_tokens) || 0 };
+  }
+
   // 공식 단가 (USD / 100만 토큰, 입력·출력). 생각 토큰은 출력 단가로 계산됩니다.
   function priceOf(model, inTok = 0) {
-    const m = String(model);
+    const m = String(model).replace(/^(vertex|firebase):/, ''); // Vertex·Firebase도 Gemini와 같은 단가로 어림
     if (/^gemini-3\.[678]-flash$/.test(m)) return Date.now() < Date.UTC(2027, 0, 1) ? [0.75, 3.75] : [1.5, 7.5];
     if (m === 'gemini-3.5-flash') return [1.5, 9];
     if (m === 'gemini-3.5-flash-lite') return [0.3, 2.5];
@@ -1732,6 +1766,9 @@
     /* ── 기억 탭 ── */
     .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -22px 16px;padding:0 22px 2px;position:sticky;top:-18px;z-index:1;background:var(--paper)}
     .seg::-webkit-scrollbar{display:none}
+    .pseg{display:flex;gap:4px;padding:12px 0 4px}.pseg button{flex:1 1 0;min-width:0;height:32px;padding:0 2px;border:0;border-radius:999px;background:var(--mist);color:var(--ink2);font-size:12.5px;font-weight:600;white-space:nowrap}.pseg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+    .aicard>summary{display:flex;align-items:center;gap:14px;min-height:54px;cursor:pointer;list-style:none}.aicard>summary::-webkit-details-marker{display:none}.aicard>summary span{margin-left:auto;color:var(--ink2);font-size:14px}.aicard>summary::after{content:'▾';color:var(--ink2)}.aicard[open]>summary::after{content:'▴'}.aicard[open]>summary{border-bottom:1px solid var(--rule)}
+    .aicard{margin:6px 0 0;padding:2px 14px;background:var(--paper);border:1px solid var(--rule);border-radius:20px}.aicard>.srow:last-of-type{border-bottom:0}.aicard .sfoot{margin:0 0 12px}
     .seg button{flex:0 0 auto;height:32px;margin:3px 0;padding:0 13px;border:0;border-radius:999px;background:var(--mist);color:var(--ink2);font-size:13.5px;font-weight:600;white-space:nowrap}
     .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:700}
     .sechead,.meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px;font-size:12.5px;color:var(--graphite)}
@@ -4436,7 +4473,7 @@
     g.recv = String(raw).length; let text = '';
     for (const line of String(raw).split('\n')) { if (!line.startsWith('data:')) continue;
       try { const j = JSON.parse(line.slice(5)); for (const p of j.candidates?.[0]?.content?.parts || []) if (!p.thought && p.text) text += p.text;
-        if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text; } catch (_) {} }
+        if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text; text += j.choices?.[0]?.delta?.content || ''; } catch (_) {} }
     g.chars = text.length; g.posts = (text.match(/"board"\s*:/g) || []).length; g.comments = (text.match(/"text"\s*:/g) || []).length;
   }
   function genView() {
@@ -6248,7 +6285,7 @@
     const [a, b] = lines; if (!a || !b || metaOf(a)) return lines;
     const ppl = l => { const ns = String(l).split(/\s*[,，·]\s*/).map(x => x.trim()).filter(Boolean);
       return ns.length && ns.every(x => [...x].length <= 16 && !/[.!?。→:：]/.test(x)) && ns.some(x => [...people().keys()].some(n => n === x || personAlias(n).includes(x))) ? ns : null; };
-    const place = l => [...String(l)].length <= 45 && !/→|[.!?。]|[다요함음됨]\s*$/.test(l) && !ppl(l);
+    const place = l => [...String(l)].length <= 60 &&!/→|[.!?。]|[다요함음됨]\s*$/.test(l) && !ppl(l);
     const join = (pl, ns) => ['\u0001' + String(pl).replace(/^📍\s*/, '').trim() + '\u0002' + ns.join(', '), ...lines.slice(2)];
     if (place(a) && ppl(b)) return join(a, ppl(b)); // 장소 → 인물
     if (ppl(a) && place(b)) return join(b, ppl(a)); // 인물 → 장소
@@ -6258,7 +6295,7 @@
     // 지침 꼴 "장소 · 이름, 이름": 뒤쪽이 짧은 이름 나열이고 그중 하나라도 노트 인물이면(모르는 이름이 섞여도) 장소·인물 줄
     const m2 = String(l).match(/^(.*?)\s*·\s*([^·→]+)$/);
     if (m2 && /[,，]/.test(m2[2]) || m2 && !m2[1].trim()) { const ns = m2[2].split(/\s*[,，]\s*/).map(x => x.trim()).filter(Boolean);
-      if (ns.length && ns.every(x => [...x].length <= 16 && !/[.!?。:：]/.test(x)) && ns.some(x => [...people().keys()].some(n => n === x || personAlias(n).includes(x))) && [...m2[1]].length <= 45 && !/→/.test(m2[1]))
+      if (ns.length && ns.every(x => [...x].length <= 16 && !/[.!?。:：]/.test(x)) && ns.some(x => [...people().keys()].some(n => n === x || personAlias(n).includes(x))) && [...m2[1]].length <= 60 && !/→/.test(m2[1]))
         return { place: m2[1].replace(/^📍\s*/, '').trim(), who: ns }; }
     const bits = String(l).split(/\s*(?:[·,，]|→)\s*/).map(x => x.trim()).filter(Boolean).map((x, i, a) => i === a.length - 1 ? x.replace(/\s*(?:등|외(?:\s*\d+\s*명)?|일행)\s*$/, '').trim() : x).filter(Boolean), isWho = x => x.length <= 16 && [...people().keys()].some(n => n === x || personAlias(n).includes(x));
     let k = bits.length; while (k > 0 && isWho(bits[k - 1])) k--;
@@ -6562,6 +6599,7 @@
     const row = (name, control, hint = '') => `<label class="srow"><div><b>${name}</b>${hint ? `<small>${hint}</small>` : ''}</div>${control}</label>`;
     const sw = key => `<input type="checkbox" class="switch" data-set="${key}">`;
     // 설정은 위 알약 탭으로 하나씩: 정리·AI / 칸·화면 / 도구 / 지침. 다른 칸도 화면에는 있어서(숨김) 저장할 때 같이 저장돼요.
+    const prov = provOf(curModel);
     const cur = ['ai', 'view', 'tool', 'backup'].includes(nav.setTab) ? nav.setTab : 'ai';
     const tabs = [['ai', '정리'], ['view', '칸 · 화면'], ['tool', '기록'], ['backup', '백업']];
     let i = 0; const box = (title, info, body) => { const k = tabs[i++][0]; return `<section data-sec="${k}"${k === cur ? '' : ' hidden'}>${body}</section>`; };
@@ -6569,12 +6607,15 @@
     return seg + box('정리 · AI', `${cycle}턴마다 · ${fmt(NOTE_LIMIT)}자 · <span data-out="keyinfo"></span>`, `
         ${row('정리 주기', `<select data-out="cyclepick">${CYCLES.map(c => opt(c, `${c}턴마다`, cycle)).join('')}</select>`)}
         ${row('노트 크기', `<select data-out="limitpick">${LIMITS.map(c => opt(c, c === NO_LIMIT ? '제한 없음(웹 모드)' : `${fmt(c)}자`, NOTE_LIMIT)).join('')}</select>`, sceneOn ? '웹 모드는 제한 없음 · 안 줄이고 다 기억해요' : '기본 5만 자 · 85%부터 오래된 사건을 줄여요')}
-        ${row('모델', `<select data-out="modelpick">${MODELS.map(([group, list]) => `<optgroup label="${group}">${list.map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}</optgroup>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
-        ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, '정리할 때 AI가 생각하는 양 · Gemini 3 이상 · 🔍 다시 확인은 늘 적게')}
+        <details class="aicard"${nav.aiOpen ? ' open' : ''}><summary data-act="aiopen"><b>AI</b><span>${esc(MODELS.find(([g]) => g.toLowerCase() === prov)?.[0] || '')} · ${esc((MODELS.flatMap(([, l]) => l).find(([id]) => id === curModel)?.[1] || curModel).replace(/\s*\(.*\)$/, ''))}</span></summary>
+        <div class="pseg">${MODELS.map(([g]) => `<button type="button" data-act="prov" data-arg="${g.toLowerCase()}" aria-pressed="${g.toLowerCase() === prov}">${g}</button>`).join('')}</div>
+        ${row('모델', `<select data-out="modelpick">${(MODELS.find(([g]) => g.toLowerCase() === prov)?.[1] || []).map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
-        ${row('Gemini 키', `<span class="keybox"><input type="password" data-set="apiKey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button type="button" data-act="peek">보기</button></span>`)}
-        ${row('Claude 키', `<span class="keybox"><input type="password" data-set="claudeKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"><button type="button" data-act="peek">보기</button></span>`)}
-        <p class="sfoot">쓸 모델 회사의 키만 넣으면 돼요. 키는 이 브라우저에만 저장돼요. Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).</p>
+        ${Object.entries(KEYS).map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
+        ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
+        ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
+        ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 켜 두세요.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
+        </details>
 `)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
@@ -6773,7 +6814,7 @@
     if (snapshot.note?.sel && !(fullNote && fullNote.upto === snapshot.note.upto)) { if (once('nofull')) pageToast('이 기기엔 전체 기억이 없어 자동 정리를 건너뛰어요 · 조아메모리 홈에서 "처음부터 다시 만들기"를 눌러 주세요'); return; }
     if ((!snapshot.note || !snapshot.note.turns) && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 10턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-    if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
+    if (!String(await getValue(keyOf(m), '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
     { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') return; /* 답이 오면 말풍선이 바뀌어 다시 불려요 */ }
     autoBusy = true; repaintInline(); if (isOpen() && !nav.view) render();
     try {
@@ -6918,9 +6959,12 @@
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
+      try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
       { const c = snap.note; // 다른 기기(폰)에서 고정 설정을 고쳤으면 채팅 노트 쪽이 최신 → 이 기기 전체 사본의 고정 설정도 그걸로
         if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto) { const fx = m => (splitSections(m).find(x => x.key === FIXED)?.body || '').trim(), a = fx(c.memory), b = fx(fullNote.memory);
-          if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory)))) { const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED); if (sec) sec.body = a; else list.unshift({ key: FIXED, body: a }); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); } } }
+          if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory)))) {
+            const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = fixItems(b).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head))); // 끈 설정은 채팅엔 없으니 사본 것을 살려요
+            const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED), body = offs.length ? a + '\n' + fixJoin(offs) : a; if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); } } }
       { const c = snap.note; // 분기한 방: 방 번호는 새것이지만 채팅 노트의 정리 시각은 그대로 → 이 기기의 다른 방에서 같은 정리본 전체를 찾아 이어 붙여요
         if (c?.sel && !c.parked && c.at && !(fullNote && fullNote.upto === c.upto)) { try {
           const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []);
@@ -6943,7 +6987,6 @@
       if (ltmData?.chatId !== chatId) { try { ltmData = JSON.parse(String(await getValue('ltmcache:' + chatId, '') || 'null')); } catch (_) { ltmData = null; } }
       try { ltmQ = JSON.parse(String(await getValue('ltmq:' + chatId, '') || 'null')); } catch (_) { ltmQ = null; }
       try { ltmDone = JSON.parse(String(await getValue('ltmdone:' + chatId, '[]')) || '[]'); } catch (_) { ltmDone = []; }
-      try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); }
       try { ltmOrig = JSON.parse(String(await getValue('ltmorig:' + chatId, '[]')) || '[]'); } catch (_) { ltmOrig = []; }
       // 다른 기기(폰↔컴)에서 정리해 넣은 노트가 채팅에 들어와 있으면 항상 묻습니다.
       //   비교 기준 = 이 기기 것: 이 기기에서 마지막으로 정리한 전체본(있으면), 없으면 이 화면이 보던 노트.
@@ -7504,8 +7547,7 @@
     if (!sceneOn) { await setValue('cycle', String(cycle)); await setValue('noteLimit', String(NOTE_LIMIT)); } // 웹 모드 값은 앱 방식 기본값에 안 섞어요
     else await setValue('webCycle', String(cycle)); // 웹 모드 주기는 따로 기억
     const cleanKey = v => String(v || '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
-    await setValue('apiKey', cleanKey(ui('[data-set="apiKey"]').value));
-    await setValue('claudeKey', cleanKey(ui('[data-set="claudeKey"]').value));
+    for (const [k] of Object.values(KEYS)) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, cleanKey(el.value)); }
     { const mv = ui('[data-set="model"]').value.trim(); if (mv) { await setValue('model', mv); curModel = mv; } } // 칸이 아직 비어 있으면(불러오기 전) 모델은 그대로
     { const tl = ui('[data-set="thinkLevel"]')?.value; if (tl) { await setValue('thinkLevel', tl); thinkLevel = tl; } }
     await setValue('autoMove', ui('[data-set="autoMove"]').checked ? 'on' : 'off');
@@ -7514,7 +7556,7 @@
       if (on !== sceneOn) { await applyScene(on, chatIdFromPath(), true);
         toast(on ? '이 방은 웹 모드를 켰어요 · 10턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
-    for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
+    for (const k of ['gsUrl', 'gsKey', 'firebaseProject']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
     turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
     if (quiet) { if (wasScene !== sceneOn) render(); else fillSettings(); if (wasScene === sceneOn) toast('저장했어요', 'ok', 1200); return; } // 바로 저장: 화면은 그대로(입력 중인 칸 안 날아가게)
@@ -7525,13 +7567,13 @@
   async function fillSettings() {
     const k = ui('[data-set="apiKey"]'), m = ui('[data-set="model"]');
     if (k && !k.value) k.value = await getValue('apiKey', '');
-    const ck = ui('[data-set="claudeKey"]'); if (ck && !ck.value) ck.value = await getValue('claudeKey', '');
-    for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el && !el.value) el.value = await getValue(k, ''); }
+    for (const [kk] of Object.values(KEYS)) { const el = ui(`[data-set="${kk}"]`); if (el && !el.value) el.value = await getValue(kk, ''); }
+    for (const k of ['gsUrl', 'gsKey', 'firebaseProject']) { const el = ui(`[data-set="${k}"]`); if (el && !el.value) el.value = await getValue(k, ''); }
     const gsWas = nav.gsOn; nav.gsOn = !!String(await getValue('gsUrl', '')).trim(); if (gsWas !== nav.gsOn && nav.tab === 'settings' && !nav.gsSheet) render();
     // 접힌 줄: 지금 모델 · 넣은 키
     const ki = out('keyinfo'), mid = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     const mlabel = (MODELS.flatMap(([, list]) => list).find(([id]) => id === mid)?.[1] || mid).replace(/\s*\(.*\)$/, '');
-    if (ki) ki.textContent = `${mlabel} · ` + ([k?.value && 'Gemini', ck?.value && 'Claude'].filter(Boolean).join('·') + (k?.value || ck?.value ? ' 키 넣음' : '키 없음'));
+    if (ki) ki.textContent = `${mlabel} · ` + (ui(`[data-set="${keyOf(mid)}"]`)?.value ? '키 넣음' : '키 없음');
     if (m && !m.value) { m.value = await getValue('model', DEFAULT_MODEL); pickModel(MODEL_IDS.includes(m.value) ? m.value : ''); }
     const a = ui('[data-set="autoMove"]'); if (a && !a.dataset.filled) { a.checked = String(await getValue('autoMove', 'on')) !== 'off'; a.dataset.filled = '1'; }
     const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
@@ -7546,6 +7588,7 @@
     const box = out('modelbox'), m = ui('[data-set="model"]');
     if (box) box.hidden = !!id;
     if (m && id) m.value = id;
+    const pv = provOf(id || m?.value || ''); ui('[data-out="main"]')?.querySelectorAll('[data-prov]').forEach(x => { x.hidden = !x.dataset.prov.split(' ').includes(pv); }); // 고른 회사 키 칸만
   }
 
   function toggleSheet() {
@@ -7563,7 +7606,7 @@
       return;
     }
     if (e.target.dataset?.out === 'modelpick') { pickModel(e.target.value); if (!e.target.value) ui('[data-set="model"]')?.focus(); }
-    if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true, e.target); }
+    if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true, e.target).then(() => { if (e.target.dataset?.out === 'modelpick') render(); }); } // 모델을 바꾸면 접힌 줄 글자도
   });
   // 다른 AI가 준 결과(파일이든 붙여 넣은 글이든)를 바로 채팅에 넣어요
   async function importResult(raw) {
@@ -7676,7 +7719,7 @@
             catch (e) { logErr('웹 모드 끄기', '전체 기억을 채팅에 다시 넣지 못함 · ' + e.message); toast('전체 기억을 채팅에 다시 넣지 못했어요 · 다음 정리 때 전체로 바뀌어요', 'info', 4500); } }
           else if (n?.sel) toast('이 기기엔 전체 기억이 없어서, 다음 정리 때 채팅 노트가 전체로 바뀌어요', 'info', 4500); }
         if (on) { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-          if (!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim()) { nav.tab = 'settings'; nav.setTab = 'ai'; nav.view = null; render(); out('main').scrollTop = 0; ui('[data-set="apiKey"]')?.focus();
+          if (!String(await getValue(keyOf(m), '')).trim()) { nav.tab = 'settings'; nav.setTab = 'ai'; nav.view = null; render(); out('main').scrollTop = 0; ui(`[data-set="${keyOf(m)}"]`)?.focus();
             return toast('웹 모드는 Gemini 키가 있어야 돌아가요 · 여기 키를 넣고 저장을 눌러 주세요', 'info', 6000); } }
         return render(); }
       case 'rvpick': nav.rvPick = arg !== 'off'; nav.rvSel = new Set(); if (arg === 'timeline' || arg === 'people') Object.assign(nav, { tab: arg, view: null }); return render(); // 설정 카드에서 → 그 화면으로 가서 바로 고르기
@@ -7689,6 +7732,7 @@
         await setValue('pins:' + cid, JSON.stringify([...injPins]));
         toast(injPins.has(arg) ? '고정했어요 · 이 사건은 늘 채팅에 들어가요' : '고정을 풀었어요', 'ok', 2500); keepScroll(render); return reinject(cid); }
       case 'injskip': injSkip.set(arg, lastInj?.recalled?.find(x => x.key === arg)?.title || arg); toast('이번 장면에선 뺄게요 · 그 일을 다시 직접 꺼내면 돌아와요', 'ok', 3000); keepScroll(render); return reinject(chatIdFromPath());
+      case 'aiopen': nav.aiOpen = !el.parentElement.open; return; // 펼침은 브라우저가 · 다시 그릴 때 그대로 두려고 기억만
       case 'injopen': e.preventDefault(); nav.injOpen = nav.injOpen === false; return keepScroll(render);
       case 'ltmskip': ltmQ = null; await setValue('ltmq:' + chatIdFromPath(), ''); return render();
       case 'ltmedit': nav.ltmEdit = arg || null; return keepScroll(render);
@@ -7734,6 +7778,8 @@
       case 'changes': histList = await historyOf(chatIdFromPath()); nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
       case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
+      case 'prov': { const list = MODELS.find(([g]) => g.toLowerCase() === arg)?.[1] || []; // 회사를 누르면 그 회사 모델로(같은 회사면 그대로)
+        const id = provOf(curModel) === arg ? curModel : (list.find(([x]) => x.endsWith(arg === 'claude' ? 'claude-sonnet-5-5' : DEFAULT_MODEL)) || list[0])[0]; pickModel(id); await saveSettings(true); return render(); }
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
       case 'peek': { const i = el.previousElementSibling; if (i) { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.textContent = show ? '숨기기' : '보기'; } return; }
       case 'grp': nav.grp = arg; return keepScroll(render);
@@ -7850,7 +7896,7 @@
         }
         const m = String(await getValue('model', DEFAULT_MODEL));
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
-        nav.hasKey = !!String(await getValue(isClaude(m) ? 'claudeKey' : 'apiKey', '')).trim();
+        nav.hasKey = !!String(await getValue(keyOf(m), '')).trim();
         nav.runBy = nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
         nav.runMode = ['chunk', 'rebuild'].includes(arg) ? arg : 'new'; nav.chunkSize = String(await getValue('chunkSize', '50'));
         // 키가 있으면 '정리하기'는 고르는 창 없이 바로 이어서 정리합니다. 키가 없거나 '다른 방법'을 누를 때만 창을 띄워요.
