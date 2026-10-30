@@ -298,7 +298,7 @@
       const m = l.match(/^▸\s*(.*)$/);
       if (m) { const t = m[1].trim(), c = t.match(/^\[(NPC|지침|세계관|기타)\]\s*(.*)$/), only = FIX_CATS.includes(t);
         cur = { cat: c ? c[1] : only ? t : '기타', title: c ? c[2] : only ? '' : t, head: t, text: [] }; out.push(cur); continue; }
-      if (!cur) { if (!l.trim()) continue; cur = { cat: '기타', title: '', text: [] }; out.push(cur); }
+      if (!cur) { if (!l.trim() || isNone(l)) continue; cur = { cat: '기타', title: '', text: [] }; out.push(cur); }
       cur.text.push(l);
     }
     for (const it of out) { it.text = it.text.join('\n').trim(); if (!it.title) it.title = (it.text.split('\n')[0] || '').replace(/^[-•*\s]+/, '').slice(0, 30); }
@@ -2730,7 +2730,7 @@
     .fx-tag{flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 7px;border-radius:6px;background:#EEE9FC;color:#4B3F8A}
     .fx-tag[data-c="지침"]{background:#E4F1FF;color:#1F4F86}.fx-tag[data-c="세계관"]{background:#E5F6EC;color:#1E6B43}.fx-tag[data-c="기타"]{background:#F1F1F4;color:#5A5966}
     .fx-body{padding:0 14px 4px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto}
-    .fx-acts{display:flex;justify-content:flex-end;padding:8px 12px 12px}
+    .fx-acts{display:flex;justify-content:flex-end;gap:8px;padding:8px 12px 12px}
     .fx-sw{all:unset;box-sizing:border-box;flex:0 0 auto;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px}
     .fx-sw i{width:13px;height:13px;border-radius:50%;background:#3FB27F;transition:background-color .2s}
     .fx-sw[aria-pressed="false"] i{background:#E0605A}
@@ -3298,7 +3298,7 @@
       <div class="fx-top"><div><b>고정 설정</b><small>내가 쓰는 설정 · 주입을 켠 것만 매 턴 들어가요 · AI가 안 고쳐요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
       <div class="fx-seg"><button data-act="fxfilter" data-arg="" aria-pressed="${!flt}">전체 <small>${items.length}</small></button>${FIX_CATS.map(c => `<button data-act="fxfilter" data-arg="${c}" aria-pressed="${flt === c}">${c} <small>${cnt(c)}</small></button>`).join('')}</div>
       ${shown.length ? `<ul class="fx-list">${shown.map(([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details><summary><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
-          <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">고치기</button></div></details></li>`).join('')}</ul>`
+          <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`).join('')}</ul>`
         : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : 'NPC·지침·세계관처럼 바뀌면 안 되는 설정을 유저노트처럼 넣어 두세요.<br>웹 모드에선 보낼 때마다 그대로 들어가요.'}</p>`}
       <div class="actions one"><button class="btn pri" data-act="fixopen" data-arg="new">+ 새로 추가</button></div>
       ${nav.fxLib ? fxLibHtml(items.length) : ''}
@@ -3329,6 +3329,21 @@
     await saveEdit(); nav.view = null; nav.tab = 'fixed'; render();
   }
   let fxChain = Promise.resolve(); // 주입 동그라미: 화면 이동 없이 바로 저장(여러 번 눌러도 차례로)
+  async function fxSaveBody(body) { // 목록에서 바로 지우기: 화면 이동 없이 채팅 노트·전체 사본에 저장
+    const chatId = chatIdFromPath(), n = snapshot?.note, y = out('main')?.scrollTop || 0;
+    try {
+      if (!chatId || !n) { await fixSaveAll(body); return; }
+      const partOnly = n.sel && !(fullNote && fullNote.upto === n.upto), list = splitSections(noteMemory()), sec = list.find(x => x.key === FIXED);
+      if (sec) sec.body = body; else list.push({ key: FIXED, body });
+      if (n.parked) await park(chatId, joinSections(list), n.upto, n.turns, n.at);
+      else { const msg = await readMessage(chatId, n.carrierId); await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(joinSections(list), n.upto, n.turns, n.at || undefined, n.by || '', partOnly)); }
+      if (!partOnly) await saveFull(chatId, n.upto, joinSections(list), n.turns, n.at);
+      const ed = await editedKeys(chatId); if (!ed.includes(FIXED)) { ed.push(FIXED); await setValue('edited:' + chatId, JSON.stringify(ed)); }
+      await refresh(); if (nav.gsOn) gsSave(true);
+      toast('지웠어요.', 'ok', 2000);
+    } catch (e) { toast('저장 실패 · ' + e.message, 'err'); try { await refresh(); } catch (_) {} }
+    render(); if (out('main')) out('main').scrollTop = y;
+  }
   async function fixMerge(add) { // 고른 항목만 · 같은 카테고리·이름은 건너뛰고 붙여요
     const cur = fixItems(editBody(FIXED)), key = it => it.cat + '|' + it.title.replace(/\s+/g, '');
     const have = new Set(cur.map(key)), fresh = add.filter(it => !have.has(key(it)));
@@ -7903,6 +7918,12 @@
         const y = out('main')?.scrollTop || 0;
         fxChain = fxChain.then(async () => { try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); } render(); if (out('main')) out('main').scrollTop = y; });
         return; }
+      case 'fxrm': { if (loading || !snapshot) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+        const list = fixItems(editBody(FIXED)), i = Number(arg), it = list[i]; if (!it) return;
+        if (!confirm(`'${it.title || '이 설정'}' 설정을 지울까요?`)) return;
+        list.splice(i, 1);
+        if (it.head && NO_INJ.delete(FIXED + '|' + itemKey(it.head))) { const cid = chatIdFromPath(); if (cid) await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); }
+        fxChain = fxChain.then(() => fxSaveBody(fixJoin(list))); return; }
       case 'fxnoop': return;
       case 'fxlibsave': { const body = editBody(FIXED).trim(); if (!body) return; let lib = []; try { lib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) {}
         const name = roomName() + ' · ' + new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' });
