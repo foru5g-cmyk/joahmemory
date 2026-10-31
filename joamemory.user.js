@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.2
+// @version      4.1.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1138,6 +1138,7 @@
   let fbCheck = { t: '', exp: 0 };
   async function fbHeaders(key, proj) {
     const h = { 'x-goog-api-key': key }, app = String(await getValue('firebaseAppId', '')).trim(), dbg = String(await getValue('firebaseDebugToken', '')).trim();
+    if (dbg && !app && !fbHeaders.noApp) { fbHeaders.noApp = true; toast('App Check에 앱 ID가 필요해요 · 설정 › Firebase 키 옆 [채우기]로 firebaseConfig를 한 번 붙여 주세요', 'err', 6000); }
     if (!app || !dbg) return h;
     if (Date.now() > fbCheck.exp) {
       // 토큰을 못 받으면 키만으로 보내요(강제 전엔 그대로 되고, 강제 뒤엔 Firebase가 거절해 그 오류가 보여요) · 잘못 넣은 토큰 하나로 정리가 막히지 않게
@@ -2644,7 +2645,7 @@
     .sg{font-family:var(--serif);font-size:16.5px;font-weight:700;margin:30px 0 2px;color:var(--ink)}
     main>.sg:first-child{margin-top:2px}
     .srow{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--rule);cursor:default;min-height:58px}
-    .srow>div{flex:1;min-width:0}
+    .srow>div{flex:1;min-width:0}.hw-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hw-grid .btn{width:100%;margin:0;justify-content:flex-start;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.srow-col{flex-direction:column;align-items:stretch;gap:8px}.srow-col>div{flex:none}.gsbox textarea[data-out=fbpaste]{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none;margin:4px 0 10px}.fbpbox textarea{width:100%;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:8px 10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none}.fbp summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2);list-style:none}.fbp summary::-webkit-details-marker{display:none}.fbp summary small{font-weight:400;color:var(--graphite);margin-left:4px}.fbp textarea{width:100%;margin-top:8px;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:8px 10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none}
     .srow b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
     .srow small{display:block;font-size:12.5px;color:var(--graphite);line-height:1.5;margin-top:3px}
     .srow.col{flex-direction:column;align-items:stretch;gap:8px}
@@ -2678,7 +2679,7 @@
     /* ── 알림 ── */
     .toast{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 84px);padding:12px 16px;border-radius:14px;font-size:13.5px;
       line-height:1.55;display:none;z-index:2;background:var(--ink);color:#fff}
-    .toast.on{display:block}.t-ok{background:#24493A}.t-err{background:#5E2333}
+    .toast.on{display:block}.t-ok{background:#DCEAF8;color:#294A72}.t-err{background:#5E2333}
     .ptoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translate(-50%,-20px);opacity:0;z-index:2147483002;
       display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:999px;background:var(--ink);color:#fff;
       font-size:13px;font-weight:600;pointer-events:none;transition:opacity .2s,transform .2s;white-space:normal;width:max-content;max-width:min(520px,calc(100vw - 32px));line-height:1.45;text-align:center;border-radius:16px}
@@ -2984,7 +2985,12 @@
   // 11. 화면 조각
   // ══════════════════════════════════════════════════════════════
   const AV = [['#E6E0FA', '#4B3F8A'], ['#F9E0EA', '#93405F'], ['#DFEFE5', '#2F6A4C'], ['#DCEAF8', '#2F5F8F'], ['#FBE4D4', '#94522B'], ['#F7EDCB', '#7A6420']];
-  const avColor = name => AV[[...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
+  // 인물 색: 인물 칸 순서대로 돌아가며(이름 글자로 정하면 나나·단테처럼 겹쳐서) · 인물 칸에 없는 이름만 글자로
+  let avOrder = { k: null, list: [] };
+  const avColor = name => { let k = ''; try { k = bodyOf('인물'); } catch (_) {}
+    if (avOrder.k !== k) { let list = []; try { list = [...people().keys()]; } catch (_) {} avOrder = { k, list }; }
+    const i = avOrder.list.findIndex(n => n === name || (typeof sameName === 'function' && sameName(n, name)));
+    return AV[i >= 0 ? i % AV.length : [...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length]; };
   // 프로필(이모지·성별·특징)은 그릴 때마다 인물 칸에서 다시 읽습니다.
   let PROF = new Map();
   const shortName = name => { const t = [...String(name).trim()]; return /[가-힣]/.test(name) ? (t.length >= 3 ? t.slice(-2) : t).join('') : t.slice(0, 2).join(''); };
@@ -3558,9 +3564,9 @@
   const hwHtml = () => { const dis = busyNow ? ' disabled' : ''; return `
       <details class="bk-info"${nav.wrOpen ? ' open' : ''}><summary data-act="wropen">🔁 확프연동</summary>
         <div class="bk-card"><small class="muted" style="display:block;margin:0 0 8px;font-size:12px">순서대로 · 지금 노트는 지우지 않아요(넣기 전 노트는 되돌릴 곳 고르기에 남아요)</small>
-        <div class="bk-row"><label class="btn sm">① 기억 불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label>
-        <label class="btn sm">② 고정 설정만<input type="file" accept=".json,.txt,application/json,text/plain" data-out="fximport" hidden></label></div>
-        <div class="bk-row"><button class="btn sm" data-act="tidyrun"${dis || !snapshot?.note ? ' disabled' : ''}>③ 우리 형식으로 맞추기</button>
+        <div class="hw-grid"><label class="btn sm">① 기억 불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label>
+        <label class="btn sm">② 고정 설정만<input type="file" accept=".json,.txt,application/json,text/plain" data-out="fximport" hidden></label>
+        <button class="btn sm" data-act="tidyrun"${dis || !snapshot?.note ? ' disabled' : ''}>③ 우리 형식으로 맞추기</button>
         <button class="btn sm" data-act="wrmcclean"${dis}>④ 채팅 흔적 지우기</button></div>
         </div></details>
 `; };
@@ -4049,6 +4055,11 @@
     catch (e) { if (!auto) toast('구글에서 불러오기 실패 · ' + e.message, 'err', 5000); }
   }
   // 구글 백업 창: 주소·비밀번호 · 처음 설정(스크립트 복사) · 지금 저장 · 불러오기
+  // Firebase 설정 채우기 창(설정 › AI 카드 바로 뒤에 그려요 · 어느 설정 칸에서 눌러도 뜨게): 콘솔의 firebaseConfig를 통째로 붙여 넣고 [채우기] → 키·프로젝트 ID·앱 ID 저장
+  const fbSheetHtml = () => `<div class="rsheet" data-act="fbclose"><div class="rbox gsbox" data-act="noop">
+      <b>Firebase 설정 채우기</b><small>Firebase 콘솔 › 프로젝트 설정 › 내 앱 › SDK 설정의 firebaseConfig = { … } 를 통째로 복사해서 붙여 넣어요</small>
+      <textarea data-out="fbpaste" rows="7" spellcheck="false" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;,&#10;  appId: &quot;…&quot;&#10;};"></textarea>
+      <button class="btn pri" data-act="fbfill">채우기</button></div></div>`;
   function gsSheetHtml() {
     return `<div class="rsheet" data-act="gsclose"><div class="rbox gsbox" data-act="noop">
       <b>구글 드라이브 백업</b><small>내 구글 드라이브 "조아메모리 백업" 폴더에 방 제목으로 저장돼요</small>
@@ -6959,13 +6970,13 @@
         <div class="pseg">${MODELS.map(([g]) => `<button type="button" data-act="prov" data-arg="${g.toLowerCase()}" aria-pressed="${g.toLowerCase() === prov}">${g}</button>`).join('')}</div>
         ${row('모델', `<select data-out="modelpick">${(MODELS.find(([g]) => g.toLowerCase() === prov)?.[1] || []).map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
-        ${Object.entries(KEYS).map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
+        ${Object.entries(KEYS).map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button>${p === 'firebase' ? '<button type="button" data-act="fbpastetog">채우기</button>' : ''}</span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
         ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
-        ${row('앱 ID <small>App Check용</small>', `<input type="text" data-set="firebaseAppId" autocomplete="off" spellcheck="false" placeholder="1:1234…:web:abcd…">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
+        <input type="hidden" data-set="firebaseAppId"><!-- 앱 ID: 칸은 안 보이고 [붙여넣기]로만 채워요(App Check용) -->
         ${row('App Check 디버그 토큰', `<span class="keybox"><input type="password" data-set="firebaseDebugToken" autocomplete="off" spellcheck="false" placeholder="콘솔 › App Check › 디버그 토큰 관리"><button type="button" data-act="peek">보기</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
         ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요).', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
-        </details>
+        </details>${nav.fbSheet ? fbSheetHtml() : ''}
 `)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
@@ -8091,6 +8102,15 @@
         await setValue('pins:' + cid, JSON.stringify([...injPins]));
         toast(injPins.has(arg) ? '고정했어요 · 이 사건은 늘 채팅에 들어가요' : '고정을 풀었어요', 'ok', 2500); keepScroll(render); return reinject(cid); }
       case 'injskip': injSkip.set(arg, lastInj?.recalled?.find(x => x.key === arg)?.title || arg); toast('이번 장면에선 뺄게요 · 그 일을 다시 직접 꺼내면 돌아와요', 'ok', 3000); keepScroll(render); return reinject(chatIdFromPath());
+      case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); await fillSettings(); ui('[data-out="fbpaste"]')?.focus(); return;
+      case 'fbclose': nav.fbSheet = false; render(); return fillSettings();
+      case 'fbfill': { // 붙여 넣은 firebaseConfig에서 apiKey·projectId·appId를 꺼내 저장(키를 잘못 옮겨 적는 일이 없게)
+        const t = String(ui('[data-out="fbpaste"]')?.value || ''), g = k => (t.match(new RegExp(k + '["\']?\\s*[:=]\\s*["\'`]([^"\'`\\s]+)')) || [])[1] || '';
+        const vals = { firebaseKey: g('apiKey'), firebaseProject: g('projectId'), firebaseAppId: g('appId') }, got = Object.entries(vals).filter(([, v]) => v);
+        if (!got.length) return toast('붙여 넣은 글에서 apiKey·projectId·appId를 못 찾았어요 · firebaseConfig 부분을 통째로 붙여 주세요', 'err', 5000);
+        for (const [k, v] of got) await setValue(k, v);
+        nav.fbSheet = false; render(); await fillSettings();
+        return toast(`Firebase 설정을 채웠어요 · ${[vals.firebaseKey && '키', vals.firebaseProject && '프로젝트 ID', vals.firebaseAppId && '앱 ID'].filter(Boolean).join('·')} · 이제 App Check 토큰만 넣으면 돼요`, 'ok', 4500); }
       case 'aiopen': nav.aiOpen = !el.parentElement.open; return; // 펼침은 브라우저가 · 다시 그릴 때 그대로 두려고 기억만
       case 'injopen': e.preventDefault(); nav.injOpen = nav.injOpen === false; return keepScroll(render);
       case 'ltmskip': ltmQ = null; await setValue('ltmq:' + chatIdFromPath(), ''); return render();
