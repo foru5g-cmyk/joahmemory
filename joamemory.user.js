@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.4
+// @version      4.1.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -268,7 +268,7 @@
         itemSkip = NO_INJ.has(at + '|' + itemKey(it[1])) || (!!mt && logT.includes(mt)); } }
       if (itemSkip) return false;
       // 유저 캐릭터 블록·프로필 줄(동물 이모지·유저 표시)도 넣습니다: 폰↔컴 어디서 봐도 인물 목록·이모지가 같게.
-      return !skip && !PROOF_LINE.test(l);
+      return !skip && (!PROOF_LINE.test(l) || (sceneOn && /^\s*-?\s*\[닫힘\]/.test(l))); // 웹 모드: 닫힌 고리 한 줄은 남겨서 대화에 나오면 떠올려요(고르기에서 걸러요)
     }).map(l => {
       // 인물 칸의 "→ 유진:"(누가 부르는지 빠진 예전 줄)에 이름을 채워 "서윤 → 유진:"으로. AI가 주어를 헷갈리지 않게.
       const h = l.match(/^(?:##(?!#)|■)\s*(.+?)\s*$/);
@@ -336,8 +336,8 @@
 - JSON {"scores":[[id,점수],...]} 만 낸다. 모든 id를 한 번씩.`;
   let aiPickCache = { k: '', v: null }, injGemKey = false; // injGemKey: Gemini 키가 있는지(주입 탭 'AI로 한 번 더 고르기' 기본값 표시용)
   const INJ_SEM = ['날짜로그', '소지품', '장소·조직', '인지·비밀', '이정표', '세계관', '호칭·말투', '관계·감정선'];
-  const INJ_ON = [FIXED, '현재상태', '직전 장면', '서사 고리', '줄거리', '세계관', '소지품', '인물']; // 처음엔 늘 넣는 칸
-  let injSet = { secs: {}, recent: 5, recall: 8 }; const secMode = k => injSet.secs[k] || (INJ_ON.includes(k) ? 'on' : 'auto');
+  const INJ_ON = ['직전 장면', '서사 고리', '줄거리', '소지품']; // 늘 넣는 칸(서사 고리는 열린 고리만 늘 · 닫힌 고리는 나올 때만) · 나머지는 나올 때만 · 유저는 칸마다 끄기만 골라요
+  let injSet = { secs: {}, recent: 8, recall: 8 }; const secMode = k => injSet.secs[k] === 'off' ? 'off' : INJ_ON.includes(k) ? 'on' : 'auto'; // 예전에 고른 '항상/나올 때만'은 안 봐요
   let injSaidHits = new Set(); // 보낸 말이 직접 꺼낸 항목(드문 낱말·날짜)
   let injPicking = false, injCtx = { text: '', sim: {} }, lastInj = null, sceneOn = false, injPins = new Set(), injSkip = new Map(); // injPins: 📌 늘 넣는 사건(방마다 저장) · injSkip: ✕ 이번 장면에서 뺀 기억(유저가 그 일을 다시 직접 말하면 돌아와요) // sceneOn: 웹 모드(설정) // injCtx.text: 최근 대화 · sim: 항목 키 → 의미 점수(0~1, 가장 비슷한 게 1)
   function secItems(sec) { // 칸의 항목: ▸·【】이 있으면 그것, 없으면 서사 고리는 고리 하나씩 · 그 밖은 '- ' 줄 하나씩(이어지는 줄 포함). key = ':' 앞 제목(서사 고리는 마지막 '·' 뒤)
@@ -388,12 +388,13 @@
       if (k === FIXED || k === '현재상태') { if (sec.body.trim()) units.push({ sec: k, i: -1, text: sec.body, pri: 100 }); continue; } // 고정 설정: 칸 방식과 상관없이 항목마다 고른 대로(미주입만 빼고 늘 넣어요) · 현재상태: 지금 이 순간의 사실이라 늘 통째로(주입 탭에 버튼 없음)
       if (mode === 'off') { if (k === '날짜로그') b.items.forEach((it, i) => { if (injPins.has(itemKey(it.key))) units.push({ sec: k, i, text: it.lines.join('\n'), pri: 88, pin: true, key: itemKey(it.key) }); }); continue; } // 안 넣기(📌 고정한 사건은 남겨요)
       if (mode === 'on' && b.items.length && k !== '인물') { units.push({ sec: k, i: -1, text: sec.body, pri: 92 }); continue; } // 늘: 칸 통째로
-      if (mode === 'auto' && !b.items.length && !['줄거리', '직전 장면', '세계관'].includes(k)) { // ▸ 항목이 없는 칸(서사 고리 등)도 '나올 때만'이면 줄(고리) 하나씩 골라요 · 세계관 규칙 줄(- …)은 낱말로 안 걸려서 예전처럼 통째로
+      if ((mode === 'auto' || k === '서사 고리') && !b.items.length && !['줄거리', '직전 장면', '세계관'].includes(k)) { // 서사 고리 '항상': 열린 고리는 늘 · 닫힌 고리는 대화에 나올 때만 // ▸ 항목이 없는 칸(서사 고리 등)도 '나올 때만'이면 줄(고리) 하나씩 골라요 · 세계관 규칙 줄(- …)은 낱말로 안 걸려서 예전처럼 통째로
         const L = secItems(sec), lh = (L.head || []).join('\n').trim();
-        if (lh && k !== '서사 고리' && !isNone(lh)) units.push({ sec: k, i: -1, text: lh, pri: 90 });
-        L.forEach((it, j) => { if (it.closed) return; const t = it.lines.join('\n'), key = itemKey(it.key);
+        if (lh && (k !== '서사 고리' || mode === 'on') && !isNone(lh)) units.push({ sec: k, i: -1, text: lh, pri: 90 });
+        L.forEach((it, j) => { if (/\(삭제\)/.test(it.lines[0])) return; const t = it.lines.join('\n'), key = itemKey(it.key);
+          if (mode === 'on' && !it.closed) return units.push({ sec: k, i: 'L' + j, text: t, pri: 80 });
           const v = score(it.key, t), hw = lastHw; if (poolMode && v > 0.5 && !injSkip.has(key)) pool.push({ key, sec: k, text: t, v });
-          if (v >= 2 && !injSkip.has(key)) units.push({ sec: k, i: 'L' + j, text: t, pri: 60 + v, rc: true, key, title: it.key, hw }); });
+          if (v >= 2 && !injSkip.has(key)) units.push({ sec: k, i: 'L' + j, text: t, pri: (it.closed ? 40 : 60) + v, rc: true, key, title: it.key, hw }); }); // 닫힌 고리는 열린 것보다 뒤
         continue; }
       if (!b.items.length) {
         let body = sec.body;
@@ -728,17 +729,19 @@
     }
     return { head, items };
   }
+  // 닫힌 고리는 한 줄로: ':' 뒤에 어떻게 끝났는지가 있으면 근거·번역 줄을 빼요(그 장면은 날짜로그에 남아 있어요) · 비어 있으면 근거를 남겨요(제목만 남으면 기억을 잃으니)
+  const shrinkHook = it => !it.open && !it.del && /[:：]\s*\S{2}/.test(it.lines[0]) ? { ...it, lines: it.lines.filter((l, i) => !i || !/^\s*-?\s*(?:근거|번역)\s*[:：]/.test(l)) } : it;
   const delOk = it => it.lines.slice(1).some(l => /^\s*-?\s*(?:근거|이유)\s*[:：]/.test(l));
   let delKept = []; // 근거 없이 지우려다 남겨 둔 항목(정리 뒤 알림)
   function mergeHooks(oldBody, newBody) {
     const o = hookItems(oldBody), n = hookItems(newBody);
-    if (!o.items.length || !n.items.length) return n.items.length || n.head.some(l => l.trim() && !isNone(l)) ? [...n.head, ...n.items.filter(x => !x.del).flatMap(x => x.lines)].join('\n').trim() : oldBody; // (삭제) 고리가 그대로 남아 '아직 끝나지 않은 일'에 뜨지 않게
+    if (!o.items.length || !n.items.length) return n.items.length || n.head.some(l => l.trim() && !isNone(l)) ? [...n.head, ...n.items.filter(x => !x.del).map(shrinkHook).flatMap(x => x.lines)].join('\n').trim() : oldBody; // (삭제) 고리가 그대로 남아 '아직 끝나지 않은 일'에 뜨지 않게
     const out = o.items.slice(); // 끝난 고리도 [닫힘]으로 남겨요(화면 '끝난 일' · 채팅엔 안 넣음)
     for (const it of n.items) {
       const i = out.findIndex(x => x.key === it.key);
       if (it.del) { if (i >= 0) { if (delOk(it)) out.splice(i, 1); else delKept.push(it.key); } } else if (i >= 0) out[i] = it; else out.push(it);
     }
-    return [...(n.head.some(l => l.trim()) ? n.head : o.head), ...out.flatMap(x => x.lines)].join('\n').trim();
+    return [...(n.head.some(l => l.trim()) ? n.head : o.head), ...out.map(shrinkHook).flatMap(x => x.lines)].join('\n').trim();
   }
   function mergeNote(base, delta, noGuard = false) { // noGuard: 기억 다시 확인(틀린 줄을 빼서 짧아지는 게 맞음)
     const list = splitSections(base);
@@ -1017,7 +1020,7 @@
   // 덧붙임 규칙(전체 정리·바뀐 것만 정리 모두)
   const EXTRA_RULE = `\n\n[덧붙임 규칙]
 - [고정 설정]에 이미 적힌 것(인물의 외형·나이·정체·성격·말버릇·기본 말투, 세계관 규칙·배경)은 인물·세계관 칸에 다시 쓰지 않음. 그 인물·세계는 RP에서 새로 생기거나 바뀐 것만 씀(새로 드러난 사실·바뀐 관계·호칭·습관·상태). 고정 설정에 없는 인물·설정만 처음부터 씀. 고정 설정과 원문이 어긋나면 원문대로 쓰되 지우지 않음.
-- 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음.
+- 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 장소를 옮기거나(공원 → 기숙사) 함께 있는 사람이 바뀌면(캘빈과 헤어진 뒤 단테와 문자) 그 자체로 새 사건이다. 문자·전화로 다른 사람과 나눈 일도 따로 사건. 기존 사건에 다른 장소·다른 사람의 일을 덧붙이지 않음. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음.
 - 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄, 150자 안팎으로 짧게: 지문 문장을 옮겨 적지 않고 핵심 낱말을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투, 속은 다정함 · 담배 피움). 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음.
 - 【이름】 줄의 행동 습관·버릇은 두 번 이상 나왔거나, 원문이 '버릇·습관·늘·매번'이라고 밝힌 것만 씀. 한 번 보인 몸짓·표정은 습관이 아님.
 - 고민·향후 계획은 【이름】 블록 안에 '고민: …', '향후 계획: …'으로 한 줄씩, 번호 없이 씀. 프로필 줄에 섞지 않음.
@@ -1031,7 +1034,8 @@
 - 성관계 장면은 빠뜨리지 않되 본문 1~2줄로, 어떤 관계였는지만 씀: 누가 이끌었는지, 동의·거부(원문 그대로), 드러난 성향(점잖은 말 한 단어씩), 피임 여부(원문에 있을 때), 그 뒤 달라진 것(관계·약속·임신 가능성). 동작·신체·감각 묘사와 노골적인 대사는 어느 칸에도 쓰지 않음.
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
 - 숨김 줄 끝에 숨기기 시작한 때를 '(N턴부터)'로 씀. 숨기던 상대가 알게 되면 숨김 줄을 지우고, 들킨 장면을 날짜로그에 남김.
-- 끝난 서사 고리는 지우지 않고 '[닫힘]' 줄로 계속 남김(끝난 일은 날짜로그에도 남김). 기본 지침의 '끝난 서사 고리는 지움'·'이번 정리 기간에 끝난 것만'보다 이 규칙이 우선함.
+- 현재상태 ▸ 몸 상태에는 지금 몸이 어떤지만 씀(다친 곳·아픔·피로·취기·졸림·땀에 젖음 같은 것, 장면에 있는 인물마다 한 줄). 그날 한 일·일정·어디 다녀왔는지는 쓰지 않음(그건 날짜로그·직전 장면에 있음). 바뀐 게 없으면 "이름: 특별한 이상 없음". ▸ 옷차림은 장면에 있는 인물마다 원문에 나온 만큼 씀.
+- 끝난 서사 고리는 지우지 않고 '[닫힘]' 줄로 계속 남김(끝난 일은 날짜로그에도 남김). 닫을 때는 '- [닫힘] 종류 · 누가→누구 · 제목: 시작 (날짜) 어떻게 생겼는지 → 끝 (날짜) 지킴/깨짐/취소 — 어떻게 끝났는지' 한 줄로 쓰고 근거 줄은 쓰지 않음(언제 무슨 일로 시작해 언제 어떻게 끝났는지가 이 한 줄로 다 보이게). 기본 지침의 '끝난 서사 고리는 지움'·'이번 정리 기간에 끝난 것만'보다 이 규칙이 우선함.
 - 감정선 칸을 만들지 않는 정리에서는 → 줄의 자각과 전환 줄을 원문에 드러난 속마음과 행동을 보고 판단함. 자각 괄호에는 자각·무자각·부정·숨김 중 한 단어만 씀.
 - 날짜가 다른 지난 사건을 다시 꺼내다가 같은 사람 사이에서 그 일과 이어지는 새 일이 생기면, 둘을 한 사건으로 합쳐 새 일이 일어난 극중 날짜로 맨 아래에 씀.
   · 제목: 그 극중 날짜 + 지금 일어난 일 한 문장 (예: ▸ [2026.04.20-닉이 나나를 작업실에도 초대함])
@@ -1043,7 +1047,8 @@
 - [기존 기억]의 항목 중 지침의 출력 형식(줄 모양·이름표·근거 줄 모양·【이름】 블록 안 줄·서사 고리 한 줄 꼴·사건 첫 줄 '장소 · 인물' 등)과 다른 항목만, 그 항목 전체를 지침 형식으로 다시 쓴다.
 - 제목 줄(▸ 뒤 글자·【】 안 이름·서사 고리 제목)은 기존과 한 글자도 다르지 않게 그대로 쓴다. 제목이 바뀌면 같은 항목이 두 개가 된다.
 - 사실·대사·숫자·이름·날짜·턴은 하나도 빼거나 줄이거나 바꾸지 않는다. 항목을 합치거나 지우지 않는다("(삭제)" 줄을 쓰지 않는다). 원문에 없는 근거·턴을 지어내지 않는다(근거가 없으면 근거 줄 없이 둔다).
-- 형식이 이미 맞는 항목, ■ 줄거리, ■ 현재상태, ■ 고정 설정은 쓰지 않는다.
+- 형식이 이미 맞는 항목, ■ 줄거리, ■ 고정 설정은 쓰지 않는다.
+- ■ 현재상태 ▸ 몸 상태에 지금 몸이 아닌 줄이 섞여 있으면 옮긴다(이것만 내용을 옮기는 예외): 지켜야 할 지시·금지·기한('~까지 피하기', '~하지 말 것') → ▸ 진행 중인 제약 · 매일 하는 일(약 복용·알람) → ▸ 되풀이되는 습관 · 지난 일(언제 어디서 무슨 일이 있었고 무슨 검사를 받았는지) → 날짜로그에 그 일이 있으면 빼고, 없으면 그대로 둔다. 몸 상태에는 지금 몸(다친 곳·붕대·아픔·쉰 목·반점 등)만 이름마다 남긴다. 옮긴 소제목(몸 상태·진행 중인 제약·되풀이되는 습관)은 그 소제목 전체를 다시 쓴다. 옮길 줄이 없으면 현재상태는 쓰지 않는다.
 - 고칠 항목이 없으면 '변화 없음' 한 줄만 쓴다.`;
   async function buildSystem(delta = false) {
     const off = await offSections();
@@ -1585,7 +1590,7 @@
   // 9. 화면 틀
   // ══════════════════════════════════════════════════════════════
   // 위 메뉴 5개. 기억(지난 이야기) / 상태(지금 값) / 인물 / 감정선(감정 변화)
-  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['now', '상태'], ['people', '인물'], ['fixed', '고정'], ['inj', '주입'], ['phone', '기타']]; // 웹 모드 메뉴 · 백업은 설정 › 백업
+  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['now', '상태'], ['people', '인물'], ['fixed', '고정'], ['phone', '기타']]; // 웹 모드 메뉴 · 백업은 설정 › 백업
   const TABS = [['home', '홈'], ['timeline', '타임라인'], ['now', '상태'], ['people', '인물'], ['phone', 'etc'], ['settings', '설정']];
   const STORY_TABS = ['명대사', '세계관', FIXED]; // 줄거리·날짜로그·서사 고리는 타임라인 탭에
   const NOW_TABS = ['현재상태', '소지품', '장소·조직']; // 옷차림은 현재상태의 인물 카드 안에
@@ -1666,6 +1671,7 @@
     .nsum{margin:0 0 10px;font-size:12.5px;color:var(--graphite)}.nsum b{color:var(--ink);font-size:14px}
     .nseg{margin-bottom:6px}
     .nh{display:flex;align-items:center;gap:6px;margin:6px 0;padding:10px 12px;border-radius:12px;background:var(--mist);font-size:13px;font-weight:800;color:var(--ink2);cursor:pointer}.nh em{font-style:normal;color:var(--graphite);transition:transform .15s}.nh.on em{transform:rotate(90deg)}.nh.on{margin-bottom:8px}.nh small{font-weight:600;color:var(--graphite)}
+
     .nh-add{margin-left:auto;border:0;background:none;padding:0;font:inherit;font-size:12px;font-weight:700;color:#6B5BC4;cursor:pointer}
     .nc{border:1px solid var(--rule);border-radius:12px;background:var(--paper);margin-bottom:6px;overflow:hidden}
     .nc.open{border-color:#C9BFF2}.nc.editing{box-shadow:0 0 0 2px #E4DEFA}
@@ -2931,7 +2937,7 @@
   }
   { let at = 0; ui('main') && ui('main').addEventListener('scroll', e => { const y = e.target.scrollTop, nv = ui('nav.top'); if (!nv) return; const hid = nv.classList.contains('dock-hide'); // at: 방향이 바뀐 자리
     if (y < 60) { nv.classList.remove('dock-hide'); at = y; } else if (hid) { if (y > at) at = y; else if (y < at - 24) { nv.classList.remove('dock-hide'); at = y; } } else { if (y < at) at = y; else if (y > at + 24) { nv.classList.add('dock-hide'); at = y; } } }, { passive: true }); }
-  const fixTab = () => { if (sceneOn && nav.ppl === 'feel') nav.ppl = 'list'; if (!sceneOn && ['backup', 'inj', 'fixed'].includes(nav.tab)) nav.tab = 'home'; };
+  const fixTab = () => { if (sceneOn && nav.ppl === 'feel') nav.ppl = 'list'; if (!sceneOn && ['backup', 'fixed'].includes(nav.tab)) nav.tab = 'home'; if (nav.tab === 'inj') nav.tab = 'home'; };
   if (window.visualViewport) ['resize', 'scroll'].forEach(ev => window.visualViewport.addEventListener(ev, () => { if (isOpen()) fitScreen(); }));
   window.addEventListener('resize', () => { if (isOpen()) fitScreen(); });
   for (const ev of ['focusin', 'focusout']) root.addEventListener(ev, () => setTimeout(() => { if (isOpen()) fitScreen(); }, 350));
@@ -2985,7 +2991,7 @@
   // ══════════════════════════════════════════════════════════════
   // 11. 화면 조각
   // ══════════════════════════════════════════════════════════════
-  const AV = [['#E6E0FA', '#4B3F8A'], ['#F9E0EA', '#93405F'], ['#DFEFE5', '#2F6A4C'], ['#DCEAF8', '#2F5F8F'], ['#FBE4D4', '#94522B'], ['#F7EDCB', '#7A6420']];
+  const AV = [['#E6E0FA', '#4B3F8A'], ['#F9E0EA', '#93405F'], ['#DFEFE5', '#2F6A4C'], ['#DCEAF8', '#2F5F8F'], ['#FBE4D4', '#94522B'], ['#F7EDCB', '#7A6420'], ['#D7F0EC', '#2B6B64'], ['#F4DEF4', '#7D3D84'], ['#FCDFD9', '#9A4436'], ['#DFE4FA', '#3E4E98'], ['#E9F1D2', '#566A20'], ['#E2E7ED', '#45586A']];
   // 인물 색: 인물 칸 순서대로 돌아가며(이름 글자로 정하면 나나·단테처럼 겹쳐서) · 인물 칸에 없는 이름만 글자로
   let avOrder = { k: null, list: [] };
   const avColor = name => { let k = ''; try { k = bodyOf('인물'); } catch (_) {}
@@ -3538,13 +3544,7 @@
     if (!items) items = fixItems(fxHead(text));
     if (!items.length) return toast('가져올 고정 설정이 없어요.', 'info', 2500);
     nav.fxPick = { name, items, on: new Set(items.map((_, i) => i)), off }; render(); }
-  function injHtml() {
-    // 주입: 칸마다 넣는 방법 · 얼마나. 바꾸면 바로 채팅 노트에 다시 넣어요.
-    const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && k !== FIXED && k !== '현재상태'); // 고정 설정·현재상태는 늘 넣어요(버튼 없음 · 고정은 항목마다 미주입으로)
-    const have = new Set(splitSections(noteMemory()).map(x => x.key));
-    const M = [['on', '항상'], ['auto', '나올 때만'], ['off', '끄기']], INJ_REC = { '서사 고리': 'on' }; // ★ 추천: 서사 고리는 항상(대화에 안 나와도 열린 일을 이어 가게)
-    const row = k => `<div class="ij-row${have.has(k) ? '' : ' none'}"><span>${esc(k)}${have.has(k) ? '' : ' <small>비어 있음</small>'}</span><div class="ij-seg">${M.map(([v, l]) => `<button data-act="injsec" data-arg="${esc(k)}|${v}" aria-pressed="${secMode(k) === v}"${INJ_REC[k] === v ? ' title="추천"' : ''}>${l}${INJ_REC[k] === v ? '<i class="rec">★</i>' : ''}</button>`).join('')}</div></div>`;
-    const num = (key, label, opts) => `<div class="ij-row"><span>${label}</span><div class="ij-seg">${opts.map(v => `<button data-act="injnum" data-arg="${key}|${v}" aria-pressed="${injSet[key] === v}">${v}</button>`).join('')}</div></div>`;
+  function injLogHtml() { // 주입 기록(홈 '이번 장면의 기억' 아래 접는 칸)
     const RES = { written: '새로 골라 넣음', same: '바뀐 것 없음', ready: '미리 골라 둔 기억 그대로 · 바로 보냄', generating: '다른 곳에서 답 쓰는 중 · 건너뜀', busy: '정리 중 · 건너뜀', timeout: '시간이 걸려 그냥 보냄', fail: '실패 · 그냥 보냄', 'no-full': '이 기기에 전체 기억 없음', 'no-note': '노트 없음', 'no-carrier': '넣을 답변 없음', moved: '방을 옮김' };
     const hm = t => new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
     const logRow = x => `<li class="il-${x.res === 'written' ? 'on' : x.res === 'same' ? 'same' : 'skip'}"><span class="il-t">${hm(x.at)}</span><div><b>${x.kind === 'reroll' ? '↻ 다시 쓰기' : esc(x.said ? '“' + x.said + '”' : '보냄')}</b>
@@ -3554,15 +3554,7 @@
     const logCard = `<div class="bk-card"><div class="bk-h"><b>주입 기록</b><small>보낼 때마다 무엇을 넣었는지 · 최근이 위</small></div>
       ${logs.length ? `<ol class="ilog">${logs.slice(0, 8).map(logRow).join('')}</ol>${logs.length > 8 ? `<details class="il-more"><summary>예전 기록 ${logs.length - 8}개</summary><ol class="ilog">${logs.slice(8).map(logRow).join('')}</ol></details>` : ''}`
         : '<p class="muted" style="margin:10px 0 0;font-size:13px">아직 기록이 없어요. 웹 모드로 채팅을 보내면 여기에 쌓여요.</p>'}</div>`;
-    return `<section class="bk">
-      <div class="bk-card"><div class="bk-h"><b>칸마다 넣는 방법</b><small>항상 = 매 턴 · 나올 때만 = 대화에 그 이름·일이 나오면 · 끄기 = 안 넣어요 · 고정 설정·현재상태는 늘 들어가요</small></div>
-        <div class="ij-rows">${keys.map(row).join('')}</div></div>
-      <div class="bk-card"><div class="bk-h"><b>얼마나</b><small>많을수록 자세하지만 채팅에 넣는 글이 길어져요</small></div>
-        <div class="ij-rows">${num('recent', '최근 사건', [3, 5, 8, 12])}${num('recall', '떠올릴 기억', [4, 8, 12, 16])}
-          <div class="ij-row"><span>AI로 한 번 더 고르기<small style="display:block;font-weight:400;margin-top:2px">낱말로 떠올린 기억이 지금 장면에 정말 맞는지 AI가 한 번 더 봐요(엉뚱한 기억이 줄어요) · 설정에 넣어 둔 AI 키를 그대로 써요(따로 안 넣어도 돼요) · 보낼 때마다 요청 1번, 최대 3.5초</small></span><div class="ij-seg">${[['on', '켜기'], ['off', '끄기']].map(([v, l]) => `<button data-act="injai" data-arg="${v}" aria-pressed="${(injSet.ai || (injGemKey ? 'on' : 'off')) === v}">${l}</button>`).join('')}</div></div></div></div>
-      <p class="muted bk-note">📌 고정한 사건은 여기 설정과 상관없이 늘 들어가요.</p>
-      <details class="il-fold"><summary>주입 기록 보기${logs.length ? ' · ' + logs.length + '개' : ''}</summary>${logCard}</details>
-    </section>`;
+    return `<details class="il-fold"><summary>주입 기록 보기${logs.length ? ' · ' + logs.length + '개' : ''}</summary>${logCard}</details>`;
   }
   // 확프연동(다른 확프에서 옮기기): 백업 화면 맨 아래 "자세히 · 무엇이 담기나요" 밑에 작게
   const hwHtml = () => { const dis = busyNow ? ' disabled' : ''; return `
@@ -3637,7 +3629,7 @@
         <p class="muted" style="margin:6px 0">필수 기억은 항상 넣고, 옛 일은 방금 쓴 말에 맞춰 골라요</p>
         ${lastInj.pinned.length ? `<h5>📌 고정한 사건</h5><ul class="inj-list">${lastInj.pinned.map(r => injRow(r, true)).join('')}</ul>` : ''}
         <h5>떠올린 기억</h5>${lastInj.recalled.length ? `<ul class="inj-list">${lastInj.recalled.map(r => injRow(r, false)).join('')}</ul>` : '<p class="muted" style="margin:4px 0">지금 대화와 맞는 옛 기억이 없어요. 옛 일을 꺼내면 보낼 때 찾아서 넣어요.</p>'}
-        <p class="muted" style="margin:6px 0 0;font-size:12px">타임라인에서 사건마다 📌 고정할 수 있어요.</p></details>`;
+        <p class="muted" style="margin:6px 0 0;font-size:12px">타임라인에서 사건마다 📌 고정할 수 있어요.</p>${injLogHtml()}</details>`;
     const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>${NOTE_LIMIT === NO_LIMIT ? '전체 기억 · 제한 없음' : `노트 ${realPc}% 참`}</span><span class="comp-n"><b>${fmt(injected)}</b>${NOTE_LIMIT === NO_LIMIT ? '자' : ` / ${fmt(NOTE_LIMIT)}자`}<button class="comp-mng" data-act="notes">📝 관리</button></span></div>
       <div class="nc-g" role="img" aria-label="노트 ${fmt(injected)}자 / ${fmt(NOTE_LIMIT)}자"><i style="width:${pc}%"></i><u></u></div>
       <p class="nc-line">${parts.map(x => `${esc(x.key)} ${Math.round(x.len / total * 100)}%`).join(' · ')}<span class="nc-more">자세히</span></p></summary>
@@ -3680,7 +3672,7 @@
       <div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || (injGemKey ? 'on' : 'off')) === 'on' ? 'off' : 'on'}"${(injSet.ai || (injGemKey ? 'on' : 'off')) === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -5815,12 +5807,18 @@
     if (!snapshot?.note) return emptyBox('아직 정리한 노트가 없어요.');
     const all = splitSections(noteMemory()), has = k => all.some(x => x.key === k && x.body.trim());
     const groups = N_GROUPS.filter(([, ks]) => ks.some(has)); if (!groups.length) return emptyBox('노트가 비어 있어요.');
+    if (sceneOn) groups.push(['주입', []]);
     if (!groups.some(([g]) => g === nav.ngrp)) nav.ngrp = groups[0][0];
     const now = stripProof(noteMemory()).length, dis = busyNow ? ' disabled' : '';
     let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
     const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
       : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
+    if (nav.ngrp === '주입') { // 칸마다 넣기/끄기 · 어떻게 들어가는지는 칸마다 정해져 있어요
+      const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && ![FIXED, '현재상태', SHELF].includes(k) && has(k));
+      return h + '<p class="nsum" style="margin-top:10px">칸마다 알아서 골라 넣어요 · 안 쓰는 칸만 끄세요 · 고정 설정·현재상태는 늘 들어가요</p><div class="ij-rows">'
+        + keys.map(k => '<div class="ij-row"><span>' + esc(secInfo(k).short) + '</span><div class="ij-seg">'
+          + [['in', '넣기'], ['off', '끄기']].map(([v, l]) => '<button data-act="injsec" data-arg="' + esc(k) + '|' + v + '" aria-pressed="' + ((secMode(k) === 'off') === (v === 'off')) + '"' + dis + '>' + l + '</button>').join('') + '</div></div>').join('') + '</div>'; }
     const secsIn = N_GROUPS.find(([g]) => g === nav.ngrp)[1].filter(has); if (!nav.nshow || nav.nshow.g !== nav.ngrp) nav.nshow = { g: nav.ngrp, open: [secsIn[0]] };
     for (const sec of secsIn) {
       const body = bodyOf(sec), its = itemBlocks(body).items, shown = nav.nshow.open.includes(sec) || String(nav.nedit || '').startsWith(sec + '¦');
@@ -7115,7 +7113,6 @@
       : nav.tab === 'people' ? peopleHtml()
       : nav.tab === 'feel' ? (snapshot?.note ? peopleHtml('feel', '') : emptyBox('아직 정리한 기억이 없어요.'))
       : nav.tab === 'backup' ? backupHtml() + hwHtml()
-      : nav.tab === 'inj' ? injHtml()
       : nav.tab === 'fixed' ? fixedHtml()
       : nav.tab === 'settings' ? settingsHtml()
       : homeHtml());
@@ -7348,6 +7345,7 @@
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); } // 사본이 망가졌으면 채팅 전체본으로
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
       try { injSet = { secs: {}, recent: 5, recall: 8, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 5, recall: 8 }; }
+      injSet.recent = 8; injSet.recall = 8; // 최근 사건·떠올릴 기억은 8개로 고정(예전에 고른 값은 안 봐요)
       try { injPins = new Set(JSON.parse(String(await getValue('pins:' + chatId, '[]')) || '[]')); } catch (_) { injPins = new Set(); }
       try { if (snap.note) selectInjection(noteMemory()); else lastInj = null; } catch (_) {}
       try { lastSeenMap = JSON.parse(String(await getValue('lastseen:' + chatId, '') || '{}')) || {}; } catch (_) { lastSeenMap = {}; }
