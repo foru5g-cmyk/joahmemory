@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.1
+// @version      4.1.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1031,7 +1031,7 @@
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
 - 숨김 줄 끝에 숨기기 시작한 때를 '(N턴부터)'로 씀. 숨기던 상대가 알게 되면 숨김 줄을 지우고, 들킨 장면을 날짜로그에 남김.
 - 끝난 서사 고리는 지우지 않고 '[닫힘]' 줄로 계속 남김(끝난 일은 날짜로그에도 남김). 기본 지침의 '끝난 서사 고리는 지움'·'이번 정리 기간에 끝난 것만'보다 이 규칙이 우선함.
-- 감정선 칸을 만들지 않는 정리에서는 → 줄의 자각과 전환 줄을 원문(속마음·행동)으로 판단함.
+- 감정선 칸을 만들지 않는 정리에서는 → 줄의 자각과 전환 줄을 원문에 드러난 속마음과 행동을 보고 판단함. 자각 괄호에는 자각·무자각·부정·숨김 중 한 단어만 씀.
 - 날짜가 다른 지난 사건을 다시 꺼내다가 같은 사람 사이에서 그 일과 이어지는 새 일이 생기면, 둘을 한 사건으로 합쳐 새 일이 일어난 극중 날짜로 맨 아래에 씀.
   · 제목: 그 극중 날짜 + 지금 일어난 일 한 문장 (예: ▸ [2026.04.20-닉이 나나를 작업실에도 초대함])
   · 본문: 첫 줄은 '장소 · 인물'. 그 아래 지난 일과 새 일을 줄마다 극중 날짜·턴과 함께 씀 (예: - 2026.04.15 닉이 나나를 브루클린 공연에 초대함 (12턴) / - 2026.04.20 다시 그 공연 얘기를 하다 작업실에도 초대함 (32턴)). 지난 사건의 줄·근거는 하나도 빼지 않음.
@@ -1823,7 +1823,7 @@
     .bigring.due .ringtext b{font-size:22px;line-height:1.3;letter-spacing:-.4px}
     .ringtext span{font-size:13px;color:var(--ink2);margin-top:6px}
     .ringtext small{font-size:11.5px;color:var(--graphite);margin-top:4px;font-variant-numeric:tabular-nums}
-    .hero-sub{margin:10px 0 2px;font-size:14px;color:var(--ink2)}.hero-meta{margin:0 0 14px;font-size:11.5px;color:var(--pencil)}.hero-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}.hero-foot .inj-sw{margin:0}.hero-dot{color:var(--rule)}.hero-reset{border:0;background:none;padding:0;font-size:12px;color:var(--pencil);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.wd-drive{font-size:16px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+    .hero-sub{margin:10px 0 2px;font-size:14px;color:var(--ink2)}.hero-meta{margin:0 0 14px;font-size:11.5px;color:var(--pencil)}.hero-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}.hero-foot .inj-sw{margin:0}.hero-dot{color:var(--rule)}.hero-reset{border:0;background:none;padding:0;font-size:12px;color:var(--pencil);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.wd-drive{font-size:16px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}.wd-drv{display:flex;align-items:center;gap:8px;border:0;background:none;padding:6px 0 2px;font-size:12.5px;font-weight:700;color:var(--ink2);cursor:pointer;border-top:1px solid var(--rule);margin-top:4px;width:100%}.wd-drv span{font-size:15px;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
     .inj-sw{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:12px;color:var(--graphite);cursor:pointer}.inj-sw input{display:none}.inj-sw i{width:26px;height:15px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.inj-sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s}.inj-sw input:checked+i{background:var(--ink)}.inj-sw input:checked+i::after{left:13px}.inj-sw small{color:var(--bad);font-size:11px}
     .hero-run{min-width:180px;background:var(--ink);border-color:var(--ink);color:#fff}
     .hero-run.due{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 0 0 4px #E6E0FA}
@@ -2892,7 +2892,7 @@
     .wd-ring.spin{animation:wd-spin 1s linear infinite}@keyframes wd-spin{to{transform:rotate(360deg)}}
     @media (prefers-reduced-motion:reduce){.wd-ring.spin{animation:wd-spin 3s linear infinite}}
     .wd-top .wd-auto{justify-content:flex-start;flex-direction:row-reverse;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--graphite);white-space:nowrap}
-    .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
+    .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-acts .wd-gear{flex:0 0 32px;height:32px;border-radius:11px}.nocall{display:inline-block;font-size:11.5px;font-weight:700;color:#8A6A12;background:#FFF1BF;border-radius:999px;padding:2px 9px;line-height:1.5;white-space:nowrap}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
     .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
     .screen.fx-open nav.top{display:none!important}
     .bk-info{margin:12px 2px 0}.bk-info summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--graphite);list-style:none}.bk-info summary::-webkit-details-marker{display:none}.bk-info summary::after{content:' ›'}.bk-info[open] summary::after{content:' ⌄'}.bk-info p{margin:8px 0 0;font-size:12.5px;line-height:1.6}
@@ -3130,7 +3130,7 @@
       const addrs = [...seg.matchAll(/「([^」]*)」/g)].map(m => m[1].trim()).filter(a => !NO_ADDR.test(a));
       const reg = ((seg.match(REG) || [])[0] || '').replace(/\s*[·\/,，]\s*/g, '·').trim();
       const rest = seg.replace(/「[^」]*」/g, '').replace(REG, '').replace(/[·,，\s]+/g, ' ').trim();
-      if (addrs.length || reg) out.push({ addr: addrs, reg }); if (rest) extra.push(rest);
+      if (addrs.length || reg) out.push({ addr: addrs, reg }); if (rest && !/^\(?\s*속마음\s*[\/·,]\s*행동\s*\)?$/.test(rest)) extra.push(rest); // 감정선 끈 방에서 AI가 규칙 글자를 그대로 적은 '(속마음/행동)'은 빼요
     }
     return { chips: out, extra: extra.join(' · ') };
   }
@@ -3144,7 +3144,7 @@
     if (!h?.before || !n || h.afterUpto !== n.upto) return (newAddrSet = new Set());
     const old = addrsOf(h.before); return (newAddrSet = new Set([...addrsOf(noteMemory())].filter(a => !old.has(a)))); };
   // 호칭이 없고 말투만 있으면 "아직 부른 적 없음"(호칭은 대사에서 실제로 부른 말만 적어서 · 오류가 아니라는 걸 보이게)
-  const NO_CALL = '<small class="pdim">아직 부른 적 없음</small>';
+  const NO_CALL = '<span class="nocall">아직 부른 적 없음</span>';
   const addrHtml = c => { const a0 = c.chips.flatMap(x => x.addr); return `<div class="addrs">${a0.length ? a0.map(a => newAddrs().has(a) ? `<span class="addrw"><i class="addr-new">NEW</i><span class="addr">「${esc(a)}」</span></span>` : `<span class="addr">「${esc(a)}」</span>`).join('') : NO_CALL}</div>`; };
   // 노트에 나오는 인물 이름 (빠진 인물 확인용)
   function namesIn(memory) {
@@ -3188,7 +3188,9 @@
   // 인물 카드의 관계 줄: 끝의 "(자각)"은 알약으로, "(변화: 계기)"는 전환 줄이 있으면 겹치니 빼고 없을 때만 한 줄로
   const relView = (text, hasTurns) => {
     let t = String(text || ''), pill = '', change = '';
-    t = t.replace(/\s*[（(]\s*(자각함?|무자각|모름|부정|숨김)\s*[)）]\s*$/, (_, a) => { const k = AWARE[a] || a; pill = pillSt(k, k === '자각' ? 'on' : k === '무자각' ? 'off' : k === '부정' ? 'broken' : 'lost'); return ''; });
+    t = t.replace(/\s*[（(]\s*속마음\s*[\/·,]\s*행동\s*[)）]/g, ''); // 감정선 끈 방에서 AI가 규칙 글자를 그대로 적은 것
+    // 자각 괄호: 끝이 아니라 줄 중간(뒤에 · 남은 쟁점 …)에 있어도 알약으로
+    t = t.replace(/\s*[（(]\s*(자각함?|무자각|모름|부정|숨김)\s*[)）]/, (_, a) => { const k = AWARE[a] || a; pill = pillSt(k, k === '자각' ? 'on' : k === '무자각' ? 'off' : k === '부정' ? 'broken' : 'lost'); return ''; });
     t = t.replace(/\s*[（(]\s*변화\s*[:：]\s*([^)）]*)[)）]/, (_, c) => { if (!hasTurns) change = `<p class="pnt"><i>변화</i>${esc(c.trim())}</p>`; return ''; });
     return { text: t.trim(), pill, change };
   };
@@ -3585,7 +3587,7 @@
       ${nav.fxPick ? fxLibHtml(true) : ''}
     </section>`;
   }
-  // 홈 정리 버튼 옆 ☁️(톱니와 같은 모양): 구글 드라이브에 연결돼 있으면 바로 올리기 · 아니면 연결 창(설정 › 백업)
+  // 홈 ☁️: 웹 모드는 톱니 창(자동 주입·자동 정리) 안 한 줄 · 아니면 '정리하기' 옆(톱니와 같은 모양): 구글 드라이브에 연결돼 있으면 바로 올리기 · 아니면 연결 창(설정 › 백업)
   const driveBtn = () => `<button class="wd-gear wd-drive" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}" aria-label="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}>☁️</button>`;
   function homeHtml() {
     if (!snapshot) return emptyBox(loading ? '대화를 읽는 중이에요…' : '불러오는 중…');
@@ -3668,7 +3670,7 @@
       <div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button>${driveBtn()}<button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label></div>` : ''}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>${nav.gsOn ? '드라이브에 올리기' : '드라이브 연결하기'}</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -6361,7 +6363,7 @@
         (who.length ? who.map(nm => { const rows = sp.filter(x => x.from === nm);
           const open = false;
           return `<details class="spgrp"${open ? ' open' : ''}><summary>${avatar(nm)}<b>${esc(nm)}</b><span>${rows.length}명</span></summary>${rows.map(x => { const c = speechChips(x.text);
-            return `<div class="sprow"><span class="spto">${esc(josa(x.to, '을', '를'))} 부를 때</span>${addrHtml(c)}${regTag(c)}${c.extra ? `<p class="item-sub">${esc(c.extra)}</p>` : ''}</div>`; }).join('')}</details>`; }).join('')
+            return `<div class="sprow"><span class="spto">${esc(josa(x.to, '을', '를'))} 부를 때</span>${addrHtml(c)}${regTag(c)}${(m => m ? ` <span class="reg-tag">${esc(m[1])}</span>` : c.extra ? `<p class="item-sub">${esc(c.extra)}</p>` : '')(String(c.extra).match(/^[(（]([^()（）]{1,12})[)）]$/))}</div>`; }).join('')}</details>`; }).join('')
           : emptyBox('호칭·말투 정보가 없어요.'));
     }
     if (which === 'outfit') {
