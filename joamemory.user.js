@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.9
+// @version      4.2.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -898,14 +898,14 @@
   const MAX_PAGES = 400; // 대화 목록 한 쪽 50개 × 400쪽 = 2만 개(약 1만 턴)까지 읽어요. 더 길면 앞부분이 빠져요(list.cut)
   async function readSinceLastNote(chatId, maxPages = MAX_PAGES) {
     const newestFirst = [], pk = await parkedOf(chatId);
-    let cursor = '', note = null, reachedStart = false;
+    let cursor = '', note = null, reachedStart = false, hitUpto = false;
     for (let page = 0; page < maxPages; page++) {
       const { list, next } = await listPage(chatId, cursor);
       // 노트는 리롤로 밀려난 답에 있어도 찾습니다(직전 답을 리롤하면 노트가 거기 남아요). 다음에 최신 답으로 옮겨져요.
       for (const m of list) { newestFirst.push(m); if (!note) note = parseNote(m); }
       // 노트를 최신 답변으로 옮기면 upto(정리 끝 메시지)는 노트보다 한참 앞에 있어요. 거기까지 읽어야 새 대화 턴을 제대로 셉니다.
       const nt = note || pk;
-      if (nt && newestFirst.some(m => msgId(m) === nt.upto)) break;
+      if (nt && newestFirst.some(m => msgId(m) === nt.upto)) { hitUpto = true; break; }
       cursor = next;
       if (!cursor) { reachedStart = true; break; }
     }
@@ -940,7 +940,7 @@
       else fresh = all.slice(all.findIndex(m => msgId(m) === note.carrierId) + 1);
     }
     fresh = fresh.filter(isChat);
-    return { note, fresh, all, complete: !!note || reachedStart };
+    return { note, fresh, all, complete: !!note || reachedStart, covered: reachedStart || hitUpto }; // covered: 지난 노트 끝(또는 채팅 처음)까지 다 읽음
   }
 
   // 새 노트에 없는 【인물】 블록은 예전 노트의 블록을 그대로 되살립니다. 25턴 동안 안 나온 인물도 잊지 않게.
@@ -7845,7 +7845,8 @@
     try {
       const now = await readSinceLastNote(chatId, 6); lap('대화 확인');
       // 정리하는 사이 마지막으로 정리한 메시지가 리롤·삭제됐으면 묻습니다(그 답을 기준으로 다음 정리가 이어지므로).
-      if (draft.uptoId && !draft.restore && !now.all.some(m => msgId(m) === draft.uptoId)
+      //   최근 몇 쪽만 읽으니, 지난 노트 끝까지 못 읽었으면(나눠서 정리하는 긴 채팅 — 묶음 끝은 한참 앞) 확인하지 않아요. 안 그러면 멀쩡한데 경고가 떠요.
+      if (draft.uptoId && !draft.restore && now.covered && !now.all.some(m => msgId(m) === draft.uptoId)
         && !confirm('정리하는 사이 마지막 대화가 리롤되거나 지워졌어요. 그래도 이 결과를 넣을까요? (취소하면 아무것도 바뀌지 않아요)')) { toast('넣지 않았어요. 노트는 그대로예요.', 'info', 3000); return; }
       // 정리하는 사이 다른 기기(폰·컴)가 먼저 노트를 넣었으면 덮어쓰기 전에 묻습니다.
       //   내 정리가 더 많은 턴을 담았으면 그쪽 내용도 이미 들어 있어서 덮어써도 되고, 아니면 그쪽이 최신이라 취소를 권합니다.
