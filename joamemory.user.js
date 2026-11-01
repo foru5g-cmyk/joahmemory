@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.7
+// @version      4.1.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1029,8 +1029,8 @@
   const EXTRA_RULE = `\n\n[덧붙임 규칙]
 - [고정 설정]에 이미 적힌 것(인물의 외형·나이·정체·성격·말버릇·기본 말투, 세계관 규칙·배경)은 인물·세계관 칸에 다시 쓰지 않음. 그 인물·세계는 RP에서 새로 생기거나 바뀐 것만 씀(새로 드러난 사실·바뀐 관계·호칭·습관·상태). 고정 설정에 없는 인물·설정만 처음부터 씀. 고정 설정과 원문이 어긋나면 원문대로 쓰되 지우지 않음.
 - 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 장소를 옮기거나(공원 → 기숙사) 함께 있는 사람이 바뀌면(캘빈과 헤어진 뒤 단테와 문자) 그 자체로 새 사건이다. 문자·전화로 다른 사람과 나눈 일도 따로 사건. 기존 사건에 다른 장소·다른 사람의 일을 덧붙이지 않음. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음.
-- 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄, 100자 안팎: 지문 문장을 옮겨 적지 않고 짧은 명사 조각(조각 하나 15자 안팎, 6개 안팎)을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투 · 속은 다정함 · 담배 피움). '~해서 ~함' 같은 사연·이유 문장은 쓰지 않음. 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음.
-- 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄, 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(40자 안팎)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그.
+- 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄: 지문 문장을 옮겨 적지 않고 짧은 명사 조각(조각 하나 15자 안팎)을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투 · 외모와 달리 다정함 · 담배 피움). 조각 개수는 정하지 않음 — 짧게 쪼개기만 하고 원문에 나온 사실(이름·나이·숫자·소속·대비되는 성격)은 빼지 않음. '~해서 ~함' 같은 사연·이유 문장은 쓰지 않음. 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음. 프로필 줄 꼬리표에 쓴 정체는 여기 다시 쓰지 않음.
+- 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄(나이·관계 등 원문 그대로), 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(60자 안팎, 왜 그랬는지까지)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그. 옮긴 내용은 옮긴 칸에 꼭 씀(어느 칸에서도 빠지지 않게).
 - 관계 줄(이름 → 상대: …)의 관계 부분은 지금 둘이 어떤 사이인지 한 구(40자 안팎, 예: 연인 직전 · 첫 키스 후 서로 자각). 어떻게 그렇게 됐는지 사건을 잇달아 쓰지 않음(경위는 날짜로그, 계기는 전환 줄).
 - 【이름】 줄의 행동 습관·버릇은 두 번 이상 나왔거나, 원문이 '버릇·습관·늘·매번'이라고 밝힌 것만 씀. 한 번 보인 몸짓·표정은 습관이 아님.
 - 고민·향후 계획은 【이름】 블록 안에 '고민: …', '향후 계획: …'으로 한 줄씩, 번호 없이 씀. 프로필 줄에 섞지 않음.
@@ -1977,7 +1977,7 @@
     .filter button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:700}
 
     /* ── 인물 한 명 화면 ── */
-    .phero{display:flex;align-items:center;gap:14px;padding:4px 0 16px;margin:0 0 4px;border-bottom:1px solid var(--rule)}
+    .phero{display:flex;align-items:flex-start;gap:14px;padding:14px;margin:0 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:20px}
     .phero .av{width:58px;height:58px;font-size:25px}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
     .phero em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--graphite);margin-left:8px}
@@ -6740,7 +6740,11 @@
     // 이름 옆 알약: 마지막으로 나온 턴(100턴 넘게 안 나왔으면 '오래 안 나옴'), 관계 줄에 "교류 없음"이 있으면 그것도
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
     const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
-    return `<div class="phero">${avatar(name)}<div style="min-width:0"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => d ? `<p class="pchips">${d.split(/\s+·\s+/).filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</p>` : '<p>인물 칸에 설명이 없어요</p>')(ppl.get(name))}${pr.family ? `<p class="pnt"><i>가족</i>${esc(pr.family)}</p>` : ''}${pr.story ? `<p class="pnt"><i>사연</i>${esc(pr.story)}</p>` : ''}${pr.worry ? `<p class="pnt"><i>고민</i>${esc(pr.worry)}</p>` : ''}${pr.plan ? `<p class="pnt"><i>계획</i>${esc(pr.plan)}</p>` : ''}</div></div>
+    return `<div class="phero">${avatar(name)}<div style="min-width:0"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
+      // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
+      const nz = s => String(s).replace(/[(（][^)）]*[)）]/g, '').replace(/[\s·,]/g, ''), tags = String(pr.tag || '').split(/\s*·\s*/).map(nz).filter(t => t.length >= 3);
+      const ps = d.split(/\s+·\s+/).filter(x => x && !tags.some(t => nz(x).includes(t) || (nz(x).length >= 3 && t.includes(nz(x))))), sh = ps.filter(x => x.length <= 16), lg = ps.filter(x => x.length > 16);
+      return (sh.length ? `<p class="pchips">${sh.map(x => `<span>${esc(x)}</span>`).join('')}</p>` : '') + (lg.length ? `<p>${esc(lg.join(' · '))}</p>` : ''); })(ppl.get(name))}${pr.family ? `<p class="pnt"><i>가족</i>${esc(pr.family)}</p>` : ''}${pr.story ? `<p class="pnt"><i>사연</i>${esc(pr.story)}</p>` : ''}${pr.worry ? `<p class="pnt"><i>고민</i>${esc(pr.worry)}</p>` : ''}${pr.plan ? `<p class="pnt"><i>계획</i>${esc(pr.plan)}</p>` : ''}</div></div>
       ${/* 이 화면엔 이 사람만의 것(프로필·관계)만. 기억·사건·명대사·서사 고리는 타임라인(이 사람), 몸·옷·소지품은 상태, 아는 것은 인지에 한 번씩만 */
         cat('', '관계 · 마음 · 호칭', relRows) || emptyBox('아직 정리된 관계가 없어요.')}
       <div class="jump" style="margin-top:6px"><button data-act="tlperson" data-arg="${esc(name)}"><b>${esc(name)} 타임라인 보기</b><span class="v">기억·사건·명대사</span></button></div>`;
