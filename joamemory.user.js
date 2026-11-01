@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.2.5
+// @version      4.2.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1724,14 +1724,15 @@
   let fbCheck = { t: '', exp: 0 };
   async function fbHeaders(key, proj) {
     const h = { 'x-goog-api-key': key }, app = String(await getValue('firebaseAppId', '')).trim(), dbg = String(await getValue('firebaseDebugToken', '')).trim();
-    if (dbg && !app && !fbHeaders.noApp) { fbHeaders.noApp = true; toast('App Check에 앱 ID가 필요해요 · 설정 › Firebase 키 옆 [채우기]로 firebaseConfig를 한 번 붙여 주세요', 'err', 6000); }
-    if (!app || !dbg) return h;
-    if (Date.now() > fbCheck.exp) {
-      // 토큰을 못 받으면 키만으로 보내요(강제 전엔 그대로 되고, 강제 뒤엔 Firebase가 거절해 그 오류가 보여요) · 잘못 넣은 토큰 하나로 정리가 막히지 않게
+    // 강제된 뒤엔 키만 보내면 이유 없는 401만 떠요 → 뭐가 빠졌는지·교환이 왜 실패했는지 그대로 보여 줘요
+    if (!app) throw new Error('App Check 앱 ID가 없어요 · 설정 › Firebase 키 옆 [채우기]로 firebaseConfig를 붙여 주세요');
+    if (!dbg) throw new Error('App Check 디버그 토큰이 없어요 · 콘솔 › App Check › 웹 앱 ⋮ › 디버그 토큰 관리에서 만들어 설정에 넣어 주세요');
+    const id = proj + '|' + app + '|' + dbg; // 설정을 바꾸면 새로 받아요
+    if (fbCheck.id !== id || Date.now() > fbCheck.exp) {
       const r = await request('POST', `https://content-firebaseappcheck.googleapis.com/v1/projects/${encodeURIComponent(proj)}/apps/${encodeURIComponent(app)}:exchangeDebugToken?key=${encodeURIComponent(key)}`, { body: { debugToken: dbg }, timeout: 15000 })
-        .catch(e => { logErr('App Check', '토큰을 못 받았어요(앱 ID·디버그 토큰 확인) · ' + e.message); return null; });
-      if (!r?.token) { if (!fbHeaders.warned) { fbHeaders.warned = true; toast('App Check 토큰을 못 받았어요 · 설정의 앱 ID·디버그 토큰을 확인해 주세요(지금은 키만으로 보내요)', 'err', 6000); } return h; }
-      fbCheck = { t: r.token, exp: Date.now() + Math.max(60000, (parseFloat(String(r.ttl || '3600')) || 3600) * 1000 - 300000) }; // 만료 5분 전에 새로
+        .catch(e => { throw new Error('App Check 토큰 교환 실패 · ' + e.message); });
+      if (!r?.token) throw new Error('App Check 토큰 교환 실패 · 빈 응답');
+      fbCheck = { id, t: r.token, exp: Date.now() + Math.max(60000, (parseFloat(String(r.ttl || '3600')) || 3600) * 1000 - 300000) }; // 만료 5분 전에 새로
     }
     return { ...h, 'X-Firebase-AppCheck': fbCheck.t };
   }
@@ -2755,7 +2756,7 @@
     .bd-tools{display:flex;justify-content:center;gap:8px;margin:12px 0 0}.bd-foot{margin:0;padding:12px 16px 14px;border-top:1px solid var(--rule)}
     .bd-tools button{border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink2);font-size:12.5px;font-weight:600;padding:5px 12px;cursor:pointer}
     .bd-snap{margin:0;padding:10px 16px 14px;text-align:center;font-size:12px;border-top:1px solid var(--rule)}.bd-snap .linkbtn{font-size:12px;color:var(--graphite)}
-    .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+    .rsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}.rsheet>.rbox{margin:auto}
     .rbox{background:var(--paper);border-radius:18px;padding:20px 18px 16px;width:min(360px,100%);display:flex;flex-direction:column;gap:6px;text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.25)}.rbox b{font-size:16px}.devask{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 14px 12px;margin:0 0 16px;box-shadow:0 6px 22px rgba(30,25,60,.07);font-size:13px;color:var(--ink)}.devask>b{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:14.5px;font-weight:800;letter-spacing:-.2px}.devask>b::before{content:"";width:8px;height:8px;border-radius:50%;background:#8B78E6;box-shadow:0 0 0 4px #ECE8FB}.devask p{margin:0 0 6px;line-height:1.55;color:var(--ink2)}.devask .warn{margin:8px 2px 0;font-size:12px;color:var(--bad)}.dcols{display:flex;gap:8px;margin:0}.dcol{flex:1;min-width:0;background:var(--mist);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}.dcol.best{background:#F3F0FD;box-shadow:inset 0 0 0 1.5px #B4A8F0}.dcol small{font-size:11px;color:var(--graphite);line-height:1.45}.dcol small:first-child{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink2)}.dcol em{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:#7B67E0;border-radius:999px;padding:2px 7px}.dcol b{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:2px 0}.dcol p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.devask-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.devask-btns .btn{flex:1;min-width:140px;height:40px;border-radius:999px;font-weight:700}.dsmall{margin:10px 0 0;text-align:center;font-size:12px;color:var(--graphite)}.devask-btns .btn{flex:1;min-width:140px}.gsbox{text-align:left;gap:10px;max-height:calc(100vh - 40px);overflow:auto}.gshow b{font-size:inherit}.gsbox>b,.gsbox>small{text-align:center}.gsf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--graphite)}.gsf>input{height:38px;border:1.5px solid var(--rule);border-radius:10px;padding:0 10px;font-size:13px;background:var(--paper);color:var(--ink);width:100%;box-sizing:border-box}.gsf .keybox{display:flex;gap:6px;width:100%;max-width:none;box-sizing:border-box}.gsf .keybox input{flex:1;min-width:0;border:0;outline:0;background:transparent;height:100%;padding:0 8px 0 10px;font-size:13px;color:var(--ink)}.gsf .keybox button{flex:none}.gsrow{display:flex;gap:8px}.gsrow .btn{flex:1}.etcsw{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--ink);cursor:pointer;padding:4px 0}.etcsw input{display:none}.etcsw i{flex:none;margin-top:2px;width:34px;height:20px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.etcsw i::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}.etcsw input:checked+i{background:#7B67E0}.etcsw input:checked+i::after{left:17px}.etcsw small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.etcgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.etcgrid .btn{height:40px;border-radius:12px;font-weight:600}.etcall{height:42px;border-radius:999px;font-weight:700;color:var(--bad);border-color:var(--bad)}.gshow{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}.gshow summary{cursor:pointer;font-weight:700;text-align:center;color:var(--ink)}.gshow ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.55}.gshow .btn{height:28px;padding:0 10px;font-size:12px}.rbox small{font-size:12px;color:var(--graphite)}
     .imgsheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
     .imgsheet .img-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer;padding:0}
@@ -8709,7 +8710,7 @@
         await setValue('pins:' + cid, JSON.stringify([...injPins]));
         toast(injPins.has(arg) ? '고정했어요 · 이 사건은 늘 채팅에 들어가요' : '고정을 풀었어요', 'ok', 2500); keepScroll(render); return reinject(cid); }
       case 'injskip': injSkip.set(arg, lastInj?.recalled?.find(x => x.key === arg)?.title || arg); toast('이번 장면에선 뺄게요 · 그 일을 다시 직접 꺼내면 돌아와요', 'ok', 3000); keepScroll(render); return reinject(chatIdFromPath());
-      case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); await fillSettings(); ui('[data-out="fbpaste"]')?.focus(); return;
+      case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); await fillSettings(); if (WIDE.matches) ui('[data-out="fbpaste"]')?.focus(); return; // 폰: 자동 포커스하면 키보드가 창을 밀어 올려서 안 해요
       case 'fbclose': nav.fbSheet = false; render(); return fillSettings();
       case 'fbfill': { // 붙여 넣은 firebaseConfig에서 apiKey·projectId·appId를 꺼내 저장(키를 잘못 옮겨 적는 일이 없게)
         const t = String(ui('[data-out="fbpaste"]')?.value || ''), g = k => (t.match(new RegExp(k + '["\']?\\s*[:=]\\s*["\'`]([^"\'`\\s]+)')) || [])[1] || '';
