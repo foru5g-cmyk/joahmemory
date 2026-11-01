@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.2.0
+// @version      4.2.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -538,6 +538,439 @@
       }
     } catch (e) { console.info('[조아메모리 실험판] 의미 검색 건너뜀 · ' + e.message); logErr('뜻 검색', '건너뜀 · ' + e.message); }
   }
+  // ── 🍼 임신 모드 (임신테스트 파일 전용) ──
+  // 주사위는 스크립트가 굴려요: 방마다 seed 하나 → 같은 seed면 늘 같은 결과(리롤해도 안 바뀜). AI는 받은 걸 사실로 쓰기만 해요.
+  //   주수 = 이야기 속 날짜(노트 현재상태 첫 날짜) − 시작일. 정리 때마다 날짜가 바뀌어요.
+  //   증상: 그 주에 들어서면 0~3턴 뒤 '지금 일'로 넣고, AI 답에 나오거나 3턴 지나면 빼요. 큰일(유산·조산 기미·임신중독증·진통)은 그 주가 되면 바로.
+  //   검진 결과는 병원 장면(보낸 말·최근 대화에 병원 말)일 때만 넣어요. 유저 캐릭터의 반응·결정은 정하지 않아요.
+  //   줄은 모두 '※ '로 시작 → 채팅 노트를 다시 읽을 때 본문에서 빠져서 정리 AI·노트에 섞이지 않아요(parseNote).
+  //   확률은 현실보다 살짝 높게(롤플레잉용).
+  let preg = null, pregChat = '', pregOut = [], pregSig = '';
+  const P_DAY = s => { const m = String(s || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
+  const P_STR = d => { const x = new Date(d * 864e5); return x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
+  function storyDay(mem) {
+    const d = P_DAY(splitSections(mem || '').find(x => x.key === '현재상태')?.body);
+    if (d != null) return d;
+    const all = [...String(mem || '').matchAll(/\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
+    return all.length ? Math.max(...all) : null;
+  }
+  const pR = k => { let h = ((preg?.seed || 1) >>> 0) ^ 0x9e3779b9; for (let i = 0; i < k.length; i++) h = Math.imul(h ^ k.charCodeAt(i), 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const pWorld = mem => preg?.world && preg.world !== 'auto' ? preg.world : pAuto(mem);
+  const pAuto = mem => /조선|한양|궁궐|대감|마님|도령|양반|어의|의녀|세자|중전/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
+  const P_WORLD = { modern: '현대', old: '옛날(조선 등)', fantasy: '판타지' };
+  const P_DOC = { modern: '산부인과', old: '의원·산파', fantasy: '치유사' };
+  const P_HOSP = { modern: /병원|산부인과|검진|초음파|진료|의사|분만실|응급실/, old: /의원|산파|진맥|어의|의녀|약방/, fantasy: /치유사|신전|진찰|치료소|산파|의사/ };
+  // [시작 주, 끝 주, 일, AI 답에 나왔는지 볼 말, 'm'이면 현대만] · 몸 + 사람·상황 사건(사람이 끼어야 장면이 살아요)
+  const P_SYM = [
+    // 몸
+    [5, 13, '특정 냄새(고기 굽는 냄새·향수·커피)에 갑자기 입덧이 올라옴', /토|헛구역|울렁|입덧|구역/],
+    [5, 14, '아랫배가 콕콕 쑤시고 땅김', /땅기|땅김|쑤시|콕콕|당기/],
+    [6, 40, '갑자기 코피가 남(임신으로 혈관이 예민해져서)', /코피|코에서|코밑/],
+    [6, 13, '참을 수 없이 졸려서 아무 데서나 꾸벅꾸벅 졺', /졸|잠들|꾸벅/],
+    [4, 14, '몸이 미열처럼 따끈함(초기 임신 체온 상승) — 곁의 NPC가 닿았을 때 알아챌 수 있음 · 감기인 줄 알고 병원에 가 보자고 권할 수 있음(강요 안 함)', /열|뜨거|따끈|미열|이마|감기/],
+    [5, 14, '입안에서 쇠 맛이 계속 돎', /쇠 맛|쇳맛|비린|금속/],
+    [6, 16, '좋아하던 음식이 갑자기 역겨워짐', /역겨|비위|싫어|못 먹/],
+    [6, 40, '감정이 널뛰어서 사소한 일(광고·노래·말 한마디)에 눈물이 터짐', /눈물|울컥|훌쩍|울음/],
+    [8, 40, '갑자기 어지러워 휘청함', /어지러|휘청|비틀|핑/],
+    [8, 40, '화장실을 너무 자주 가게 됨', /화장실/],
+    [10, 30, '양치하다 잇몸에서 피가 남', /잇몸/],
+    [12, 40, '한밤중에 특정 음식이 미치도록 당김', /먹고 싶|당겨|당긴|땡겨|야식/],
+    [12, 40, '이상하게 생생한 꿈을 꿈', /꿈/],
+    [14, 40, '밤에 다리에 쥐가 남', /쥐가|쥐 나|종아리/],
+    [14, 40, '얼굴에 기미가 올라오거나 피부가 뒤집어짐', /기미|피부|뾰루지|트러블/],
+    [16, 40, '속이 쓰리고 신물이 올라옴', /속쓰|쓰려|쓰리|신물/],
+    [17, 22, '처음으로 태동이 느껴짐(뽀글뽀글, 꿈틀)', /태동|꿈틀|뽀글|움직/],
+    [20, 40, '태동이 유난히 세게 참 · 하필 조용한 순간에', /태동|발길질|꿈틀|찼|차는/],
+    [22, 40, '배에 손을 대거나 목소리가 들리면 아기가 그쪽을 참', /태동|찼|차는|꿈틀|발길질/],
+    [20, 40, '발목과 손이 붓기 시작함', /붓|부어|부종|퉁퉁/],
+    [22, 40, '배꼽이 튀어나옴', /배꼽/],
+    [24, 40, '허리와 골반(치골)이 아파 걷기 불편함', /허리|골반|치골|뒤뚱/],
+    [26, 40, '배가 단단하게 뭉쳤다 풀림(가진통)', /뭉치|뭉쳤|단단|가진통/],
+    [26, 40, '배 때문에 자세가 불편해 잠을 설침', /잠|뒤척|못 자/],
+    [28, 40, '배에 튼살이 보이기 시작함', /튼살/],
+    [28, 40, '숨이 차서 계단 몇 개에도 헉헉댐', /숨이|헉헉|숨차|숨을/],
+    [30, 40, '아기가 딸꾹질하는 게 배 너머로 느껴짐', /딸꾹/],
+    [32, 40, '손목이 저리고 손이 부어 물건을 놓침', /손목|저려|저림|떨어뜨/],
+    // 사람·상황
+    [8, 40, '중요한 순간(대화·약속·일하는 중)에 하필 화장실이 급해짐', /화장실/],
+    [6, 16, '사람 많은 곳(식당·회의·수업)에서 냄새 때문에 입덧이 올라와 자리를 박차고 나가야 함', /토|헛구역|울렁|입덧|나가/],
+    [10, 40, '갑자기 몸이 무거워 약속·일정을 망칠 위기', /약속|일정|못 가|늦/],
+    [12, 40, '곁의 NPC가 밤에 배에 대고 몰래 말을 걸거나 노래를 불러 줌', /배에 대고|속삭|노래|말을 걸/],
+    [8, 24, '아직 임신을 모르던 사람이 산모수첩·초음파 사진·약봉투를 보고 알게 됨', /알게|봤|산모수첩|초음파 사진|약봉투|임신이었/],
+    [12, 40, '곁의 NPC와 사소한 일로 다툼 — 호르몬 탓에 평소보다 날카로움', /다투|싸우|날카|짜증|화를/],
+    [10, 40, '곁의 NPC가 과보호 모드 — 무거운 것 못 들게 하고 계단마다 손을 잡음', /들지 마|조심|손을 잡|과보호|부축/],
+    [8, 40, '곁의 NPC가 한밤중 야식 심부름을 다녀옴(구하기 어려운 음식)', /사 왔|사왔|구해|편의점|심부름|야식/],
+    [10, 30, '곁의 NPC가 태명 이야기를 꺼냄', /태명/],
+    [14, 40, '곁의 NPC가 몰래 아기 물건(옷·신발·인형)을 사 옴', /아기 옷|배냇|신발|인형|사 왔|사왔/],
+    [16, 40, '모르는 사람(가게 주인·이웃 할머니)이 배를 보고 참견하거나 축하하며 덤을 줌', /할머니|아주머니|주인|덤|참견|축하/],
+    [16, 40, '처음 보는 사람이 허락 없이 배를 만지려 함', /만지|손을 뻗|배를/],
+    [18, 40, '배 모양을 보고 누군가 아들이다·딸이다 장담함', /아들|딸|배 모양|장담/],
+    [8, 20, '주변 사람(동료·친구·이웃)이 임신을 눈치챔 — 소문이 돌기 시작함', /눈치|소문|수군|혹시/],
+    [8, 40, '술자리나 커피·날음식을 권받는 상황이 생김', /술|와인|맥주|커피|회|날것/],
+    [10, 40, '가족(부모·형제)에게서 연락이 옴 — 임신 이야기가 나옴', /전화|연락|엄마|아빠|어머니|아버지|가족/],
+    [16, 40, '전에 입던 옷이 안 맞음 — 단추가 안 잠기거나 지퍼가 안 올라감', /단추|지퍼|안 맞|꽉 끼|옷이/],
+    [20, 40, '대중교통·줄에서 누가 자리를 양보함', /양보|자리를|비켜/, 'm'],
+    [10, 40, '임신 앱·맘카페에서 이번 주 주의사항을 보고 곁의 NPC가 호들갑을 떪', /앱|카페|검색|알림|읽었/, 'm'],
+    [24, 40, '곁의 NPC가 아기방이나 아기 침대를 준비하자고 함', /아기방|요람|침대|아기 침대|조립/],
+    [30, 40, '출산 가방을 미리 싸 두자는 이야기가 나옴', /출산 가방|가방|짐/, 'm'],
+    [12, 40, '태몽 이야기가 나옴(본인 아닌 가족·NPC가 꾼 꿈)', /태몽|꿈/],
+  ];
+  const P_TELL = /임신했어|임신했다고|임신이야|임신이에요|임신했습니다|임신\s*했어|(?:아기|애기|아이)가?\s*생겼|두\s*줄\s*(?:이야|이었어|이에요|나왔|떴)|(?:우리|너의|네)\s*아기(?:야|를|가)|아빠가\s*(?:된|돼)|엄마가\s*(?:된|돼)|임신\s*사실을\s*(?:말|알리|털어|고백)/; // 유저가 임신을 밝히는 말
+  const P_SEXQ = /성별|아들|딸(?!꾹|기)|남자\s*아이|여자\s*아이|남자애|여자애|공주님|왕자님/; // 성별을 묻거나 말함('딸꾹질·딸기'는 빼요)
+  const P_AUTHOR = /임신(?:을|이)?\s*(?:했|됐|되었|한\s*상태|된\s*상태)/; // 서술·작가 메모로 임신을 정함
+  const P_UNAWARE = /모르고|모름|몰라|모른다|모르는|눈치\s*(?:못|채지|를\s*못)/; // 본인은 모름
+  const P_INNER = /역겨워짐|눈물이 터짐|화장실을 너무 자주|미치도록 당김|생생한 꿈|하필 화장실|자리를 박차고|약속·일정을 망칠/; // 유저 캐릭터의 행동·감정·욕구가 필요한 일(유저 몫이라 뺌)
+  const P_FEEL = /쇠 맛|속이 쓰리고|처음으로 태동|딸꾹질하는|손목이 저리고|콕콕 쑤시고|쥐가 남|피가 비치고|피가 살짝|뭉치며 아파|뭉쳤다 풀림|태동이 유난히|아기가 그쪽을 참|두통이 심하고|진통이 시작|어지러워 휘청|하루 종일 평소보다 조용/; // 몸에 생기는 감각: 짧게 쓰고 멈춤 // 본인만 느끼거나 본인 행동이 필요한 일
+  const P_KNOW = /^곁의 NPC가|아기방|출산 가방|태명|임신 앱|가족\(부모|배 모양을 보고/; // 비밀일 땐 안 나오는 일(NPC·가족이 이미 알아야 생김)
+  const P_SOC = P_SYM.findIndex(s => s[2].startsWith('곁의 NPC가 밤에')); // 여기부터 사람·상황 사건
+  const P_SIZE = { 4: '양귀비씨', 5: '참깨', 6: '렌틸콩', 7: '블루베리', 8: '라즈베리', 9: '체리', 10: '대추', 11: '무화과', 12: '자두', 13: '레몬', 14: '복숭아', 15: '사과', 16: '아보카도', 17: '배', 18: '고구마', 19: '망고', 20: '바나나', 21: '당근', 22: '파파야', 23: '자몽', 24: '옥수수', 25: '콜리플라워', 26: '상추 한 포기', 27: '양배추', 28: '가지', 29: '단호박', 30: '큰 양배추', 31: '코코넛', 32: '배추', 33: '파인애플', 34: '멜론', 35: '허니듀 멜론', 36: '로메인 한 단', 37: '근대 한 단', 38: '대파 한 단', 39: '작은 수박', 40: '수박', 41: '수박', 42: '큰 수박' };
+  // 정리 전에도 시간이 넘어가면 주수를 미리 넘겨요: 아직 정리 안 된 대화의 서술(따옴표 속 대사는 빼고 · "2주 뒤에 검진" 같은 약속 말 방지)에서
+  //   'N일/주/달 뒤·후·만에', '다음 날·이튿날'을 더해요. 다음 정리 때 노트 날짜로 다시 맞춰져요(정리 AI가 쓴 날짜가 기준).
+  const P_DEV = [
+    [4, '심장·뇌·척수의 싹이 생김'], [6, '심장이 뛰기 시작 · 팔다리 싹이 돋음'], [8, '손가락·발가락이 생김 · 꼼지락대지만 아직 못 느낌'],
+    [10, '주요 장기가 다 생김 · 손톱이 남 · 딸꾹질을 시작'], [12, '주먹을 쥐고 입을 오물거림 · 성기 모양이 생김'], [14, '얼굴을 찡그리고 손가락을 빨기 시작 · 솜털이 남'],
+    [16, '빛을 느끼고 하품을 함 · 뼈가 단단해짐'], [18, '소리를 듣기 시작 · 태동은 뽀글뽀글 약하게'], [20, '양수를 삼키는 연습 · 자고 깨는 리듬이 생김 · 태동이 톡톡'],
+    [22, '엄마 목소리를 알아듣기 시작 · 쥐는 힘이 생김'], [24, '폐가 자라기 시작 · 큰 소리에 놀라 움찔 · 태동이 확실해짐'], [26, '눈을 뜨기 시작 · 딸꾹질이 잦음 · 태동이 세짐'],
+    [28, '꿈꾸는 잠(렘수면)을 잠 · 빛 쪽으로 고개를 돌림 · 발로 뻥뻥 참'], [30, '체온 조절 연습 · 손가락 빨기가 능숙 · 태동이 세고 잦음'], [32, '머리를 아래로 돌리기 시작 · 손톱이 다 자람 · 움직임이 묵직해짐'],
+    [34, '폐가 거의 다 자람 · 살이 올라 통통 · 공간이 좁아 밀어 대듯 움직임'], [36, '아래로 내려옴 · 몸을 굴리듯 묵직하게 움직임'], [38, '다 자람 · 언제 나와도 괜찮음 · 공간이 좁아 꿈틀대는 정도'],
+  ];
+  const pBelly = (wk, twin) => (wk < 13 ? '아직 티 안 남' : wk < 16 ? '아랫배가 살짝 단단해짐' : wk < 20 ? '배가 조금씩 나옴(옷 입으면 잘 모름)' : wk < 24 ? '배가 눈에 띄게 나옴' : wk < 28 ? '누가 봐도 임신한 배' : wk < 32 ? '배가 많이 불러 앞이 잘 안 보임' : wk < 36 ? '배가 가득 차 숨이 차고 걸음이 뒤뚱' : '배가 아래로 처짐(아기가 내려옴)')
+    + (twin && wk >= 16 ? ' · 쌍둥이라 더 큼' : '') + (wk >= 20 ? ` · 자궁 높이 약 ${Math.min(40, wk) + (twin ? 4 : 0)}cm` : '');
+  const pDev = wk => (P_DEV.filter(d => d[0] <= wk).pop() || [0, ''])[1];
+  const P_NUM = { 한: 1, 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6, 일곱: 7, 몇: 2 };
+  function pSkip(t) {
+    t = String(t || '').replace(/"[^"]*"|“[^”]*”|「[^」]*」|『[^』]*』|'[^'\n]*'/g, ' ');
+    let d = 0;
+    for (const m of t.matchAll(/(\d{1,3}|한|두|세|네|다섯|여섯|일곱|몇)\s*(일|주|주일|달|개월)\s*(?:이|가)?\s*(?:뒤|후|지나|흘러|만에)/g)) d += (/\d/.test(m[1]) ? +m[1] : P_NUM[m[1]]) * ({ 일: 1, 주: 7, 주일: 7, 달: 30, 개월: 30 }[m[2]]);
+    const W = { 하루: 1, 이틀: 2, 사흘: 3, 나흘: 4, 닷새: 5, 엿새: 6, 이레: 7, 일주일: 7, 보름: 15 };
+    for (const m of t.matchAll(/(하루|이틀|사흘|나흘|닷새|엿새|이레|일주일|보름)\s*(?:이|가)?\s*(?:뒤|후|지나|지났|흘러|흘렀|만에)/g)) d += W[m[1]];
+    d += [...t.matchAll(/(\d{1,3}|한|두|세|네|다섯|여섯|일곱|몇)\s*(일|주|주일|달|개월)\s*(?:이|가)?\s*(?:지났|흘렀)/g)].reduce((a, m) => a + (/\d/.test(m[1]) ? +m[1] : P_NUM[m[1]]) * ({ 일: 1, 주: 7, 주일: 7, 달: 30, 개월: 30 }[m[2]]), 0);
+    if (!d && /다음\s*날|이튿날|다음날|하룻밤이\s*지나/.test(t)) d = 1;
+    return Math.min(d, 60);
+  }
+  // 이야기가 먼저: 아직 정리 안 된 대화(최근 것부터)에 '9주 차'·'구 주 차'·'nine weeks along'이 나오면 그 주수로 시작일을 맞춰요.
+  const P_KO = { 일: 1, 이: 2, 삼: 3, 사: 4, 오: 5, 육: 6, 칠: 7, 팔: 8, 구: 9 };
+  const P_EN = Object.fromEntries('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ').map((w, i) => [w, i + 1]).concat([['thirty', 30], ['forty', 40]]));
+  const koNum = s => { if (/^\d+$/.test(s)) return +s; const i = s.indexOf('십'); if (i < 0) return P_KO[s] || null; return (i ? P_KO[s.slice(0, i)] || 0 : 1) * 10 + (P_KO[s.slice(i + 1)] || 0); };
+  const enNum = s => s.split('-').reduce((a, w) => a + (P_EN[w] || (/^\d+$/.test(w) ? +w : 0)), 0) || null;
+  function pregWeeksSaid(t) {
+    t = String(t || '');
+    const k = t.match(/(?:임신|태아|아기|지금|벌써|이제)[^\n.!?]{0,12}?(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)/) || t.match(/(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)(?:예요|에요|네요|입니다|래|야|군요|쯤|정도)/);
+    const e = t.toLowerCase().match(/\b(\d{1,2}|(?:twenty|thirty|forty)(?:-[a-z]+)?|[a-z]+teen|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\s+(?:along|pregnant)/);
+    const w = k ? koNum(k[1]) : e ? enNum(e[1]) : null;
+    return w >= 4 && w <= 42 ? w : null;
+  }
+  function pregSync(day, snap) {
+    let at = day; // 그 말이 나온 때의 날짜(그 뒤에 넘어간 시간은 빼요)
+    for (const m of [...(snap?.fresh || [])].filter(isChat).reverse()) {
+      const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t); if (!w) { at -= pSkip(t); continue; }
+      if (Math.floor((at - preg.start) / 7) !== w) { preg.start = at - w * 7; preg.why = `대화에서 '${w}주'라고 나와서 맞췄어요`; preg.w0 = Math.min(preg.w0 ?? w, w); pregSave(); }
+      return;
+    }
+  }
+  const P_DAY2 = s => { const m = String(s || '').match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
+  const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
+    for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
+      if (x != null && x >= d - 3 && x <= d + 400) cur = Math.max(cur, x); else cur += pSkip(t); }
+    return cur; };
+  // 태아 쪽 경우의 수(현실보다 살짝 높게): 염색체 이상 종류 · 정밀초음파 구조 이상 · 작은 소견 · 성장 지연 · 양수 · 탯줄 · 큰 아기 · 태동 감소
+  const P_CHROM = [['다운 증후군(21번 염색체)', 0.7], ['에드워드 증후군(18번 염색체)', 0.2], ['파타우 증후군(13번 염색체)', 0.1]];
+  const P_STRUCT = ['심장 벽에 작은 구멍(심실중격결손) — 대부분 저절로 막히거나 태어난 뒤 치료', '윗입술 갈림(구순열) — 태어난 뒤 수술로 치료', '한쪽 발이 안쪽으로 휨(내반족) — 태어난 뒤 교정', '손가락이 하나 더 있음(다지증) — 간단한 수술', '신장 한쪽이 작게 보임 — 계속 지켜보기', '배꼽 쪽 탈장 소견 — 태어난 뒤 수술 여부 결정'];
+  const pickW = (list, r) => { let a = 0; for (const [v, w] of list) { a += w; if (r < a) return v; } return list[0][0]; };
+  function pregPlan() { // seed로 정해지는 이번 임신의 운명(늘 같은 결과)
+    const n = preg.babies || (pR('twin') < 0.02 ? 2 : 1);
+    const sex = Array.from({ length: n }, (_, i) => pR('sex' + i) < 0.5 ? '남' : '여');
+    const abn = pR('abn') < 0.005, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.06, minor = pR('minor') < 0.06, lowP = pR('plac') < 0.06, previa = lowP && pR('placfix') < 0.1;
+    const struct = !abn && pR('struct') < 0.035 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.02; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
+    const gdm = pR('gdm') < (n > 1 ? 0.15 : 0.1), pe = pR('pe') < (n > 1 ? 0.12 : 0.06), peW = 30 + Math.floor(pR('peW') * 7);
+    const fgr = pR('fgr') < (n > 1 ? 0.15 : 0.07), oligo = pR('oligo') < 0.04, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.2, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
+    const quiet = pR('quiet') < 0.12, quietW = 28 + Math.floor(pR('quietW') * 10); // 태동이 뜸한 날(검사하면 대부분 괜찮음)
+    const breech = pR('br') < 0.25, breechStay = breech && pR('brs') < 0.2, threat = pR('thr') < (n > 1 ? 0.2 : 0.1), thrW = 28 + Math.floor(pR('thrW') * 6);
+    const sick = pR('sick') < 0.25 ? 0 : pR('sick2') < 0.8 ? 1 : 2; // 입덧 없음·보통·심함
+    const spot = pR('spot') < 0.2, spotW = 5 + Math.floor(pR('spotW') * 6); // 초기 출혈(대부분 괜찮음)
+    const pre = pR('pre') < (n > 1 ? 0.5 : 0.1), x = pR('lw');
+    let labor = n > 1 ? (pre ? 32 + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? 32 + Math.floor(x * 5) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
+    if (pe && peW + 1 < labor && pR('pe2') < 0.5) labor = Math.max(peW + 1, 34); // 임신중독증이면 일찍 낳기도 해요
+    if (fgr && labor > 37 && pR('fgr2') < 0.5) labor = 37; // 성장 지연이면 일찍 낳기도
+    let loss = null; // 초기 유산(5~12주 합쳐 약 15%) · 중기 유산 · 사산
+    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.023 : k <= 20 ? 0.0015 : 0.0003) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
+    const cs = previa || breechStay || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
+    return { n, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
+  }
+  function pregChecks(p, world) { // [주, 검진 이름, 결과]
+    const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
+    if (world === 'modern') return [
+      [6, '임신 확인 · 심장 소리', twin ? '아기집에서 심장 소리가 둘 — 쌍둥이' : '심장 소리 확인 · 정상'],
+      [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
+      [16, '2차 기형아 검사', p.abn ? `추가 검사에서 ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상'], // 성별은 물어볼 때만(pregTick)
+      [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
+      [26, '임신성 당뇨 검사', p.gdm ? '임신성 당뇨 판정 → 식단 관리·혈당 재기' : '당뇨 검사 정상'],
+      [30, '정기 검진', J([p.breech ? (twin ? '한 아이가 거꾸로(역아)' : '역아(아기가 거꾸로)') + ' → 아직 돌 수 있음' : '아기 자리 좋음', p.fgr ? `${one}가 주수보다 작음(성장 지연) → 2주마다 크기 보기` : '', p.oligo ? '양수가 적음 → 물 많이 마시고 자주 보기' : p.poly ? '양수가 많음 → 자주 보기' : '', p.lowP ? (p.previa ? '태반이 자궁 입구를 덮음(전치태반) → 제왕절개 예정' : '태반이 올라가서 괜찮아짐') : '', p.cpc ? '뇌 물혹이 사라짐' : '', p.minor ? '전에 본 신장 소견 좋아짐' : ''])],
+      [34, '정기 검진', p.pe && p.peW <= 34 ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기 권함' : J([p.fgr ? `${one}가 여전히 작음 → 일찍 낳는 것도 이야기함` : '', p.macro ? '아기가 주수보다 큼' : '']) || A + ' 잘 크고 있음'],
+      [36, '막달 검진', J([p.breech ? (p.breechStay ? '여전히 역아 → 제왕절개 날짜 잡기' : '역아였던 아기가 돌아옴') : A + ' 머리가 아래로 내려옴', p.cord ? '탯줄이 목에 한 번 감겨 있음 · 대부분 괜찮아서 지켜보기' : '', p.macro ? '아기가 커서(추정 3.8kg 넘음) 분만 방법 이야기가 나옴' : ''])],
+      ...[37, 38, 39, 40, 41].map(w => [w, '막달 검진', w >= 40 ? '예정일 근처 · 유도분만 이야기가 나옴' : '자궁문이 조금씩 열리는 중']),
+    ];
+    const dr = world === 'fantasy' ? '치유사' : '산파';
+    return [
+      [8, world === 'fantasy' ? '치유사 진찰(태기 확인)' : '진맥(태기 확인)', '태기가 확실함' + (twin ? ' · 기운이 둘로 잡힘 — 쌍태' : '')],
+      [16, world === 'fantasy' ? '치유사 진찰' : '진맥', '태가 자리를 잘 잡음' + (p.sick === 2 ? ' · 입덧으로 기력이 쇠해 보약을 권함' : '')],
+      [24, dr + ' 진찰', p.fgr ? '배가 주수보다 작다며 잘 먹으라 함' : p.poly ? '배가 유난히 크다며 물이 많은 것 같다 함' : '배 속에서 ' + A + '가 힘차게 놂'],
+      [32, dr + ' 진찰', p.breech ? '태 자리가 거꾸로 앉음 → 아직 돌 수 있음' : '태 자리 좋음'],
+      [36, dr + ' 진찰', p.breechStay ? '여전히 거꾸로 → 해산이 어려울 수 있음' : p.pe ? '몸이 심하게 붓고 두통 → 몸조리를 단단히 하라 함' : '곧 해산할 때가 다가옴'],
+    ];
+  }
+  function birthLine(p, world) {
+    const base = (p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
+    const extra = [p.struct ? '태어나 보니 ' + p.struct.split(' — ')[0] : '', p.abn ? p.chrom.split('(')[0] + '로 태어남' : '', p.cord ? '탯줄이 감겨 있었지만 무사함' : ''].filter(Boolean).join(' · ');
+    if (world !== 'modern') return (p.breechStay ? '난산 끝에 해산' : '무사히 해산') + ' · ' + p.sex.map(s => s === '남' ? '아들' : '딸').join(', ') + (p.labor < 35 || p.fgr ? ' · 몸이 작고 약함' : ' · 건강함') + (p.struct ? ' · ' + p.struct.split('(')[0] : '');
+    return (p.cs ? '제왕절개로 출산' : '자연분만으로 출산') + ' · ' + p.sex.map((s, i) => s + '아 ' + Math.max(1.2, base + pR('kg' + i) * (p.n > 1 ? 0.4 : 0.8)).toFixed(1) + 'kg').join(', ') + (p.labor < 35 ? ' · 일찍 나와 신생아 집중치료실에서 지켜봄' : extra ? '' : ' · 건강함') + (extra ? ' · ' + extra : '');
+  }
+  function pregBig(p, world) { // 큰일: 그 주가 되면 바로 '지금 일'로 · 결과는 병원에서
+    const out = [], until = p.loss ?? 99;
+    const why = p.loss == null ? '' : [['염색체 이상(누구 잘못도 아닌, 가장 흔한 이유)', '아기집만 있고 아기가 자라지 않음', '심장이 멈춤(이유를 알 수 없음)'], ['자궁경부가 일찍 열림(자궁경부 무력증)', '감염', '태반 문제'], ['탯줄이 꼬임', '태반이 일찍 떨어짐(태반 조기 박리)', '이유를 알 수 없음']][p.loss <= 12 ? 0 : p.loss <= 20 ? 1 : 2][Math.floor(pR('why') * 3)];
+    if (p.loss != null) out.push({ k: 'loss', w: p.loss, t: '갑자기 피가 비치고 아랫배가 심하게 아픔', kw: /피|출혈|아프|아파|통증/, why,
+      res: (p.loss <= 20 ? (world === 'modern' ? '초음파에서 심장 소리가 안 잡힘 → 유산' : '태기가 끊어짐 → 유산') : (world === 'modern' ? '심장 소리가 없음 → 사산' : '배 속 아기가 숨을 거둠 → 사산')) + ` (이유: ${why})`, end: p.loss <= 20 ? '유산' : '사산' });
+    if (p.spot && p.spotW < until && p.spotW !== p.loss) out.push({ k: 'spot', w: p.spotW, t: '속옷에 피가 살짝 비침', kw: /피|출혈|비침|비쳤/, res: world === 'modern' ? '초음파상 아기는 괜찮음 · 초기에 흔한 출혈이라 며칠 무리하지 말라고 함' : '태는 무사함 · 며칠 누워 지내라 함' });
+    if (p.quiet && p.quietW < Math.min(p.labor, until)) out.push({ k: 'quiet', w: p.quietW, t: '아기가 하루 종일 평소보다 조용함(태동이 뜸함)', kw: /태동|조용|안 움직|움직이지/, res: world === 'modern' ? '태동 검사(NST) 결과 아기는 괜찮음 · 잠을 오래 잔 듯' : '배를 짚어 보더니 아기는 무사하다 함' });
+    if (p.threat && p.thrW < Math.min(p.labor, until)) out.push({ k: 'thr', w: p.thrW, t: '배가 규칙적으로 뭉치며 아파 옴(조산 기미)', kw: /뭉치|아프|아파|진통/, res: world === 'modern' ? '조산 기미 → 수축 억제제를 맞고 며칠 입원하길 권함' : '해산이 이를 수 있으니 누워서 몸조리하라 함' });
+    if (p.pe && p.peW < Math.min(p.labor, until)) out.push({ k: 'pe', w: p.peW, t: '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음', kw: /두통|머리가|붓|부어|번쩍/, res: world === 'modern' ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기' : '몸에 독기가 올랐다며 절대 안정하라 함' });
+    const SEEN = '주변 누구든 알아챔(아무도 없으면 옷·거울로 드러남)';
+    for (const [w, t] of [[16, '배가 살짝 티 나기 시작함'], [24, '누가 봐도 임신한 배가 됨'], [32, '배가 많이 불러 걸음걸이까지 달라짐']]) if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k: 'b' + w, w, t: t + ' — ' + SEEN, kw: /배가|배를|옷이|단추|거울|임산부|불룩|볼록/ });
+    if (p.labor < until) out.push({ k: 'labor', w: p.labor, t: '진통이 시작됨(' + (pR('wb') < 0.3 ? '양수가 터짐' : '배가 규칙적으로 아파 옴') + ')', kw: /양수|진통|아프|아파|터졌/, res: birthLine(p, world), end: '출산' });
+    return out;
+  }
+  // 보낼 때마다: 지금 상태를 보고 채팅에 넣을 줄(pregOut)을 만들고, 걸린 일·공개한 결과를 저장해요.
+  function pregTick(snap, mem, said = '') {
+    pregOut = []; pregSig = '';
+    if (!preg || preg.ended || !pregEnsure(mem, snap) || !preg.on) return;
+    const day = pregDay(mem, snap); if (day == null) return;
+    pregSync(day, snap);
+    const turn = (snap?.note?.turns || 0) + (snap?.fresh || []).filter(m => msgRole(m) === 'user').length;
+    const world = pWorld(mem), p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
+    if (wk < 0) return;
+    const chat = (snap?.all || []).filter(isChat), lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
+    const atHosp = P_HOSP[world].test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said);
+    preg.fired ||= {}; preg.shown ||= {}; preg.log ||= []; preg.seen ||= {};
+    if (preg.unaware && P_TELL.test(said) && !/못\s*하|아니야|아닐/.test(said)) { preg.unaware = false; preg.log.push({ w: wk, t: '임신 사실을 알게 됨', at: turn }); }
+    if (preg.secret && P_TELL.test(said) && !/못\s*하|안\s*할|숨기|비밀로|말\s*못|말하지\s*말/.test(said)) { preg.secret = false; preg.log.push({ w: wk, t: '임신 사실을 밝힘(비밀 끝)', at: turn }); }
+    const big = pregBig(p, world), checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
+    const who = preg.who || '임신한 사람', me = !!preg.me, ck = world === 'modern' ? '검진' : '진찰';
+    // 지금 일: 나왔거나(AI 답에 그 말) 3턴 지나면 끝
+    let cur = preg.cur;
+    if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) { preg.log.push({ w: wk, t: cur.t.split(' — ')[0].replace(/\(NPC가[^)]*\)/, ''), at: turn - 1 }); preg.cur = cur = null; } // 나왔으면 적고 끝
+    else if (cur && turn > cur.until) preg.cur = cur = null; // 안 나오고 지나가면 안 적어요
+    if (!cur) {
+      const b = big.find(e => e.w <= wk && preg.fired[e.k] == null);
+      let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
+      // 가벼운 일: 턴마다 약 45%(평균 2턴에 하나 · 유저 요청: 바쁘게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
+      if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.45) {
+        const recent = preg.recent || [], pool = P_SYM.filter(s => wk >= s[0] && wk <= s[1] && (p.sick || !/입덧/.test(s[2])) && (s[4] !== 'm' || world === 'modern') && !(me && P_INNER.test(s[2])) && !((preg.secret || preg.unaware) && P_KNOW.test(s[2])) && !(preg.unaware && /산모수첩|모르던 사람/.test(s[2])) && !recent.includes(s[2]));
+        if (pool.length) { const s = pool[Math.floor(pR('symp' + turn) * pool.length)]; ev = { k: 't' + turn, t: s[2] + (/^곁의 NPC가/.test(s[2]) ? ' (그 NPC 성격·관계대로)' : ''), kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); }
+      }
+      preg.lastRoll = turn;
+      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 3 : 1) }; }
+    }
+    // 검진 결과: 병원 장면일 때만(리롤해도 같은 턴엔 다시 넣어요)
+    const res = [];
+    if (atHosp && preg.unaware) { preg.unaware = false; res.push(`검사해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
+    else if (atHosp) {
+      for (const e of big) if (e.res && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn)) {
+        if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); }
+        res.push(e.res); if (e.end) preg.endNext = { kind: e.end, dayN: day, why: e.why || '', turn };
+      }
+      const due = checks.filter(c => c[0] <= wk && !(p.loss != null && preg.fired.loss != null && c[0] >= p.loss) && (preg.shown['c' + c[0]] == null || preg.shown['c' + c[0]] === turn));
+      due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; if (i >= due.length - 2) preg.log.push({ w: c[0], t: c[1] + ': ' + c[2], at: turn, res: 1 }); } });
+      due.slice(-2).forEach(c => res.push(c[0] + '주 ' + c[1] + ': ' + c[2]));
+      // 성별(현대만): 16주 전엔 절대 안 알려 줘요 · 16주부터 병원 장면이면 AI에게 주고 '누가(유저든 NPC든) 물어보면 알려 줌, 안 물으면 말 안 함'
+      const sexTxt = p.sex.map(x => x === '남' ? '아들' : '딸').join('·');
+      if (world === 'modern' && preg.shown.sex == null) {
+        if (wk < 16) { if (P_SEXQ.test(said)) res.push('성별을 물었지만 아직 너무 일러서 안 보인다고 함(16주부터 · 절대 미리 말하지 않음)'); }
+        else { res.push(`성별: ${sexTxt} — 누가 물어보면 알려 줌, 아무도 안 물으면 말하지 않음`); preg.sexAt = turn; }
+      }
+    }
+    // AI 답(또는 유저 말)에 성별이 나오면 들은 걸로 · 수첩에 적어요
+    if (preg.shown.sex == null && preg.sexAt != null && turn > preg.sexAt && P_SEXQ.test(lastAi)) {
+      preg.shown.sex = turn; preg.log.push({ w: wk, t: '성별을 알게 됨: ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·'), at: turn, res: 1 });
+    }
+    if (preg.endNext && preg.endNext.turn < turn) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
+    if (preg.ended) { pregSave(); return; }
+    const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8;
+    const sexKnown = preg.shown.sex != null; // 물어봐서 들었을 때만
+    const body = '배: ' + pBelly(wk, p.n > 1 && anyShown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아보고 반응(시선·자리 양보·조심)') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
+    // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
+    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? ` · ${who}(유저)의 행동·말·생각·결정은 안 씀: 몸 상태는 NPC 눈에 보인 모습으로, 결정할 일은 선택지만 주고 멈춤` : ' · 결정할 일은 어느 쪽으로도 몰지 않음'}${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
+    const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
+    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (p.n > 1 ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.join('·') + ')' : ''} · ${body}${pDev(wk) ? ` · 태아(${P_SIZE[wk] || ''}만 함): ${pDev(wk)}` : ''} · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${p.n > 1 && anyShown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
+    if (next) {
+      const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
+      if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
+        if (preg.seen[tag] == null) preg.seen[tag] = turn;
+        if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck} — ${preg.secret ? P_DOC[world] + ' 쪽 문자·전화로만' : '곁의 NPC나 ' + P_DOC[world] + ' 연락으로'} 한 번 알려 주기` : `${ck}을 놓침 — ${preg.secret ? P_DOC[world] + ' 쪽에서 다시 오라고 연락' : '곁의 NPC가 다시 가자고 한 번 권하기'}`);
+      }
+    }
+    if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기(아기 크기 비유)
+    if (!preg.unaware && turn - (preg.wkAt ?? -9) < 2 && P_SIZE[wk]) todo.push(`${wk}주가 됨 — 아기가 자란 걸 한 번 드러내기`);
+    if (cur && turn >= cur.from) todo.push((cur.soc ? cur.t : me ? (P_FEEL.test(cur.t) ? `${who}의 몸에 ${cur.t}(몸에 생긴 일까지만 쓰고 멈춤 · ${who}의 반응은 유저가 씀)` : `${who}에게 ${cur.t}(NPC 눈에 보인 대로)`) : `${who}에게 ${cur.t}`) + (cur.big ? (preg.secret ? ' (비밀이 들킬 위기일 수 있음)' : ` (곁의 NPC가 ${P_DOC[world]}에 가자고 할 수 있음)`) : ' — 지금 장면 안에서 일어나게'));
+    if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) todo.push(preg.secret ? `${who}가 몰래 해 본 임신테스트기에 두 줄이 뜸(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 해 본 임신테스트기에 두 줄이 뜸(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); }
+    if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
+    if (todo.length) L.push(`※ 임신 · 이번 답에 꼭 넣을 일: ${todo.join(' / ')}`);
+    pregOut = L; pregSig = L.join('\n');
+    pregSave();
+  }
+  // 끝나면(유산·사산·출산·직접 끝냄) 지금 기록은 지우고 '지난 기록'에 한 줄만 남긴 뒤 다시 기다려요 · 그날 이전의 임신 흔적은 다시 안 잡아요
+  function pregArchive(kind, endDay, why = '') {
+    if (preg?.start == null) return;
+    const wk = endDay != null ? Math.floor((endDay - preg.start) / 7) : null, w0 = preg.w0 || 0;
+    const line = `${kind} · ${preg.who || ''} · ${P_STR(preg.start + w0 * 7)}(${w0}주) ~ ${endDay != null ? P_STR(endDay) + '(' + wk + '주)' : '?'}${why ? ' · ' + why : ''}`;
+    preg = { on: true, world: preg.world, peek: preg.peek, history: [...(preg.history || []), line], after: endDay ?? preg.after, afterTurn: (snapshot?.note?.turns || 0) + freshTurns() };
+    pregOut = []; pregSig = ''; pregSave();
+  }
+  const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg));
+  async function pregLoad(chatId) { pregChat = chatId; try { preg = JSON.parse(String(await getValue('preg:' + chatId, '') || 'null')); } catch (_) { preg = null; } }
+  // 노트에서 임신 찾기 → {who, me, start, w0, why} · 순서: 현재상태 '임신 N주' → 날짜로그 임신 확인 날(그날 = 5주) → 현재상태 '임신' → 아직 정리 안 된 최근 대화
+  //   누군지: 현재상태 줄 앞 이름 → 그 사건·대화에 나온 유저 캐릭터 → 나온 여자 인물 → 유저 캐릭터
+  function pregDetect(mem, chatTexts = [], after = null) {
+    const day = storyDay(mem); if (day == null) return null;
+    const fresh = after == null || day > after + 14; // 끝난 지 2주 안엔 현재상태·대화의 옛 흔적으로 다시 시작하지 않아요
+    const secs = splitSections(mem), body = k => secs.find(x => x.key === k)?.body || '';
+    const NEG = /음성|한\s*줄|임신\s*(?:가능성|걱정|아님|아닌|안\s*됨|하지\s*않)|피임|불임|임신시키|임신할/;
+    const ppl = body('인물').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
+    const pick = t => (ppl.find(p => p.me && t.includes(p.name)) || ppl.find(p => p.female && t.includes(p.name)) || ppl.find(p => p.me) || ppl.find(p => p.female))?.name || '';
+    const isMe = who => !!ppl.find(p => p.me && (p.name.includes(who) || who.includes(p.name)));
+    const line = body('현재상태').split('\n').find(l => /임신/.test(l) && !NEG.test(l) && !(/임신\s*여부|테스트기\s*(?:사|구입|준비)/.test(l) && !/두\s*줄|양성|확정/.test(l))) || ''; // '임신 여부 확인하려고 테스트기 사 옴'은 아직 아님
+    const lineWho = (line.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '';
+    const wm = line.match(/임신\s*(?:약\s*)?(\d{1,2})\s*주/) || line.match(/(\d{1,2})\s*주\s*(?:차|째)?[^\n]{0,6}임신/);
+    const rel = pregKitRel(mem), relOk = rel && rel.d <= day && day - rel.d <= 280 && (after == null || rel.d > after);
+    const guess = (start, why) => relOk ? [rel.d - 14, `마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요`] : [start, why];
+    const out = (who, start, why) => who ? { who, me: isMe(who), start, w0: Math.max(4, Math.floor((day - start) / 7)), why } : null;
+    if (fresh && wm && +wm[1] >= 3 && +wm[1] <= 42) return out(lineWho || pick(line), day - +wm[1] * 7, `현재상태에 '임신 ${wm[1]}주'라고 적혀 있어요`);
+    const hits = blocksOf(body('날짜로그')).map(b => ({ t: b.title + ' ' + b.lines.join(' '), d: P_DAY(b.title), title: b.title }))
+      .filter(b => b.d != null && b.d <= day && (after == null || b.d > after) && /임신|임테기|테스트기/.test(b.t) && /두\s*줄|양성|확인|확정|알게|알았|진단|소식|사실/.test(b.t) && !NEG.test(b.title));
+    if (hits.length) { const h = hits.reduce((a, b) => b.d < a.d ? b : a); return out(lineWho || pick(h.t), ...guess(h.d - 35, `날짜로그 ${P_STR(h.d)} 임신 확인 → 그날을 5주로 셌어요`)); }
+    if (fresh && line) return out(lineWho || pick(line), ...guess(day - 35, '임신을 안 날을 못 찾아서 지금을 5주로 셌어요'));
+    const msg = chatTexts.find(t => /임신|임테기|테스트기/.test(t) && /두\s*줄|양성|임신(?:이야|이에요|이래|입니다|했|\s*확정|\s*\d+\s*주)/.test(t) && !/한\s*줄|음성|못\s*하|말\s*못|숨기|비밀로|아니야|아닐|아닌\s*것/.test(t));
+    if (fresh && msg) return out(pick(msg), ...guess(day - 35, '최근 대화에서 임신 소식을 봤어요 → 지금을 5주로 셌어요'));
+    return null;
+  }
+  function pregEnsure(mem, snap = snapshot) {
+    if (preg.start != null) return true;
+    { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) !== 'user') continue; t++; if (t > (preg.afterTurn ?? -1)) told.push(stripBlocks(msgText(m))); }
+      const tell = told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
+      const unaware = !!tell && P_AUTHOR.test(tell) && P_UNAWARE.test(tell);
+      if (tell && day != null) { const said = pregWeeksSaid(tell), rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? day - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)), ws = pregWhoDefault(mem); preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
+        Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 → 관계일을 못 찾아서 지금을 5주로 셌어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true; } }
+    if (!preg.on) return false; // 노트·대화에서 찾기는 켜 둔 방만
+    const d = pregDetect(mem, (snap?.fresh || []).filter(isChat).slice(-12).map(m => stripBlocks(msgText(m))).reverse(), preg.after ?? null); if (!d) return false;
+    Object.assign(preg, d, { seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true;
+  }
+  // 🧪 임테기 긁기: 기다리는 동안 모드 탭에서 직접 긁어 봐요 · 결과는 이야기 속 날짜마다 하나(같은 날 다시 긁어도 같음)
+  //   임신 여부는 마지막 관계 날에 한 번만 굴려요(피임 안 함 30% · 피임 5%) → 며칠에 긁든 같고, 새 관계가 있으면 다시 · 관계 후 10일 전엔 임신이어도 한 줄(너무 일러요)
+  //   두 줄이면 관계한 날 + 2주 = 4주 식으로 임신 기록 시작 + 다음 2턴 동안 채팅에 '임테기 두 줄'을 넣어요(유저가 직접 긁은 거라 장면에 써도 돼요)
+  const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
+  const pregWhoDefault = mem => { const ps = pPeople(mem); return ps.find(p => p.me && p.female) || ps.find(p => p.me) || ps.find(p => p.female) || { name: '', me: false }; };
+  const P_SEX = /성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  function pregKitRel(mem) { // 마지막 관계 날(날짜로그 · 아직 정리 안 된 대화면 노트 날짜)과 그 글
+    const base = storyDay(mem); let best = null;
+    for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = b.title + ' ' + b.lines.join(' '), d = P_DAY(b.title); if (d != null && P_SEX.test(t) && (!best || d > best.d)) best = { d, t }; }
+    const fr = (snapshot?.fresh || []).filter(isChat).map(m => stripBlocks(msgText(m))).filter(t => P_SEX.test(t));
+    if (fr.length && base != null && (!best || base >= best.d)) best = { d: base, t: fr.join('\n') };
+    return best;
+  }
+  const kitChance = t => /피임\s*(?:안|없이|하지\s*않|을\s*안)|콘돔\s*없이|노콘|질내/.test(t) ? 0.3 : /피임|콘돔|사후\s*피임약/.test(t) ? 0.05 : 0.3;
+  function pregKitHtml(mem) {
+    const day = pregDay(mem, snapshot); if (day == null) return '';
+    if (!preg.seed) { preg.seed = (Math.random() * 4294967296) >>> 0; pregSave(); }
+    const rel = pregKitRel(mem), since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
+    const res = done || (!rel ? 'neg' : since < 10 ? 'early' : (preg.forceRel === rel.d || pR('conc' + rel.d) < kitChance(rel.t)) ? 'pos' : 'neg'); // forceRel: 작가가 '이 관계로 임신'이라고 정함
+    const stick = `<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t${res === 'pos' ? ' on' : ''}"></i></span><small>C T</small></div>`;
+    const info = rel ? `마지막 관계 ${P_STR(rel.d)} · ${since}일째${since < 14 ? ' (2주쯤 지나야 정확해요)' : ''}` : '노트·최근 대화에 관계 흔적이 없어요';
+    const msg = !done ? `${info}<br>동전으로 긁듯이 문질러 보세요` : done === 'pos' ? '<b>두 줄!</b> 임신이에요 🎉'
+      : done === 'neg' ? `<b>한 줄</b> · ${!rel ? '노트·최근 대화에 관계 기록이 없어요.' : `${P_STR(rel.d)} 관계 때 임신이 안 됐어요(주사위 · ${kitChance(rel.t) > 0.1 ? '피임 안 함 30%' : '피임함 5%'}). 다음 관계 때 다시 굴려요.`}<br><small>임신시키고 싶으면 아래 ✍️ 작가 설정을 누르거나, 메시지에 "○○는 임신을 했는데 모르고 있음"처럼 써 주세요.</small>` : done === 'early' ? `<b>한 줄</b> · 아직 너무 일러요(관계 후 ${since}일째). 2주쯤 지나서 다시 해 보세요.` : '<b>한 줄</b> · 이번엔 아니에요.';
+    return `<div class="pg-cap">🧪 임테기</div><div class="pg-card"><div class="pg-kit" data-day="${day}" data-res="${res}" data-rel="${rel ? rel.d : ''}">${stick}${done ? '' : '<canvas class="pg-scr" width="260" height="96"></canvas>'}</div><p class="pg-s" style="text-align:center">${msg}</p>${rel && preg.start == null ? `<p class="pg-s" style="text-align:center;margin-top:8px"><button class="pg-link" data-act="pregforce">✍️ 작가 설정 · 이 관계로 임신된 걸로 하기</button><br><small>주사위 대신 직접 정해요 · 본인은 아직 모르고 증상만 생겨요</small></p>` : ''}</div>`;
+  }
+  // ✍️ 작가 설정: 마지막 관계로 임신됨(본인도 모름) → 증상은 생기고, 임테기·병원에서 알게 돼요
+  async function pregForce() {
+    const mem = noteMemory() || '', rel = pregKitRel(mem), day = pregDay(mem, snapshot); if (!rel || day == null) return;
+    const w = pregWhoDefault(mem), tests = { ...(preg?.tests || {}) }; delete tests[day]; // 오늘 긁은 한 줄은 지우고 다시 긁을 수 있게
+    preg = { ...(preg || {}), on: true, tests, forceRel: rel.d, unaware: true, who: w.name || '임신한 사람', me: w.me, start: rel.d - 14, w0: Math.max(2, Math.floor((day - rel.d + 14) / 7)), why: `작가 설정 · ${P_STR(rel.d)} 관계로 임신(본인은 아직 모름)`, seed: preg?.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() };
+    pregChat = pregChat || chatIdFromPath(); await pregSave(); render();
+  }
+  function setupKit(main) {
+    const box = main.querySelector('.pg-kit'), cv = box?.querySelector('canvas'); if (!cv || cv.dataset.on) return; cv.dataset.on = '1';
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height, gr = g.createLinearGradient(0, 0, W, H);
+    gr.addColorStop(0, '#C9C6D6'); gr.addColorStop(0.5, '#EFEDF6'); gr.addColorStop(1, '#B9B5C9');
+    g.fillStyle = gr; g.fillRect(0, 0, W, H); g.fillStyle = '#6E6880'; g.font = '700 14px sans-serif'; g.textAlign = 'center'; g.fillText('여기를 긁어 보세요 🪙', W / 2, H / 2 + 5);
+    g.globalCompositeOperation = 'destination-out'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 26;
+    let down = false, last = null, n = 0, fin = false;
+    const at = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; };
+    cv.addEventListener('pointerdown', e => { down = true; last = at(e); try { cv.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+    const up = () => { down = false; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('pointermove', e => {
+      if (!down || fin) return; const p = at(e); g.beginPath(); g.moveTo(last[0], last[1]); g.lineTo(p[0], p[1]); g.stroke(); last = p;
+      if (++n % 6) return;
+      const d = g.getImageData(0, 0, W, H).data; let clear = 0, all = 0; for (let i = 3; i < d.length; i += 16) { all++; if (!d[i]) clear++; }
+      if (clear / all > 0.5) { fin = true; cv.style.transition = 'opacity .6s'; cv.style.opacity = '0'; setTimeout(() => pregKitDone(Number(box.dataset.day), box.dataset.res, Number(box.dataset.rel)), 1100); }
+    });
+  }
+  async function pregKitDone(day, res, rel) {
+    if (!preg) return;
+    if (preg.unaware) { // 작가가 정해 둔 임신: 임테기로 본인이 알게 돼요
+      preg.tests = { ...(preg.tests || {}), [day]: res };
+      if (res === 'pos') { preg.unaware = false; preg.kit = 1; preg.kitAt = null; preg.secret = confirm('두 줄! 🎉\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림)'); preg.log = [...(preg.log || []), { w: Math.floor((day - preg.start) / 7), t: '임테기 두 줄로 임신을 알게 됨', at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
+      await pregSave(); render(); return;
+    }
+    if (preg.start != null) return;
+    preg.tests = { ...(preg.tests || {}), [day]: res };
+    if (res === 'pos') { const w = pregWhoDefault(noteMemory() || ''); Object.assign(preg, { secret: confirm('두 줄! 🎉\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림 · 나중에 모드 탭에서 바꿀 수 있어요)'), on: true, who: w.name || '임신한 사람', me: w.me, start: rel - 14, w0: Math.max(3, Math.floor((day - rel + 14) / 7)), why: `임테기 두 줄(직접 긁음) · ${P_STR(rel)} 관계 기준으로 셌어요`, kit: 1, at: Date.now() }); }
+    await pregSave(); render();
+  }
+  // 🎲 모드 탭(설정 왼쪽) · 목록: 🍼 임신 카드(켜기·임테기) / 임신 중이면 '📔 산모수첩 열기' → 수첩(연보라 · 우리 포인트 색)
+  //   수첩: 표지(이름·주수·진행 줄·칩) → 🗓 이번 주(늘 숨김) → 👶 아기 → 🤰 엄마 몸 → 🩻 초음파 기록 → 📖 지나온 일 → 지난 기록 → 버튼
+  //   지나온 일·지난 기록은 화면에만(채팅엔 안 들어가요) · 미리 보기 없음(그냥 랜덤)
+  const P_TEST = '<p class="pg-test">🧪 테스트용 모드 · 11월 15일까지</p>'; // 모드 탭 맨 위에 늘
+  function modeHtml() {
+    const mem = noteMemory() || '', on = !!preg?.on;
+    if (mem && preg) pregEnsure(mem);
+    const day = pregDay(mem, snapshot), turn = (snapshot?.note?.turns || 0) + freshTurns(), started = on && preg.start != null;
+    if (started && day != null) pregSync(day, snapshot);
+    const world = pWorld(mem), p = started ? pregPlan() : null, age = started && day != null ? day - preg.start : null, wk = age == null ? null : Math.floor(age / 7), dd = age == null ? 0 : ((age % 7) + 7) % 7;
+    const ck = world === 'modern' ? '검진' : '진찰', shown = preg?.shown || {}, who = esc(preg?.who || '');
+    const dday = started && day != null ? Math.max(0, preg.start + 280 - day) : null;
+    const sel = `<button class="pg-wchip" data-act="pregworld" aria-label="세계관 바꾸기">🌍 ${preg?.world && preg.world !== 'auto' ? P_WORLD[preg.world] : P_WORLD[pAuto(mem)] + '(자동)'}</button>`;
+    const hist = (preg?.history || []).length ? `<details class="pg-hist"><summary>📝 지난 기록 ${preg.history.length}개</summary><ul class="pg-log">${preg.history.map(h => `<li>${esc(h)}</li>`).reverse().join('')}</ul></details>` : '';
+    const soon = ''; // 육아는 아직 없어요(만들면 여기)
+    const sw = `<button class="pg-sw" data-act="pregon" aria-pressed="${on}" aria-label="임신 모드 ${on ? '끄기' : '켜기'}"><i></i></button>`;
+    const warn = on && !sceneOn ? '<p class="pg-warn">웹 모드에서만 채팅에 들어가요.</p>' : '';
+    if (!started) {
+      preg = preg || { on: false }; pregChat = pregChat || chatIdFromPath();
+      const det = on ? `<p class="pg-s">🔍 아직 임신한 사람이 없어요. 이야기에서 임신 사실이 나오면 자동으로 시작돼요. <button class="pg-link" data-act="pregfix">직접 시작</button></p>` : '';
+      return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${on ? '임신한 사람을 기다리는 중' : '이야기에서 임신하면 노트에서 알아채고 알아서 시작해요'}</small></div>${sw}</div>${on ? `<div class="pg-chips">${sel}</div>` : ''}${det}${warn}${hist}</div>${pregKitHtml(mem)}${soon}</div>`;
+    }
+    if (!nav.pgBook) return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${who} · ${wk == null ? '?' : wk + '주 ' + dd + '일'}${dday != null ? ' · D-' + dday : ''}${preg.unaware ? ' · 🙈 본인은 아직 몰라요' : ''}</small><button class="pg-open" data-act="pgbook">📔 산모수첩 열기 ›</button></div>${sw}</div>${warn}${hist}</div>${preg.unaware ? pregKitHtml(mem) : ''}${soon}</div>`;
+    // ── 산모수첩 ──
+    const stage = wk == null ? -1 : wk < 14 ? 0 : wk < 28 ? 1 : 2;
+    const anyShown = Object.keys(shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown;
+    const cover = `<div class="pg-cover"><div class="pg-ct"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>
+      ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>D-${dday}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
+      <div class="pg-chips"><span>${anyShown ? (p.n > 1 ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${sel}</div>
+      <p class="pg-s">🔍 ${esc(preg.why || '')} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p>${warn}</div>`;
+    const cur = preg.cur && turn >= preg.cur.from;
+    const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
+    const next = checks.filter(c => day == null || preg.start + c[0] * 7 >= day - 14).find(c => shown['c' + c[0]] == null);
+    const sec = (h, em, body) => `<div class="pg-sec"><h3>${h}${em ? `<em>${em}</em>` : ''}</h3>${body}</div>`;
+    const week = sec('🗓 이번 주', next ? `다음 ${ck} ${next[0]}주 · ${esc(next[1])}` : '', cur ? '<div class="pg-hid"><b>🎲</b><div><b>이번 주 일이 정해졌어요</b><br>이야기에서 나오면 여기 적혀요</div></div>' : '<p class="pg-s">지금 걸린 일은 없어요.</p>');
+    const risk = wk < 6 ? '높은 시기예요(심장 소리 확인 전)' : wk < 12 ? '조금씩 낮아지는 중 · 12주 지나면 안정기' : wk < 20 ? '안정기 들어섰어요 🍀' : '아주 낮아요 🍀';
+    const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ' · 쌍둥이라 조금 더 높아요' : ''}</b></div>`) : '';
+    const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
+    const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
+    const scans = checks.filter(c => shown['c' + c[0]] != null && !/당뇨/.test(c[1])).map(c => `<span>${c[0]}주${c[0] <= 8 ? ' 💓' : ''} ${esc(c[1].split(' · ')[0])}</span>`);
+    const scan = sec(world === 'modern' ? '🩻 초음파 기록' : '🩺 진찰 기록', '', `<div class="pg-scan">${scans.join('')}${next ? `<span class="soon">${next[0]}주 · 곧</span>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
+    const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(x.t)}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
+    const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
+    const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button><button class="btn ghost" data-act="pregreset">처음부터</button></div></div>`;
+    return `<div class="pg pg-book">${P_TEST}<button class="pg-back" data-act="pgbook">‹ 모드</button>${cover}${week}${baby}${mom}${scan}${log}${foot}</div>`;
+  }
+
   function buildBlock(memory, uptoId, turns, at = new Date().toISOString(), by = DEVICE, keepSel = false) {
     const whole = memory; memory = selectInjection(memory); const sel = keepSel || !lastInj.all;
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
@@ -559,7 +992,7 @@
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
+        ...pregOut, ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
 
@@ -674,7 +1107,7 @@
     const stems = t => new Set(String(t).replace(/[(（][^)）]*[)）]/g, ' ').split(/[^가-힣A-Za-z0-9]+/).filter(w => w.length >= 2).map(w => w.slice(0, 2)));
     const sameWords = (t, list) => { const a = stems(t); if (a.size < 3) return false; return list.some(c => { const b = stems(c); let n = 0; for (const x of a) if (b.has(x)) n++; return n / Math.min(a.size, b.size || 1) >= 0.5; }); };
     const out = [];
-    const facts = sq(sec(newMem, '인지·비밀')), factTitles = blocksOf(sec(newMem, '인지·비밀')).map(b => b.title.split(/[:：]/)[0]);
+    const facts = core(sec(newMem, '인지·비밀')), factTitles = blocksOf(sec(newMem, '인지·비밀')).map(b => b.title.split(/[:：]/)[0]);
     for (const b of blocksOf(sec(oldMem, '인지·비밀'))) {
       const t = b.title.split(/[:：]/)[0].trim();
       if (t && !facts.includes(core(t)) && !alike(t, factTitles)) out.push('비밀·인지: ' + t);
@@ -682,9 +1115,9 @@
     const miles = sec(newMem, '이정표'), mileTitles = blocksOf(miles).map(b => b.title.replace(/^\[|\]$/g, ''));
     for (const b of blocksOf(sec(oldMem, '이정표'))) {
       const t = b.title.replace(/^\[|\]$/g, '').trim(), d = (t.match(DATE) || [])[0];
-      if (t && !sq(miles).includes(core(t)) && !(d && miles.includes(d)) && !alike(t, mileTitles)) out.push('이정표: ' + t);
+      if (t && !core(miles).includes(core(t)) && !(d && miles.includes(d)) && !alike(t, mileTitles)) out.push('이정표: ' + t);
     }
-    const hooks = sq(sec(newMem, '서사 고리')), hookLines = itemsOf(sec(newMem, '서사 고리')).filter(l => /^\[(?:열림|닫힘)\]/.test(l)).map(l => l.replace(/^\[(?:열림|닫힘)\]\s*[^·:：]*·\s*/, ''));
+    const hooks = core(sec(newMem, '서사 고리')), hookLines = itemsOf(sec(newMem, '서사 고리')).filter(l => /^\[(?:열림|닫힘)\]/.test(l)).map(l => l.replace(/^\[(?:열림|닫힘)\]\s*[^·:：]*·\s*/, ''));
     for (const l of itemsOf(sec(oldMem, '서사 고리'))) {
       const m = l.match(/^\[열림\]\s*(.+?)[:：]/); if (!m) continue;
       const t = m[1].split('·').pop().trim(), whole = l.replace(/^\[열림\]\s*[^·:：]*·\s*/, ''); // 이름을 다르게 지어도 누가·언제까지·무엇이 같으면 같은 고리
@@ -1870,7 +2303,7 @@
     .ringtext span{font-size:13px;color:var(--ink2);margin-top:6px}
     .ringtext small{font-size:11.5px;color:var(--graphite);margin-top:4px;font-variant-numeric:tabular-nums}
     .hero-sub{margin:10px 0 2px;font-size:14px;color:var(--ink2)}.hero-meta{margin:0 0 14px;font-size:11.5px;color:var(--pencil)}.hero-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}.hero-foot .inj-sw{margin:0}.hero-dot{color:var(--rule)}.hero-reset{border:0;background:none;padding:0;font-size:12px;color:var(--pencil);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.wd-drive{font-size:16px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}.wd-drv{white-space:nowrap;display:flex;align-items:center;gap:8px;border:0;background:none;padding:6px 0 2px;font-size:12.5px;font-weight:700;color:var(--ink2);cursor:pointer;border-top:1px solid var(--rule);margin-top:4px;width:100%}.wd-drv span{font-size:15px;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
-    .inj-sw{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:12px;color:var(--graphite);cursor:pointer}.inj-sw input{display:none}.inj-sw i{width:26px;height:15px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.inj-sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s}.inj-sw input:checked+i{background:var(--ink)}.inj-sw input:checked+i::after{left:13px}.inj-sw small{color:var(--bad);font-size:11px}
+    .inj-sw{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:12px;color:var(--graphite);cursor:pointer}.inj-sw input{display:none}.inj-sw i{flex:0 0 auto;width:26px;height:15px;border-radius:999px;background:var(--rule);position:relative;transition:background .15s}.inj-sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s}.inj-sw input:checked+i{background:var(--ink)}.inj-sw input:checked+i::after{left:13px}.inj-sw small{color:var(--bad);font-size:11px}
     .hero-run{min-width:180px;background:var(--ink);border-color:var(--ink);color:#fff}
     .hero-run.due{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 0 0 4px #E6E0FA}
     .hero-btns{display:flex;flex-direction:column;align-items:center;gap:8px}
@@ -2101,7 +2534,7 @@
     .pc-lock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;color:#fff;background:radial-gradient(120% 90% at 20% 10%,var(--wb),var(--wf))}
     /* 🗨 커뮤니티: 앱 화면 같은 카드 하나 */
     .bd{border:1px solid var(--rule);border-radius:16px;overflow:hidden;background:var(--paper)}
-    .bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
+    nav.top button[data-arg="mode"]{--ic:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.7%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2716%27%20rx%3D%274%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E")}.pg{padding:4px 2px 20px}.pg-mode{display:flex;gap:12px;align-items:center}.pg-mode>div{flex:1;min-width:0}.pg-mode b{font-size:15px}.pg-mode small{display:block;color:var(--graphite);font-size:12px;margin-top:2px;line-height:1.45}.pg-ic{font-size:24px;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:var(--chip,#F1F0F7);display:flex;align-items:center;justify-content:center}.pg-sw{flex:0 0 42px;width:42px;height:24px;border-radius:99px;border:0;padding:0;background:var(--rule);position:relative;cursor:pointer}.pg-sw i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.pg-sw[aria-pressed="true"]{background:var(--ink)}.pg-sw[aria-pressed="true"] i{left:21px}.pg-card .pg-hid{margin-top:12px}.pg-dim{opacity:.45}.pg-inj summary{font-size:13px;font-weight:700;color:var(--graphite);cursor:pointer}.pg-inj pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.55;margin:10px 0 0;color:var(--ink2);font-family:inherit}.pg-wchip{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);border:0;color:var(--graphite);cursor:pointer}.pg-row small{max-width:68%}.pg-card .pg-big{margin-top:12px}.pg-tri .pg-now{color:var(--acc,#7B61D9);font-weight:700}.pg-kit{position:relative;width:260px;max-width:100%;height:96px;margin:8px auto 2px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rule)}.pg-scr{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}.pg-stick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pg-win{display:flex;gap:20px;padding:10px 24px;background:#F7F5FA;border-radius:10px;border:1px solid var(--rule)}.pg-win i{width:4px;height:34px;border-radius:2px}.pg-win i.c,.pg-win i.t.on{background:#D9466F}.pg-stick small{font-size:10px;color:var(--graphite);letter-spacing:14px;margin-left:14px}.pg-more summary{font-size:12.5px;color:var(--graphite);cursor:pointer;font-weight:700}.pg-more .pg-log{margin-top:6px}.pg-open{display:block;border:0;background:none;padding:0;margin-top:4px;font:inherit;font-size:12.5px;font-weight:700;color:var(--acc,#7B61D9);cursor:pointer}.pg-back{border:0;background:none;padding:2px 4px 10px;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.pg-cover{background:#F1EDFC;border:1px solid #E4DCFA;border-radius:20px;padding:16px;margin:0 0 12px}.pg-ct{font-size:19px;font-weight:800;letter-spacing:-.3px}.pg-ct small{display:block;font-size:12px;font-weight:600;color:var(--graphite);margin-top:3px}.pg-label{font-size:11px;font-weight:700;color:var(--acc,#7B61D9);background:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:3px}.pg-cover .pg-bar{background:#fff}.pg-cover .pg-bar i{background:#A993E8}.pg-cover .pg-chips span,.pg-cover .pg-wchip{background:#fff}.pg-sec{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 16px;margin:0 0 12px}.pg-sec h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:6px}.pg-sec h3 em{font-style:normal;font-size:11px;color:var(--graphite);font-weight:600;margin-left:auto;text-align:right}.pg-r{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;line-height:1.45}.pg-r+.pg-r{border-top:1px dashed var(--rule)}.pg-r span{color:var(--graphite);white-space:nowrap}.pg-r b{font-weight:600;text-align:right;color:var(--ink2)}.pg-scan{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.pg-scan span{border:1.5px dashed #CBBDF2;border-radius:10px;padding:6px 9px;font-size:12px;color:var(--acc,#7B61D9);background:#FAF8FF}.pg-scan .soon{color:var(--graphite);border-color:var(--rule);background:#fff}.pg-book .pg-log em{color:var(--acc,#7B61D9);font-weight:700}.pg-book .pg-log li+li{border-top:1px dashed var(--rule)}.pg-hist{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}.pg-hist summary{font-size:12.5px;color:var(--graphite);font-weight:700;cursor:pointer}.pg-hist .pg-log li{font-size:12.5px}.pg-test{margin:0 0 10px;text-align:center;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);background:#F1EDFC;border-radius:999px;padding:5px 12px}.pg-link{border:0;background:none;padding:0;color:var(--acc,#7B61D9);font:inherit;font-size:12px;font-weight:700;cursor:pointer}.pg-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:16px;margin:0 0 12px}.pg-t{font-size:16px}.pg-s{font-size:12.5px;color:var(--graphite);line-height:1.55;margin:6px 0}.pg-warn{font-size:12.5px;color:#8A6A12;background:#FFF1BF;border-radius:10px;padding:8px 10px}.pg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);font-size:13.5px}.pg-row small{color:var(--graphite);font-size:12px;text-align:right}.pg-in{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:#fff;max-width:55%}.pg-go{width:100%;margin-top:10px}.pg-sub{font-size:12.5px;color:var(--graphite)}.pg-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}.pg-big b{font-size:32px}.pg-big span{color:var(--graphite);font-size:13px}.pg-bar{height:8px;border-radius:9px;background:var(--chip,#F1F0F7);margin:10px 0 6px;position:relative;overflow:hidden}.pg-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc,#7B61D9);border-radius:9px}.pg-tri{display:flex;justify-content:space-between;font-size:11.5px;color:var(--graphite)}.pg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.pg-chips span{padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px}.pg-cap{font-size:13px;font-weight:700;color:var(--graphite);margin:4px 4px 8px}.pg-hid{display:flex;gap:10px;align-items:center;background:var(--acc-soft,#ECE7FC);border-radius:14px;padding:12px;font-size:13px}.pg-hid>b{font-size:20px}.pg-log{margin:0;padding:0}.pg-log li{list-style:none;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.5}.pg-log li:first-child{border-top:0}.pg-log em{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}.pg-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:4px;background:#E5F4EA;color:#2F7A47}.pg-soon{background:#FFF1BF;color:#8A6A12}.pg-btns{display:flex;gap:8px;margin-top:8px}.pg-btns .btn{flex:1}.bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
     .bd-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:14px 16px 10px;border-bottom:1px solid var(--rule)}.bd-top b{font-size:16px}.bd-top small{font-size:12px;color:var(--graphite)}
     .bd-top button{border:0;background:transparent;font-size:13.5px;color:var(--ink2);padding:0;cursor:pointer}
     .bd-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 16px;border-bottom:1px solid var(--rule)}
@@ -2940,7 +3373,7 @@
     .wd-ring.spin{animation:wd-spin 1s linear infinite}@keyframes wd-spin{to{transform:rotate(360deg)}}
     @media (prefers-reduced-motion:reduce){.wd-ring.spin{animation:wd-spin 3s linear infinite}}
     .wd-top .wd-auto{justify-content:flex-start;flex-direction:row-reverse;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--graphite);white-space:nowrap}
-    .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-acts .wd-gear{flex:0 0 32px;height:32px;border-radius:11px}.nocall{display:inline-block;font-size:11.5px;font-weight:700;color:#8A6A12;background:#FFF1BF;border-radius:999px;padding:2px 9px;line-height:1.5;white-space:nowrap}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;bottom:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:bottom right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(4px)}}
+    .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-acts .wd-gear{flex:0 0 32px;height:32px;border-radius:11px}.nocall{display:inline-block;font-size:11.5px;font-weight:700;color:#8A6A12;background:#FFF1BF;border-radius:999px;padding:2px 9px;line-height:1.5;white-space:nowrap}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;top:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:top right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;white-space:nowrap;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(-4px)}}
     .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
     .screen.fx-open nav.top{display:none!important}
     .bk-info{margin:12px 2px 0}.bk-info summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--graphite);list-style:none}.bk-info summary::-webkit-details-marker{display:none}.bk-info summary::after{content:' ›'}.bk-info[open] summary::after{content:' ⌄'}.bk-info p{margin:8px 0 0;font-size:12.5px;line-height:1.6}
@@ -3451,7 +3884,7 @@
     const n = snapshot?.note; if (!n) return '';
     const turns = freshTurns(), covered = n.turns, now = covered + turns, span = Math.max(now, 1);
     const pct = t => (t / span * 100).toFixed(2);
-    const knots = [...new Set(usage.map(r => r.to).filter(t => t > 0 && t <= covered).concat([covered]))].sort((a, b) => a - b);
+    const knots = [...new Set(usage.map(r => r.to).filter(t => t > 0 && t <= covered).concat([covered]))].sort((a, b) => a - b).slice(-6); // 최근 6번만(오래된 매듭은 사라져요)
     const close = turns && turns / span < 0.2; // 정리한 곳과 지금이 가까우면 글자 하나로(겹치지 않게)
     return `<div class="thread" role="img" aria-label="${covered}턴까지 정리됨, 그 뒤로 ${turns}턴 쌓임">
       <i class="th-done" style="width:${pct(covered)}%"></i>
@@ -3793,7 +4226,7 @@
     a.download = name; document.body.appendChild(a); a.click(); a.remove();
   }
   // 백업에 담는 이 방의 기기 저장값. 노트 자리(full·parked·moved)는 불러올 때 확인 화면 → 넣기로 다시 만들어져서 되살리지 않아요.
-  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'gc', 'usage', 'ltmorig', 'ltmdone', 'pins', 'noinj']; // ltmorig: 장기기억으로 옮긴 원래 사건(되돌리기용) · ltmdone: 이미 옮긴 사건 · noinj: 꺼 둔(미주입) 항목
+  const BACKUP_KEYS = ['hist', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'talk', 'gc', 'usage', 'ltmorig', 'ltmdone', 'pins', 'noinj', 'preg']; // ltmorig: 장기기억으로 옮긴 원래 사건(되돌리기용) · ltmdone: 이미 옮긴 사건 · noinj: 꺼 둔(미주입) 항목
   async function backupData() {
     const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId) return null;
     const store = {};
@@ -7153,6 +7586,7 @@
         <div class="actions" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><button class="btn pri" data-act="errcopy">복사</button><button class="btn" data-act="errclear">지우기</button></div>
         ${(errLog || []).length ? '<ol class="errl-list">' + [...errLog].reverse().map(x => `<li><small>${esc(new Date(x.at).toLocaleString('ko-KR'))} · ${esc(x.where)}</small><p>${esc(x.msg)}</p></li>`).join('') + '</ol>' : emptyBox('아직 오류가 없어요.')}</section>`
       : nav.tab === 'timeline' ? timelineHtml()
+      : nav.tab === 'mode' ? modeHtml()
       : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
       : nav.tab === 'story' ? memoryHtml(STORY_TABS)
       : nav.tab === 'now' ? memoryHtml(NOW_TABS)
@@ -7182,8 +7616,10 @@
     ui('.screen').classList.toggle('fx-open', !!ui('.fx-sheet'));
     if (hadSheet) main.querySelectorAll('.fx-sheet-in').forEach(x => { x.style.animation = 'none'; }); // 이미 떠 있던 창은 다시 튀어나오지 않게
     if (nav.tab === 'phone' && !nav.view) centerEmoji(main);
+    if (nav.tab === 'mode') setupKit(main);
     if ((out('main')?.scrollTop || 0) < 60) ui('nav.top')?.classList.remove('dock-hide');
     out('tabs').innerHTML = (sceneOn ? WEB_TABS : TABS.filter(([k]) => k !== 'settings')).map(([k, l]) => `<button data-act="tab" data-arg="${k}" aria-label="${k === 'phone' ? '기타' : l}"${nav.tab === k ? ' aria-current="page"' : ''}>${k === 'phone' ? '기타' : l}</button>`).join('')
+      + `<button data-act="tab" data-arg="mode" aria-label="모드"${nav.tab === 'mode' ? ' aria-current="page"' : ''}>모드</button>`
       + `<button class="rail-set" data-act="tab" data-arg="settings" aria-label="설정"${nav.tab === 'settings' ? ' aria-current="page"' : ''}>설정</button>`;
     if (nav.view === 'preview') updatePreviewCount();
     if (nav.tab === 'settings' && !nav.view) fillSettings();
@@ -7218,6 +7654,7 @@
     try { await dropOldNote(chatId, n.carrierId, msgText(snap.all.find(m => msgId(m) === n.carrierId))); } catch (_) { /* 예전 자리 정리가 실패해도 새 자리에는 이미 들어감 */ }
     return true;
   }
+  root.addEventListener('change', e => { if (e.target?.id === 'pg-world' && preg?.start != null) { preg.world = e.target.value; pregSave(); render(); } });
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
   let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
   async function autoSum() {
@@ -7265,9 +7702,10 @@
     { const chat = snap.all.filter(isChat); if (kind === 'send' && msgRole(chat[chat.length - 1]) === 'user') return 'generating'; }
     let whole = await wholeOf(chatId, n);
     if (!whole && !n.sel) { await saveFull(chatId, n.upto, n.memory, n.turns, n.at); whole = n.memory; } // 채팅 노트가 전체(본판·처음)면 먼저 이 기기에 저장
+    if (whole) pregTick(snap, whole, kind === 'send' ? said : ''); const pregNew = pregSig !== (preg?.sig ?? '');
     if (!whole) return 'no-full'; // 고른 일부만 있고 전체본이 없는 기기는 다시 고를 수 없어요(지금 든 것 그대로)
     // 답이 온 뒤 미리 골라 넣어 둔 기억이 그대로 쓸 만하면 기다리지 않고 바로 보내요 · 보낸 말이 아직 안 넣은 옛일을 꺼냈을 때만 새로 골라요
-    if (kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
+    if (!pregNew && kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
       const keep = injCtx, before = new Set(lastInj?.keys || []); injCtx = { ...keep, said: String(said) }; injSaidHits = new Set();
       try { selectInjection(whole); } catch (_) {}
       const fresh = [...injSaidHits].filter(k => !before.has(k)); injCtx = keep;
@@ -7282,12 +7720,12 @@
     if (!carrier) return 'no-carrier';
     // 같은 자리에 같은 내용이면 저장하지 않고 바로 보내요(5만 자 노트는 두 답변에 나뉘어 있어 글 전체 대신 고른 내용으로 비교)
     const picked = selectInjection(whole);
-    if (msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
+    if (!pregNew && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
     const cur = msgId(carrier) === n.carrierId && !msgText(carrier) ? await readMessage(chatId, msgId(carrier)) : carrier; // 목록에 글이 있으면 다시 안 읽어요
     const next = stripBlocks(msgText(cur)).trimEnd() + buildBlock(whole, n.upto, n.turns, n.at || undefined, n.by || '');
     if (next === msgText(cur)) return 'same';
     if (chatIdFromPath() !== chatId || busyNow) return 'moved';
-    await writeMessage(chatId, msgId(carrier), next); lap();
+    await writeMessage(chatId, msgId(carrier), next); lap(); if (preg) { preg.sig = pregSig; pregSave(); }
     if (msgId(carrier) !== n.carrierId) { const seen = msgText(snap.all.find(m => msgId(m) === n.carrierId)); setTimeout(() => dropOldNote(chatId, n.carrierId, seen).catch(() => {}), 1500); } // 예전 자리 지우기는 보낸 뒤에
     console.info('[조아메모리 실험판] 고르기 단계 · 읽기/고르기/쓰기 ' + laps());
     return 'written';
@@ -7370,7 +7808,7 @@
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
       snapshot = snap;
       usage = await usageOf(chatId);
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
@@ -7841,7 +8279,7 @@
     if (!chatId || !draft || busyNow) return;
     const memory = joinSections(draft.sections), cleanOld = !!ui('[data-opt="clean"]')?.checked;
     busyNow = true; render(); toast('채팅에 넣는 중…'); let nextStep = false;
-    const t0 = Date.now(), lap = w => console.info('[조아메모리] 넣기 · ' + w + ' ' + ((Date.now() - t0) / 1000).toFixed(1) + '초');
+    const t0 = Date.now(), laps = [], lap = w => { const s = w + ' ' + ((Date.now() - t0) / 1000).toFixed(1) + '초'; laps.push(s); console.info('[조아메모리] 넣기 · ' + s); };
     try {
       const now = await readSinceLastNote(chatId, 6); lap('대화 확인');
       // 정리하는 사이 마지막으로 정리한 메시지가 리롤·삭제됐으면 묻습니다(그 답을 기준으로 다음 정리가 이어지므로).
@@ -7864,7 +8302,7 @@
       if (parked) await park(chatId, memory, draft.uptoId, draft.turns);
       // 채팅 노트와 이 기기 전체본에 같은 정리 시각을 찍어요(같은 정리본인지 알아보는 기준).
       const savedAt = new Date().toISOString();
-      if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
+      if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); lap('뜻 검색·고르기'); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId; lap('채팅에 쓰기');
       await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt);
@@ -7887,7 +8325,7 @@
       }
       if (String(await getValue('gsUrl', '')).trim()) gsSave(true); // 구글 백업을 켜 뒀으면 넣을 때마다 자동으로
     } catch (e) { toast('넣기 실패 · ' + e.message, 'err'); }
-    finally { busyNow = false; render(); }
+    finally { busyNow = false; render(); if (Date.now() - t0 > 20000) logErr('넣기 느림', laps.join(' → ') + ' · 전체 ' + ((Date.now() - t0) / 1000).toFixed(0) + '초'); }
     if (nextStep) { toast(`넣었어요 · 남은 ${freshTurns()}턴. ① 다음 요청 복사 → AI에 붙여 넣기 → 답 복사 → ② 답 붙여 넣기`, 'ok', 7000); ui('[data-act="extget"]')?.focus(); }
   }
 
@@ -8216,6 +8654,18 @@
       case 'qdel': { const cid = chatIdFromPath(), list = quotes(); list.splice(Number(arg), 1); if (cid) await saveQuotes(cid, list); nav.qOpen = true; return keepScroll(render); }
       case 'phwho': nav.phWho = arg; nav.phScreen = 'home'; nav.pcScreen = 'home'; return keepScroll(render);
       case 'dev': nav.dev = arg; return keepScroll(render);
+      case 'pregon': preg = preg || {}; preg.on = !preg.on; pregChat = chatIdFromPath(); await pregSave(); return keepScroll(render);
+      case 'pregfix': {
+        if (!preg?.on) return; const day = storyDay(noteMemory() || '');
+        const who = prompt('누가 임신했어요?', preg.who || ''); if (who == null) return;
+        const w = parseInt(prompt('지금 몇 주예요?', day != null && preg.start != null ? String(Math.floor((day - preg.start) / 7)) : '5'), 10); if (!(w >= 3 && w <= 42) || day == null) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
+        Object.assign(preg, { who: who.trim() || preg.who, start: day - w * 7, w0: Math.min(preg.w0 ?? w, w), me: confirm(who.trim() + ' 이(가) 유저 캐릭터예요?'), why: '직접 정했어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0) }); await pregSave(); return keepScroll(render); }
+      case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
+      case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
+      case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
+      case 'pregforce': if (!confirm('주사위 대신 직접 정할까요? 마지막 관계로 임신된 걸로 하고, 본인은 아직 몰라요(증상만 생겨요). 임테기를 긁거나 병원에 가면 알게 돼요.')) return; await pregForce(); return;
+      case 'pregend': { if (preg?.start == null) return; const kind = prompt('어떻게 끝났어요? (예: 유산, 중단, 출산)', ''); if (kind == null) return; const why = prompt('이유가 있으면 적어 주세요 (없으면 비워 두기)', '') || ''; pregArchive(kind.trim() || '끝남', pregDay(noteMemory() || '', snapshot), why.trim()); return keepScroll(render); }
+      case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, history: preg?.history || [], after: preg?.after }; await pregSave(); return keepScroll(render);
       case 'wkrange': nav.rgKind = 'wiki'; nav.bdRange = true; return keepScroll(render);
       case 'wkupd': return makeWiki(0, 0, true);
       case 'wkdoc': nav.wkDoc = arg === '' ? null : Number(arg); nav.wkTab = ''; return keepView();
@@ -8527,7 +8977,7 @@
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
       const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
-      if (inlineBtn.parentElement !== box || inlineBtn.nextElementSibling !== before) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 2px'; } } }
+      if (inlineBtn.parentElement !== box || inlineBtn.nextElementSibling !== before) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
