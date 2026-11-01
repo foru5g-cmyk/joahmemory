@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.2.3
+// @version      4.2.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
+// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAOE0lEQVR4nOydeWxcxR3Hv/N2N75312uv7Zw4Drk4mnCnaSihuYEmKWmAoooeaiv1L1TRqrSUFkGlUqkVUsUfFap6iBbC0RIgSkIgEAqEcCSENsp9kYPYXtvr9X3tDr95sSHxvvW+td+b9553PtLLrndf9s3M7zu/mfm9mXkaFHmNBkVeowSQ5ygB5Dl+OExXM5/Sk8J8pDBV45jCGSbTx5M5vQe9Z0AZPAwH2umfM4zhLP15ll7PpDi913C6UMPe4gp2Bg7CIBnOudbeiBuoEG4jY99KH81DfvMxiWITS2FTsBrvM0bvJCJNAK0NfB3VhtVUG1bRVaNQpMMRo7LZQu9eKK9mGyEBWwVAtZ0lYlhP7vwR+nMWFLlwmDzDr0JRPE9egcMmbBNAPMZvonb9MXp7FRSjh+NDMtL94Rq2HTZguQDijXy+bniGxVBYyWtMIyFE2W5YiGXDQOHu4w38IVLsHmV8W1jKU/iAyvjXoqxhEZb8EI/xstYknqJfuw0K++HYFPbhbhZl7RgjYxZAW4zPGkjhJfqh2VBIg3qFhxDA8kiEncIYGFMTQB29m8n4Hyjjy0eUOevDHmEDjIFRC4Daovuos/cqJSQIhTMwVAgbxOv5TzBKRtUEUFBnObkgEbBQ9xLcQUqjqGqoim1FjuQsgEQjn5k8PzZVNd9FUIVM+DVcH4yyw7n8v5xqsOjtUwx/kzK++yCbhERnnDfznGxjWgA09vTHU3gOKqTrWkTHMD6ADbnECUwLIN6Ix+lXV0DhashGq1ob9BC82fOzQ0ONxdTbfAMK76Dh5vIo25H9NBNQCPIRKLxFEg+ZOS2rAGi8v5bcxCIovAXDTTRiW5nttKwCoOHFw1B4EhqxPZrtnBEFkIjxu6j2XwmFV5knbDjSCRk7gWLuHvUmj9IZ06HwMsfDVZiZaa5hRg+QaMSPnDJ+PDaAndsSQoTwOiIPIi8iTw5R1xrDPZm+zCgAaj8WwyFOHOrB/t1d2PpMCwb6vSsCkXaRB5EXkSenoFFcxs6goQBItQGq/avgECcOdOuvZ0/04cV/NKG7MwmvIdIs0i7yIBjKkyOwHAXQFsMSp+L9iZYBxJu+cJfCdb7w1ya0NPbDK4i0ijRf6PZFnkTenEDcJ0jU8wVG3xkKIDWCy7CbY/vTXWVXR0qvTWeO98LtiDSKtIo0D8cob7IgH7rW6HPjJoA5J4BMrjJJlUe0pwf3dsGtiLSJNCYzVHSHmwFDAaStDWxr4nOSSWemeA13/0a8vSWBc6f7EYn60NGaRFdnCj2d51+76bC70+gPMBSVaCimo6jEp78vDfvI3SdxdN/I4hxqBkIR+UsyxZ1CYdtgJTt44edpKUmmsAAOMZKLFCNCxvTIJI5RQR+DMwiBtZPwxAEM65eIxLEv0mqEyOPVi0rhBIO2vUgAaU0Apb0GDmHkIvngMVSg0lez5sJQGgeFahTGcLIZMLJtmgAoXuSIAIa7fz74jyhTVxs9A3q6DRLu6GggZUIATnmA4e6fff7POIEPihrOjQbMeQCHBCBcIx/y9+MRKlixxlfk0almgJkRAFELyYjAiXCNzKv+3izsfLMg8hqPyQ9s0fDelACkeoDO9iS2bGhBviHy7ECI24QAGAogic52ivD9vUkfv+cbIlK48W9NehnIQoSEh3/m2Mqe5ADHK882G4ZM8wVh/G3PNetl4RSOCWDHy63U9jt2j9w1NDcMYMemVjiFIwL46J0OnDjo3I0Rt3HiQA/27uyAE0gXQHNDP3b/d8z7Gow7PnyznUYH8kcG0gUgbuYojHlnaxtkI1UAJw/1IHbOOxM7ZFN/ug+njsid8yBNAKkkx7uvqdqfjV3bE3pZyUKaAPZ90IXOtvwd8pmlLZ7E/j3yJr1IE8Ded1XHzywyRwRSBPDpyT709YzXuzzW09OVwrlTfZCBFAGcOqrG/Lly6oicMpMigJOHlQByRdZCEtsFIMK9HQnvLexwGlFmrU32h8ptF4By/6Pn1FH7YwK2z08WoV/F6JBRdrYLoKfb/rF/MOLTX9ta5DQ1sq4no+zsF0CXPZlg1Hhdt7gU875SjNCgQRJkkI/e6qSbTZ1iRaynryfoHQ8CsCMTGpX/3fdWomZq4KLPhWEWrwlizlVFeOpPTRRShSXIvt4QMjyA7Z1AOzzAgmVlaca4kJppAf0cr15viN6ucSCAlA15mL+w2JJz3Hq9IfolbI7hud2+i8s0/bDqPLddTzZqu/c8x3MC6GpP6YdV57nterLxpAfYu7PLknPcej2ZeFIAu15tR+OZzFGy2KcD+jlevZ5MPCkAMd5++vFm7Hs/fZHl/g+78c/HYpaOyWVfTyZpSzHjDdbuzviX352DnRQUsYtCs73d9g6dZF/vB7+YCCspr7541wLbI4EihDqaMGnJhAFMLO1DacH5W6IdvX6c65iAzr6LkywMEDsrb4VRtuuZTbcZAgH7l0rbLoCAn6Gvz3wtKStIYtElLagr707bYUP4puPxIrz9STnae+VvtDQSdqRbRlzB9lL0kQBgUgBBqjV3XFmPQr+xyxAFOyPSjcnBXjz7/xq0uUQEdqW7uMwHu7G9BP05uLFLK7oyFuKFiHPqqED3njMXf59UG8DKb4XR18ux581O7N9tvEPHZdcW4ZqvliAwgWHL060494m5+/F2pbu4ZBwIoDjoQ7vJKWEpbk+bt2x9GJGq81m95dthzKa7d+9ua9enq2nkZcOVfixcUYa6y77YGmHpN0N48o9Npn7frnQXl46DJkAUfMNpc1OcD8aKcVlVOyJFI3fq4l1+/Vwz+HzpBTnj8gL9GIkScr9mO7B2pFtQUROA3dgusUiV+Uz0DPjw4oEqHGspMtxjT3wmvnvhQLV+rhmS5Hw2P9WK/l7zHVGxhmHzv+KmRy92pFswbYb9m7XYHgdobR7A80/EkCulE5KoKe21ZDglKAlqWHlXGNPnjlyox/f3Yiu1/6PducSqdEcnBbDmO5WwGulxgHCFH6UhX85Twzv6fDjaYt09drEu8d9PtGDuNUVYcnsIhcUXa1/sU7T9P204uGdsW7hZle6pMwohAynjqLo5hfjfe51wAwdoBCCMLDxCCXVQxb6EHW1J/U6em55QM6VOzl5dUgQwbaZ7BCAQhu5IpPTDjYhwc9Uk+zuAAik3g6qnBD6fSavIzpcWyNtNXIoAGPU7ZGbKyxQWa7j82hLIQtrt4JlXFkkJbHid624qg98vb79caRbRNIb5C62fOj2eEM3k7PnWzy4eCalVcu7VRYhOlNO58SLX3Sz/QW1SBSD6AotXhzM+TiWfmXlFEWpnyRn7X4j0Rlk8MOnqG1VTcCGTaifgxltDcAJHemXzvlyiZ1pBodmoH8vWlet9JCdwRAAis8vWRVBZk9/9gZIyDavuqkBggnOjI6NnBknZzVFMulh5ZwSlwfwMEFXU+LH2+5VSh8ZGtjW6ej0kIYIeX7+nAuWV7prfZzfT5xZi9T2VKCqWLv4026Y/NIrLE4BATLxY891KaTc/HIWa+etpqLdkbTl8PvltvpFt06oeuYl62UkT8wZX3hHBgY+78P7rbTlN3vAKQuDC+ENT05yAw4QAGOR6gAsvPJeiYJdcWoC3Nidw+pj7nxRuBtHRvWFJGSZOc97DMTNNANccEsAgxaU+rCBv4HWE4ZfeXo6136t0hfEFRrZ1jwfwOBMKGSbXFmBqXSGmkhcTTxV3G8xME+DTsCupNvbMiDB0MOxHsNxHhx9lYR/ClQFUT3Z/TEPYdvhnaQIQz5dvaeCHxPPm4WEKyFCLVoUwfU4RFHoH8JCw7fDPDbukNFzYSv7CswKYRi5YxNYdGGe7F46NRh8bCkDTsDXFcS88hggsLVweQt1c+XfV3A5VBfMCCEaxPd6IhNGjRt2KqvWZIfffFqphu4y+M24CGOtvqeeiGbgTLkfVehNwbMn0VcawlM+HjamUuwWgar05hC0zfZdxsBqsxLOknBNwIaLWf43i6cvXR5Txs8A59um2zEBGAVAzkNJ8+CVchqj1635YqVy+SRjDg8KWmb4fMVwVirIN1IF4Gy5A1frcIdvtLK9mG0c6J+utKabhQaTwBhxEtfWjg2z3QLZzsgqgPMp2UGTwFRoSroBkVA9/9FDtfyVCtst2nqmb0wGOnw4wuQJQtX5sBPy4z8x5pud+UFzgUepQ/BwK10M9/99Hatj9Zs41LQDOOYs34GUSwa1QuBbh+sursIp6/qamVeU0+4s382C8H++RCOZA4UYOhzVcy6LM9M7VOc1aYBWsze/DWllTxxXmEfF+jeG2XIwvyHnaSjDKDvkY7qa33ns6wvglRYZcH6piR5Ajo5q3RBfazFn2MaZCDsIW4Wq2DaNgTDPA4/V8NV38SfoR+euaFbrbp2DPWorVjDpQN+YlAG0xPjuZ1GcQ1UIhDTHFy69hNTXJhzEGLFkDkkjwSKoHz9DbpVDYD8frYeqM59rhM8KSucuhEGsJV2EFqfLPUNgKlfEfwtVYboXxBZZNXhe3HCPV7Mf0i4spkbugsBS9TKlsqYx/RmVt2cR925YBUgdxDSX6txQ0ugKKsbCHxvcP0MhrK2zA1nWgFD7W2ppwRyqFh+nPmVDkwhGN4zfBamwwG9YdDdIWAscb+O308g3yZbfQVb2/+M8OOFqobMQEzuezTeSwCumL1Mkr+OIxLKTMrqaLr6aPZiG/EcO4l8kSL4WjeMfK9t0Mjm/Yxht5aStwKQmiVj9Ax/mYQi35vVovrU0wQtw3oTychDj44Cs7f4SBo6yKdcBB1I59eY7avDfPUQLIc5QA8pzPAAAA//9CzzLGAAAABklEQVQDADLmbrBxMALzAAAAAElFTkSuQmCC
 // @match        https://crack.wrtn.ai/*
 // @noframes
 // @grant        GM_xmlhttpRequest
@@ -207,8 +208,11 @@
       });
     });
   }
-  const crack = (method, url, body) =>
-    request(method, url, { body, headers: { Authorization: 'Bearer ' + token(), platform: 'web' } });
+  // 로그인 쿠키(access_token)는 크랙이 토큰을 새로 받는 사이 잠깐 비어요(엣지에서 자주) → 바로 실패하지 말고 0.5초씩 최대 4초 기다려요.
+  //   이 틈에 '노트 옮기기·읽기 실패'가 나면 노트가 AI가 못 보는 자리에 남아 기억이 사라진 것처럼 보였어요.
+  const waitToken = async () => { for (let i = 0; ; i++) { try { return token(); } catch (e) { if (i >= 7) throw e; await new Promise(r => setTimeout(r, 500)); } } };
+  const crack = async (method, url, body) =>
+    request(method, url, { body, headers: { Authorization: 'Bearer ' + await waitToken(), platform: 'web' } });
 
   // ══════════════════════════════════════════════════════════════
   // 5. 노트 읽기·쓰기 · 칸 나누기
@@ -516,8 +520,8 @@
       }
       console.info('[조아메모리 실험판] 의미 검색 · ' + Object.keys(injCtx.sim).length + '개 점수 · 새 임베딩 ' + need.length + '개');
       } // 의미 검색 끝(Gemini 키 있을 때만)
-      // AI 재검토: 주입 탭에서 방마다 켜고 끔 · 안 정했으면 Gemini 키가 있을 때만 켜요(Firebase·Vertex는 크레딧·시간이 들어서 직접 켜야)
-      if (injCtx.said && String(await getValue('aiPick', 'on')) !== 'off' && (injSet.ai ? injSet.ai === 'on' : !!key)) {
+      // AI 재검토: 주입 탭에서 방마다 켜고 끔 · 기본은 꺼짐(보낼 때마다 AI를 불러 돈이 들어서 · 키워드·뜻 검색으로 골라요)
+      if (injCtx.said && String(await getValue('aiPick', 'on')) !== 'off' && injSet.ai === 'on') {
         const cand = selectInjection(memory, true);
         if (cand.length >= 2) {
           const prev = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) !== 'user') || {})).slice(-2500);
@@ -529,6 +533,7 @@
                 contents: [{ role: 'user', parts: [{ text: JSON.stringify({ said: injCtx.said.slice(-1500), prev, candidates: cand.map((c, i) => ({ id: i, sec: c.sec, text: c.text.slice(0, 500) })) }) }] }],
                 safetySettings: ['HARASSMENT', 'HATE_SPEECH', 'SEXUALLY_EXPLICIT', 'DANGEROUS_CONTENT', 'CIVIC_INTEGRITY'].map(c => ({ category: 'HARM_CATEGORY_' + c, threshold: 'OFF' })),
                 generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 2048 } } });
+            pickSpend(chatId, r?.usageMetadata);
             const j = JSON.parse((r?.candidates?.[0]?.content?.parts || []).map(p => p.thought ? '' : p.text || '').join('') || '{}'), ai = {};
             for (const row of Array.isArray(j.scores) ? j.scores : []) { const [id, sc] = Array.isArray(row) ? row : [row?.id, row?.score]; if (cand[id] && Number.isFinite(+sc)) ai[cand[id].key] = Math.max(0, Math.min(100, Math.round(+sc))); }
             if (Object.keys(ai).length) { injCtx.ai = ai; aiPickCache = { k: ck, v: ai }; }
@@ -549,14 +554,22 @@
   const P_DAY = s => { const m = String(s || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
   const P_STR = d => { const x = new Date(d * 864e5); return x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
   function storyDay(mem) {
-    const d = P_DAY(splitSections(mem || '').find(x => x.key === '현재상태')?.body);
+    const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB);
     if (d != null) return d;
     const all = [...String(mem || '').matchAll(/\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
-    return all.length ? Math.max(...all) : null;
+    if (all.length) return Math.max(...all);
+    // 노트가 없거나 날짜가 없으면(정리 전·앱 방식) 대화에서 바로: 최근 AI 답 머리말의 날짜(돈 안 듦)
+    for (const m of [...(snapshot?.all || [])].reverse()) { if (msgRole(m) !== 'assistant') continue; const x = P_DAY2(stripBlocks(msgText(m)).slice(0, 400)); if (x != null) return x; }
+    return null;
   }
   const pR = k => { let h = ((preg?.seed || 1) >>> 0) ^ 0x9e3779b9; for (let i = 0; i < k.length; i++) h = Math.imul(h ^ k.charCodeAt(i), 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   const pWorld = mem => preg?.world && preg.world !== 'auto' ? preg.world : pAuto(mem);
-  const pAuto = mem => /조선|한양|궁궐|대감|마님|도령|양반|어의|의녀|세자|중전/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
+  // 세계관 자동: ① 이야기 날짜(HUD·노트)의 년도 — 1900년 이후면 현대(센티넬·헌터물도) ② 날짜가 없으면 단어(현대 장르 말이 있으면 현대)
+  const pAuto = mem => { const d = storyDay(mem), y = d == null ? null : new Date(d * 864e5).getUTCFullYear();
+    if (y != null && y < P_NOYEAR) return y >= 1900 ? 'modern' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'old';
+    const t = mem + '\n' + (snapshot?.all || []).slice(-6).map(m => stripBlocks(msgText(m)).slice(0, 400)).join('\n'); // 최근 머리말까지 같이 봐요(경복궁·별당 등)
+    return /센티넬|가이드|가이딩|헌터|각성자|게이트|던전|오메가|알파|이능/.test(t) ? 'modern' : pAuto0(t); };
+  const pAuto0 = mem => /조선|한양|궁궐|경복궁|창덕궁|별당|대감|마님|도령|양반|어의|의녀|세자|중전|전하|마마|오시|자시|축시|인시|묘시|진시|사시|미시|신시|유시|술시|해시/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
   const P_WORLD = { modern: '현대', old: '옛날(조선 등)', fantasy: '판타지' };
   const P_DOC = { modern: '산부인과', old: '의원·산파', fantasy: '치유사' };
   const P_HOSP = { modern: /병원|산부인과|검진|초음파|진료|의사|분만실|응급실/, old: /의원|산파|진맥|어의|의녀|약방/, fantasy: /치유사|신전|진찰|치료소|산파|의사/ };
@@ -621,6 +634,7 @@
   const P_UNAWARE = /모르고|모름|몰라|모른다|모르는|눈치\s*(?:못|채지|를\s*못)/; // 본인은 모름
   const P_INNER = /역겨워짐|눈물이 터짐|화장실을 너무 자주|미치도록 당김|생생한 꿈|하필 화장실|자리를 박차고|약속·일정을 망칠/; // 유저 캐릭터의 행동·감정·욕구가 필요한 일(유저 몫이라 뺌)
   const P_FEEL = /쇠 맛|속이 쓰리고|처음으로 태동|딸꾹질하는|손목이 저리고|콕콕 쑤시고|쥐가 남|피가 비치고|피가 살짝|뭉치며 아파|뭉쳤다 풀림|태동이 유난히|아기가 그쪽을 참|두통이 심하고|진통이 시작|어지러워 휘청|하루 종일 평소보다 조용/; // 몸에 생기는 감각: 짧게 쓰고 멈춤 // 본인만 느끼거나 본인 행동이 필요한 일
+  const P_BORN = /(?:아기|아이|애기|쌍둥이|딸|아들)[가이은는]?\s*(?:태어났|태어나\s*있|세상에\s*나왔)|출산(?:했|을\s*마쳤|이\s*끝났)|분만(?:했|을\s*마쳤|이\s*끝났)|응애|무사히\s*낳|아기를\s*낳았|낳았다|첫\s*울음/; // 이야기에서 아기가 태어남
   const P_KNOW = /^곁의 NPC가|아기방|출산 가방|태명|임신 앱|가족\(부모|배 모양을 보고/; // 비밀일 땐 안 나오는 일(NPC·가족이 이미 알아야 생김)
   const P_SOC = P_SYM.findIndex(s => s[2].startsWith('곁의 NPC가 밤에')); // 여기부터 사람·상황 사건
   const P_SIZE = { 4: '양귀비씨', 5: '참깨', 6: '렌틸콩', 7: '블루베리', 8: '라즈베리', 9: '체리', 10: '대추', 11: '무화과', 12: '자두', 13: '레몬', 14: '복숭아', 15: '사과', 16: '아보카도', 17: '배', 18: '고구마', 19: '망고', 20: '바나나', 21: '당근', 22: '파파야', 23: '자몽', 24: '옥수수', 25: '콜리플라워', 26: '상추 한 포기', 27: '양배추', 28: '가지', 29: '단호박', 30: '큰 양배추', 31: '코코넛', 32: '배추', 33: '파인애플', 34: '멜론', 35: '허니듀 멜론', 36: '로메인 한 단', 37: '근대 한 단', 38: '대파 한 단', 39: '작은 수박', 40: '수박', 41: '수박', 42: '큰 수박' };
@@ -668,34 +682,43 @@
       return;
     }
   }
-  const P_DAY2 = s => { const m = String(s || '').match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
+  const P_NOYEAR = 2900;
+  const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
+    const md = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
+      if (x != null && x < cur - 180) x += 365; // 년도 없는 날짜가 12월→1월로 넘어가면 다음 해
       if (x != null && x >= d - 3 && x <= d + 400) cur = Math.max(cur, x); else cur += pSkip(t); }
     return cur; };
   // 태아 쪽 경우의 수(현실보다 살짝 높게): 염색체 이상 종류 · 정밀초음파 구조 이상 · 작은 소견 · 성장 지연 · 양수 · 탯줄 · 큰 아기 · 태동 감소
   const P_CHROM = [['다운 증후군(21번 염색체)', 0.7], ['에드워드 증후군(18번 염색체)', 0.2], ['파타우 증후군(13번 염색체)', 0.1]];
   const P_STRUCT = ['심장 벽에 작은 구멍(심실중격결손) — 대부분 저절로 막히거나 태어난 뒤 치료', '윗입술 갈림(구순열) — 태어난 뒤 수술로 치료', '한쪽 발이 안쪽으로 휨(내반족) — 태어난 뒤 교정', '손가락이 하나 더 있음(다지증) — 간단한 수술', '신장 한쪽이 작게 보임 — 계속 지켜보기', '배꼽 쪽 탈장 소견 — 태어난 뒤 수술 여부 결정'];
   const pickW = (list, r) => { let a = 0; for (const [v, w] of list) { a += w; if (r < a) return v; } return list[0][0]; };
-  function pregPlan() { // seed로 정해지는 이번 임신의 운명(늘 같은 결과)
+  const P_ERA = { modern: { loss: 1, still: 1, crisis: 0.01, weak: 0.02, ndeath: 0.003 }, old: { loss: 1.3, still: 5, crisis: 0.06, weak: 0.1, ndeath: 0.05 }, fantasy: { loss: 1, still: 2, crisis: 0.03, weak: 0.05, ndeath: 0.02 } };
+  function pregPlan() { // seed로 정해지는 이번 임신의 운명(늘 같은 결과) · 시대(preg.era)마다 위험이 달라요
+    const era = P_ERA[preg.era] || P_ERA.modern;
     const n = preg.babies || (pR('twin') < 0.02 ? 2 : 1);
     const sex = Array.from({ length: n }, (_, i) => pR('sex' + i) < 0.5 ? '남' : '여');
-    const abn = pR('abn') < 0.005, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.06, minor = pR('minor') < 0.06, lowP = pR('plac') < 0.06, previa = lowP && pR('placfix') < 0.1;
-    const struct = !abn && pR('struct') < 0.035 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.02; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
-    const gdm = pR('gdm') < (n > 1 ? 0.15 : 0.1), pe = pR('pe') < (n > 1 ? 0.12 : 0.06), peW = 30 + Math.floor(pR('peW') * 7);
-    const fgr = pR('fgr') < (n > 1 ? 0.15 : 0.07), oligo = pR('oligo') < 0.04, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.2, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
-    const quiet = pR('quiet') < 0.12, quietW = 28 + Math.floor(pR('quietW') * 10); // 태동이 뜸한 날(검사하면 대부분 괜찮음)
-    const breech = pR('br') < 0.25, breechStay = breech && pR('brs') < 0.2, threat = pR('thr') < (n > 1 ? 0.2 : 0.1), thrW = 28 + Math.floor(pR('thrW') * 6);
+    let abn = pR('abn') < 0.008, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.09, minor = pR('minor') < 0.1, lowP = pR('plac') < 0.09, previa = lowP && pR('placfix') < 0.1;
+    let struct = !abn && pR('struct') < 0.06 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.04; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
+    let gdm = pR('gdm') < (n > 1 ? 0.18 : 0.13), pe = pR('pe') < (n > 1 ? 0.14 : 0.08), peW = 30 + Math.floor(pR('peW') * 7);
+    let fgr = pR('fgr') < (n > 1 ? 0.18 : 0.1), oligo = pR('oligo') < 0.06, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.25, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
+    const quiet = pR('quiet') < 0.2, quietW = 28 + Math.floor(pR('quietW') * 10); // 태동이 뜸한 날(검사하면 대부분 괜찮음)
+    let breech = pR('br') < 0.3, breechStay = breech && pR('brs') < 0.25, threat = pR('thr') < (n > 1 ? 0.25 : 0.14), thrW = 28 + Math.floor(pR('thrW') * 6);
     const sick = pR('sick') < 0.25 ? 0 : pR('sick2') < 0.8 ? 1 : 2; // 입덧 없음·보통·심함
-    const spot = pR('spot') < 0.2, spotW = 5 + Math.floor(pR('spotW') * 6); // 초기 출혈(대부분 괜찮음)
+    const spot = pR('spot') < 0.28, spotW = 5 + Math.floor(pR('spotW') * 6); // 초기 출혈(대부분 괜찮음)
     const pre = pR('pre') < (n > 1 ? 0.5 : 0.1), x = pR('lw');
     let labor = n > 1 ? (pre ? 32 + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? 32 + Math.floor(x * 5) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
     if (pe && peW + 1 < labor && pR('pe2') < 0.5) labor = Math.max(peW + 1, 34); // 임신중독증이면 일찍 낳기도 해요
     if (fgr && labor > 37 && pR('fgr2') < 0.5) labor = 37; // 성장 지연이면 일찍 낳기도
     let loss = null; // 초기 유산(5~12주 합쳐 약 15%) · 중기 유산 · 사산
-    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.023 : k <= 20 ? 0.0015 : 0.0003) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
+    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.027 * era.loss : k <= 20 ? 0.0015 * era.loss : 0.0003 * era.still) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
     const cs = previa || breechStay || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
-    return { n, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
+    let crisis = pR('crisis') < era.crisis, weak = pR('weak') < era.weak, ndeath = pR('ndeath') < era.ndeath; // 출산 때 산모 위독 · 아기가 약함 · 아기를 잃음
+    // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
+    const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.3 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
+    if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
+    return { crisis, weak, ndeath, n, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
@@ -719,7 +742,12 @@
       [36, dr + ' 진찰', p.breechStay ? '여전히 거꾸로 → 해산이 어려울 수 있음' : p.pe ? '몸이 심하게 붓고 두통 → 몸조리를 단단히 하라 함' : '곧 해산할 때가 다가옴'],
     ];
   }
-  function birthLine(p, world) {
+  // 누구 닮았는지(아기마다 두 군데 · 엄마/아빠 · 늘 같은 결과)
+  const P_LOOK = ['눈', '코', '입매', '머리카락', '피부', '웃는 얼굴', '귀', '눈썹'];
+  const babyLook = (p, i) => { const a = Math.floor(pR('look' + i) * P_LOOK.length), b = (a + 1 + Math.floor(pR('look2' + i) * (P_LOOK.length - 1))) % P_LOOK.length, who = k => pR('lp' + i + k) < 0.5 ? '엄마' : '아빠';
+    return `${P_LOOK[a]}은 ${who('a')}, ${P_LOOK[b]}은 ${who('b')} 닮음`.replace(/([가-힣])은 /g, (m, c) => ((c.charCodeAt(0) - 0xac00) % 28 ? c + '은 ' : c + '는 ')); };
+  function birthLine(p, world) { return birthLine0(p, world) + (preg.father ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? (i ? '둘째: ' : '첫째: ') : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
+  function birthLine0(p, world) {
     const base = (p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
     const extra = [p.struct ? '태어나 보니 ' + p.struct.split(' — ')[0] : '', p.abn ? p.chrom.split('(')[0] + '로 태어남' : '', p.cord ? '탯줄이 감겨 있었지만 무사함' : ''].filter(Boolean).join(' · ');
     if (world !== 'modern') return (p.breechStay ? '난산 끝에 해산' : '무사히 해산') + ' · ' + p.sex.map(s => s === '남' ? '아들' : '딸').join(', ') + (p.labor < 35 || p.fgr ? ' · 몸이 작고 약함' : ' · 건강함') + (p.struct ? ' · ' + p.struct.split('(')[0] : '');
@@ -746,7 +774,7 @@
     const day = pregDay(mem, snap); if (day == null) return;
     pregSync(day, snap);
     const turn = (snap?.note?.turns || 0) + (snap?.fresh || []).filter(m => msgRole(m) === 'user').length;
-    const world = pWorld(mem), p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
+    const world = pWorld(mem); preg.era = world; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
     if (wk < 0) return;
     const chat = (snap?.all || []).filter(isChat), lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
     const atHosp = P_HOSP[world].test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said);
@@ -762,8 +790,8 @@
     if (!cur) {
       const b = big.find(e => e.w <= wk && preg.fired[e.k] == null);
       let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
-      // 가벼운 일: 턴마다 약 45%(평균 2턴에 하나 · 유저 요청: 바쁘게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
-      if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.45) {
+      // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
+      if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
         const recent = preg.recent || [], pool = P_SYM.filter(s => wk >= s[0] && wk <= s[1] && (p.sick || !/입덧/.test(s[2])) && (s[4] !== 'm' || world === 'modern') && !(me && P_INNER.test(s[2])) && !((preg.secret || preg.unaware) && P_KNOW.test(s[2])) && !(preg.unaware && /산모수첩|모르던 사람/.test(s[2])) && !recent.includes(s[2]));
         if (pool.length) { const s = pool[Math.floor(pR('symp' + turn) * pool.length)]; ev = { k: 't' + turn, t: s[2] + (/^곁의 NPC가/.test(s[2]) ? ' (그 NPC 성격·관계대로)' : ''), kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); }
       }
@@ -792,6 +820,8 @@
     if (preg.shown.sex == null && preg.sexAt != null && turn > preg.sexAt && P_SEXQ.test(lastAi)) {
       preg.shown.sex = turn; preg.log.push({ w: wk, t: '성별을 알게 됨: ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·'), at: turn, res: 1 });
     }
+    // 출산은 이야기를 따라가요: AI 답이나 보낸 말에 아기가 태어났다고 나오면(20주부터) 그날로 출산 · 주사위가 정한 주가 아니어도
+    if (!preg.endNext && wk >= 20 && P_BORN.test(lastAi + '\n' + said) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said)) preg.endNext = { kind: '출산', dayN: day, why: '', turn: turn - 1 };
     if (preg.endNext && preg.endNext.turn < turn) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
     const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8;
@@ -811,7 +841,7 @@
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기(아기 크기 비유)
     if (!preg.unaware && turn - (preg.wkAt ?? -9) < 2 && P_SIZE[wk]) todo.push(`${wk}주가 됨 — 아기가 자란 걸 한 번 드러내기`);
     if (cur && turn >= cur.from) todo.push((cur.soc ? cur.t : me ? (P_FEEL.test(cur.t) ? `${who}의 몸에 ${cur.t}(몸에 생긴 일까지만 쓰고 멈춤 · ${who}의 반응은 유저가 씀)` : `${who}에게 ${cur.t}(NPC 눈에 보인 대로)`) : `${who}에게 ${cur.t}`) + (cur.big ? (preg.secret ? ' (비밀이 들킬 위기일 수 있음)' : ` (곁의 NPC가 ${P_DOC[world]}에 가자고 할 수 있음)`) : ' — 지금 장면 안에서 일어나게'));
-    if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) todo.push(preg.secret ? `${who}가 몰래 해 본 임신테스트기에 두 줄이 뜸(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 해 본 임신테스트기에 두 줄이 뜸(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); }
+    if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
     if (todo.length) L.push(`※ 임신 · 이번 답에 꼭 넣을 일: ${todo.join(' / ')}`);
     pregOut = L; pregSig = L.join('\n');
@@ -822,11 +852,14 @@
     if (preg?.start == null) return;
     const wk = endDay != null ? Math.floor((endDay - preg.start) / 7) : null, w0 = preg.w0 || 0;
     const line = `${kind} · ${preg.who || ''} · ${P_STR(preg.start + w0 * 7)}(${w0}주) ~ ${endDay != null ? P_STR(endDay) + '(' + wk + '주)' : '?'}${why ? ' · ' + why : ''}`;
-    preg = { on: true, world: preg.world, peek: preg.peek, history: [...(preg.history || []), line], after: endDay ?? preg.after, afterTurn: (snapshot?.note?.turns || 0) + freshTurns() };
+    const nth = (preg.books || []).filter(b => b.kind === '출산').length + (kind === '출산' ? 1 : 0), ORD = ['', '첫째', '둘째', '셋째', '넷째', '다섯째'];
+    const book = { title: kind === '출산' ? `${ORD[nth] || nth + '번째'} 산모수첩` : `${kind} 기록`, kind, line, who: preg.who, father: preg.father || '', log: preg.log || [], at: Date.now() };
+    preg = { on: kind !== '출산', world: preg.world, peek: preg.peek, books: [...(preg.books || []), book], history: [...(preg.history || []), line], after: endDay ?? preg.after, afterV2: true, afterTurn: (snapshot?.note?.turns || 0) + freshTurns() };
     pregOut = []; pregSig = ''; pregSave();
   }
   const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg));
-  async function pregLoad(chatId) { pregChat = chatId; try { preg = JSON.parse(String(await getValue('preg:' + chatId, '') || 'null')); } catch (_) { preg = null; } }
+  async function pregLoad(chatId) { pregChat = chatId; try { preg = JSON.parse(String(await getValue('preg:' + chatId, '') || 'null')); } catch (_) { preg = null; }
+    if (preg && preg.after != null && !preg.afterV2) { delete preg.after; delete preg.afterTurn; } } // 예전 '기록 지우기'가 남긴 날짜 막기는 버려요(진짜로 끝난 임신만 막아요)
   // 노트에서 임신 찾기 → {who, me, start, w0, why} · 순서: 현재상태 '임신 N주' → 날짜로그 임신 확인 날(그날 = 5주) → 현재상태 '임신' → 아직 정리 안 된 최근 대화
   //   누군지: 현재상태 줄 앞 이름 → 그 사건·대화에 나온 유저 캐릭터 → 나온 여자 인물 → 유저 캐릭터
   function pregDetect(mem, chatTexts = [], after = null) {
@@ -835,70 +868,126 @@
     const secs = splitSections(mem), body = k => secs.find(x => x.key === k)?.body || '';
     const NEG = /음성|한\s*줄|임신\s*(?:가능성|걱정|아님|아닌|안\s*됨|하지\s*않)|피임|불임|임신시키|임신할/;
     const ppl = body('인물').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
-    const pick = t => (ppl.find(p => p.me && t.includes(p.name)) || ppl.find(p => p.female && t.includes(p.name)) || ppl.find(p => p.me) || ppl.find(p => p.female))?.name || '';
+    const pick = () => ppl.find(p => p.me)?.name || '유저 캐릭터'; // 임신은 유저 캐릭터(페르소나)만 — 엄마·다른 여자 인물로 잡히지 않게
     const isMe = who => !!ppl.find(p => p.me && (p.name.includes(who) || who.includes(p.name)));
     const line = body('현재상태').split('\n').find(l => /임신/.test(l) && !NEG.test(l) && !(/임신\s*여부|테스트기\s*(?:사|구입|준비)/.test(l) && !/두\s*줄|양성|확정/.test(l))) || ''; // '임신 여부 확인하려고 테스트기 사 옴'은 아직 아님
-    const lineWho = (line.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '';
+    const lineWho0 = (line.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '', lineWho = lineWho0 && isMe(lineWho0) ? lineWho0 : ''; // 현재상태에 적힌 사람이 유저 캐릭터일 때만
     const wm = line.match(/임신\s*(?:약\s*)?(\d{1,2})\s*주/) || line.match(/(\d{1,2})\s*주\s*(?:차|째)?[^\n]{0,6}임신/);
     const rel = pregKitRel(mem), relOk = rel && rel.d <= day && day - rel.d <= 280 && (after == null || rel.d > after);
     const guess = (start, why) => relOk ? [rel.d - 14, `마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요`] : [start, why];
-    const out = (who, start, why) => who ? { who, me: isMe(who), start, w0: Math.max(4, Math.floor((day - start) / 7)), why } : null;
+    const out = (who, start, why) => who ? { who, me: isMe(who) || who === '유저 캐릭터', start, w0: Math.max(4, Math.floor((day - start) / 7)), why } : null;
     if (fresh && wm && +wm[1] >= 3 && +wm[1] <= 42) return out(lineWho || pick(line), day - +wm[1] * 7, `현재상태에 '임신 ${wm[1]}주'라고 적혀 있어요`);
     const hits = blocksOf(body('날짜로그')).map(b => ({ t: b.title + ' ' + b.lines.join(' '), d: P_DAY(b.title), title: b.title }))
-      .filter(b => b.d != null && b.d <= day && (after == null || b.d > after) && /임신|임테기|테스트기/.test(b.t) && /두\s*줄|양성|확인|확정|알게|알았|진단|소식|사실/.test(b.t) && !NEG.test(b.title));
+      .filter(b => b.d != null && b.d <= day && (after == null || b.d > after) && /임신|임테기|테스트기/.test(b.t) && /두\s*줄|양성|확인|확정|알게|알았|진단|소식|사실|임신했|임신을\s*(?:알|고백|밝)|또\s*임신|임신\s*중/.test(b.t) && !NEG.test(b.title));
     if (hits.length) { const h = hits.reduce((a, b) => b.d < a.d ? b : a); return out(lineWho || pick(h.t), ...guess(h.d - 35, `날짜로그 ${P_STR(h.d)} 임신 확인 → 그날을 5주로 셌어요`)); }
     if (fresh && line) return out(lineWho || pick(line), ...guess(day - 35, '임신을 안 날을 못 찾아서 지금을 5주로 셌어요'));
-    const msg = chatTexts.find(t => /임신|임테기|테스트기/.test(t) && /두\s*줄|양성|임신(?:이야|이에요|이래|입니다|했|\s*확정|\s*\d+\s*주)/.test(t) && !/한\s*줄|음성|못\s*하|말\s*못|숨기|비밀로|아니야|아닐|아닌\s*것/.test(t));
+    const msg = chatTexts.find(t => /임신|임테기|테스트기/.test(t) && /두\s*줄|양성|임신(?:이야|이에요|이래|입니다|했|\s*확정|\s*\d+\s*주)/.test(t) && !/한\s*줄|음성|못\s*하|말\s*못|숨기|비밀로|아니야|아닐|아닌\s*것/.test(t) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(t));
     if (fresh && msg) return out(pick(msg), ...guess(day - 35, '최근 대화에서 임신 소식을 봤어요 → 지금을 5주로 셌어요'));
     return null;
   }
   function pregEnsure(mem, snap = snapshot) {
-    if (preg.start != null) return true;
-    { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) !== 'user') continue; t++; if (t > (preg.afterTurn ?? -1)) told.push(stripBlocks(msgText(m))); }
-      const tell = told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
+    if (preg.start != null) { if (preg.father == null) { const f = pregFather(mem); if (f) { preg.father = f; pregSave(); } } return true; }
+    { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(stripBlocks(msgText(m))); } // 유저 말 + AI 답(유저 캐릭터가 보낸 문자·대사로 나오기도 해요)
+      const tell = told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
       const unaware = !!tell && P_AUTHOR.test(tell) && P_UNAWARE.test(tell);
       if (tell && day != null) { const said = pregWeeksSaid(tell), rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? day - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)), ws = pregWhoDefault(mem); preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
-        Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 → 관계일을 못 찾아서 지금을 5주로 셌어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true; } }
-    if (!preg.on) return false; // 노트·대화에서 찾기는 켜 둔 방만
+        Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 · 관계 미상이라 지금을 5주로 셌어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true; } }
+    // 노트·대화에서 찾기는 스위치가 꺼져 있어도 해요(유저 캐릭터만 잡으니까) · 찾으면 켜져요
     const d = pregDetect(mem, (snap?.fresh || []).filter(isChat).slice(-12).map(m => stripBlocks(msgText(m))).reverse(), preg.after ?? null); if (!d) return false;
-    Object.assign(preg, d, { seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true;
+    Object.assign(preg, d, { on: true, seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true;
+  }
+  // 👨 아빠: 임신된 날(시작 + 2주)에 가장 가까운 관계 장면에 나온 남자 인물(유저 캐릭터 말고) · 여러 사람과 관계했어도 그날 사람으로
+  function pregFather(mem) {
+    if (preg?.start == null) return '';
+    const ps = pPeople(mem), cd = preg.start + 14, rels = pregKitRels(mem).filter(r => Math.abs(r.d - cd) <= 14).sort((a, b) => Math.abs(a.d - cd) - Math.abs(b.d - cd));
+    for (const r of rels) { const c = ps.filter(p => !p.me && r.t.includes(p.name)); const m = c.find(p => p.male) || c[0]; if (m) return m.name; }
+    return '';
+  }
+  // 👶 아기 외모: 엄마·아빠 인물 칸에 적힌 머리색·눈·보조개 같은 걸 하나씩 물려받아요(늘 같은 결과) · 없으면 '어디는 누구 닮음'
+  const P_HAIR = /흑발|금발|은발|백발|적발|갈발|검은\s*머리|금빛\s*머리|은빛\s*머리|갈색\s*머리|붉은\s*머리|빨간\s*머리|하얀\s*머리|분홍\s*머리|파란\s*머리|애쉬\s*블론드|블론드/;
+  const P_EYE = /벽안|흑안|금안|적안|푸른\s*눈|파란\s*눈|녹색\s*눈|초록\s*눈|회색\s*눈|잿빛\s*눈|갈색\s*눈|검은\s*눈|붉은\s*눈|금빛\s*눈|호박색\s*눈|보라색\s*눈|올리브색\s*눈/;
+  const P_MARK = /보조개|쌍꺼풀|주근깨|눈물점|곱슬머리|곱슬|덧니|긴\s*속눈썹/g;
+  function babyLooks(p, i) {
+    const mem = noteMemory() || '', blk = n => { const b = (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').find(x => x.split('】')[0].includes(n)); return b || ''; };
+    const mom = preg.who || '엄마', dad = preg.father || '아빠', tm = blk(mom), td = preg.father ? blk(preg.father) : '';
+    const from = (re, k) => { const a = (tm.match(re) || [])[0], b = (td.match(re) || [])[0]; if (!a && !b) return null; const useDad = b && (!a || pR('lk' + k + i) < 0.5); return [(useDad ? b : a).replace(/\s+/g, ' '), useDad ? dad : mom]; };
+    const out = [], h = from(P_HAIR, 'h'), e = from(P_EYE, 'e');
+    if (h) out.push(`${h[0]}(${h[1]})`); if (e) out.push(`${e[0]}(${e[1]})`);
+    const marks = [...new Set([...(tm.match(P_MARK) || []).map(x => [x, mom]), ...(td.match(P_MARK) || []).map(x => [x, dad])].map(x => x.join('|')))].map(x => x.split('|')).filter((_, k) => pR('mk' + k + i) < 0.5);
+    for (const [m, w] of marks.slice(0, 2)) out.push(`${m}(${w})`);
+    if (out.length < 2) out.push(babyLook(p, i).replace(/엄마/g, mom).replace(/아빠/g, dad));
+    return out.join(' · ');
   }
   // 🧪 임테기 긁기: 기다리는 동안 모드 탭에서 직접 긁어 봐요 · 결과는 이야기 속 날짜마다 하나(같은 날 다시 긁어도 같음)
   //   임신 여부는 마지막 관계 날에 한 번만 굴려요(피임 안 함 30% · 피임 5%) → 며칠에 긁든 같고, 새 관계가 있으면 다시 · 관계 후 10일 전엔 임신이어도 한 줄(너무 일러요)
   //   두 줄이면 관계한 날 + 2주 = 4주 식으로 임신 기록 시작 + 다음 2턴 동안 채팅에 '임테기 두 줄'을 넣어요(유저가 직접 긁은 거라 장면에 써도 돼요)
   const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
-  const pregWhoDefault = mem => { const ps = pPeople(mem); return ps.find(p => p.me && p.female) || ps.find(p => p.me) || ps.find(p => p.female) || { name: '', me: false }; };
-  const P_SEX = /성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  const pregWhoDefault = mem => pPeople(mem).find(p => p.me) || { name: '유저 캐릭터', me: true }; // 유저 캐릭터(페르소나)만
+  const P_SEX = /쿠퍼액|프리컴|질외\s*사정|밖에\s*(?:쌌|사정)|첫날밤|합방|정사(?:를|가|를\s*나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
   function pregKitRels(mem) { // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
     const base = storyDay(mem), out = [];
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = b.title + ' ' + b.lines.join(' '), d = P_DAY(b.title); if (d != null && P_SEX.test(t)) out.push({ d, t }); }
-    const fr = (snapshot?.fresh || []).filter(isChat).map(m => stripBlocks(msgText(m))).filter(t => P_SEX.test(t));
-    if (fr.length && base != null && !out.some(x => x.d === base)) out.push({ d: base, t: fr.join('\n') });
+    const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
+    for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m));
+      if (msgRole(m) === 'assistant') { const x = P_DAY2(t.slice(0, 400)); if (x != null) cur = x; else if (cur != null) cur += pSkip(t); } else if (cur != null) cur += pSkip(t);
+      if (P_SEX.test(t)) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + t; else out.push({ d, t }); } } }
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
-  const kitChance = t => /피임\s*(?:안|없이|하지\s*않|을\s*안)|콘돔\s*없이|노콘|질내/.test(t) ? 0.3 : /피임|콘돔|사후\s*피임약/.test(t) ? 0.05 : 0.3;
+  // 임신 확률: AI·키 없이 그 관계 글(날짜로그·대화)의 말로 정해요(현실보다 살짝 높게) · [확률, 이유들]
+  function kitOdds(t) {
+    t = String(t || ''); const why = [];
+    const noProt = /피임\s*(?:안|없이|하지\s*않|을\s*안)|콘돔\s*(?:없이|안\s*끼|을\s*안)|노콘|생으로/.test(t);
+    let p;
+    if (!noProt && /콘돔이?\s*(?:찢어|터|빠졌|벗겨)|피임\s*실패/.test(t)) { p = 0.25; why.push('피임 실패'); }
+    else if (!noProt && /사후\s*피임약/.test(t)) { p = 0.02; why.push('사후피임약'); }
+    else if (!noProt && /콘돔|피임약|피임/.test(t)) { p = 0.02; why.push('피임함'); }
+    else if (/쿠퍼액|프리컴|사정\s*전|질외\s*사정|밖에\s*(?:쌌|사정)|빼고\s*쌌/.test(t) && !/질내|안에\s*(?:쌌|사정|싸)|안에다/.test(t)) { p = 0.015; why.push('질외사정·쿠퍼액'); } // 쿠퍼액·질외는 거의 안 됨(여섯 번이어도 10% 안쪽)
+    else { p = 0.3; why.push(noProt ? '피임 안 함' : '피임 얘기 없음'); if (/질내|안에\s*(?:쌌|사정|싸)|안에다/.test(t)) { p = 0.38; why.push('질내사정'); } }
+    if (p >= 0.3) { // 한 번 관계 안에서 여러 번·많이: 최대 +5%(피임·질외엔 안 더해요)
+      const n = (t.match(/질내|안에\s*(?:쌌|사정|싸)|안에다|사정했|싸질렀/g) || []).length, many = /여러\s*번|몇\s*번이나|밤새|연달아|가득|넘쳐|흘러넘|잔뜩/.test(t);
+      const plus = Math.min(0.05, (many ? 0.03 : 0) + Math.max(0, n - 1) * 0.02); if (plus) { p += plus; why.push('여러 번·많은 양'); } }
+    if (/배란일|배란기|가임기/.test(t)) { p = Math.min(0.5, p * 1.3); why.push('배란기'); }
+    else if (/생리\s*중|생리하는\s*날|생리\s*기간/.test(t)) { p *= 0.15; why.push('생리 중'); }
+    else if (/안전한\s*날|안전일/.test(t)) { p *= 0.4; why.push('안전한 날'); }
+    return [Math.min(0.5, p), why]; // 질내 한 번 38% · 두 번 합쳐 약 62% · 여러 번 합쳐도 최대 65%(pregConceive에서 맞춰요)
+  }
+  const kitChance = t => kitOdds(t)[0];
+  const kitKind = t => { const w = kitOdds(t)[1]; return w.includes('질내사정') ? '질내' : w.includes('질외사정·쿠퍼액') ? '질외' : w.includes('피임 실패') ? '피임 실패' : w.some(x => /피임함|사후피임약/.test(x)) ? '피임' : '모름'; };
+  const P_HOW = { 피임: ['🩹 콘돔 찢어짐', '🩹 콘돔 빠짐', '💊 피임약 빼먹음'], 질외: ['💧 쿠퍼액', '⏱ 질외 늦음'], '피임 실패': ['🩹 콘돔 찢어짐'], 질내: ['💦 질내'], 모름: ['💞 관계'] }; // 두 줄일 때 알약 하나로 짧게
+  const kitHow = r => { const l = P_HOW[kitKind(r.t)] || P_HOW.모름; return l[Math.floor(pR('how' + r.d) * l.length)]; };
+  const kitKinds = rs => { const c = {}; for (const r of rs) { const k = kitKind(r.t); c[k] = (c[k] || 0) + 1; } return Object.entries(c).map(([k, n]) => `${k} ${n}`).join(' · '); };
+  const kitWhy = t => { const [p, w] = kitOdds(t); return `${w.join(' · ')} → ${Math.round(p * 100)}%`; };
   const P_NOWHY = ['배란일이 아니었어요', '수정은 됐지만 착상이 안 됐어요(착상 실패 · 흔한 일이에요)', '수정이 안 됐어요', '이번엔 그냥 안 됐어요']; // 피임 안 했는데 임신이 안 된 이유(관계마다 하나로 정해져요)
   // 임테기는 10일 넘게 지난 관계만 확인할 수 있어요 → 그중 주사위가 맞은 가장 이른 날이 임신된 날 · 최근(10일 안) 관계는 아직 몰라요
+  const kitCap = rels => { const comb = q => 1 - rels.reduce((a, r) => a * (1 - kitChance(r.t) * q), 1); if (comb(1) <= 0.65) return 1; let lo = 0, hi = 1; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (comb(m) > 0.65) hi = m; else lo = m; } return lo; };
   function pregConceive(mem, day) {
     const rels = pregKitRels(mem).filter(r => r.d <= day && day - r.d <= 42 && (preg.after == null || r.d > preg.after));
     const testable = rels.filter(r => day - r.d >= 10), recent = rels.filter(r => day - r.d < 10);
-    const hit = testable.find(r => preg.forceRel === r.d || pR('conc' + r.d) < kitChance(r.t));
-    return { hit, testable, recent, last: rels[rels.length - 1] || null };
+    const k = kitCap(rels), hit = testable.find(r => preg.forceRel === r.d || pR('conc' + r.d) < kitChance(r.t) * k);
+    return { hit, testable, recent, k, last: rels[rels.length - 1] || null };
   }
-  function pregKitHtml(mem) {
-    const day = pregDay(mem, snapshot); if (day == null) return '';
+  const P_KIT = { modern: ['🧪 임테기', '임테기'], old: ['🌿 맥 짚어 보기', '진맥'], fantasy: ['🔮 수정구슬 보기', '수정구슬'] };
+  function pregKitHtml(mem, inline = false) { const h = pregKitHtml0(mem); return !inline ? h : h.replace(/^<div class="pg-cap">([^<]*)<\/div><div class="pg-card">/, '<div class="pg-kitin"><b class="pg-kitcap">$1</b>').replace(/^<div class="pg-card pg-kitdone">/, '<div class="pg-kitin pg-kitdone">'); }
+  function pregKitHtml0(mem) { // 짧게: 날짜·며칠째 + 🍼 확률 알약 · 결과 한 줄 · 작가 설정 버튼
+    const kw = pWorld(mem), [kcap, kname] = P_KIT[kw], day = pregDay(mem, snapshot);
+    if (day == null) return `<div class="pg-cap">${kcap}</div><div class="pg-card"><p class="pg-s">이야기 날짜를 못 찾았어요 · AI 답 머리말에 날짜(예: 05월 07일)가 나오면 바로 돼요</p></div>`; // 숨기지 않고 왜 안 되는지 알려요
     if (!preg.seed) { preg.seed = (Math.random() * 4294967296) >>> 0; pregSave(); }
-    const { hit, testable, recent, last } = pregConceive(mem, day), tl = testable[testable.length - 1], rl = recent[recent.length - 1];
+    const { hit, testable, recent, k, last } = pregConceive(mem, day), tl = testable[testable.length - 1], rl = recent[recent.length - 1];
     const rel = hit || tl || last, since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
-    const res = done || (!last ? 'neg' : hit ? 'pos' : tl ? 'neg' : 'early');
-    const later = rl ? ` · ${P_STR(rl.d)} 관계(${day - rl.d}일째)는 아직 일러서 2주쯤 뒤에 다시 해 보세요` : '';
-    const why = !last ? '노트·최근 대화에 관계 기록이 없어요.' : res === 'early' ? `아직 너무 일러요(관계 후 ${day - last.d}일째) · 2주쯤 지나서 다시 해 보세요.` : `${P_STR(tl.d)} 관계(${day - tl.d}일째)까지는 임신이 아니에요 · ${kitChance(tl.t) < 0.1 ? '피임이 제대로 됐어요' : P_NOWHY[Math.floor(pR('nowhy' + tl.d) * P_NOWHY.length)]}${later}.<br><small>주사위 · ${kitChance(tl.t) > 0.1 ? '피임 안 함 30%' : '피임함 5%'}</small>`;
-    const force = last && preg.start == null ? `<button class="pg-link" data-act="pregforce">✍️ 작가 설정 · 이 관계로 임신된 걸로 하기</button>` : '';
-    if (done && done !== 'pos') return `<div class="pg-card pg-kitdone"><b>🧪 오늘 임테기 · 한 줄</b><p class="pg-s">${why}</p>${force}</div>`; // 긁은 뒤엔 작게 접어요(이야기 날짜가 바뀌면 다시 긁을 수 있어요)
-    const stick = `<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t${res === 'pos' ? ' on' : ''}"></i></span><small>C T</small></div>`;
-    const info = !rel ? '노트·최근 대화에 관계 흔적이 없어요' : tl || hit ? `확인하는 관계 ${P_STR(rel.d)} · ${since}일째` : `마지막 관계 ${P_STR(rel.d)} · ${since}일째 (2주쯤 지나야 정확해요)`;
-    return `<div class="pg-cap">🧪 임테기</div><div class="pg-card"><div class="pg-kit" data-day="${day}" data-res="${res}" data-rel="${rel ? rel.d : ''}">${stick}${done ? '' : '<canvas class="pg-scr"></canvas>'}</div><p class="pg-s" style="text-align:center">${done === 'pos' ? '<b>두 줄!</b> 임신이에요 🎉' : info + '<br>동전으로 긁듯이 문질러 보세요'}</p>${force ? `<p class="pg-s" style="text-align:center;margin-top:8px">${force}<br><small>주사위 대신 직접 정해요 · 본인은 아직 모르고 증상만 생겨요</small></p>` : ''}</div>`;
+    const declared = !!(preg.unaware || preg.start != null); // 이야기·작가가 이미 임신으로 정함 → 주사위 말고 두 줄
+    const res = declared && done !== 'pos' ? 'pos' : done || (!last ? 'neg' : hit ? 'pos' : tl ? 'neg' : 'early');
+    const pill = r => r ? ` <span class="pg-odds" title="${esc(kitOdds(r.t)[1].join(' · '))}">🍼 ${Math.round(kitChance(r.t) * 100)}% · ${kitKind(r.t)}</span>` : '';
+    const md = d => P_STR(d).slice(5).replace('.', '/').replace(/^0/, '').replace('/0', '/');
+    const nowhy = r => kitOdds(r.t)[1].some(x => /피임함|사후피임약/.test(x)) ? '피임이 됐어요' : kitOdds(r.t)[1].includes('생리 중') ? '생리 중이었어요' : P_NOWHY[Math.floor(pR('nowhy' + r.d) * P_NOWHY.length)].replace(/\(.*\)/, '');
+    const why = !last ? '관계 기록이 없어요' : res === 'early' ? `아직 일러요 · ${md(last.d)} 관계 ${day - last.d}일째` : `${md(tl.d)} 관계 · ${nowhy(tl)}${pill(tl)}${rl ? ` · ${md(rl.d)} 관계는 2주 뒤에` : ''}`;
+    const force = last && preg.start == null ? `<button class="pg-link" data-act="pregforce">✍️ 작가 설정</button>` : '';
+    if (done && done !== 'pos' && !declared) return `<div class="pg-card pg-kitdone"><b>${kcap.split(' ')[0]} 오늘 ${kname} · ${kw === 'modern' ? '한 줄' : kw === 'old' ? '태기 없음' : '구슬이 잠잠함'}</b><p class="pg-s">${why}${force ? ' · ' + force : ''}</p></div>`; // 긁은 뒤엔 작게(이야기 날짜가 바뀌면 다시)
+    const stick = kw === 'modern' ? `<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t${res === 'pos' ? ' on' : ''}"></i></span><small>C T</small></div>`
+      : `<div class="pg-stick"><b style="font-size:14px">${res === 'pos' ? (kw === 'old' ? '🌿 희맥이 잡혀요 · 태기가 있어요' : '🔮 구슬이 분홍빛으로 빛나요') : (kw === 'old' ? '맥이 평소와 같아요' : '구슬이 잠잠해요')}</b></div>`;
+    const rels = [...testable, ...recent], all = rels.length > 1 ? Math.round((1 - rels.reduce((q, r) => q * (1 - kitChance(r.t) * k), 1)) * 100) : null; // 최근 6주 관계를 합친 확률(관계마다 따로 굴려서 하나라도 맞으면 임신)
+    const info = declared && !rel ? '관계 미상 · 이야기에서 임신으로 정해졌어요' : !rel ? '관계 기록이 없어요' : `${md(rel.d)} 관계 · ${since}일째${tl || hit ? '' : ' · 2주 뒤가 정확해요'}${all ? ` <span class="pg-odds">🍼 ${all}% · 관계 ${rels.length}번(${kitKinds(rels)})</span>` : pill(rel)}`;
+    return `<div class="pg-cap">${kcap}</div><div class="pg-card"><div class="pg-kit" data-day="${day}" data-res="${res}" data-rel="${rel ? rel.d : ''}">${stick}${done ? '' : '<canvas class="pg-scr"></canvas>'}</div><p class="pg-s" style="text-align:center">${done === 'pos' ? (kw === 'modern' ? '<b>두 줄!</b> 임신이에요 🎉' : '<b>태기가 있어요!</b> 🎉') + (hit ? ` <span class="pg-odds">${md(hit.d)} 관계 · ${kitHow(hit)}</span>` : '') : info}${force ? ' · ' + force : ''}</p></div>`;
   }
   // ✍️ 작가 설정: 마지막 관계로 임신됨(본인도 모름) → 증상은 생기고, 임테기·병원에서 알게 돼요
   async function pregForce() {
@@ -924,7 +1013,7 @@
       if (clear / all > 0.5) { fin = true; cv.style.transition = 'opacity .6s'; cv.style.opacity = '0'; setTimeout(() => pregKitDone(Number(box.dataset.day), box.dataset.res, Number(box.dataset.rel)), 1100); }
     });
   }
-  async function pregKitDone(day, res, rel) {
+  async function pregKitDone(day, res, rel) { // rel: 임신된 관계 날(이유는 kitHow로)
     if (!preg) return;
     if (preg.unaware) { // 작가가 정해 둔 임신: 임테기로 본인이 알게 돼요
       preg.tests = { ...(preg.tests || {}), [day]: res };
@@ -942,29 +1031,31 @@
   const P_TEST = ''; // 테스트 표시는 하단 버전 옆에
   function modeHtml() {
     const mem = noteMemory() || '', on = !!preg?.on;
-    if (mem && preg) pregEnsure(mem);
+    preg = preg || { on: false }; pregChat = pregChat || chatIdFromPath(); pregEnsure(mem); // 노트가 없어도(정리 전) 대화만으로 · 처음 열 때도 메시지부터
     const day = pregDay(mem, snapshot), turn = (snapshot?.note?.turns || 0) + freshTurns(), started = on && preg.start != null;
     if (started && day != null) pregSync(day, snapshot);
-    const world = pWorld(mem), p = started ? pregPlan() : null, age = started && day != null ? day - preg.start : null, wk = age == null ? null : Math.floor(age / 7), dd = age == null ? 0 : ((age % 7) + 7) % 7;
+    const world = pWorld(mem); if (preg) preg.era = world; const p = started ? pregPlan() : null, age = started && day != null ? day - preg.start : null, wk = age == null ? null : Math.floor(age / 7), dd = age == null ? 0 : ((age % 7) + 7) % 7;
     const ck = world === 'modern' ? '검진' : '진찰', shown = preg?.shown || {}, who = esc(preg?.who || '');
     const dday = started && day != null ? Math.max(0, preg.start + 280 - day) : null;
     const sel = `<button class="pg-wchip" data-act="pregworld" aria-label="세계관 바꾸기">🌍 ${preg?.world && preg.world !== 'auto' ? P_WORLD[preg.world] : P_WORLD[pAuto(mem)] + '(자동)'}</button>`;
-    const hist = (preg?.history || []).length ? `<details class="pg-hist"><summary>📝 지난 기록 ${preg.history.length}개</summary><ul class="pg-log">${preg.history.map(h => `<li>${esc(h)}</li>`).reverse().join('')}</ul></details>` : '';
+    const books = preg?.books || [], bookHtml = books.length ? `<details class="pg-hist"><summary>📚 지난 산모수첩 ${books.length}권</summary>${books.map((b, i) => `<details class="pg-book1"><summary>📔 ${esc(b.title)} <small>${esc(b.line)}</small></summary>${b.father ? `<p class="pg-s">👨 아빠 · ${esc(b.father)}</p>` : ''}<ul class="pg-log">${(b.log || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0)).map(x => `<li><em>${x.w}주</em>${esc(x.t)}</li>`).join('') || '<li>기록이 없어요</li>'}</ul></details>`).reverse().join('')}</details>` : '';
+    const hist = books.length ? bookHtml : (preg?.history || []).length ? `<details class="pg-hist"><summary>📝 지난 기록 ${preg.history.length}개</summary><ul class="pg-log">${preg.history.map((h, i) => `<li>${esc(h)} <button class="pg-link" data-act="preghdel" data-arg="${i}" aria-label="이 기록 지우기">×</button></li>`).reverse().join('')}</ul></details>` : '';
     const soon = ''; // 육아는 아직 없어요(만들면 여기)
     const sw = `<button class="pg-sw" data-act="pregon" aria-pressed="${on}" aria-label="임신 모드 ${on ? '끄기' : '켜기'}"><i></i></button>`;
     const warn = on && !sceneOn ? '<p class="pg-warn">웹 모드에서만 채팅에 들어가요.</p>' : '';
+    if (!on && preg?.start != null) return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신 · 꺼 둠</b><small>${who} 임신 기록은 그대로 있어요 · 켜면 이어서 채팅에 들어가요</small></div>${sw}</div><div class="pg-btns"><button class="btn ghost" data-act="pregdel">🗑 임신 기록 지우기</button></div>${hist}</div></div>`;
     if (!started) {
       preg = preg || { on: false }; pregChat = pregChat || chatIdFromPath();
-      const det = on ? `<p class="pg-s">🔍 아직 임신한 사람이 없어요. 이야기에서 임신 사실이 나오면 자동으로 시작돼요. <button class="pg-link" data-act="pregfix">직접 시작</button></p>` : '';
-      return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${on ? '임신한 사람을 기다리는 중' : '이야기에서 임신하면 노트에서 알아채고 알아서 시작해요'}</small></div>${sw}</div>${on ? `<div class="pg-chips">${sel}</div>` : ''}${det}${warn}${hist}</div>${pregKitHtml(mem)}${soon}</div>`;
+      const why0 = [!pPeople(mem).some(p => p.me) ? '노트 인물에 유저(PC) 표시가 없어요' : '', preg.after != null ? `지난 기록(${P_STR(preg.after)}) 뒤 일만 봐요` : '', !(snapshot?.fresh || []).length ? '아직 정리 안 된 대화가 없어요' : ''].filter(Boolean).join(' · ');
+      const det = on ? `<p class="pg-s">🔍 아직 임신한 사람이 없어요. 이야기에서 임신 사실이 나오면 자동으로 시작돼요. <button class="pg-link" data-act="pregfix">직접 시작</button>${why0 ? `<br><small>${esc(why0)}</small>` : ''}</p>` : (why0 ? `<p class="pg-s"><small>${esc(why0)}</small></p>` : '');
+      return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${on ? '임신한 사람을 기다리는 중' : '이야기에서 임신하면 노트에서 알아채고 알아서 시작해요'} <span class="pg-free">🔑 키 안 써요 · 무료</span></small></div>${sw}</div>${on ? `<div class="pg-chips">${sel}</div>` : ''}${det}${warn}${pregKitHtml(mem, true)}${hist}</div>${soon}</div>`;
     }
-    if (!nav.pgBook) return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${who} · ${wk == null ? '?' : wk + '주 ' + dd + '일'}${dday != null ? ' · D-' + dday : ''}${preg.unaware ? ' · 🙈 본인은 아직 몰라요' : ''}</small><button class="pg-open" data-act="pgbook">📔 산모수첩 열기 ›</button></div>${sw}</div>${warn}${hist}</div>${preg.unaware ? pregKitHtml(mem) : ''}${soon}</div>`;
     // ── 산모수첩 ──
     const stage = wk == null ? -1 : wk < 14 ? 0 : wk < 28 ? 1 : 2;
     const anyShown = Object.keys(shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown;
-    const cover = `<div class="pg-cover"><div class="pg-ct"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>
+    const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>D-${dday}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
-      <div class="pg-chips"><span>${anyShown ? (p.n > 1 ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${sel}</div>
+      <div class="pg-chips"><span>${anyShown ? (p.n > 1 ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(preg.why || '')} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p>${warn}</div>`;
     const cur = preg.cur && turn >= preg.cur.from;
     const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
@@ -979,8 +1070,8 @@
     const scan = sec(world === 'modern' ? '🩻 초음파 기록' : '🩺 진찰 기록', '', `<div class="pg-scan">${scans.join('')}${next ? `<span class="soon">${next[0]}주 · 곧</span>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(x.t)}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
-    const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button><button class="btn ghost" data-act="pregreset">처음부터</button></div></div>`;
-    return `<div class="pg pg-book">${P_TEST}<button class="pg-back" data-act="pgbook">‹ 모드</button>${cover}${week}${baby}${mom}${scan}${log}${foot}</div>`;
+    const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns">${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
+    return `<div class="pg pg-book">${P_TEST}${cover}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>`;
   }
 
   function buildBlock(memory, uptoId, turns, at = new Date().toISOString(), by = DEVICE, keepSel = false) {
@@ -1566,8 +1657,8 @@
     if (t.length < 80) return '내용이 너무 짧아요. 답이 중간에 끊겼다면 AI에게 "계속"이라고 보내고 이어진 답까지 함께 붙여 넣어 주세요.';
     return '';
   }
-  const LOG_BUDGET = 60000, LOG_RECENT = 15, LOG_SKIP = '(본문 생략 · 그대로 보존)';
-  function trimLogForSummary(memory, fresh) { // 날짜로그가 6만 자를 넘으면 최근 + 새 대화에 나온 사건만 본문, 나머지는 제목만
+  const LOG_BUDGET = 15000, LOG_RECENT = 15, LOG_SKIP = '(본문 생략 · 그대로 보존)'; // 1.5만 자 넘으면 오래된 사건은 제목만 보내요(정리 비용이 노트 길이만큼 계속 오르지 않게 · 예전 6만)
+  function trimLogForSummary(memory, fresh) { // 날짜로그가 1.5만 자를 넘으면 최근 + 새 대화에 나온 사건만 본문, 나머지는 제목만
     const secs = splitSections(memory), i = secs.findIndex(x => x.key === '날짜로그');
     if (i < 0 || secs[i].body.length <= LOG_BUDGET) return { memory, hidden: new Set() };
     const { head, items } = itemBlocks(secs[i].body), text = (fresh || []).map(m => msgText(m)).join('\n');
@@ -1733,6 +1824,13 @@
     if (/^claude-haiku-4-5/.test(m)) return [1, 5];
     return null;
   }
+  let pickUse = null; // 이 방 'AI로 한 번 더 고르기' 합계 {n, usd}
+  async function pickSpend(chatId, u) {
+    if (!chatId || !u) return; const p = priceOf(INJ_AI_MODEL, u.promptTokenCount || 0); if (!p) return;
+    const usd = ((u.promptTokenCount || 0) * p[0] + ((u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0)) * p[1]) / 1e6;
+    let v = { n: 0, usd: 0 }; try { v = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')) || v; } catch (_) {}
+    v.n++; v.usd += usd; await setValue('usepick:' + chatId, JSON.stringify(v)); if (chatId === chatIdFromPath()) pickUse = v;
+  }
   async function recordUsage(chatId, run) {
     const price = priceOf(run.model, run.inTok);
     const cr = isClaude(run.model) ? 0 : run.cached || 0; // Gemini 자동 캐시 부분은 어림 0.25배
@@ -1835,19 +1933,20 @@
     for (let i = 0; i < json.length; i++) { const c = json.charCodeAt(i); b[i * 2] = c & 255; b[i * 2 + 1] = c >> 8; }
     return new Blob([b], { type: 'application/json; charset=utf-16le' });
   }
-  function patchUtf16(url, json) {
+  async function patchUtf16(url, json) {
+    const tk = await waitToken();
     return new Promise((resolve, reject) => {
       if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       gmRequest({ method: 'PATCH', url, timeout: 30000, data: utf16Blob(json),
-        headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + token(), platform: 'web' },
+        headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' },
         onload: r => r.status >= 200 && r.status < 300 ? resolve() : reject(Object.assign(new Error(`HTTP ${r.status}`), { status: r.status })),
         ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
     });
   }
   // 아이폰 Userscripts 앱은 확장 요청에 블롭을 못 실을 수 있어서, 페이지의 fetch로도 한 번 보내 봅니다(크랙 사이트가 자기 API를 부르는 것과 같은 길).
   async function patchUtf16Fetch(url, json) {
-    let r;
-    try { r = await fetch(url, { method: 'PATCH', body: utf16Blob(json), headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + token(), platform: 'web' } }); }
+    let r; const tk = await waitToken();
+    try { r = await fetch(url, { method: 'PATCH', body: utf16Blob(json), headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' } }); }
     catch (_) { throw new Error('전송 불가'); }
     if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
   }
@@ -2546,7 +2645,7 @@
     .pc-lock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;color:#fff;background:radial-gradient(120% 90% at 20% 10%,var(--wb),var(--wf))}
     /* 🗨 커뮤니티: 앱 화면 같은 카드 하나 */
     .bd{border:1px solid var(--rule);border-radius:16px;overflow:hidden;background:var(--paper)}
-    nav.top button[data-arg="mode"]{--ic:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.7%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2716%27%20rx%3D%274%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E")}.pg{padding:4px 2px 20px}.pg-mode{display:flex;gap:12px;align-items:center}.pg-mode>div{flex:1;min-width:0}.pg-mode b{font-size:15px}.pg-mode small{display:block;color:var(--graphite);font-size:12px;margin-top:2px;line-height:1.45}.pg-ic{font-size:24px;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:var(--chip,#F1F0F7);display:flex;align-items:center;justify-content:center}.pg-sw{flex:0 0 42px;width:42px;height:24px;border-radius:99px;border:0;padding:0;background:var(--rule);position:relative;cursor:pointer}.pg-sw i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.pg-sw[aria-pressed="true"]{background:var(--ink)}.pg-sw[aria-pressed="true"] i{left:21px}.pg-card .pg-hid{margin-top:12px}.pg-dim{opacity:.45}.pg-inj summary{font-size:13px;font-weight:700;color:var(--graphite);cursor:pointer}.pg-inj pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.55;margin:10px 0 0;color:var(--ink2);font-family:inherit}.pg-wchip{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);border:0;color:var(--graphite);cursor:pointer}.pg-row small{max-width:68%}.pg-card .pg-big{margin-top:12px}.pg-tri .pg-now{color:var(--acc,#7B61D9);font-weight:700}.pg-kit{position:relative;width:260px;max-width:100%;height:96px;margin:8px auto 2px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rule)}.pg-scr{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}.pg-stick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pg-win{display:flex;gap:20px;padding:10px 24px;background:#F7F5FA;border-radius:10px;border:1px solid var(--rule)}.pg-win i{width:4px;height:34px;border-radius:2px}.pg-win i.c,.pg-win i.t.on{background:#D9466F}.pg-stick small{font-size:10px;color:var(--graphite);letter-spacing:14px;margin-left:14px}.pg-more summary{font-size:12.5px;color:var(--graphite);cursor:pointer;font-weight:700}.pg-more .pg-log{margin-top:6px}.pg-open{display:block;border:0;background:none;padding:0;margin-top:4px;font:inherit;font-size:12.5px;font-weight:700;color:var(--acc,#7B61D9);cursor:pointer}.pg-back{border:0;background:none;padding:2px 4px 10px;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.pg-cover{background:#F1EDFC;border:1px solid #E4DCFA;border-radius:20px;padding:16px;margin:0 0 12px}.pg-ct{font-size:19px;font-weight:800;letter-spacing:-.3px}.pg-ct small{display:block;font-size:12px;font-weight:600;color:var(--graphite);margin-top:3px}.pg-label{font-size:11px;font-weight:700;color:var(--acc,#7B61D9);background:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:3px}.pg-cover .pg-bar{background:#fff}.pg-cover .pg-bar i{background:#A993E8}.pg-cover .pg-chips span,.pg-cover .pg-wchip{background:#fff}.pg-sec{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 16px;margin:0 0 12px}.pg-sec h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:6px}.pg-sec h3 em{font-style:normal;font-size:11px;color:var(--graphite);font-weight:600;margin-left:auto;text-align:right}.pg-r{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;line-height:1.45}.pg-r+.pg-r{border-top:1px dashed var(--rule)}.pg-r span{color:var(--graphite);white-space:nowrap}.pg-r b{font-weight:600;text-align:right;color:var(--ink2)}.pg-scan{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.pg-scan span{border:1.5px dashed #CBBDF2;border-radius:10px;padding:6px 9px;font-size:12px;color:var(--acc,#7B61D9);background:#FAF8FF}.pg-scan .soon{color:var(--graphite);border-color:var(--rule);background:#fff}.pg-book .pg-log em{color:var(--acc,#7B61D9);font-weight:700}.pg-book .pg-log li+li{border-top:1px dashed var(--rule)}.pg-hist{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}.pg-hist summary{font-size:12.5px;color:var(--graphite);font-weight:700;cursor:pointer}.pg-hist .pg-log li{font-size:12.5px}.pg-test{margin:0 0 10px;text-align:center;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);background:#F1EDFC;border-radius:999px;padding:5px 12px}.pg-vt{font-size:10.5px;color:var(--acc,#7B61D9);margin-left:4px}.pg-kitdone b{font-size:13.5px}.pg-kitdone .pg-s{margin:6px 0}.pg-hd{border:0;background:#F1EDFC;color:var(--acc,#7B61D9);font:inherit;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;margin-right:4px;cursor:pointer;white-space:nowrap;align-self:center}.pg-link{border:0;background:none;padding:0;color:var(--acc,#7B61D9);font:inherit;font-size:12px;font-weight:700;cursor:pointer}.pg-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:16px;margin:0 0 12px}.pg-t{font-size:16px}.pg-s{font-size:12.5px;color:var(--graphite);line-height:1.55;margin:6px 0}.pg-warn{font-size:12.5px;color:#8A6A12;background:#FFF1BF;border-radius:10px;padding:8px 10px}.pg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);font-size:13.5px}.pg-row small{color:var(--graphite);font-size:12px;text-align:right}.pg-in{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:#fff;max-width:55%}.pg-go{width:100%;margin-top:10px}.pg-sub{font-size:12.5px;color:var(--graphite)}.pg-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}.pg-big b{font-size:32px}.pg-big span{color:var(--graphite);font-size:13px}.pg-bar{height:8px;border-radius:9px;background:var(--chip,#F1F0F7);margin:10px 0 6px;position:relative;overflow:hidden}.pg-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc,#7B61D9);border-radius:9px}.pg-tri{display:flex;justify-content:space-between;font-size:11.5px;color:var(--graphite)}.pg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.pg-chips span{padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px}.pg-cap{font-size:13px;font-weight:700;color:var(--graphite);margin:4px 4px 8px}.pg-hid{display:flex;gap:10px;align-items:center;background:var(--acc-soft,#ECE7FC);border-radius:14px;padding:12px;font-size:13px}.pg-hid>b{font-size:20px}.pg-log{margin:0;padding:0}.pg-log li{list-style:none;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.5}.pg-log li:first-child{border-top:0}.pg-log em{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}.pg-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:4px;background:#E5F4EA;color:#2F7A47}.pg-soon{background:#FFF1BF;color:#8A6A12}.pg-btns{display:flex;gap:8px;margin-top:8px}.pg-btns .btn{flex:1}.bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
+    nav.top button[data-arg="mode"]{--ic:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.7%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2716%27%20rx%3D%274%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E")}.pg{padding:4px 2px 20px}.pg-mode{display:flex;gap:12px;align-items:center}.pg-mode>div{flex:1;min-width:0}.pg-mode b{font-size:15px}.pg-mode small{display:block;color:var(--graphite);font-size:12px;margin-top:2px;line-height:1.45}.pg-ic{font-size:24px;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:var(--chip,#F1F0F7);display:flex;align-items:center;justify-content:center}.pg-sw{flex:0 0 42px;width:42px;height:24px;border-radius:99px;border:0;padding:0;background:var(--rule);position:relative;cursor:pointer}.pg-sw i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.pg-sw[aria-pressed="true"]{background:var(--ink)}.pg-sw[aria-pressed="true"] i{left:21px}.pg-card .pg-hid{margin-top:12px}.pg-dim{opacity:.45}.pg-inj summary{font-size:13px;font-weight:700;color:var(--graphite);cursor:pointer}.pg-inj pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.55;margin:10px 0 0;color:var(--ink2);font-family:inherit}.pg-wchip{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);border:0;color:var(--graphite);cursor:pointer}.pg-row small{max-width:68%}.pg-card .pg-big{margin-top:12px}.pg-tri .pg-now{color:var(--acc,#7B61D9);font-weight:700}.pg-kit{position:relative;width:260px;max-width:100%;height:96px;margin:8px auto 2px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rule)}.pg-scr{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}.pg-stick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pg-win{display:flex;gap:20px;padding:10px 24px;background:#F7F5FA;border-radius:10px;border:1px solid var(--rule)}.pg-win i{width:4px;height:34px;border-radius:2px}.pg-win i.c,.pg-win i.t.on{background:#D9466F}.pg-stick small{font-size:10px;color:var(--graphite);letter-spacing:14px;margin-left:14px}.pg-more summary{font-size:12.5px;color:var(--graphite);cursor:pointer;font-weight:700}.pg-more .pg-log{margin-top:6px}.pg-open{display:block;border:0;background:none;padding:0;margin-top:4px;font:inherit;font-size:12.5px;font-weight:700;color:var(--acc,#7B61D9);cursor:pointer}.pg-back{border:0;background:none;padding:2px 4px 10px;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.pg-cover{background:#F1EDFC;border:1px solid #E4DCFA;border-radius:20px;padding:16px;margin:0 0 12px}.pg-ct{font-size:19px;font-weight:800;letter-spacing:-.3px}.pg-ct small{display:block;font-size:12px;font-weight:600;color:var(--graphite);margin-top:3px}.pg-label{font-size:11px;font-weight:700;color:var(--acc,#7B61D9);background:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:3px}.pg-cover .pg-bar{background:#fff}.pg-cover .pg-bar i{background:#A993E8}.pg-cover .pg-chips span,.pg-cover .pg-wchip{background:#fff}.pg-sec{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 16px;margin:0 0 12px}.pg-sec h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:6px}.pg-sec h3 em{font-style:normal;font-size:11px;color:var(--graphite);font-weight:600;margin-left:auto;text-align:right}.pg-r{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;line-height:1.45}.pg-r+.pg-r{border-top:1px dashed var(--rule)}.pg-r span{color:var(--graphite);white-space:nowrap}.pg-r b{font-weight:600;text-align:right;color:var(--ink2)}.pg-scan{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.pg-scan span{border:1.5px dashed #CBBDF2;border-radius:10px;padding:6px 9px;font-size:12px;color:var(--acc,#7B61D9);background:#FAF8FF}.pg-scan .soon{color:var(--graphite);border-color:var(--rule);background:#fff}.pg-book .pg-log em{color:var(--acc,#7B61D9);font-weight:700}.pg-book .pg-log li+li{border-top:1px dashed var(--rule)}.pg-hist{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}.pg-hist summary{font-size:12.5px;color:var(--graphite);font-weight:700;cursor:pointer}.pg-hist .pg-log li{font-size:12.5px}.pg-test{margin:0 0 10px;text-align:center;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);background:#F1EDFC;border-radius:999px;padding:5px 12px}.pg-vt{font-size:10.5px;color:var(--acc,#7B61D9);margin-left:4px}.pg-kitdone b{font-size:13.5px}.pg-kitdone .pg-s{margin:6px 0}.pg-hd{border:0;background:#F1EDFC;color:var(--acc,#7B61D9);font:inherit;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;margin-right:4px;cursor:pointer;white-space:nowrap;align-self:center}.pg-kitin{border-top:1px solid var(--rule);margin-top:12px;padding-top:12px}.pg-kitcap{display:block;font-size:13px;color:var(--graphite);margin-bottom:4px}.pg-book .pg-kitin{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:12px 14px;margin:0 0 12px}.pg-odds{display:inline-block;font-size:11px;font-weight:700;color:#C9648E;background:#FDEEF3;border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px}.pg-free{display:inline-block;font-size:10.5px;font-weight:700;color:#4E9A6E;background:#E8F5EE;border-radius:999px;padding:1px 7px;margin-left:2px}.pg-book1{margin:6px 0 0 4px}.pg-book1 summary{font-size:12.5px;cursor:pointer}.pg-book1 small{color:var(--graphite);font-size:11px;margin-left:4px}.pg-link{border:0;background:none;padding:0;color:var(--acc,#7B61D9);font:inherit;font-size:12px;font-weight:700;cursor:pointer}.pg-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:16px;margin:0 0 12px}.pg-t{font-size:16px}.pg-s{font-size:12.5px;color:var(--graphite);line-height:1.55;margin:6px 0}.pg-warn{font-size:12.5px;color:#8A6A12;background:#FFF1BF;border-radius:10px;padding:8px 10px}.pg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);font-size:13.5px}.pg-row small{color:var(--graphite);font-size:12px;text-align:right}.pg-in{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:#fff;max-width:55%}.pg-go{width:100%;margin-top:10px}.pg-sub{font-size:12.5px;color:var(--graphite)}.pg-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}.pg-big b{font-size:32px}.pg-big span{color:var(--graphite);font-size:13px}.pg-bar{height:8px;border-radius:9px;background:var(--chip,#F1F0F7);margin:10px 0 6px;position:relative;overflow:hidden}.pg-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc,#7B61D9);border-radius:9px}.pg-tri{display:flex;justify-content:space-between;font-size:11.5px;color:var(--graphite)}.pg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.pg-chips span{padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px}.pg-cap{font-size:13px;font-weight:700;color:var(--graphite);margin:4px 4px 8px}.pg-hid{display:flex;gap:10px;align-items:center;background:var(--acc-soft,#ECE7FC);border-radius:14px;padding:12px;font-size:13px}.pg-hid>b{font-size:20px}.pg-log{margin:0;padding:0}.pg-log li{list-style:none;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.5}.pg-log li:first-child{border-top:0}.pg-log em{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}.pg-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:4px;background:#E5F4EA;color:#2F7A47}.pg-soon{background:#FFF1BF;color:#8A6A12}.pg-btns{display:flex;gap:8px;margin-top:8px}.pg-btns .btn{flex:1}.bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
     .bd-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:14px 16px 10px;border-bottom:1px solid var(--rule)}.bd-top b{font-size:16px}.bd-top small{font-size:12px;color:var(--graphite)}
     .bd-top button{border:0;background:transparent;font-size:13.5px;color:var(--ink2);padding:0;cursor:pointer}
     .bd-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 16px;border-bottom:1px solid var(--rule)}
@@ -4159,7 +4258,7 @@
       <div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || (injGemKey ? 'on' : 'off')) === 'on' ? 'off' : 'on'}"${(injSet.ai || (injGemKey ? 'on' : 'off')) === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -4729,7 +4828,7 @@
   // 정리 기록: 기억의 실 · 비용 · 회차별 막대
   function historyHtml() {
     if (!snapshot?.note) return emptyBox('아직 정리한 기록이 없어요.');
-    const totalUsd = usage.reduce((a, r) => a + (r.usd || 0), 0), runs = usage.filter(r => !r.label).length;
+    const totalUsd = usage.reduce((a, r) => a + (r.usd || 0), 0) + (pickUse?.usd || 0), runs = usage.filter(r => !r.label).length;
     // 무엇에·어느 모델로 썼는지 나눠서(ETC 포함). 라벨 앞 이모지로 종류를 묶어요
     const KIND = { '🔍': '다시 확인', '🗨': '커뮤니티', '📱': '폰', '💬': '단톡방', '💻': '컴퓨터', '📰': '뉴스', '📚': '위키', '📺': '실시간톡', '✨': '명대사', '✏': '센 말 고침' };
     const kindOf = r => !r.label ? '정리' : KIND[[...String(r.label).trim()][0]] || String(r.label).replace(/^[^\p{L}]+/u, '').trim() || '기타';
@@ -4739,7 +4838,7 @@
     return `<h4 class="sg">이어진 기억</h4>${threadHtml()}
       ${movedInfo ? `<p class="muted">마지막 자동 옮김 · ${esc(movedInfo)}</p>` : ''}
       <h4 class="sg">쓴 돈</h4>
-      <p class="item-text" style="margin-top:4px">${usage.length ? `이 방에서 약 ${fmt(won(totalUsd))}원 ($${totalUsd.toFixed(3)})${runs ? ` · 정리 ${runs}번` : ''}` : '아직 쓴 돈이 없어요.'}</p>
+      <p class="item-text" style="margin-top:4px">${usage.length || pickUse?.n ? `이 방에서 약 ${fmt(won(totalUsd))}원 ($${totalUsd.toFixed(3)})${runs ? ` · 정리 ${runs}번` : ''}` : '아직 쓴 돈이 없어요.'}</p>${pickUse?.n ? `<p class="muted" style="margin-top:2px">그중 'AI로 한 번 더 고르기'(보낼 때마다) ${pickUse.n}번 · 약 ${fmt(won(pickUse.usd))}원 — 끄면 이 돈은 안 들어요</p>` : ''}
       ${(() => { const rs = usage.filter(r => !r.label && (r.inTok || r.outTok)).slice(-5).reverse(); if (!rs.length) return '';
         const tk = n => n >= 10000 ? (Math.round(n / 1000) / 10) + '만' : fmt(n);
         return `<div class="h3" style="margin-top:10px">최근 정리</div><ul class="nrules">${rs.map(r => `<li><em class="rk">${r.from ? r.from + '~' : ''}${r.to || '?'}턴</em>${r.ms ? Math.round(r.ms / 1000) + '초 · ' : ''}입력 ${tk(r.inTok || 0)}${r.cached ? `(캐시 ${tk(r.cached)})` : ''} · 출력 ${tk(r.outTok || 0)} 토큰${r.usd != null ? ` · 약 ${fmt(won(r.usd))}원` : ''}</li>`).join('')}</ul><p class="muted" style="margin-top:4px">출력이 클수록 오래 걸려요(출력엔 AI가 생각한 양도 들어가요)</p>`; })()}
@@ -7576,7 +7675,7 @@
         ${nav.part == null && !nav.fxEdit && editHasList(nav.key) ? '' : `<button class="hsave" data-act="saveEdit"${busyNow ? ' disabled' : ''}>${nav.view === 'pvEdit' ? '적용' : '저장'}</button>`}`
       : `${inline ? '' : back}<div class="htitle"><b>${esc(inline ? baseTitle : title)}</b><span>${inline ? baseSub : sub}</span></div>
       ${inSettings ? '' : `<button class="hbtn gear" data-act="tab" data-arg="settings" aria-label="설정">설정</button>`}
-      <button class="pg-hd" data-act="tab" data-arg="mode" aria-label="모드 테스트 열기">11/15까지 테스트 중~</button>
+      <button class="pg-hd" data-act="tab" data-arg="mode" aria-label="모드 테스트 열기">11/15까지 테스트중</button>
       <button class="hbtn" data-act="close" aria-label="닫기">${icon('close', 'currentColor', 20)}</button>`;
 
     // 본문
@@ -7781,7 +7880,7 @@
     if (save && chatId) await setValue('scene:' + chatId, JSON.stringify({ on, at: new Date().toISOString() })); // 이 방만 · 다른 방은 안 바뀜
     try { repaintInline(); } catch (_) {}
   }
-  let thinkLevel = 'medium'; // 정리할 때 AI가 생각하는 양(설정) · Gemini 3 이상
+  let thinkLevel = 'low'; // 정리할 때 AI가 생각하는 양(설정) · Gemini 3 이상 · 기본 낮음(생각도 출력값이라 돈이 들어서)
   let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
   let sceneGen = 0, loadingAt = 0; const gsTried = new Set(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
@@ -7819,7 +7918,7 @@
       }
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
       snapshot = snap;
-      usage = await usageOf(chatId);
+      usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
@@ -7861,7 +7960,9 @@
         : was ? { memory: was.memory, full: false, upto: was.upto, turns: was.turns, at: was.at, by: was.by } : null;
       // 정리 지점·정리한 시각까지 같으면 같은 정리본이에요. 업데이트로 채팅에 넣는 모양만 바뀐 경우(꼬리표 빼기 등)에 '다른 기기'로 잘못 묻지 않게.
       const sameSave = !!(c && mine && c.at && mine.at && c.upto === mine.upto && Math.abs(Date.parse(c.at) - Date.parse(mine.at)) < 120e3); // 예전 버전은 두 시각이 몇 ms 달랐어요
-      const same = !c || !mine || c.parked || sameSave || (c.sel && mine.full && c.upto === mine.upto) || (c.upto === mine.upto && (mine.full ? sameAsChat(mine.memory, c.memory) : chatShape(mine.memory) === chatShape(c.memory)));
+      // 이 기기 기억이 이 채팅에 있는 턴보다 많으면(분기한 방에서 원래 방 기억이 잡힘 · 50턴 방에 1~180턴) 이 방 것이 아니라 묻지 않아요
+      const notThis = !!(c && mine && mine.turns && mine.turns > (c.turns || 0) + (snap.fresh || []).filter(m => msgRole(m) === 'user').length + 2);
+      const same = !c || !mine || notThis || c.parked || sameSave || (c.sel && mine.full && c.upto === mine.upto) || (c.upto === mine.upto && (mine.full ? sameAsChat(mine.memory, c.memory) : chatShape(mine.memory) === chatShape(c.memory)));
       // 사파리는 화면으로 돌아오는 순간 뜨는 확인 창을 막거나 바로 닫기도 해서(그러면 '취소'로 처리돼 위험) 창 대신 패널 카드로 묻습니다.
       //   고르기 전에는 아무것도 바꾸지 않아요.
       if (!same) {
@@ -8667,16 +8768,22 @@
       case 'phwho': nav.phWho = arg; nav.phScreen = 'home'; nav.pcScreen = 'home'; return keepScroll(render);
       case 'dev': nav.dev = arg; return keepScroll(render);
       case 'pregon': preg = preg || {}; preg.on = !preg.on; pregChat = chatIdFromPath(); await pregSave(); return keepScroll(render);
-      case 'pregfix': {
-        if (!preg?.on) return; const day = storyDay(noteMemory() || '');
-        const who = prompt('누가 임신했어요?', preg.who || ''); if (who == null) return;
-        const w = parseInt(prompt('지금 몇 주예요?', day != null && preg.start != null ? String(Math.floor((day - preg.start) / 7)) : '5'), 10); if (!(w >= 3 && w <= 42) || day == null) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
-        Object.assign(preg, { who: who.trim() || preg.who, start: day - w * 7, w0: Math.min(preg.w0 ?? w, w), me: confirm(who.trim() + ' 이(가) 유저 캐릭터예요?'), why: '직접 정했어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0) }); await pregSave(); return keepScroll(render); }
+      case 'pregfix': { // 직접 시작: 유저 캐릭터·마지막 관계일로 알아서 채우고 한 번만 확인 · 이미 시작했으면 주수만 고치기
+        if (!preg) preg = { on: true }; const mem = noteMemory() || '', day = pregDay(mem, snapshot); if (day == null) return toast('이야기 속 날짜를 못 찾았어요. AI 답 머리말에 날짜가 있거나 정리를 한 번 하면 돼요.', 'err', 4000);
+        if (preg.start == null) { const ws = pregWhoDefault(mem), rel = pregKitRel(mem), ok = rel && day - rel.d >= 0 && day - rel.d <= 280, st = ok ? rel.d - 14 : day - 35, wk = Math.max(3, Math.floor((day - st) / 7));
+          let who = ws.name; if (!who) { who = prompt('유저 캐릭터 이름을 못 찾았어요. 누가 임신했어요?', ''); if (!who) return; }
+          if (!confirm(`${who} · ${ok ? '마지막 관계 ' + P_STR(rel.d) + ' 기준 ' : ''}${wk}주로 임신을 시작할까요?`)) return;
+          Object.assign(preg, { on: true, who: who.trim(), me: true, start: st, w0: wk, why: ok ? `직접 시작 · 마지막 관계 ${P_STR(rel.d)} 기준` : '직접 시작 · 관계일을 못 찾아서 지금을 5주로', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregChat = pregChat || chatIdFromPath(); await pregSave(); return keepScroll(render); }
+        const w0 = parseInt(prompt('지금 몇 주예요?', String(Math.floor((day - preg.start) / 7))), 10); if (!(w0 >= 3 && w0 <= 42)) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
+        Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요' }); await pregSave(); return keepScroll(render); }
       case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
       case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
       case 'pregforce': if (!confirm('주사위 대신 직접 정할까요? 마지막 관계로 임신된 걸로 하고, 본인은 아직 몰라요(증상만 생겨요). 임테기를 긁거나 병원에 가면 알게 돼요.')) return; await pregForce(); return;
-      case 'pregend': { if (preg?.start == null) return; const kind = prompt('어떻게 끝났어요? (예: 유산, 중단, 출산)', ''); if (kind == null) return; const why = prompt('이유가 있으면 적어 주세요 (없으면 비워 두기)', '') || ''; pregArchive(kind.trim() || '끝남', pregDay(noteMemory() || '', snapshot), why.trim()); return keepScroll(render); }
+      case 'pregdel': if (!confirm('지금 임신 기록을 지울까요? (채팅에 더 안 들어가요 · 지난 기록은 남아요)')) return; preg = { on: false, world: preg?.world, history: preg?.history || [], after: preg?.after }; await pregSave(); nav.pgBook = false; return keepScroll(render);
+      case 'preghdel': { if (!preg?.history) return; const i = Number(arg); if (!confirm('이 지난 기록을 지울까요?')) return; preg.history.splice(i, 1); await pregSave(); return keepScroll(render); }
+      case 'pregend': if (preg?.start == null) return; nav.pgEnd = !nav.pgEnd; return keepScroll(render);
+      case 'pregendk': if (preg?.start == null) return; nav.pgEnd = false; pregArchive(arg, pregDay(noteMemory() || '', snapshot), ''); return keepScroll(render);
       case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, history: preg?.history || [], after: preg?.after }; await pregSave(); return keepScroll(render);
       case 'wkrange': nav.rgKind = 'wiki'; nav.bdRange = true; return keepScroll(render);
       case 'wkupd': return makeWiki(0, 0, true);
@@ -9004,7 +9111,9 @@
     if (String(await getValue('sceneMode', 'off')) === 'on') { await setValue('sceneMode', 'off'); await setValue('cycle', '20'); await setValue('noteLimit', '50000'); return; } // 예전 '모든 방' 값 정리
     const c = Number(await getValue('cycle', '20')); if (CYCLES.includes(c)) cycle = c;
     curModel = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-    { const t = String(await getValue('thinkLevel', 'medium')); if (['low', 'medium', 'high'].includes(t)) thinkLevel = t; }
+    { let t = String(await getValue('thinkLevel', 'low')); // 한 번만: 예전 기본값 '보통'은 '낮음'으로(정리 비용) · '높음'은 일부러 고른 거라 그대로
+      if (String(await getValue('thinkMig1', '')) !== '1') { if (t === 'medium') { t = 'low'; await setValue('thinkLevel', 'low'); } await setValue('thinkMig1', '1'); }
+      if (['low', 'medium', 'high'].includes(t)) thinkLevel = t; }
     const l = Number(await getValue('noteLimit', '50000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
   // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
