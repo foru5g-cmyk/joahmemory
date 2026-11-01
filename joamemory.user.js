@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.1.9
+// @version      4.2.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -399,7 +399,8 @@
         const nowT = (snapshot?.note?.turns || 0) + freshTurns();
         const oldHook = it => { const lm = String(it.lines[0]).match(/[（(]마지막 언급\s*[:：]([^)）]*)[)）]/), n = lm && [...lm[1].matchAll(/(\d+)\s*턴/g)].pop();
           return !!n && nowT > 0 && nowT - Number(n[1]) >= 100; };
-        L.forEach((it, j) => { if (/\(삭제\)/.test(it.lines[0])) return; const t = it.lines.join('\n'), key = itemKey(it.key);
+        const dupH = k === '서사 고리' ? hookDrop(L.map(it => ({ open: !it.closed, key: it.key, line: it.lines[0] }))) : new Set(); // 같은 약속이 두 번 적힌 고리는 한 번만 넣어요
+        L.forEach((it, j) => { if (/\(삭제\)/.test(it.lines[0]) || dupH.has(j)) return; const t = it.lines.join('\n'), key = itemKey(it.key);
           if (mode === 'on' && !it.closed && (!oldHook(it) || injPins.has(key))) return units.push({ sec: k, i: 'L' + j, text: t, pri: 80 });
           const v = score(it.key, t), hw = lastHw; if (poolMode && v > 0.5 && !injSkip.has(key)) pool.push({ key, sec: k, text: t, v });
           if (v >= 2 && !injSkip.has(key)) units.push({ sec: k, i: 'L' + j, text: t, pri: (it.closed ? 40 : 60) + v, rc: true, key, title: it.key, hw }); }); // 닫힌 고리는 열린 것보다 뒤
@@ -741,15 +742,39 @@
   const shrinkHook = it => !it.open && !it.del && /[:：]\s*\S{2}/.test(it.lines[0]) ? { ...it, lines: it.lines.filter((l, i) => !i || !/^\s*-?\s*(?:근거|번역)\s*[:：]/.test(l)) } : it;
   const delOk = it => it.lines.slice(1).some(l => /^\s*-?\s*(?:근거|이유)\s*[:：]/.test(l));
   let delKept = []; // 근거 없이 지우려다 남겨 둔 항목(정리 뒤 알림)
+  // 고리 제목이 같은 약속인지: 띄어쓰기 빼고 한쪽이 다른 쪽을 품거나(4글자+), 두 글자 조각이 60% 넘게 겹치면
+  const hookG2 = t => { const x = String(t).replace(/[\s\p{P}\p{S}]/gu, ''), s = new Set(); for (let k = 0; k < x.length - 1; k++) s.add(x.slice(k, k + 2)); return s; };
+  // 누가→누구(제목 줄의 종류와 제목 사이 칸)가 같으면 50%, 모르거나 다르면 60%
+  const hookWho = line => { const h = String(line).replace(/^\s*(?:[-•]\s*)*(?:\[(?:열림|닫힘)\]\s*)?/, '').split(/[:：]\s/)[0].split(/\s+·\s+/); return h.length >= 3 ? h.slice(1, -1).join('·').split(/\s*(?:→|->|·)\s*/).map(x => x.trim()).filter(Boolean).sort().join('|') : ''; };
+  const hookNear = (a, b, la = '', lb = '') => { const same = !!hookWho(la) && hookWho(la) === hookWho(lb); const x = String(a).replace(/\s/g, ''), y = String(b).replace(/\s/g, ''); if (Math.min(x.length, y.length) >= 4 && (x.includes(y) || y.includes(x))) return true;
+    const A = hookG2(a), B = hookG2(b); let c = 0; for (const z of A) if (B.has(z)) c++; return A.size + B.size ? 2 * c / (A.size + B.size) >= (same ? 0.5 : 0.6) : false; };
+  // 같은 약속이 두 번 적힌 고리 중 뺄 것(번호): ① 열린 고리인데 비슷한 닫힌 고리가 있고, 열린 쪽 마지막 언급이 닫힌 날 이전(또는 날짜 없음) → 열린 쪽
+  //   ② 비슷한 열린 고리 둘 → 마지막 언급이 더 이른 쪽(같으면 앞에 적힌 쪽). 닫힌 뒤에 다시 언급된 열린 고리(같은 약속을 또 함)는 남겨요.
+  //   ponytail: 제목 글자만 봄. '주말 데이트'와 '주말 데이트 및 쇼핑'처럼 실제로 다른 두 약속이면 하나가 빠져요(정리 미리보기에서 되돌릴 수 있음).
+  function hookDrop(items) {
+    const day = s => (String(s).match(/\d{4}\.\d{1,2}\.\d{1,2}/g) || []).map(d => d.split('.').map((v, i) => i ? v.padStart(2, '0') : v).join('.')).sort().pop() || '';
+    const last = it => { const m = String(it.line).match(/마지막 언급\s*[:：]([^)）]*)/); return { d: m ? day(m[1]) : '', t: m ? Number((m[1].match(/(\d+)\s*턴/) || [0, 0])[1]) : 0 }; };
+    const drop = new Set();
+    items.forEach((a, i) => { if (!a.open || drop.has(i)) return; const la = last(a);
+      if (items.some(b => !b.open && hookNear(a.key, b.key, a.line, b.line) && (!la.d || !day(b.line) || la.d <= day(b.line)))) { drop.add(i); return; }
+      items.forEach((b, j) => { if (j === i || !b.open || drop.has(j) || !hookNear(a.key, b.key, a.line, b.line)) return; const lb = last(b);
+        drop.add(la.t < lb.t || (la.t === lb.t && i < j) ? i : j); }); });
+    return drop;
+  }
   function mergeHooks(oldBody, newBody) {
     const o = hookItems(oldBody), n = hookItems(newBody);
     if (!o.items.length || !n.items.length) return n.items.length || n.head.some(l => l.trim() && !isNone(l)) ? [...n.head, ...n.items.filter(x => !x.del).map(shrinkHook).flatMap(x => x.lines)].join('\n').trim() : oldBody; // (삭제) 고리가 그대로 남아 '아직 끝나지 않은 일'에 뜨지 않게
     const out = o.items.slice(); // 끝난 고리도 [닫힘]으로 남겨요(화면 '끝난 일' · 채팅엔 안 넣음)
+    // 닫으면서 제목을 조금 다르게 쓰면('…드라이브 데이트' → '…드라이브') 열린 고리가 남아 예정·완료에 둘 다 떠요.
+    //   이번에 닫힌 고리와 제목이 비슷한 예전 열린 고리가 딱 하나면 그걸 닫힌 것으로 바꿔요. 비슷한 게 둘 이상이면 헷갈려서 안 건드려요. (이미 생긴 중복은 아래 hookDrop이 정리)
+    const near = hookNear;
     for (const it of n.items) {
-      const i = out.findIndex(x => x.key === it.key);
+      let i = out.findIndex(x => x.key === it.key);
+      if (i < 0 && !it.open && !it.del) { const cand = out.map((x, k) => x.open && !n.items.some(y => y.key === x.key) && near(x.key, it.key, x.lines[0], it.lines[0]) ? k : -1).filter(k => k >= 0); if (cand.length === 1) i = cand[0]; }
       if (it.del) { if (i >= 0) { if (delOk(it)) out.splice(i, 1); else delKept.push(it.key); } } else if (i >= 0) out[i] = it; else out.push(it);
     }
-    return [...(n.head.some(l => l.trim()) ? n.head : o.head), ...out.map(shrinkHook).flatMap(x => x.lines)].join('\n').trim();
+    const drop = hookDrop(out.map(x => ({ open: x.open, key: x.key, line: x.lines[0] })));
+    return [...(n.head.some(l => l.trim()) ? n.head : o.head), ...out.filter((_, k) => !drop.has(k)).map(shrinkHook).flatMap(x => x.lines)].join('\n').trim();
   }
   function mergeNote(base, delta, noGuard = false) { // noGuard: 기억 다시 확인(틀린 줄을 빼서 짧아지는 게 맞음)
     const list = splitSections(base);
@@ -1047,6 +1072,7 @@
 - 숨김 줄 끝에 숨기기 시작한 때를 '(N턴부터)'로 씀. 숨기던 상대가 알게 되면 숨김 줄을 지우고, 들킨 장면을 날짜로그에 남김.
 - 현재상태 ▸ 몸 상태에는 지금 몸이 어떤지만 씀(다친 곳·아픔·피로·취기·졸림·땀에 젖음 같은 것, 장면에 있는 인물마다 한 줄). 그날 한 일·일정·어디 다녀왔는지, 지금 하고 있는 행동(달리는 중·조깅 중·문자 보내는 중)·왜 왔는지는 쓰지 않음(그건 날짜로그·직전 장면에 있음). 바뀐 게 없으면 "이름: 특별한 이상 없음". ▸ 옷차림은 장면에 있는 인물마다 원문에 나온 만큼 씀.
 - 기존 기억의 ▸ 몸 상태에 지금 몸이 아닌 줄이 있으면 몸이 안 바뀌었어도 이번에 고쳐 쓴다: 지시·금지·기한('~까지 피하기') → ▸ 진행 중인 제약 · 매일 하는 일(약 복용·알람) → ▸ 되풀이되는 습관 · 그날 한 일·지난 일 → 날짜로그에 있으면 빼고, 없으면 그대로 둔다. 옮긴 소제목은 그 소제목 전체를 다시 쓴다.
+- 고리를 닫을 때는 새 고리를 만들지 않음: 이번 로그에서 이루어진(지킴·깨짐·취소) 약속·예정이 기존 [열림] 고리에 있으면, 그 고리의 제목(마지막 '·' 뒤 ':' 앞 글자)을 한 글자도 바꾸지 않고 '[열림]'만 '[닫힘]'으로 바꿔 다시 씀. 같은 일을 가리키는 열린 고리가 둘이면 하나만 닫고 나머지는 '- [열림] … 제목 (삭제)' + '- 이유: 중복'으로 지움. 출력 전에 열린 고리마다 '이번 로그에서 이 일이 이루어졌나'를 꼭 확인함.
 - 끝난 서사 고리는 지우지 않고 '[닫힘]' 줄로 계속 남김(끝난 일은 날짜로그에도 남김). 닫을 때는 '- [닫힘] 종류 · 누가→누구 · 제목: 시작 (날짜) 어떻게 생겼는지 → 끝 (날짜) 지킴/깨짐/취소 — 어떻게 끝났는지' 한 줄로 쓰고 근거 줄은 쓰지 않음(언제 무슨 일로 시작해 언제 어떻게 끝났는지가 이 한 줄로 다 보이게). 기본 지침의 '끝난 서사 고리는 지움'·'이번 정리 기간에 끝난 것만'보다 이 규칙이 우선함.
 - 감정선 칸을 만들지 않는 정리에서는 → 줄의 자각과 전환 줄을 원문에 드러난 속마음과 행동을 보고 판단함. 자각 괄호에는 자각·무자각·부정·숨김 중 한 단어만 씀.
 - 날짜가 다른 지난 사건을 다시 꺼내다가 같은 사람 사이에서 그 일과 이어지는 새 일이 생기면, 둘을 한 사건으로 합쳐 새 일이 일어난 극중 날짜로 맨 아래에 씀.
@@ -3377,7 +3403,9 @@
       const i = (j => j >= 0 ? j : rest.search(/[:：]/))(rest.search(/[:：](?=\s|$)/));
       list.push({ closed, title: i > 0 ? rest.slice(0, i).trim() : rest, text: i > 0 ? rest.slice(i + 1).trim() : '', quote: '' });
     }
-    return list;
+    // 같은 약속이 두 번 적힌 것은 화면에서 한 번만(노트는 다음 정리 때 mergeHooks가 정리)
+    const drop = hookDrop(list.map(t => ({ open: !t.closed, key: itemKey(String(t.title).split('·').pop()), line: t.title + ': ' + t.text })));
+    return list.filter((_, k) => !drop.has(k));
   }
 
 
