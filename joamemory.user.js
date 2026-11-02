@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.2.9
+// @version      4.3.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -696,6 +696,7 @@
   function pregSync(day, snap) {
     let at = day; // 그 말이 나온 때의 날짜(그 뒤에 넘어간 시간은 빼요)
     for (const m of [...(snap?.fresh || [])].filter(isChat).reverse()) {
+      if (preg.fixId && msgId(m) === preg.fixId) return; // 주수를 직접 고쳤으면 그 전 대화의 'N주'는 안 따라요
       const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t); if (!w) { at -= pSkip(t); continue; }
       if (Math.floor((at - preg.start) / 7) !== w) { preg.start = at - w * 7; preg.why = `대화에서 '${w}주'라고 나와서 맞췄어요`; preg.w0 = Math.min(preg.w0 ?? w, w); pregSave(); }
       return;
@@ -8865,7 +8866,7 @@
           if (!confirm(`${who} · ${ok ? '마지막 관계 ' + P_STR(rel.d) + ' 기준 ' : ''}${wk}주로 임신을 시작할까요?`)) return;
           Object.assign(preg, { on: true, who: who.trim(), me: true, start: st, w0: wk, why: ok ? `직접 시작 · 마지막 관계 ${P_STR(rel.d)} 기준` : '직접 시작 · 관계일을 못 찾아서 지금을 5주로', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregChat = pregChat || chatIdFromPath(); await pregSave(); return keepScroll(render); }
         const w0 = parseInt(prompt('지금 몇 주예요?', String(Math.floor((day - preg.start) / 7))), 10); if (!(w0 >= 3 && w0 <= 42)) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
-        Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요' }); await pregSave(); return keepScroll(render); }
+        Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요', fixId: msgId([...(snapshot?.all || [])].filter(isChat).pop()) }); await pregSave(); return keepScroll(render); }
       case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
       case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
