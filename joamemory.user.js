@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.2.7
+// @version      4.2.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -371,7 +371,10 @@
     //   제목은 ':' 앞까지만(인지 '정보: 설명' · 설명 속 '아니·않은' 같은 말로 떠올리지 않게)
     const words = key => [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w)); // 숫자뿐인 건 빼요(날짜는 dayHit)
     // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(WRMC처럼 · 제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
-    const bodyWords = (key, body) => { const tw = new Set(words(key)); return [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w) && !tw.has(w)); };
+    //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('나나')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
+    const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
+    const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든]|(?<!타)운)$/; // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
+    const bodyWords = (key, body) => { const tw = new Set(words(key)); return [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !NOT_NOUN.test(w)); };
     const df = new Map(), bdf = new Map(); let nItems = 0;
     for (const sec of secs) for (const it of secItems(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
@@ -389,8 +392,8 @@
     //   예전엔 '최근 대화에 제목 낱말 하나 + 지금 나온 인물'로 2점이 돼서, 주인공이 낀 옛일이 낱말 하나로 줄줄이 떠올랐어요
     const score = (key, body) => { let core = 0, bodyN = 0; const hit = []; lastHw = hit;
       if (dayHit(key)) { core += 6; hit.push(String(key).match(/\d{4}[.\/-]\d{1,2}[.\/-]\d{1,2}/)[0]); }
-      for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (has(scene, w)) { core += 2; hit.push(w); } else if (has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
-      let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점)
+      for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (!NOT_NOUN.test(w) && has(scene, w)) { core += 2; hit.push(w); } else if (!NOT_NOUN.test(w) && has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 · 대화와 맞출 땐 명사 꼴만('끝에·에서'로 안 떠올리게) // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
+      let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (w.length >= 3 && has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점 · 직전 답은 길어서 '이마·허리' 같은 두 글자는 우연히 겹쳐 3글자부터)
       bodyN = Math.min(4, bs) + Math.min(2.1, bc); core += bodyN;
       const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + body) ? 1 : 0) + sm * 2;
       why.set(k, [hit.length ? '‘' + hit.slice(0, 3).join('·') + '’ 이야기가 나와서' : '', sm >= 0.5 ? '비슷한 장면이라서' : ''].filter(Boolean).join(' · ') || '지금 나온 인물이 있어서');
@@ -946,9 +949,11 @@
   // 질외: 밖에(다)·밖으로·몸 어디에 쌌다 · 뺐다(앞뒤 20자 안에 쌌·사정이 있을 때만 · '손을 뺐다'는 안 걸려요) · '싸'만으론 '싸웠'에 걸려서 꼴을 정해 둬요
   const P_SHOT = '(?:쌌|사정|싸\\s*(?:버렸|버림|줬)|뿌렸|쏟았|쏟아\\s*냈|뿜었|뿜어\\s*냈)'; // 싸고·싸서는 '이불에 싸서·짐을 싸고'에 걸려서 뺐어요
   // '사정은 밖에다 했다·정액을 밖에 쏟아냈다'처럼 사정·정액이 먼저 나오고 '밖에'가 뒤에 오는 말도(같은 문장 12자 안)
-  const P_OUT = new RegExp(`쿠퍼액|프리컴|사정\\s*전|질외\\s*사정|빼고\\s*쌌|(?:사정|정액)[^\\n.!?]{0,12}?밖(?:에|으로)|밖에\\s*(?:다\\s*(?:가\\s*)?)?${P_SHOT}|밖으로\\s*${P_SHOT}|(?:배|아랫배|허벅지|다리|등|엉덩이|가슴)\\s*(?:위|사이)?에\\s*(?:다\\s*(?:가\\s*)?)?${P_SHOT}|직전에\\s*(?:뺐|빼)|(?:뺐|빼서|빼고|빼낸|빼냈|빼자마자)[^\\n]{0,20}?${P_SHOT}|${P_SHOT}[^\\n]{0,20}?(?:직전|전)에\\s*뺐`);
+  // AI가 쓴 묘사형: '마지막 순간 빼냈다. … 정액이 아랫배와 속옷 위로 쏟아져 내렸다'처럼 문장을 넘어가거나 몸 위에 떨어지는 말도(같은 문단)
+  const P_OUT = new RegExp(`쿠퍼액|프리컴|사정\\s*전|질외\\s*사정|빼고\\s*쌌|(?:사정|정액)[^\\n.!?]{0,12}?밖(?:에|으로)|(?:빼냈|빼내자|빼낸|뽑아냈|뽑아내자|뽑아낸)[^\\n]{0,150}?정액|정액[^\\n.!?]{0,40}?(?:아랫배|배|허벅지|다리|등|엉덩이|가슴|속옷|시트|이불|바닥|얼굴|입술|손)\\s*(?:위|사이|밖)?(?:에|로|으로|와|과)|밖에\\s*(?:다\\s*(?:가\\s*)?)?${P_SHOT}|밖으로\\s*${P_SHOT}|(?:배|아랫배|허벅지|다리|등|엉덩이|가슴)\\s*(?:위|사이)?에\\s*(?:다\\s*(?:가\\s*)?)?${P_SHOT}|직전에\\s*(?:뺐|빼)|(?:뺐|빼서|빼고|빼낸|빼냈|빼자마자)[^\\n]{0,20}?${P_SHOT}|${P_SHOT}[^\\n]{0,20}?(?:직전|전)에\\s*뺐`);
   // 질내: '안에 쌌다'처럼 이미 한 일은 늘 질내 · '안에 싸·질내사정·안에다'는 바로 뒤(문장 안 8자)에 '~지 마·~면 안·안 했·않았·말고·못 했·금지'가 붙으면 안 한 거라 빼요
-  const P_IN = /안에\s*(?:다\s*(?:가\s*)?)?(?:쌌|싸\s*(?:버렸|줬)|사정\s*했|쏟았|쏟아\s*냈|뿜었|뿌렸)|(?:질내\s*사정|질내|안에\s*(?:다\s*(?:가\s*)?)?(?:싸|사정)|안에다)(?![^\n.!?]{0,8}?(?:지\s*(?:마|말)|면\s*안|안\s*(?:했|함|돼|되)|하지\s*않|않았|말고|못\s*했|금지))/;
+  //   묘사형 질내: '안에 가득 쏟아냈다·정액이 안을 채웠다·자궁 안으로 뿜어져' (같은 문장 15자 안)
+  const P_IN = /안에\s*(?:다\s*(?:가\s*)?)?(?:쌌|싸\s*(?:버렸|줬)|사정\s*했|쏟았|쏟아\s*냈|뿜었|뿌렸)|(?:안|속|자궁|질)\s*(?:안)?(?:에|으로|을|를)[^\n.!?]{0,15}?(?:정액|쏟아|쏟았|뿜어|뿜었|사정했|채웠|채우)|정액[^\n.!?]{0,15}?(?:안|속|자궁)\s*(?:에|으로|을|를)|(?:질내\s*사정|질내|안에\s*(?:다\s*(?:가\s*)?)?(?:싸|사정)|안에다)(?![^\n.!?]{0,8}?(?:지\s*(?:마|말)|면\s*안|안\s*(?:했|함|돼|되)|하지\s*않|않았|말고|못\s*했|금지))/;
   // 임신 확률: AI·키 없이 그 관계 글(날짜로그·대화)의 말로 정해요(현실보다 살짝 높게) · [확률, 이유들]
   function kitOdds(t) {
     t = String(t || ''); const why = [];
@@ -1218,6 +1223,19 @@
       }
     }
     return out;
+  }
+  // 감정선 ★ 줄(관계가 크게 꺾인 순간)은 AI가 항목을 고쳐 쓰다 빼먹어도 지울 이유가 없어서 묻지 않고 되살려요 · 날짜 순서에 맞는 자리에 끼워요
+  //   인물 관계 줄은 끝난 관계일 수 있어서 지금처럼 미리보기에서 물어요(droppedLines)
+  function keepStars(oldMem, newMem) {
+    const back = droppedLines(oldMem, newMem).filter(x => x.sec === '감정선'); if (!back.length) return { memory: newMem, n: 0 };
+    const list = splitSections(newMem), s = list.find(z => z.key === '감정선'); if (!s) return { memory: newMem, n: 0 };
+    const b = itemBlocks(s.body), day = l => { const m = /^\s*-?\s*근거/.test(l) ? null : String(l).match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? +m[1] * 1e4 + +m[2] * 100 + +m[3] : null; };
+    let n = 0;
+    for (const x of back) { const it = b.items.find(y => itemKey(y.key) === itemKey(x.key)); if (!it) continue;
+      for (const l of x.lines) { if (it.lines.includes(l)) continue; const d = day(l), j = d == null ? -1 : it.lines.findIndex((y, k) => k > 0 && day(y) != null && day(y) > d);
+        if (j > 0) it.lines.splice(j, 0, l); else it.lines.push(l); n++; } }
+    s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim();
+    return { memory: joinSections(list), n };
   }
   // 정리 뒤 빠진 핵심: 예전 노트엔 있었는데 새 노트에서 이유 없이 사라진 것만(닫힌 서사 고리처럼 끝난 건 빼요).
   //   AI가 제목을 살짝 바꿔 쓰는 일이 있어서 같은 칸 안에 그 말(또는 같은 날짜)이 있으면 남은 것으로 봐요.
@@ -1627,6 +1645,7 @@
 - 지울 땐 근거: "(삭제)" 제목 줄 바로 아래에 지우는 이유 한 줄을 꼭 쓴다. 새 로그 때문에 끝났으면 "- 근거: (N턴) 「끝났음을 보여 주는 원문 한 조각」"(원문 글자 그대로, 요약·의역 금지). 다른 항목에 합쳤거나 (요약)으로 묶었거나 중복이면 "- 이유: ○○에 합침" / "- 이유: (요약)으로 묶음" / "- 이유: 중복". 이 줄이 없는 (삭제)는 프로그램이 적용하지 않는다.`;
   // 덧붙임 규칙(전체 정리·바뀐 것만 정리 모두)
   const EXTRA_RULE = `\n\n[덧붙임 규칙]
+- 인물·감정선 항목을 고쳐 쓸 때 기존 ★ 줄과 관계 줄(→)은 한 글자도 빼지 않고 그대로 두고, 새로 생긴 줄만 날짜 순서대로 덧붙인다.
 - 딱지 말 금지: 집착·강박·통제·소유욕·독점욕·광기·비정상·병적·얀데레·집요·포식자·사냥감·먹잇감·맹수·소유물·지배욕·광적·구속·감금은 대화 원문에 그 말이 그대로 있을 때만 쓴다. 없으면 그 인물이 실제로 한 행동·말로 쓴다(예: '집착함' 대신 '연락이 안 되자 세 번 전화함').
 - [고정 설정]에 이미 적힌 것(인물의 외형·나이·정체·성격·말버릇·기본 말투, 세계관 규칙·배경)은 인물·세계관 칸에 다시 쓰지 않음. 그 인물·세계는 RP에서 새로 생기거나 바뀐 것만 씀(새로 드러난 사실·바뀐 관계·호칭·습관·상태). 고정 설정에 없는 인물·설정만 처음부터 씀. 고정 설정과 원문이 어긋나면 원문대로 쓰되 지우지 않음.
 - 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 장소를 옮기거나(공원 → 기숙사) 함께 있는 사람이 바뀌면(캘빈과 헤어진 뒤 단테와 문자) 그 자체로 새 사건이다. 문자·전화로 다른 사람과 나눈 일도 따로 사건. 기존 사건에 다른 장소·다른 사람의 일을 덧붙이지 않음. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음.
@@ -8343,6 +8362,7 @@
         if (checkStrong(chatPart, srcText).length) { toast('원문에 없는 센 말을 원문 행동으로 고치는 중이에요… (AI 한 번 더 · 끝나면 미리보기가 떠요)', 'info');
           try { const view = splitSections(memory), keepView = view.filter(x => VIEW_ONLY.includes(x.key)), rest = joinSections(view.filter(x => !VIEW_ONLY.includes(x.key)));
             const r = await fixStrong(rest, srcText); if (r.n) { memory = joinSections([...splitSections(r.memory), ...keepView]); strongFixed = r.n; strongChanges = r.changes; } } catch (_) {} } }
+      if (snapshot.note && mode !== 'rebuild') { const ks = keepStars(baseMem, memory); if (ks.n) { memory = ks.memory; toast(`AI가 빼먹은 감정선 ★ ${ks.n}줄을 되살렸어요`, 'info', 4000); } }
       if (dup.merged.length) toast(`같은 사람으로 보이는 인물을 하나로 합쳤어요 · ${dup.merged.join(', ')}`, 'info', 5000);
       if (summarize.last) { await recordUsage(chatId, { at: Date.now(), from, to: turns, chars: memory.length, ...summarize.last, ...(reviewIn ? { label: '🔍 기억 다시 확인' } : {}) }); usage = await usageOf(chatId); }
       const off = await offSections();
