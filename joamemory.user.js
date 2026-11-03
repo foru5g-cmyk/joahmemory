@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.1
+// @version      4.3.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -850,8 +850,8 @@
       preg.shown.sex = turn; preg.sexFix = p.sex; preg.log.push({ w: wk, t: '성별을 알게 됨: ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·'), at: turn, res: 1 });
     }
     // 출산은 이야기를 따라가요: AI 답이나 보낸 말에 아기가 태어났다고 나오면(20주부터) 그날로 출산 · 주사위가 정한 주가 아니어도
-    if (!preg.endNext && wk >= 20 && P_BORN.test(lastAi + '\n' + said) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said)) preg.endNext = { kind: '출산', dayN: day, why: '', turn: turn - 1 };
-    if (preg.endNext && preg.endNext.turn < turn) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
+    const bornNow = !preg.endNext && wk >= 20 && P_BORN.test(lastAi + '\n' + said) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said); if (bornNow) preg.endNext = { kind: '출산', dayN: day, why: '', turn, born: 1 }; // 리롤하면 아직 안 끝난 걸로(새로 보낼 때 끝내요)
+    if (preg.endNext && (preg.endNext.turn < turn || (preg.endNext.born && said && !bornNow))) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
     const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const sexKnown = preg.shown.sex != null; // 물어봐서 들었을 때만
@@ -861,7 +861,7 @@
     const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? '' : ' · 결정할 일은 어느 쪽으로도 몰지 않음'}${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${twinKnown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
+    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${twinKnown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -1079,7 +1079,7 @@
     const ck = world === 'modern' ? '검진' : '진찰', shown = preg?.shown || {}, who = esc(preg?.who || '');
     const dday = started && day != null ? Math.max(0, preg.start + 280 - day) : null;
     const sel = `<button class="pg-wchip" data-act="pregworld" aria-label="세계관 바꾸기">🌍 ${preg?.world && preg.world !== 'auto' ? P_WORLD[preg.world] : P_WORLD[pAuto(mem)] + '(자동)'}</button>`;
-    const books = preg?.books || [], bookHtml = books.length ? `<details class="pg-hist"><summary>📚 지난 산모수첩 ${books.length}권</summary>${books.map((b, i) => `<details class="pg-book1"><summary>📔 ${esc(b.title)} <small>${esc(b.line)}</small></summary>${b.father ? `<p class="pg-s">👨 아빠 · ${esc(b.father)}</p>` : ''}<ul class="pg-log">${(b.log || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0)).map(x => `<li><em>${x.w}주</em>${esc(x.t)}</li>`).join('') || '<li>기록이 없어요</li>'}</ul></details>`).reverse().join('')}</details>` : '';
+    const books = preg?.books || [], bookHtml = books.length ? `<details class="pg-hist"><summary>📚 지난 산모수첩 ${books.length}권</summary>${books.map((b, i) => `<details class="pg-book1"><summary>📔 ${esc(b.title)} <small>${esc(b.line)}</small></summary>${b.father ? `<p class="pg-s">👨 아빠 · ${esc(b.father)}</p>` : ''}<ul class="pg-log">${(b.log || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0)).map(x => `<li><em>${x.w}주</em>${esc(x.t)}</li>`).join('') || '<li>기록이 없어요</li>'}</ul>${b.kind === '출산' ? `<p class="pg-s" style="text-align:right;margin:4px 0 0"><button class="pg-link" style="font-size:11px;font-weight:600;color:var(--graphite)" data-act="pregbooksex" data-arg="${i}">오류 수정하기</button></p>` : ''}</details>`).reverse().join('')}</details>` : '';
     const hist = books.length ? bookHtml : (preg?.history || []).length ? `<details class="pg-hist"><summary>📝 지난 기록 ${preg.history.length}개</summary><ul class="pg-log">${preg.history.map((h, i) => `<li>${esc(h)} <button class="pg-link" data-act="preghdel" data-arg="${i}" aria-label="이 기록 지우기">×</button></li>`).reverse().join('')}</ul></details>` : '';
     const soon = ''; // 육아는 아직 없어요(만들면 여기)
     const sw = `<button class="pg-sw" data-act="pregon" aria-pressed="${on}" aria-label="임신 모드 ${on ? '끄기' : '켜기'}"><i></i></button>`;
@@ -8889,6 +8889,9 @@
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
       case 'pregforce': if (!confirm('주사위 대신 직접 정할까요? 마지막 관계로 임신된 걸로 하고, 본인은 아직 몰라요(증상만 생겨요). 임테기를 긁거나 병원에 가면 알게 돼요.')) return; await pregForce(); return;
       case 'pregdel': if (!confirm('지금 임신 기록을 지울까요? (채팅에 더 안 들어가요 · 지난 기록은 남아요)')) return; preg = { on: false, world: preg?.world, history: preg?.history || [], after: preg?.after }; await pregSave(); nav.pgBook = false; return keepScroll(render);
+      case 'pregbooksex': { const b = preg?.books?.[Number(arg)]; if (!b || !confirm('아기 성별을 바꿀까요? (아들↔딸 · 한 번 더 누르면 원래대로)')) return; // 지난 수첩의 성별을 이야기에 맞게 고쳐요(기록 글 속 아들↔딸·남아↔여아)
+        const sw = t => String(t || '').replace(/아들|딸(?!꾹|기)|남아|여아/g, m => ({ 아들: '딸', 딸: '아들', 남아: '여아', 여아: '남아' })[m]);
+        b.line = sw(b.line); for (const x of b.log || []) x.t = sw(x.t); await pregSave(); return keepScroll(render); }
       case 'preghdel': { if (!preg?.history) return; const i = Number(arg); if (!confirm('이 지난 기록을 지울까요?')) return; preg.history.splice(i, 1); await pregSave(); return keepScroll(render); }
       case 'pregend': if (preg?.start == null) return; nav.pgEnd = !nav.pgEnd; return keepScroll(render);
       case 'pregendk': if (preg?.start == null) return; nav.pgEnd = false; pregArchive(arg, pregDay(noteMemory() || '', snapshot), ''); return keepScroll(render);
