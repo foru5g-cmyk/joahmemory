@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.4
+// @version      4.3.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -2658,6 +2658,12 @@
 
     /* ── 인물 한 명 화면 ── */
     .phero{display:flex;align-items:flex-start;gap:14px;padding:14px;margin:0 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:20px}
+.phero{position:relative}.phero>.rpill{position:absolute;right:12px;top:12px}
+.rpill{display:inline-block;flex:none;font-size:11.5px;font-weight:800;line-height:1.3;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.avb-w{position:relative;display:inline-flex;flex:none}.avb{position:absolute;right:-5px;top:-5px;width:20px;height:20px;border-radius:50%;background:var(--paper);border:2px solid var(--rule);font-size:11px;line-height:1;display:grid;place-items:center;font-style:normal}
+.rp-bar{display:flex;justify-content:flex-end;margin:0 0 10px}.rp-tg{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--graphite)}
+.gtg{position:absolute;left:12px;top:10px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:4px 6px 4px 12px}.gwrap .ghint{top:56px}
+.ge .gp text{stroke:none;font-size:11.5px;font-weight:800}.gn .gb{fill:var(--paper);stroke:var(--rule);stroke-width:2}
     .phero .av{width:58px;height:58px;font-size:25px}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
     .phero em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--graphite);margin-left:8px}
@@ -7116,30 +7122,30 @@
       grand.forEach(g => seen.add(g));
       return `<div class="branch"><div class="stub"></div>
         <div class="edge">${d ? `<div><i>↓ ${esc(josa(rootName, '이', '가'))} 보기엔</i>${esc(d)}</div>` : ''}${u ? `<div><i>↑ ${esc(josa(k, '이', '가'))} 보기엔</i>${esc(u)}</div>` : ''}</div>
-        <button class="tnode" data-act="person" data-arg="${esc(k)}">${avatar(k)}<b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</button>
+        <button class="tnode" data-act="person" data-arg="${esc(k)}">${avB(k)}<b>${esc(k)}</b>${relPill(pairKind(rel, rootName, k))}${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</button>
         ${grand.length ? `<div class="subs">${grand.map(g => `<button data-act="person" data-arg="${esc(g)}">└ <b>${esc(g)}</b> ${esc((pt(k, g) || pt(g, k)).slice(0, 28))}</button>`).join('')}</div>` : ''}</div>`;
     };
-    const bigBtn = `<button class="bigmap" data-act="graph">${icon('globe', 'currentColor', 16)}전체 관계도 크게 보기 · 확대해서 한눈에</button>`;
+    const bigBtn = `<div class="rp-bar">${relPillSw()}</div><button class="bigmap" data-act="graph">${icon('globe', 'currentColor', 16)}전체 관계도 크게 보기 · 확대해서 한눈에</button>`;
     const centerBar = names.length > 2 ? `<div class="centers">${ranked.map(x => `<button data-act="center" data-arg="${esc(x)}" aria-pressed="${x === rootName}">${esc(x)}</button>`).join('')}</div>` : '';
     // 연결된 사람이 많으면 가지 대신 한 줄씩 보여 줍니다.
     if (kids.length > 4) {
       const rows = kids.map(k => {
         const d = pt(rootName, k), u = pt(k, rootName), grand = [...nb.get(k)].filter(g => !seen.has(g));
         grand.forEach(g => seen.add(g));
-        return `<div class="rrow"><button class="rhead" data-act="person" data-arg="${esc(k)}">${avatar(k)}<span><b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</span></button>
+        return `<div class="rrow"><button class="rhead" data-act="person" data-arg="${esc(k)}">${avB(k)}<span style="flex:1;min-width:0"><b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</span>${relPill(pairKind(rel, rootName, k))}</button>
           ${d ? `<div class="rline"><i>↓ ${esc(josa(rootName, '이', '가'))} 보기엔</i>${esc(d)}</div>` : ''}${u ? `<div class="rline"><i>↑ ${esc(josa(k, '이', '가'))} 보기엔</i>${esc(u)}</div>` : ''}
           ${grand.length ? `<div class="rsub">${grand.map(g => `<button data-act="person" data-arg="${esc(g)}"><b>${esc(g)}</b> ${esc(pt(k, g) || pt(g, k))}</button>`).join('')}</div>` : ''}</div>`;
       }).join('');
       const loose2 = names.filter(x => !seen.has(x));
       return seg + descHtml('map') + `<div class="meta"><span>${names.length}명 · 위에서 중심 인물을 바꿀 수 있어요</span></div>${bigBtn}${centerBar}
-        <div class="rcenter">${avatar(rootName)}<div><b>${esc(rootName)}</b><small>${esc(ppl.get(rootName) || '')}</small></div></div>
+        <div class="rcenter">${avB(rootName)}<div><b>${esc(rootName)}</b><small>${esc(ppl.get(rootName) || '')}</small></div></div>
         <div class="rlist">${rows}</div>
         ${loose2.length ? `<div class="muted" style="margin-top:12px">${esc(rootName)}와 직접 이어지지 않은 사람 · ${loose2.map(esc).join(', ')}</div>` : ''}`;
     }
     const loose = names.filter(x => !seen.has(x));
     return seg + descHtml('map') + `<div class="meta"><span>${names.length}명 · 이름을 누르면 자세히</span></div>${bigBtn}${centerBar}
       <div class="tree">
-        <button class="tnode root" data-act="person" data-arg="${esc(rootName)}">${avatar(rootName)}<b>${esc(rootName)}</b>${ppl.get(rootName) ? `<small>${esc(ppl.get(rootName))}</small>` : ''}</button>
+        <button class="tnode root" data-act="person" data-arg="${esc(rootName)}">${avB(rootName)}<b>${esc(rootName)}</b>${ppl.get(rootName) ? `<small>${esc(ppl.get(rootName))}</small>` : ''}</button>
         <div class="trunk"></div>
         <div class="branches${kids.length === 1 ? ' one' : ''}">${kids.map(branch).join('')}</div>
         ${loose.length ? `<div class="muted" style="margin-top:14px;text-align:center">연결 없음 · ${loose.map(esc).join(', ')}</div>` : ''}
@@ -7159,6 +7165,27 @@
     if (rel.some(r => [r.from, r.to].includes(b.who) && ![r.from, r.to].includes(b.father) && /(^|[\s·(])(딸|아들|아기)([\s·)]|$)/.test(r.text))) return []; // 노트에 이미 아기가 있으면
     return [b.who, b.father].filter(Boolean).map(p => ({ from: p, to: kid, text: '아기' }));
   });
+  // 관계 알약: 관계 줄 맨 앞 구절만 보고 몇 가지로만 붙여요('연인 직전'·'친구의 딸'·'연인인 척' 같은 덴 안 붙게) · 화면에만(AI한테 넣는 글은 그대로)
+  let relPillOn = true;
+  const REL_PILL = { '연인': ['#FFD6E4', '#C2416B'], '약혼': ['#FFE7C7', '#B05F00'], '부부': ['#E3DCFF', '#5B3FC4'], '자녀': ['#FFF0B3', '#8A6D00'], '형제': ['#DFF3E6', '#2F8A4A'], '전 연인': ['#ECECF2', '#6B6880'] };
+  const relKind = text => {
+    const h = String(text || '').split(/\s*[·,;/(（]\s*|\s+[—–-]\s+/)[0].trim();
+    if (!h || /직전|척|행세|위장|계약|짝사랑|썸|같은|처럼|후보|뻔|아닌|아님/.test(h)) return '';
+    if (/^(?:전|옛|예전)\s*(?:연인|애인|남친|여친|남자\s*친구|여자\s*친구|남편|아내|부인|약혼)|헤어진|이혼/.test(h)) return '전 연인';
+    if (/부부|남편|아내|배우자|신혼/.test(h)) return '부부';
+    if (/약혼|예비\s*(?:신랑|신부|부부)/.test(h)) return '약혼';
+    if (/연인|애인|남친|여친|남자\s*친구|여자\s*친구|사귀|교제/.test(h)) return '연인';
+    if (/의\s/.test(h)) return ''; // '친구의 딸'·'형의 친구'
+    if (/(?:^|\s)(?:친?딸|친?아들|자녀|자식|아기|모녀|부녀|모자|엄마|아빠|어머니|아버지|부모)(?:\s|$)/.test(h)) return '자녀';
+    if (/(?:^|\s)(?:형제|자매|남매|형|오빠|언니|누나|남동생|여동생|동생|쌍둥이)(?:\s|$)/.test(h)) return '형제';
+    return '';
+  };
+  const pairKind = (rel, a, b) => { if (!a || !b || a === b) return ''; for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = relKind(r.text); if (k) return k; } return ''; };
+  const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${REL_PILL[k][0]};color:${REL_PILL[k][1]}${style ? ';' + style : ''}">${k}</span>` : '';
+  // 얼굴 옆 표시: 지금 임신 중 🤰 · 산모수첩으로 아이를 낳은 엄마·아빠 👶
+  const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) ? '👶' : '';
+  const avB = name => { const b = kidBadge(name); return b ? `<span class="avb-w">${avatar(name)}<i class="avb">${b}</i></span>` : avatar(name); };
+  const relPillSw = () => `<label class="rp-tg">관계 알약<input type="checkbox" class="switch" data-act="relpill"${relPillOn ? ' checked' : ''}></label>`;
   const relAll = ppl => { const r0 = pairs('관계·감정선'); return [...r0, ...pregKids(r0, ppl)]; };
   function graphModel() {
     const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()].filter(n => rel.some(r => r.from === n || r.to === n));
@@ -7220,9 +7247,11 @@
       // 살짝 휘어진 선. 글자는 휜 곳 바깥쪽에 붙입니다.
       const bend = 28, cx = mx + nx * bend, cy = my + ny * bend;
       const lx = mx + nx * (bend / 2 + 12), ly = my + ny * (bend / 2 + 12) - (list.length - 1) * 8 + 4;
+      const k = relPillOn && !(sel && on) ? pairKind(list, x, y) : '', px = (a.x + 2 * cx + b.x) / 4, py = (a.y + 2 * cy + b.y) / 4, pw = [...k].length * 12 + 20;
+      const pill = k ? `<g class="gp" transform="translate(${px},${py})"><rect x="${-pw / 2}" y="-11" width="${pw}" height="22" rx="11" fill="${REL_PILL[k][0]}" stroke="#fff" stroke-width="2"/><text y="4.5" text-anchor="middle" fill="${REL_PILL[k][1]}">${k}</text></g>` : '';
       const spans = sel && on ? list.map((r, i) => `<tspan x="${lx}" dy="${i ? 17 : 0}"><tspan class="who">${esc(r.from)}</tspan> ${esc(cut(r.text, 16))}</tspan>`).join('') : '';
       return `<g class="ge${on ? '' : ' dim'}${sel && on ? ' on' : ''}"><path d="M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}"/>
-        ${spans ? `<text x="${lx}" y="${ly}" text-anchor="${anchor}">${spans}</text>` : ''}</g>`;
+        ${spans ? `<text x="${lx}" y="${ly}" text-anchor="${anchor}">${spans}</text>` : ''}${pill}</g>`;
     }).join('');
     const nodes = g.names.filter(n => g.pos.has(n)).map(n => {
       const p = g.pos.get(n), [bg, fg] = avColor(n), r = p.ring === 0 ? 32 : 26;
@@ -7233,7 +7262,7 @@
         <circle r="${r + 5}" class="halo" stroke="${fg}"/><circle r="${r}" fill="${bg}"/>
         <text y="${p.ring === 0 ? 11 : 9}" text-anchor="middle" font-size="${p.ring === 0 ? 30 : 24}">${esc(face)}</text>
         <rect x="${-w / 2}" y="${r + 9}" width="${w}" height="22" rx="11" fill="${bg}"/>
-        <text y="${r + 24.5}" text-anchor="middle" class="nm" fill="${fg}">${esc(n)}</text></g>`;
+        <text y="${r + 24.5}" text-anchor="middle" class="nm" fill="${fg}">${esc(n)}</text>${(bd => bd ? `<circle class="gb" cx="${r * 0.72}" cy="${-r * 0.72}" r="11"/><text x="${r * 0.72}" y="${-r * 0.72 + 4.5}" text-anchor="middle" font-size="12">${bd}</text>` : '')(kidBadge(n))}</g>`;
     }).join('');
     const info = sel ? (() => {
       const rows = [...g.rel.filter(r => r.from === sel).map(r => `<div class="rline" style="margin:6px 0 0"><i>${esc(josa(sel, '이', '가'))} 보는 ${esc(r.to)}</i>${esc(r.text)}</div>`),
@@ -7244,6 +7273,7 @@
     })() : `<div class="ghint">사람을 누르면 그 사람의 관계가 선 위에 나타나요</div>`;
     return `<div class="gwrap" data-out="gwrap">
         <svg data-out="gsvg" width="100%" height="100%"><g data-out="gvp">${edges}${nodes}</g></svg>
+        <div class="gtg">${relPillSw()}</div>
         <div class="gctl"><button data-act="gzoom" data-arg="in" aria-label="확대">＋</button><button data-act="gzoom" data-arg="out" aria-label="축소">－</button><button data-act="gzoom" data-arg="fit" aria-label="전체 보기">${icon('globe', 'currentColor', 16)}</button></div>
         ${info}</div>`;
   }
@@ -7435,13 +7465,14 @@
     // 이 사람이 상대를 보는 쪽만 (반대쪽은 상대 화면에). 폰에서 길지 않게 상대마다 접고, 접힌 줄엔 부르는 말만. 첫 사람만 펼침
     const addrOf = (a, b) => { const r = sp.find(x => x.from === a && x.to === b); return r ? speechChips(r.text).chips.flatMap(x => x.addr)[0] || '' : ''; };
     const relRows = others.filter(o => side(name, o)).map((o, i) => { const to = addrOf(name, o);
-      return `<div class="pgrp">${fold(`${avatar(o)}<b>${esc(o)}</b>`, to ? `「${to}」` : '', side(name, o), i === 0)}</div>`; });
+      return `<div class="pgrp">${fold(`${avB(o)}<b>${esc(o)}</b>${to ? `<small>${esc(`「${to}」`)}</small>` : ''}${relPill(pairKind(rel, name, o), 'margin-left:auto')}`, '', side(name, o), i === 0)}</div>`; });
     // 칸 제목 앞에 이모지 하나, 칸 사이는 얇은 선
     const cat = (emo, t, rows) => rows.length ? `<section class="pcat">${t ? `<h5>${emo ? emo + ' ' : ''}${t}</h5>` : ''}${rows.join('')}</section>` : '';
     // 이름 옆 알약: 마지막으로 나온 턴(100턴 넘게 안 나왔으면 '오래 안 나옴'), 관계 줄에 "교류 없음"이 있으면 그것도
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
     const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
-    return `<div class="phero">${avatar(name)}<div style="min-width:0"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
+    const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName));
+    return `<div class="rp-bar">${relPillSw()}</div><div class="phero">${heroPill}${avB(name)}<div style="min-width:0${heroPill ? ';padding-right:58px' : ''}"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
       // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
       const nz = s => String(s).replace(/[(（][^)）]*[)）]/g, '').replace(/[\s·,]/g, ''), tags = String(pr.tag || '').split(/\s*·\s*/).map(nz).filter(t => t.length >= 3);
       const ps = d.split(/\s+·\s+/).filter(x => x && !tags.some(t => nz(x).includes(t) || (nz(x).length >= 3 && t.includes(nz(x))))), sh = ps.filter(x => x.length <= 16), lg = ps.filter(x => x.length > 16);
@@ -8031,7 +8062,7 @@
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
-      injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off';
+      injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; relPillOn = String(await getValue('relPill', 'on')) !== 'off';
       if (injectOn && snap.note && !snap.note.parked && behind !== 0) await updateInjCtx(chatId, snap, undefined, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); // 마지막 유저 말로 골라요
       if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && !(snap.note.web && !sceneOn) && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
@@ -8810,6 +8841,7 @@
         if (act === 'injsec') injSet = { ...injSet, secs: { ...injSet.secs, [k]: v } }; else injSet = { ...injSet, [k]: Number(v) };
         await setValue('injset:' + cid, JSON.stringify(injSet)); keepScroll(render); return reinject(cid); }
       case 'wdopt': nav.wdOpt = !nav.wdOpt; return render();
+      case 'relpill': relPillOn = !!el.checked; await setValue('relPill', relPillOn ? 'on' : 'off'); render.keepGraph = true; return keepScroll(render);
       case 'autosum': autoSumOn = !!el.checked; await setValue('autoSum', autoSumOn ? 'on' : 'off');
         toast(autoSumOn ? '자동 정리를 켰어요 · 10턴마다 알아서 정리해요' : '자동 정리를 껐어요 · 이 기기에선 \'지금 바로 정리\'를 누를 때만 정리해요 · 기억 넣기는 그대로', 'ok', 4000); render(); if (autoSumOn) autoSum(); return;
       case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; const hadNote = !!snapshot?.note?.turns; await applyScene(on, chatIdFromPath(), true); fixTab(); render();
