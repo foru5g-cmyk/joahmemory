@@ -7094,7 +7094,7 @@
         (ppl.size ? `<div class="list">${[...ppl].map(([nm, d]) => `<button class="pcard${exitOf(nm) ? ' gone' : ''}${nav.rvPick ? ' rvp' + (nav.rvSel?.has('person:' + nm) ? ' sel' : '') : ''}" data-find="${esc((nm + ' ' + (d || '')).toLowerCase())}" data-act="${nav.rvPick ? 'rvtoggle' : 'person'}" data-arg="${esc(nav.rvPick ? 'person:' + nm : nm)}">${nav.rvPick ? rvCk('person:' + nm) : ''}${avatar(nm)}<span class="t"><b>${esc(nm)}${exitOf(nm) ? ' <em class="gone-tag">🕊 퇴장</em>' : ''}</b><small>${esc(exitOf(nm) || d || '설명 없음')}</small></span>${icon('chev', 'var(--mute2)', 16)}</button>`).join('')}</div>` : emptyBox('인물 정보가 없어요.'));
     }
     // 관계도
-    const rel = pairs('관계·감정선'), names = [...ppl.keys()];
+    const rel = relAll(ppl), names = [...ppl.keys()];
     rel.forEach(r => { if (!names.includes(r.from)) names.push(r.from); if (!names.includes(r.to)) names.push(r.to); });
     const nb = new Map(names.map(x => [x, new Set()]));
     rel.forEach(r => { nb.get(r.from).add(r.to); nb.get(r.to).add(r.from); });
@@ -7148,16 +7148,20 @@
 
   // ── 전체 관계도: 가운데 중심 인물, 바로 이어진 사람은 안쪽 원, 한 다리 건너는 바깥 원.
   //    두 손가락으로 확대, 한 손가락으로 이동, 사람을 누르면 그 사람 관계만 강조됩니다.
-  // 산모수첩으로 태어난 아기: 노트 관계에 아직 없으면 관계도에만 엄마·아빠와 이어서 보여 줘요(AI한테는 안 넣어요)
-  const pregKids = rel => (preg?.books || []).filter(b => b.kind === '출산' && b.who).flatMap(b => {
+  // 산모수첩으로 태어난 아기: 노트 관계에 아직 없으면 화면(인물·관계도)에만 엄마·아빠와 이어서 보여 줘요(AI한테는 안 넣어요)
+  //   인물 칸에 아기가 이름으로 들어와 있으면(설명에 딸·아들·아기 + 엄마나 아빠 이름) 그 이름으로 이어요
+  const pregKids = (rel, ppl = new Map()) => (preg?.books || []).filter(b => b.kind === '출산' && b.who).flatMap(b => {
     const t = (b.log || []).map(x => x.t).join(' '), sx = [...new Set((t.match(/[남여]아/g) || []).map(x => x === '남아' ? '아들' : '딸'))];
     if (!sx.length) sx.push(...((t.match(/성별을 알게 됨: (\S+)/) || [])[1] || '').split('·').filter(Boolean));
-    const kid = b.title.replace(/\s*산모수첩$/, '') + ' ' + (sx.length ? sx.join('·') : '아기');
+    const named = [...ppl].find(([n, d]) => n !== b.who && n !== b.father && /딸|아들|아기|신생아|갓난/.test(d || '') && (String(d).includes(b.who) || (b.father && String(d).includes(b.father))))?.[0];
+    const kid = named || b.title.replace(/\s*산모수첩$/, '') + ' ' + (sx.length ? sx.join('·') : '아기');
+    if (rel.some(r => [r.from, r.to].includes(kid) && [r.from, r.to].includes(b.who))) return [];
     if (rel.some(r => [r.from, r.to].includes(b.who) && ![r.from, r.to].includes(b.father) && /(^|[\s·(])(딸|아들|아기)([\s·)]|$)/.test(r.text))) return []; // 노트에 이미 아기가 있으면
     return [b.who, b.father].filter(Boolean).map(p => ({ from: p, to: kid, text: '아기' }));
   });
+  const relAll = ppl => { const r0 = pairs('관계·감정선'); return [...r0, ...pregKids(r0, ppl)]; };
   function graphModel() {
-    const rel0 = pairs('관계·감정선'), ppl = people(), rel = [...rel0, ...pregKids(rel0)], names = [...ppl.keys()].filter(n => rel.some(r => r.from === n || r.to === n));
+    const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()].filter(n => rel.some(r => r.from === n || r.to === n));
     rel.forEach(r => { if (!names.includes(r.from)) names.push(r.from); if (!names.includes(r.to)) names.push(r.to); });
     const nb = new Map(names.map(x => [x, new Set()]));
     rel.forEach(r => { nb.get(r.from).add(r.to); nb.get(r.to).add(r.from); });
@@ -7411,7 +7415,7 @@
   // 인물 칸에서 이 사람 【】 블록의 제목(이름) — 별명으로 불러도 찾게
   const personKeyOf = name => (itemBlocks(bodyOf('인물')).items.find(x => sameName(String(x.key).trim(), name)) || {}).key || '';
   function personHtml(name) {
-    const ppl = people(), rel = pairs('관계·감정선'), sp = pairs('호칭·말투'), pr = PROF.get(name) || {};
+    const ppl = people(), rel = relAll(ppl), sp = pairs('호칭·말투'), pr = PROF.get(name) || {};
     // 상대마다 관계·마음(감정선 마지막 단계)·부르는 말을 한 묶음으로
     const fl = feelings().filter(f => f.steps.length), mine = r => r.from === name || r.to === name;
     const others = [...new Set([...rel, ...sp, ...fl].filter(mine).map(r => (r.from === name ? r.to : r.from)))];
