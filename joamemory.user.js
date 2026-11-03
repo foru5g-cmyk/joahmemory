@@ -4,7 +4,7 @@
 // @version      4.3.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -840,11 +840,11 @@
       if (p.hideTwin && (preg.twinAt == null || preg.twinAt === turn) && due.some(c => c[0] >= 12)) { // 숨어 있던 쌍둥이가 밝혀짐(처음 초음파를 봤으면 '하나 더', 못 봤으면 그냥 둘)
         const t = Object.keys(preg.shown).some(k => /^c\d/.test(k) && +k.slice(1) < 12 && preg.shown[k] >= 0) ? '다시 보니 뒤에 숨어 있던 아기가 하나 더 — 쌍둥이였음' : '아기가 둘 — 쌍둥이';
         if (preg.twinAt == null) { preg.twinAt = turn; preg.log.push({ w: wk, t, at: turn, res: 1 }); } res.unshift(t); }
-      // 성별(현대만): 16주 전엔 절대 안 알려 줘요 · 16주부터 병원 장면이면 AI에게 주고 '누가(유저든 NPC든) 물어보면 알려 줌, 안 물으면 말 안 함'
+      // 성별(현대만): 병원 장면에서 성별 얘기가 나오면 16주부터 알려 줘요
       const sexTxt = p.sex.map(x => x === '남' ? '아들' : '딸').join('·');
       if (world === 'modern' && preg.shown.sex == null) {
-        if (wk < 16) { if (P_SEXQ.test(said)) res.push('성별을 물었지만 아직 너무 일러서 안 보인다고 함(16주부터 · 절대 미리 말하지 않음)'); }
-        else { res.push(`성별: ${sexTxt} — 누가 물어보면 알려 줌, 아무도 안 물으면 말하지 않음`); preg.sexAt = turn; }
+        if (P_SEXQ.test(said + ' ' + lastAi)) { // 성별 얘기가 나왔을 때만 줘요(미리 주면 AI가 먼저 꺼내요)
+          if (wk < 16) res.push('성별은 아직 안 보임(16주부터)'); else { res.push(`성별: ${sexTxt}`); preg.sexAt = turn; } }
       }
     }
     // AI 답(또는 유저 말)에 성별이 나오면 들은 걸로 · 수첩에 적어요
