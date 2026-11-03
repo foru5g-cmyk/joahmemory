@@ -4,7 +4,7 @@
 // @version      4.3.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리하기🚀
+// @description  랙시들의 RP정리🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -574,6 +574,8 @@
     for (const m of [...(snapshot?.all || [])].reverse()) { if (msgRole(m) !== 'assistant') continue; const x = P_DAY2(stripBlocks(msgText(m)).slice(0, 400)); if (x != null) return x; }
     return null;
   }
+  // 주사위 seed는 방·몇 번째 임신으로 정해요(무작위면 폰·컴이 따로 임신을 잡았을 때 서로 다른 주사위가 돼서 성별 같은 게 바뀌어요) · '처음부터'는 reroll로 새로
+  const pSeed = () => { let h = 2166136261; for (const ch of `${pregChat || chatIdFromPath()}|${(preg?.history || []).length}|${preg?.reroll || 0}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h || 1; };
   const pR = k => { let h = ((preg?.seed || 1) >>> 0) ^ 0x9e3779b9; for (let i = 0; i < k.length; i++) h = Math.imul(h ^ k.charCodeAt(i), 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   const pWorld = mem => preg?.world && preg.world !== 'auto' ? preg.world : pAuto(mem);
   // 세계관 자동: ① 이야기 날짜(HUD·노트)의 년도 — 1900년 이후면 현대(센티넬·헌터물도) ② 날짜가 없으면 단어(현대 장르 말이 있으면 현대)
@@ -918,10 +920,10 @@
       const tell = told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
       const unaware = !!tell && P_AUTHOR.test(tell) && P_UNAWARE.test(tell);
       if (tell && day != null) { const said = pregWeeksSaid(tell), rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? day - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)), ws = pregWhoDefault(mem); preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
-        Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 · 관계 미상이라 지금을 5주로 셌어요', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true; } }
+        Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 · 관계 미상이라 지금을 5주로 셌어요', seed: preg.seed || (pSeed()), at: Date.now() }); pregSave(); return true; } }
     // 노트·대화에서 찾기는 스위치가 꺼져 있어도 해요(유저 캐릭터만 잡으니까) · 찾으면 켜져요
     const d = pregDetect(mem, (snap?.fresh || []).filter(isChat).slice(-12).map(m => stripBlocks(msgText(m))).reverse(), preg.after ?? null); if (!d) return false;
-    Object.assign(preg, d, { on: true, seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregSave(); return true;
+    Object.assign(preg, d, { on: true, seed: preg.seed || (pSeed()), at: Date.now() }); pregSave(); return true;
   }
   // 👨 아빠: 임신된 날(시작 + 2주)에 가장 가까운 관계 장면에 나온 남자 인물(유저 캐릭터 말고) · 여러 사람과 관계했어도 그날 사람으로
   function pregFather(mem) {
@@ -1011,7 +1013,7 @@
   function pregKitHtml0(mem) { // 짧게: 날짜·며칠째 + 🍼 확률 알약 · 결과 한 줄 · 작가 설정 버튼
     const kw = pWorld(mem), [kcap, kname] = P_KIT[kw], day = pregDay(mem, snapshot);
     if (day == null) return `<div class="pg-cap">${kcap}</div><div class="pg-card"><p class="pg-s">이야기 날짜를 못 찾았어요 · AI 답 머리말에 날짜(예: 05월 07일)가 나오면 바로 돼요</p></div>`; // 숨기지 않고 왜 안 되는지 알려요
-    if (!preg.seed) { preg.seed = (Math.random() * 4294967296) >>> 0; pregSave(); }
+    if (!preg.seed) { preg.seed = pSeed(); pregSave(); }
     const { hit, testable, recent, k, last } = pregConceive(mem, day), tl = testable[testable.length - 1], rl = recent[recent.length - 1];
     const rel = hit || tl || last, since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
     const declared = !!(preg.unaware || preg.start != null); // 이야기·작가가 이미 임신으로 정함 → 주사위 말고 두 줄
@@ -1032,7 +1034,7 @@
   async function pregForce() {
     const mem = noteMemory() || '', rel = pregKitRel(mem), day = pregDay(mem, snapshot); if (!rel || day == null) return;
     const w = pregWhoDefault(mem), tests = { ...(preg?.tests || {}) }; delete tests[day]; // 오늘 긁은 한 줄은 지우고 다시 긁을 수 있게
-    preg = { ...(preg || {}), on: true, tests, forceRel: rel.d, unaware: true, who: w.name || '임신한 사람', me: w.me, start: rel.d - 14, w0: Math.max(2, Math.floor((day - rel.d + 14) / 7)), why: `작가 설정 · ${P_STR(rel.d)} 관계로 임신(본인은 아직 모름)`, seed: preg?.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() };
+    preg = { ...(preg || {}), on: true, tests, forceRel: rel.d, unaware: true, who: w.name || '임신한 사람', me: w.me, start: rel.d - 14, w0: Math.max(2, Math.floor((day - rel.d + 14) / 7)), why: `작가 설정 · ${P_STR(rel.d)} 관계로 임신(본인은 아직 모름)`, seed: preg?.seed || (pSeed()), at: Date.now() };
     pregChat = pregChat || chatIdFromPath(); await pregSave(); render();
   }
   function setupKit(main) {
@@ -1094,7 +1096,7 @@
     const anyShown = Object.keys(shown).some(k => /^c\d/.test(k) && shown[k] >= 0) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>D-${dday}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
-      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ' ✎' : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
+      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(preg.why || '')} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p>${warn}</div>`;
     const cur = preg.cur && turn >= preg.cur.from;
     const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
@@ -8875,11 +8877,13 @@
         if (preg.start == null) { const ws = pregWhoDefault(mem), rel = pregKitRel(mem), ok = rel && day - rel.d >= 0 && day - rel.d <= 280, st = ok ? rel.d - 14 : day - 35, wk = Math.max(3, Math.floor((day - st) / 7));
           let who = ws.name; if (!who) { who = prompt('유저 캐릭터 이름을 못 찾았어요. 누가 임신했어요?', ''); if (!who) return; }
           if (!confirm(`${who} · ${ok ? '마지막 관계 ' + P_STR(rel.d) + ' 기준 ' : ''}${wk}주로 임신을 시작할까요?`)) return;
-          Object.assign(preg, { on: true, who: who.trim(), me: true, start: st, w0: wk, why: ok ? `직접 시작 · 마지막 관계 ${P_STR(rel.d)} 기준` : '직접 시작 · 관계일을 못 찾아서 지금을 5주로', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregChat = pregChat || chatIdFromPath(); await pregSave(); return keepScroll(render); }
+          Object.assign(preg, { on: true, who: who.trim(), me: true, start: st, w0: wk, why: ok ? `직접 시작 · 마지막 관계 ${P_STR(rel.d)} 기준` : '직접 시작 · 관계일을 못 찾아서 지금을 5주로', seed: preg.seed || (pSeed()), at: Date.now() }); pregChat = pregChat || chatIdFromPath(); await pregSave(); return keepScroll(render); }
         const w0 = parseInt(prompt('지금 몇 주예요?', String(Math.floor((day - preg.start) / 7))), 10); if (!(w0 >= 3 && w0 <= 42)) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
         Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요', fixId: msgId([...(snapshot?.all || [])].filter(isChat).pop()) }); await pregSave(); return keepScroll(render); }
       case 'pregsex': { if (!preg?.start) return; const s = pregPlan().sex, k = (s.reduce((a, x) => a * 2 + (x === '여'), 0) + 1) % (1 << s.length); // 아들↔딸(쌍둥이는 네 가지를 돌아가며)
-        preg.sexFix = s.map((_, i) => (k >> (s.length - 1 - i)) & 1 ? '여' : '남'); await pregSave(); return keepScroll(render); }
+        preg.sexFix = s.map((_, i) => (k >> (s.length - 1 - i)) & 1 ? '여' : '남');
+        for (const x of preg.log || []) if (/^성별을 알게 됨/.test(x.t)) x.t = '성별을 알게 됨: ' + preg.sexFix.map(v => v === '남' ? '아들' : '딸').join('·'); // 지나온 일 기록도 같이
+        await pregSave(); return keepScroll(render); }
       case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
       case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
@@ -8888,7 +8892,7 @@
       case 'preghdel': { if (!preg?.history) return; const i = Number(arg); if (!confirm('이 지난 기록을 지울까요?')) return; preg.history.splice(i, 1); await pregSave(); return keepScroll(render); }
       case 'pregend': if (preg?.start == null) return; nav.pgEnd = !nav.pgEnd; return keepScroll(render);
       case 'pregendk': if (preg?.start == null) return; nav.pgEnd = false; pregArchive(arg, pregDay(noteMemory() || '', snapshot), ''); return keepScroll(render);
-      case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, history: preg?.history || [], after: preg?.after }; await pregSave(); return keepScroll(render);
+      case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, history: preg?.history || [], after: preg?.after, reroll: (preg?.reroll || 0) + 1 }; await pregSave(); return keepScroll(render);
       case 'wkrange': nav.rgKind = 'wiki'; nav.bdRange = true; return keepScroll(render);
       case 'wkupd': return makeWiki(0, 0, true);
       case 'wkdoc': nav.wkDoc = arg === '' ? null : Number(arg); nav.wkTab = ''; return keepView();
