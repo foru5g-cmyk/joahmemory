@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.5
+// @version      4.3.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -1052,7 +1052,7 @@
       : `<div class="pg-stick"><b style="font-size:14px">${res === 'pos' ? (kw === 'old' ? '🌿 희맥이 잡혀요 · 태기가 있어요' : '🔮 구슬이 분홍빛으로 빛나요') : (kw === 'old' ? '맥이 평소와 같아요' : '구슬이 잠잠해요')}</b></div>`;
     const rels = [...testable, ...recent], all = rels.length > 1 ? Math.round((1 - rels.reduce((q, r) => q * (1 - kitChance(r.t) * k), 1)) * 100) : null; // 최근 6주 관계를 합친 확률(관계마다 따로 굴려서 하나라도 맞으면 임신)
     const info = declared && !rel ? '관계 미상 · 이야기에서 임신으로 정해졌어요' : !rel ? '관계 기록이 없어요' : `${md(rel.d)} 관계 · ${since}일째${tl || hit ? '' : ' · 2주 뒤가 정확해요'}${all ? ` <span class="pg-odds">🍼 ${all}% · 관계 ${rels.length}번(${kitKinds(rels)})</span>` : pill(rel)}`;
-    return `<div class="pg-cap">${kcap}</div><div class="pg-card"><div class="pg-kit" data-day="${day}" data-res="${res}" data-rel="${rel ? rel.d : ''}">${stick}${done ? '' : '<canvas class="pg-scr"></canvas>'}</div><p class="pg-s" style="text-align:center">${done === 'pos' ? (kw === 'modern' ? '<b>두 줄!</b> 임신이에요 🎉' : '<b>태기가 있어요!</b> 🎉') + (hit ? ` <span class="pg-odds">${md(hit.d)} 관계 · ${kitHow(hit)}</span>` : '') : info}${force ? ' · ' + force : ''}</p></div>`;
+    return `<div class="pg-cap">${kcap}</div><div class="pg-card"><div class="pg-kit" data-day="${day}" data-res="${res}" data-rel="${rel ? rel.d : ''}">${stick}${done ? '' : '<canvas class="pg-scr"></canvas>'}</div><p class="pg-s" style="text-align:center">${done === 'pos' ? (kw === 'modern' ? '<b>두 줄!</b> 임신이에요 🎉' : '<b>태기가 있어요!</b> 🎉') + ((r => r && /피임/.test(kitKind(r.t)) ? ` <span class="pg-odds">${md(r.d)} 관계 · ${kitHow(r)}</span>` : '')(hit || tl || last)) : info}${force ? ' · ' + force : ''}</p></div>`;
   }
   // ✍️ 작가 설정: 마지막 관계로 임신됨(본인도 모름) → 증상은 생기고, 임테기·병원에서 알게 돼요
   async function pregForce() {
@@ -2660,9 +2660,9 @@
     .phero{display:flex;align-items:flex-start;gap:14px;padding:14px;margin:0 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:20px}
 .phero{position:relative}.phero>.rpill{position:absolute;right:12px;top:12px}
 .rpill{display:inline-block;flex:none;font-size:11.5px;font-weight:800;line-height:1.3;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.pgrp .fold-t{flex-wrap:nowrap;min-width:0}.pgrp .fold-t b{white-space:nowrap}.pgrp .fold-t small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .avb-w{position:relative;display:inline-flex;flex:none}.avb{position:absolute;right:-5px;top:-5px;width:20px;height:20px;border-radius:50%;background:var(--paper);border:2px solid var(--rule);font-size:11px;line-height:1;display:grid;place-items:center;font-style:normal}
-.rp-bar{display:flex;justify-content:flex-end;margin:0 0 10px}.rp-tg{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--graphite)}
-.gtg{position:absolute;left:12px;top:10px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:4px 6px 4px 12px}.gwrap .ghint{top:56px}
+.gtg{position:absolute;left:12px;top:12px;font:inherit;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;color:var(--graphite);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:5px 9px;cursor:pointer}.gtg.on{color:#C2416B;border-color:#FFD6E4;background:#FFF5F8}.gwrap .ghint{top:48px}
 .ge .gp text{stroke:none;font-size:11.5px;font-weight:800}.gn .gb{fill:var(--paper);stroke:var(--rule);stroke-width:2}
     .phero .av{width:58px;height:58px;font-size:25px}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
@@ -7122,17 +7122,17 @@
       grand.forEach(g => seen.add(g));
       return `<div class="branch"><div class="stub"></div>
         <div class="edge">${d ? `<div><i>↓ ${esc(josa(rootName, '이', '가'))} 보기엔</i>${esc(d)}</div>` : ''}${u ? `<div><i>↑ ${esc(josa(k, '이', '가'))} 보기엔</i>${esc(u)}</div>` : ''}</div>
-        <button class="tnode" data-act="person" data-arg="${esc(k)}">${avB(k)}<b>${esc(k)}</b>${relPill(pairKind(rel, rootName, k))}${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</button>
+        <button class="tnode" data-act="person" data-arg="${esc(k)}">${avB(k)}<b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</button>
         ${grand.length ? `<div class="subs">${grand.map(g => `<button data-act="person" data-arg="${esc(g)}">└ <b>${esc(g)}</b> ${esc((pt(k, g) || pt(g, k)).slice(0, 28))}</button>`).join('')}</div>` : ''}</div>`;
     };
-    const bigBtn = `<div class="rp-bar">${relPillSw()}</div><button class="bigmap" data-act="graph">${icon('globe', 'currentColor', 16)}전체 관계도 크게 보기 · 확대해서 한눈에</button>`;
+    const bigBtn = `<button class="bigmap" data-act="graph">${icon('globe', 'currentColor', 16)}전체 관계도 크게 보기 · 확대해서 한눈에</button>`;
     const centerBar = names.length > 2 ? `<div class="centers">${ranked.map(x => `<button data-act="center" data-arg="${esc(x)}" aria-pressed="${x === rootName}">${esc(x)}</button>`).join('')}</div>` : '';
     // 연결된 사람이 많으면 가지 대신 한 줄씩 보여 줍니다.
     if (kids.length > 4) {
       const rows = kids.map(k => {
         const d = pt(rootName, k), u = pt(k, rootName), grand = [...nb.get(k)].filter(g => !seen.has(g));
         grand.forEach(g => seen.add(g));
-        return `<div class="rrow"><button class="rhead" data-act="person" data-arg="${esc(k)}">${avB(k)}<span style="flex:1;min-width:0"><b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</span>${relPill(pairKind(rel, rootName, k))}</button>
+        return `<div class="rrow"><button class="rhead" data-act="person" data-arg="${esc(k)}">${avB(k)}<span><b>${esc(k)}</b>${ppl.get(k) ? `<small>${esc(ppl.get(k))}</small>` : ''}</span></button>
           ${d ? `<div class="rline"><i>↓ ${esc(josa(rootName, '이', '가'))} 보기엔</i>${esc(d)}</div>` : ''}${u ? `<div class="rline"><i>↑ ${esc(josa(k, '이', '가'))} 보기엔</i>${esc(u)}</div>` : ''}
           ${grand.length ? `<div class="rsub">${grand.map(g => `<button data-act="person" data-arg="${esc(g)}"><b>${esc(g)}</b> ${esc(pt(k, g) || pt(g, k))}</button>`).join('')}</div>` : ''}</div>`;
       }).join('');
@@ -7162,7 +7162,7 @@
     const named = [...ppl].find(([n, d]) => n !== b.who && n !== b.father && /딸|아들|아기|신생아|갓난/.test(d || '') && (String(d).includes(b.who) || (b.father && String(d).includes(b.father))))?.[0];
     const kid = named || b.title.replace(/\s*산모수첩$/, '') + ' ' + (sx.length ? sx.join('·') : '아기');
     if (rel.some(r => [r.from, r.to].includes(kid) && [r.from, r.to].includes(b.who))) return [];
-    if (rel.some(r => [r.from, r.to].includes(b.who) && ![r.from, r.to].includes(b.father) && /(^|[\s·(])(딸|아들|아기)([\s·)]|$)/.test(r.text))) return []; // 노트에 이미 아기가 있으면
+    if (rel.some(r => [r.from, r.to].includes(b.who) && ![r.from, r.to].includes(b.father) && /(^|[\s·(])(딸|아들|아기|자녀)([\s·)]|$)/.test(r.text))) return []; // 노트에 이미 아기가 있으면
     return [b.who, b.father].filter(Boolean).map(p => ({ from: p, to: kid, text: '아기' }));
   });
   // 관계 알약: 관계 줄 맨 앞 구절만 보고 몇 가지로만 붙여요('연인 직전'·'친구의 딸'·'연인인 척' 같은 덴 안 붙게) · 화면에만(AI한테 넣는 글은 그대로)
@@ -7183,12 +7183,25 @@
   const pairKind = (rel, a, b) => { if (!a || !b || a === b) return ''; for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = relKind(r.text); if (k) return k; } return ''; };
   const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${REL_PILL[k][0]};color:${REL_PILL[k][1]}${style ? ';' + style : ''}">${k}</span>` : '';
   // 얼굴 옆 표시: 지금 임신 중 🤰 · 산모수첩으로 아이를 낳은 엄마·아빠 👶
-  const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) ? '👶' : '';
+  const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) || relAll.parents?.has(name) ? '👶' : '';
   const avB = name => { const b = kidBadge(name); return b ? `<span class="avb-w">${avatar(name)}<i class="avb">${b}</i></span>` : avatar(name); };
-  const relPillSw = () => `<label class="rp-tg">관계 알약<input type="checkbox" class="switch" data-act="relpill"${relPillOn ? ' checked' : ''}></label>`;
-  const relAll = ppl => { const r0 = pairs('관계·감정선'); return [...r0, ...pregKids(r0, ppl)]; };
+  const relPillSw = () => `<button class="gtg${relPillOn ? ' on' : ''}" data-act="relpill" aria-pressed="${relPillOn}">알약 ${relPillOn ? '켬' : '끔'}</button>`;
+  // 관계 줄이 없는 아기·자녀도 부모와 이어요: ① 설명에 '나나와 단테의 딸'처럼 부모 이름 + 딸·아들·아기 ② 가족 줄에 '엄마 나나'(아이 쪽) 또는 '딸 하린'(부모 쪽)
+  const noteKids = (rel, ppl) => {
+    const out = [], names = [...ppl.keys()], fam = n => String(PROF.get(n)?.family || ''), re = (w, n) => new RegExp(`(?:${w})\\s*[:：]?\\s*${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+    for (const n of names) {
+      if (rel.some(r => r.from === n || r.to === n)) continue;
+      const d = String(ppl.get(n) || '');
+      let par = /딸|아들|아기|신생아|갓난/.test(d) && !/같은|처럼/.test(d) ? names.filter(m => m !== n && d.includes(m)) : [], text = '아기';
+      if (!par.length) { par = names.filter(m => m !== n && (re('엄마|아빠|어머니|아버지|부모', m).test(fam(n)) || re('딸|아들|자녀|아기', n).test(fam(m)))); text = '자녀'; }
+      par.slice(0, 2).forEach(m => out.push({ from: m, to: n, text }));
+    }
+    return out;
+  };
+  // 노트로 찾은 아이가 있으면 수첩의 '첫째 딸'은 안 겹치게(노트 먼저)
+  const relAll = ppl => { const r0 = pairs('관계·감정선'), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
   function graphModel() {
-    const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()].filter(n => rel.some(r => r.from === n || r.to === n));
+    const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()]; // 관계 줄이 없는 인물도 빠지지 않게(아래에 따로 줄 세워요)
     rel.forEach(r => { if (!names.includes(r.from)) names.push(r.from); if (!names.includes(r.to)) names.push(r.to); });
     const nb = new Map(names.map(x => [x, new Set()]));
     rel.forEach(r => { nb.get(r.from).add(r.to); nb.get(r.to).add(r.from); });
@@ -7202,9 +7215,9 @@
     }
     const centerComp = comps.find(c => c.includes(nav.center)) || comps[0];
     if (centerComp) comps.splice(comps.indexOf(centerComp), 1), comps.unshift(centerComp);
-    const pos = new Map();
-    let offsetX = 0, root = null;
-    for (const comp of comps) {
+    const pos = new Map(), lone = comps.filter((c, i) => i > 0 && c.length === 1 && !nb.get(c[0]).size).map(c => c[0]);
+    let offsetX = null, root = null;
+    for (const comp of comps.filter(c => !(c.length === 1 && lone.includes(c[0])))) {
       const c0 = comp.includes(nav.center) ? nav.center : [...comp].sort((a, b) => nb.get(b).size - nb.get(a).size)[0];
       if (!root) root = c0;
       const local = new Map([[c0, { x: 0, y: 0, ring: 0, a: 0 }]]);
@@ -7221,10 +7234,11 @@
       let ring = 3;
       comp.filter(n => !local.has(n)).forEach((n, i) => local.set(n, { x: (i - 1) * 90, y: R2 + 120, ring }));
       const xs = [...local.values()].map(p => p.x), minX = Math.min(...xs), maxX = Math.max(...xs);
-      const shift = offsetX === 0 ? 0 : offsetX - minX + 110;
+      const shift = offsetX === null ? 0 : offsetX - minX + 110;
       local.forEach((p, n) => pos.set(n, { ...p, x: p.x + shift, ring: n === c0 ? 0 : p.ring }));
       offsetX = maxX + shift;
     }
+    if (lone.length) { const ps = [...pos.values()], x0 = Math.min(...ps.map(p => p.x)), y0 = Math.max(...ps.map(p => p.y)) + 170; lone.forEach((n, i) => pos.set(n, { x: x0 + (i % 6) * 110, y: y0 + Math.floor(i / 6) * 120, ring: 3 })); }
     return { ppl, rel, names, pos, root };
   }
 
@@ -7273,7 +7287,7 @@
     })() : `<div class="ghint">사람을 누르면 그 사람의 관계가 선 위에 나타나요</div>`;
     return `<div class="gwrap" data-out="gwrap">
         <svg data-out="gsvg" width="100%" height="100%"><g data-out="gvp">${edges}${nodes}</g></svg>
-        <div class="gtg">${relPillSw()}</div>
+        ${relPillSw()}
         <div class="gctl"><button data-act="gzoom" data-arg="in" aria-label="확대">＋</button><button data-act="gzoom" data-arg="out" aria-label="축소">－</button><button data-act="gzoom" data-arg="fit" aria-label="전체 보기">${icon('globe', 'currentColor', 16)}</button></div>
         ${info}</div>`;
   }
@@ -7472,7 +7486,7 @@
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
     const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
     const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName));
-    return `<div class="rp-bar">${relPillSw()}</div><div class="phero">${heroPill}${avB(name)}<div style="min-width:0${heroPill ? ';padding-right:58px' : ''}"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
+    return `<div class="phero">${heroPill}${avB(name)}<div style="min-width:0${heroPill ? ';padding-right:58px' : ''}"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
       // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
       const nz = s => String(s).replace(/[(（][^)）]*[)）]/g, '').replace(/[\s·,]/g, ''), tags = String(pr.tag || '').split(/\s*·\s*/).map(nz).filter(t => t.length >= 3);
       const ps = d.split(/\s+·\s+/).filter(x => x && !tags.some(t => nz(x).includes(t) || (nz(x).length >= 3 && t.includes(nz(x))))), sh = ps.filter(x => x.length <= 16), lg = ps.filter(x => x.length > 16);
@@ -8841,7 +8855,7 @@
         if (act === 'injsec') injSet = { ...injSet, secs: { ...injSet.secs, [k]: v } }; else injSet = { ...injSet, [k]: Number(v) };
         await setValue('injset:' + cid, JSON.stringify(injSet)); keepScroll(render); return reinject(cid); }
       case 'wdopt': nav.wdOpt = !nav.wdOpt; return render();
-      case 'relpill': relPillOn = !!el.checked; await setValue('relPill', relPillOn ? 'on' : 'off'); render.keepGraph = true; return keepScroll(render);
+      case 'relpill': relPillOn = !relPillOn; await setValue('relPill', relPillOn ? 'on' : 'off'); render.keepGraph = true; return keepScroll(render);
       case 'autosum': autoSumOn = !!el.checked; await setValue('autoSum', autoSumOn ? 'on' : 'off');
         toast(autoSumOn ? '자동 정리를 켰어요 · 10턴마다 알아서 정리해요' : '자동 정리를 껐어요 · 이 기기에선 \'지금 바로 정리\'를 누를 때만 정리해요 · 기억 넣기는 그대로', 'ok', 4000); render(); if (autoSumOn) autoSum(); return;
       case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; const hadNote = !!snapshot?.note?.turns; await applyScene(on, chatIdFromPath(), true); fixTab(); render();
