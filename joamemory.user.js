@@ -4,7 +4,7 @@
 // @version      4.3.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리하기🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -817,7 +817,7 @@
       // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
       if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
         const recent = preg.recent || [], pool = P_SYM.filter(s => wk >= s[0] && wk <= s[1] && (p.sick || !/입덧/.test(s[2])) && (s[4] !== 'm' || world === 'modern') && !(me && P_INNER.test(s[2])) && !((preg.secret || preg.unaware) && P_KNOW.test(s[2])) && !(preg.unaware && /산모수첩|모르던 사람/.test(s[2])) && !recent.includes(s[2]));
-        if (pool.length) { const s = pool[Math.floor(pR('symp' + turn) * pool.length)]; ev = { k: 't' + turn, t: s[2] + (/^곁의 NPC가/.test(s[2]) ? ' (그 NPC 성격·관계대로)' : ''), kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); }
+        if (pool.length) { const s = pool[Math.floor(pR('symp' + turn) * pool.length)]; ev = { k: 't' + turn, t: s[2], kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); }
       }
       preg.lastRoll = turn;
       if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 3 : 2) }; }
@@ -856,20 +856,20 @@
     const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const sexKnown = preg.shown.sex != null; // 물어봐서 들었을 때만
     if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
-    const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아보고 반응(시선·자리 양보·조심)') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
+    const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아봄') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
     // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
-    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? ` · ${who}(유저)의 행동·말·생각·결정은 안 씀: 몸 상태는 NPC 눈에 보인 모습으로, 결정할 일은 선택지만 주고 멈춤` : ' · 결정할 일은 어느 쪽으로도 몰지 않음'} · 장소는 지금 장면 그대로: 병원·검진엔 유저가 가기로 했을 때만 감(AI가 장면을 병원으로 옮기거나 시간을 건너뛰지 않음)${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
+    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? ` · ${who}(유저)의 행동·말·생각은 안 씀` : ' · 결정할 일은 어느 쪽으로도 몰지 않음'}${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body} · 아기 모습은 주수에 맞게 자유롭게(앞에서 쓴 묘사는 되풀이하지 않음) · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${twinKnown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
+    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게(앞에서 쓴 묘사는 되풀이하지 않음)'} · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${twinKnown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
         if (preg.seen[tag] == null) preg.seen[tag] = turn;
-        if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck} — ${preg.secret ? P_DOC[world] + ' 쪽 문자·전화로만' : '곁의 NPC나 ' + P_DOC[world] + ' 연락으로'} 한 번 알려 주기(말·문자로만 · 데려가거나 장면을 옮기지 않음)` : `${ck}을 놓침 — ${preg.secret ? P_DOC[world] + ' 쪽에서 다시 오라고 연락' : '곁의 NPC가 다시 가자고 한 번 권하기'}(권하기만 · 가는 건 유저가 정함)`);
+        if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck}${preg.secret ? ` — ${P_DOC[world]} 쪽 문자·전화로만` : ''}` : `${ck}을 놓침${preg.secret ? ` — ${P_DOC[world]} 쪽에서 다시 오라고 연락` : ''}`);
       }
     }
-    if (cur && turn >= cur.from) todo.push((cur.soc ? cur.t : me ? (P_FEEL.test(cur.t) ? `${who}의 몸에 ${cur.t}(몸에 생긴 일까지만 쓰고 멈춤 · ${who}의 반응은 유저가 씀)` : `${who}에게 ${cur.t}(NPC 눈에 보인 대로)`) : `${who}에게 ${cur.t}`) + (cur.big ? (preg.secret ? ' (비밀이 들킬 위기일 수 있음)' : ` (곁의 NPC가 ${P_DOC[world]}에 가자고 할 수 있음)`) : ' — 지금 장면 안에서 일어나게'));
+    if (cur && turn >= cur.from) todo.push((cur.soc ? cur.t : me && P_FEEL.test(cur.t) ? `${who}의 몸에 ${cur.t}` : `${who}에게 ${cur.t}${me ? '(NPC 눈에 보인 대로)' : ''}`) + (cur.big ? ` — ${P_DOC[world]}에 가 봐야 할 일` : '')); // 큰일은 결과가 병원에서만 나와서(안 가면 유산·조산이 확정이 안 돼요)
     if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
     if (todo.length) L.push(`※ 임신 · 이번 답에 꼭 넣을 일: ${todo.join(' / ')}`);
