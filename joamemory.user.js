@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.0
+// @version      4.3.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리하기🚀
@@ -592,13 +592,13 @@
     [5, 14, '아랫배가 콕콕 쑤시고 땅김', /땅기|땅김|쑤시|콕콕|당기/],
     [6, 40, '갑자기 코피가 남(임신으로 혈관이 예민해져서)', /코피|코에서|코밑/],
     [6, 13, '참을 수 없이 졸려서 아무 데서나 꾸벅꾸벅 졺', /졸|잠들|꾸벅/],
-    [4, 14, '몸이 미열처럼 따끈함(초기 임신 체온 상승) — 곁의 NPC가 닿았을 때 알아챌 수 있음 · 감기인 줄 알고 병원에 가 보자고 권할 수 있음(강요 안 함)', /열|뜨거|따끈|미열|이마|감기/],
+    [4, 14, '몸이 미열처럼 따끈함(초기 임신 체온 상승)', /열|뜨거|따끈|미열|이마|감기/],
     [5, 14, '입안에서 쇠 맛이 계속 돎', /쇠 맛|쇳맛|비린|금속/],
     // 초기(4~7주)엔 고를 게 미열·쇠 맛뿐이라 같은 게 되풀이됐어요 → 저절로 나오는 몸 반응 위주로 더해요(유저 캐릭터의 행동·생각은 안 씀 · NPC가 알아챌 길은 힌트로)
-    [5, 12, '안색이 창백하고 쉽게 지쳐 보임 — 곁의 NPC가 알아채고 쉬라고 챙길 수 있음', /창백|안색|지쳐|핼쑥|기운/],
-    [5, 14, '커피·술·향수·고기 냄새를 맡으면 속이 메슥거려 안색이 변함 — 곁의 NPC가 왜 그러냐고 묻거나 창문을 열어 줄 수 있음', /메슥|냄새|안색|창문/],
-    [4, 12, '가슴이 붓고 예민해져 닿으면 저도 모르게 움찔함 — 곁의 NPC가 안거나 닿을 때 알아챌 수 있음', /움찔|가슴|예민|아파/],
-    [4, 13, '자꾸 하품이 나고 말하다가 멍해짐 — 곁의 NPC가 졸리냐고 묻거나 재우려 할 수 있음', /하품|멍|졸려|졸리/],
+    [5, 12, '안색이 창백하고 쉽게 지쳐 보임', /창백|안색|지쳐|핼쑥|기운/],
+    [5, 14, '커피·술·향수·고기 냄새를 맡으면 속이 메슥거려 안색이 변함', /메슥|냄새|안색|창문/],
+    [4, 12, '가슴이 붓고 예민해져 닿으면 저도 모르게 움찔함', /움찔|가슴|예민|아파/],
+    [4, 13, '자꾸 하품이 나고 말하다가 멍해짐', /하품|멍|졸려|졸리/],
     [4, 6, '생리 예정일이 지났는데 소식이 없음', /생리|예정일|늦어|안 와/],
     [4, 5, '속옷에 피가 살짝 비치다 금방 멈춤', /피가|비치|얼룩/],
     [6, 16, '좋아하던 음식이 갑자기 역겨워짐', /역겨|비위|싫어|못 먹/],
@@ -630,7 +630,7 @@
     [12, 40, '곁의 NPC가 밤에 배에 대고 몰래 말을 걸거나 노래를 불러 줌', /배에 대고|속삭|노래|말을 걸/],
     [8, 24, '아직 임신을 모르던 사람이 산모수첩·초음파 사진·약봉투를 보고 알게 됨', /알게|봤|산모수첩|초음파 사진|약봉투|임신이었/],
     [12, 40, '곁의 NPC와 사소한 일로 다툼 — 호르몬 탓에 평소보다 날카로움', /다투|싸우|날카|짜증|화를/],
-    [10, 40, '곁의 NPC가 과보호 모드 — 무거운 것 못 들게 하고 계단마다 손을 잡음', /들지 마|조심|손을 잡|과보호|부축/],
+    [10, 40, '곁의 NPC가 과보호 모드', /들지 마|조심|손을 잡|과보호|부축/],
     [8, 40, '곁의 NPC가 한밤중 야식 심부름을 다녀옴(구하기 어려운 음식)', /사 왔|사왔|구해|편의점|심부름|야식/],
     [10, 30, '곁의 NPC가 태명 이야기를 꺼냄', /태명/],
     [14, 40, '곁의 NPC가 몰래 아기 물건(옷·신발·인형)을 사 옴', /아기 옷|배냇|신발|인형|사 왔|사왔/],
@@ -640,7 +640,7 @@
     [8, 20, '주변 사람(동료·친구·이웃)이 임신을 눈치챔 — 소문이 돌기 시작함', /눈치|소문|수군|혹시/],
     [8, 40, '술자리나 커피·날음식을 권받는 상황이 생김', /술|와인|맥주|커피|회|날것/],
     [10, 40, '가족(부모·형제)에게서 연락이 옴 — 임신 이야기가 나옴', /전화|연락|엄마|아빠|어머니|아버지|가족/],
-    [16, 40, '전에 입던 옷이 안 맞음 — 단추가 안 잠기거나 지퍼가 안 올라감', /단추|지퍼|안 맞|꽉 끼|옷이/],
+    [16, 40, '전에 입던 옷이 안 맞음', /단추|지퍼|안 맞|꽉 끼|옷이/],
     [20, 40, '대중교통·줄에서 누가 자리를 양보함', /양보|자리를|비켜/, 'm'],
     [10, 40, '임신 앱·맘카페에서 이번 주 주의사항을 보고 곁의 NPC가 호들갑을 떪', /앱|카페|검색|알림|읽었/, 'm'],
     [24, 40, '곁의 NPC가 아기방이나 아기 침대를 준비하자고 함', /아기방|요람|침대|아기 침대|조립/],
@@ -681,7 +681,7 @@
     if (!d && /다음\s*날|이튿날|다음날|하룻밤이\s*지나/.test(t)) d = 1;
     return Math.min(d, 60);
   }
-  // 이야기가 먼저: 아직 정리 안 된 대화(최근 것부터)에 '9주 차'·'구 주 차'·'nine weeks along'이 나오면 그 주수로 시작일을 맞춰요.
+  // 이야기가 먼저: 아직 정리 안 된 대화(최근 것부터 · 유저가 보낸 말만)에 '9주 차'·'구 주 차'·'nine weeks along'이 나오면 그 주수로 시작일을 맞춰요.
   const P_KO = { 일: 1, 이: 2, 삼: 3, 사: 4, 오: 5, 육: 6, 칠: 7, 팔: 8, 구: 9 };
   const P_EN = Object.fromEntries('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ').map((w, i) => [w, i + 1]).concat([['thirty', 30], ['forty', 40]]));
   const koNum = s => { if (/^\d+$/.test(s)) return +s; const i = s.indexOf('십'); if (i < 0) return P_KO[s] || null; return (i ? P_KO[s.slice(0, i)] || 0 : 1) * 10 + (P_KO[s.slice(i + 1)] || 0); };
@@ -697,6 +697,7 @@
     let at = day; // 그 말이 나온 때의 날짜(그 뒤에 넘어간 시간은 빼요)
     for (const m of [...(snap?.fresh || [])].filter(isChat).reverse()) {
       if (preg.fixId && msgId(m) === preg.fixId) return; // 주수를 직접 고쳤으면 그 전 대화의 'N주'는 안 따라요
+      if (msgRole(m) !== 'user') { at -= pSkip(stripBlocks(msgText(m))); continue; } // AI가 쓴 'N주'는 안 따라요(주수는 우리가 넣어 준 것이라 다르면 AI가 틀린 것) · 유저가 쓴 말만
       const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t); if (!w) { at -= pSkip(t); continue; }
       if (Math.floor((at - preg.start) / 7) !== w) { preg.start = at - w * 7; preg.why = `대화에서 '${w}주'라고 나와서 맞췄어요`; preg.w0 = Math.min(preg.w0 ?? w, w); pregSave(); }
       return;
@@ -717,10 +718,11 @@
   const P_ERA = { modern: { loss: 1, still: 1, crisis: 0.01, weak: 0.02, ndeath: 0.003 }, old: { loss: 1.3, still: 5, crisis: 0.06, weak: 0.1, ndeath: 0.05 }, fantasy: { loss: 1, still: 2, crisis: 0.03, weak: 0.05, ndeath: 0.02 } };
   function pregPlan() { // seed로 정해지는 이번 임신의 운명(늘 같은 결과) · 시대(preg.era)마다 위험이 달라요
     const era = P_ERA[preg.era] || P_ERA.modern;
-    const n = preg.babies || (pR('twin') < 0.02 ? 2 : 1);
-    const sex = Array.from({ length: n }, (_, i) => pR('sex' + i) < 0.5 ? '남' : '여');
-    let abn = pR('abn') < 0.008, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.09, minor = pR('minor') < 0.1, lowP = pR('plac') < 0.09, previa = lowP && pR('placfix') < 0.1;
-    let struct = !abn && pR('struct') < 0.06 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.04; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
+    const n = preg.babies || (pR('twin') < 0.04 ? 2 : 1);
+    const hideTwin = n > 1 && !preg.babies && (preg.w0 || 0) < 12 && pR('hideTw') < 0.35; // 쌍둥이인데 처음 초음파엔 하나로 보였다가 12주 넘어 밝혀짐
+    const sex = preg.sexFix?.length === n ? preg.sexFix : Array.from({ length: n }, (_, i) => pR('sex' + i) < 0.5 ? '남' : '여'); // 한 번 알게 된 성별은 고정(주사위가 바뀌어도 안 바뀜)
+    let abn = pR('abn') < 0.015, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.18, minor = pR('minor') < 0.15, lowP = pR('plac') < 0.15, previa = lowP && pR('placfix') < 0.1;
+    let struct = !abn && pR('struct') < 0.08 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.1; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
     let gdm = pR('gdm') < (n > 1 ? 0.18 : 0.13), pe = pR('pe') < (n > 1 ? 0.14 : 0.08), peW = 30 + Math.floor(pR('peW') * 7);
     let fgr = pR('fgr') < (n > 1 ? 0.18 : 0.1), oligo = pR('oligo') < 0.06, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.25, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
     const quiet = pR('quiet') < 0.2, quietW = 28 + Math.floor(pR('quietW') * 10); // 태동이 뜸한 날(검사하면 대부분 괜찮음)
@@ -738,14 +740,14 @@
     // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
     const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.3 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
     if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
-    return { crisis, weak, ndeath, n, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
+    return { crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
     if (world === 'modern') return [
-      [6, '임신 확인 · 심장 소리', twin ? '아기집에서 심장 소리가 둘 — 쌍둥이' : '심장 소리 확인 · 정상'],
+      [6, '임신 확인 · 심장 소리', twin ? (p.hideTwin ? '심장 소리 확인 · 아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '심장 소리 확인 · 정상'],
       [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
-      [16, '2차 기형아 검사', p.abn ? `추가 검사에서 ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상'], // 성별은 물어볼 때만(pregTick)
+      [16, '2차 기형아 검사', p.abn ? `${preg?.shown?.c12 >= 0 ? '추가 검사에서' : `기형아 검사 고위험(${p.chrom.split('(')[0]}) → 추가 검사에서`} ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? (preg?.shown?.c12 >= 0 ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상') : '2차 기형아 검사 정상'], // 12주 검진을 못 갔으면 '의심'을 들은 적이 없으니 그에 맞게 // 성별은 물어볼 때만(pregTick)
       [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
       [26, '임신성 당뇨 검사', p.gdm ? '임신성 당뇨 판정 → 식단 관리·혈당 재기' : '당뇨 검사 정상'],
       [30, '정기 검진', J([p.breech ? (twin ? '한 아이가 거꾸로(역아)' : '역아(아기가 거꾸로)') + ' → 아직 돌 수 있음' : '아기 자리 좋음', p.fgr ? `${one}가 주수보다 작음(성장 지연) → 2주마다 크기 보기` : '', p.oligo ? '양수가 적음 → 물 많이 마시고 자주 보기' : p.poly ? '양수가 많음 → 자주 보기' : '', p.lowP ? (p.previa ? '태반이 자궁 입구를 덮음(전치태반) → 제왕절개 예정' : '태반이 올라가서 괜찮아짐') : '', p.cpc ? '뇌 물혹이 사라짐' : '', p.minor ? '전에 본 신장 소견 좋아짐' : ''])],
@@ -816,7 +818,7 @@
         if (pool.length) { const s = pool[Math.floor(pR('symp' + turn) * pool.length)]; ev = { k: 't' + turn, t: s[2] + (/^곁의 NPC가/.test(s[2]) ? ' (그 NPC 성격·관계대로)' : ''), kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); }
       }
       preg.lastRoll = turn;
-      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 3 : 1) }; }
+      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 3 : 2) }; }
     }
     // 검진 결과: 병원 장면일 때만(리롤해도 같은 턴엔 다시 넣어요)
     const res = [];
@@ -826,9 +828,14 @@
         if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); }
         res.push(e.res); if (e.end) preg.endNext = { kind: e.end, dayN: day, why: e.why || '', turn };
       }
-      const due = checks.filter(c => c[0] <= wk && !(p.loss != null && preg.fired.loss != null && c[0] >= p.loss) && (preg.shown['c' + c[0]] == null || preg.shown['c' + c[0]] === turn));
+      checks.filter(c => c[0] < wk - 4 && preg.shown['c' + c[0]] == null).forEach(c => { preg.shown['c' + c[0]] = -1; }); // 4주 넘게 지난 검진은 안 받은 걸로(16주에 병원 가서 6주 초음파를 찍은 걸로 적지 않게)
+      const due = checks.filter(c => c[0] <= wk && c[0] >= wk - 4 && !(p.loss != null && preg.fired.loss != null && c[0] >= p.loss) && (preg.shown['c' + c[0]] == null || preg.shown['c' + c[0]] === turn)).slice(-1); // 이번에 받는 건 가장 최근 검진 하나(그 전 것은 안 받은 걸로)
+      checks.filter(c => c[0] < (due[0]?.[0] ?? 0) && preg.shown['c' + c[0]] == null).forEach(c => { preg.shown['c' + c[0]] = -1; });
       due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; if (i >= due.length - 2) preg.log.push({ w: c[0], t: c[1] + ': ' + c[2], at: turn, res: 1 }); } });
       due.slice(-2).forEach(c => res.push(c[0] + '주 ' + c[1] + ': ' + c[2]));
+      if (p.hideTwin && (preg.twinAt == null || preg.twinAt === turn) && due.some(c => c[0] >= 12)) { // 숨어 있던 쌍둥이가 밝혀짐(처음 초음파를 봤으면 '하나 더', 못 봤으면 그냥 둘)
+        const t = Object.keys(preg.shown).some(k => /^c\d/.test(k) && +k.slice(1) < 12 && preg.shown[k] >= 0) ? '다시 보니 뒤에 숨어 있던 아기가 하나 더 — 쌍둥이였음' : '아기가 둘 — 쌍둥이';
+        if (preg.twinAt == null) { preg.twinAt = turn; preg.log.push({ w: wk, t, at: turn, res: 1 }); } res.unshift(t); }
       // 성별(현대만): 16주 전엔 절대 안 알려 줘요 · 16주부터 병원 장면이면 AI에게 주고 '누가(유저든 NPC든) 물어보면 알려 줌, 안 물으면 말 안 함'
       const sexTxt = p.sex.map(x => x === '남' ? '아들' : '딸').join('·');
       if (world === 'modern' && preg.shown.sex == null) {
@@ -838,28 +845,28 @@
     }
     // AI 답(또는 유저 말)에 성별이 나오면 들은 걸로 · 수첩에 적어요
     if (preg.shown.sex == null && preg.sexAt != null && turn > preg.sexAt && P_SEXQ.test(lastAi)) {
-      preg.shown.sex = turn; preg.log.push({ w: wk, t: '성별을 알게 됨: ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·'), at: turn, res: 1 });
+      preg.shown.sex = turn; preg.sexFix = p.sex; preg.log.push({ w: wk, t: '성별을 알게 됨: ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·'), at: turn, res: 1 });
     }
     // 출산은 이야기를 따라가요: AI 답이나 보낸 말에 아기가 태어났다고 나오면(20주부터) 그날로 출산 · 주사위가 정한 주가 아니어도
     if (!preg.endNext && wk >= 20 && P_BORN.test(lastAi + '\n' + said) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said)) preg.endNext = { kind: '출산', dayN: day, why: '', turn: turn - 1 };
     if (preg.endNext && preg.endNext.turn < turn) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
-    const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8;
+    const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const sexKnown = preg.shown.sex != null; // 물어봐서 들었을 때만
-    const body = '배: ' + pBelly(wk, p.n > 1 && anyShown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아보고 반응(시선·자리 양보·조심)') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
+    if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
+    const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아보고 반응(시선·자리 양보·조심)') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
     // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
-    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? ` · ${who}(유저)의 행동·말·생각·결정은 안 씀: 몸 상태는 NPC 눈에 보인 모습으로, 결정할 일은 선택지만 주고 멈춤` : ' · 결정할 일은 어느 쪽으로도 몰지 않음'}${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
+    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${me ? ` · ${who}(유저)의 행동·말·생각·결정은 안 씀: 몸 상태는 NPC 눈에 보인 모습으로, 결정할 일은 선택지만 주고 멈춤` : ' · 결정할 일은 어느 쪽으로도 몰지 않음'} · 장소는 지금 장면 그대로: 병원·검진엔 유저가 가기로 했을 때만 감(AI가 장면을 병원으로 옮기거나 시간을 건너뛰지 않음)${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
-    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (p.n > 1 ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.join('·') + ')' : ''} · ${body}${pDev(wk) ? ` · 태아(${P_SIZE[wk] || ''}만 함): ${pDev(wk)}` : ''} · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${p.n > 1 && anyShown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
+    if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
+    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body} · 아기 모습은 주수에 맞게 자유롭게(앞에서 쓴 묘사는 되풀이하지 않음) · 유산 위험: ${wk < 6 ? '높은 시기' : wk < 12 ? '아직 조심할 때(12주부터 안정기)' : wk < 20 ? '안정기' : '아주 낮음'}${twinKnown ? '(쌍둥이라 조금 더 높음)' : ''}${next ? ` · 다음 ${ck} ${next[0]}주 ${next[1]}(${P_STR(preg.start + next[0] * 7)}쯤)` : ''}`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
         if (preg.seen[tag] == null) preg.seen[tag] = turn;
-        if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck} — ${preg.secret ? P_DOC[world] + ' 쪽 문자·전화로만' : '곁의 NPC나 ' + P_DOC[world] + ' 연락으로'} 한 번 알려 주기` : `${ck}을 놓침 — ${preg.secret ? P_DOC[world] + ' 쪽에서 다시 오라고 연락' : '곁의 NPC가 다시 가자고 한 번 권하기'}`);
+        if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck} — ${preg.secret ? P_DOC[world] + ' 쪽 문자·전화로만' : '곁의 NPC나 ' + P_DOC[world] + ' 연락으로'} 한 번 알려 주기(말·문자로만 · 데려가거나 장면을 옮기지 않음)` : `${ck}을 놓침 — ${preg.secret ? P_DOC[world] + ' 쪽에서 다시 오라고 연락' : '곁의 NPC가 다시 가자고 한 번 권하기'}(권하기만 · 가는 건 유저가 정함)`);
       }
     }
-    if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기(아기 크기 비유)
-    if (!preg.unaware && turn - (preg.wkAt ?? -9) < 2 && P_SIZE[wk]) todo.push(`${wk}주가 됨 — 아기가 자란 걸 한 번 드러내기`);
     if (cur && turn >= cur.from) todo.push((cur.soc ? cur.t : me ? (P_FEEL.test(cur.t) ? `${who}의 몸에 ${cur.t}(몸에 생긴 일까지만 쓰고 멈춤 · ${who}의 반응은 유저가 씀)` : `${who}에게 ${cur.t}(NPC 눈에 보인 대로)`) : `${who}에게 ${cur.t}`) + (cur.big ? (preg.secret ? ' (비밀이 들킬 위기일 수 있음)' : ` (곁의 NPC가 ${P_DOC[world]}에 가자고 할 수 있음)`) : ' — 지금 장면 안에서 일어나게'));
     if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
@@ -1084,10 +1091,10 @@
     }
     // ── 산모수첩 ──
     const stage = wk == null ? -1 : wk < 14 ? 0 : wk < 28 ? 1 : 2;
-    const anyShown = Object.keys(shown).some(k => /^c\d/.test(k)) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown;
+    const anyShown = Object.keys(shown).some(k => /^c\d/.test(k) && shown[k] >= 0) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>D-${dday}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
-      <div class="pg-chips"><span>${anyShown ? (p.n > 1 ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
+      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ' ✎' : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(preg.why || '')} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p>${warn}</div>`;
     const cur = preg.cur && turn >= preg.cur.from;
     const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
@@ -1098,12 +1105,12 @@
     const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ' · 쌍둥이라 조금 더 높아요' : ''}</b></div>`) : '';
     const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
     const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
-    const scans = checks.filter(c => shown['c' + c[0]] != null && !/당뇨/.test(c[1])).map(c => `<span>${c[0]}주${c[0] <= 8 ? ' 💓' : ''} ${esc(c[1].split(' · ')[0])}</span>`);
-    const scan = sec(world === 'modern' ? '🩻 초음파 기록' : '🩺 진찰 기록', '', `<div class="pg-scan">${scans.join('')}${next ? `<span class="soon">${next[0]}주 · 곧</span>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
+    const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${c[0]}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
+    const scan = sec(world === 'modern' ? '🩻 초음파 기록' : '🩺 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(x.t)}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
-    const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns">${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
-    return `<div class="pg pg-book">${P_TEST}${cover}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>`;
+    const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="devimg" data-arg="preg">📸 수첩 캡처</button>${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
+    return `<div class="pg pg-book">${P_TEST}${cover}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>${devImgSheet()}`;
   }
   // 앱 방식: 보낼 때 끼어들지 않으니까, 화면을 다시 읽을 때(답이 온 뒤·사파리로 들어올 때) 임신 줄이 바뀌었으면 노트 든 답변(전전)에 한 번 고쳐 써요 · 정리 안 해도 · AI 안 불러서 0원
   async function pregAppSync(chatId) {
@@ -2721,7 +2728,7 @@
     .pc-lock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;color:#fff;background:radial-gradient(120% 90% at 20% 10%,var(--wb),var(--wf))}
     /* 🗨 커뮤니티: 앱 화면 같은 카드 하나 */
     .bd{border:1px solid var(--rule);border-radius:16px;overflow:hidden;background:var(--paper)}
-    nav.top button[data-arg="mode"]{--ic:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.7%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2716%27%20rx%3D%274%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E")}.pg{padding:4px 2px 20px}.pg-mode{display:flex;gap:12px;align-items:center}.pg-mode>div{flex:1;min-width:0}.pg-mode b{font-size:15px}.pg-mode small{display:block;color:var(--graphite);font-size:12px;margin-top:2px;line-height:1.45}.pg-ic{font-size:24px;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:var(--chip,#F1F0F7);display:flex;align-items:center;justify-content:center}.pg-sw{flex:0 0 42px;width:42px;height:24px;border-radius:99px;border:0;padding:0;background:var(--rule);position:relative;cursor:pointer}.pg-sw i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.pg-sw[aria-pressed="true"]{background:var(--ink)}.pg-sw[aria-pressed="true"] i{left:21px}.pg-card .pg-hid{margin-top:12px}.pg-dim{opacity:.45}.pg-inj summary{font-size:13px;font-weight:700;color:var(--graphite);cursor:pointer}.pg-inj pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.55;margin:10px 0 0;color:var(--ink2);font-family:inherit}.pg-wchip{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);border:0;color:var(--graphite);cursor:pointer}.pg-row small{max-width:68%}.pg-card .pg-big{margin-top:12px}.pg-tri .pg-now{color:var(--acc,#7B61D9);font-weight:700}.pg-kit{position:relative;width:260px;max-width:100%;height:96px;margin:8px auto 2px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rule)}.pg-scr{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}.pg-stick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pg-win{display:flex;gap:20px;padding:10px 24px;background:#F7F5FA;border-radius:10px;border:1px solid var(--rule)}.pg-win i{width:4px;height:34px;border-radius:2px}.pg-win i.c,.pg-win i.t.on{background:#D9466F}.pg-stick small{font-size:10px;color:var(--graphite);letter-spacing:14px;margin-left:14px}.pg-more summary{font-size:12.5px;color:var(--graphite);cursor:pointer;font-weight:700}.pg-more .pg-log{margin-top:6px}.pg-open{display:block;border:0;background:none;padding:0;margin-top:4px;font:inherit;font-size:12.5px;font-weight:700;color:var(--acc,#7B61D9);cursor:pointer}.pg-back{border:0;background:none;padding:2px 4px 10px;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.pg-cover{background:#F1EDFC;border:1px solid #E4DCFA;border-radius:20px;padding:16px;margin:0 0 12px}.pg-ct{font-size:19px;font-weight:800;letter-spacing:-.3px}.pg-ct small{display:block;font-size:12px;font-weight:600;color:var(--graphite);margin-top:3px}.pg-label{font-size:11px;font-weight:700;color:var(--acc,#7B61D9);background:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:3px}.pg-cover .pg-bar{background:#fff}.pg-cover .pg-bar i{background:#A993E8}.pg-cover .pg-chips span,.pg-cover .pg-wchip{background:#fff}.pg-sec{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 16px;margin:0 0 12px}.pg-sec h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:6px}.pg-sec h3 em{font-style:normal;font-size:11px;color:var(--graphite);font-weight:600;margin-left:auto;text-align:right}.pg-r{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;line-height:1.45}.pg-r+.pg-r{border-top:1px dashed var(--rule)}.pg-r span{color:var(--graphite);white-space:nowrap}.pg-r b{font-weight:600;text-align:right;color:var(--ink2)}.pg-scan{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.pg-scan span{border:1.5px dashed #CBBDF2;border-radius:10px;padding:6px 9px;font-size:12px;color:var(--acc,#7B61D9);background:#FAF8FF}.pg-scan .soon{color:var(--graphite);border-color:var(--rule);background:#fff}.pg-book .pg-log em{color:var(--acc,#7B61D9);font-weight:700}.pg-book .pg-log li+li{border-top:1px dashed var(--rule)}.pg-hist{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}.pg-hist summary{font-size:12.5px;color:var(--graphite);font-weight:700;cursor:pointer}.pg-hist .pg-log li{font-size:12.5px}.pg-test{margin:0 0 10px;text-align:center;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);background:#F1EDFC;border-radius:999px;padding:5px 12px}.pg-vt{font-size:10.5px;color:var(--acc,#7B61D9);margin-left:4px}.pg-kitdone b{font-size:13.5px}.pg-kitdone .pg-s{margin:6px 0}.pg-hd{border:0;background:#F1EDFC;color:var(--acc,#7B61D9);font:inherit;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;margin-right:4px;cursor:pointer;white-space:nowrap;align-self:center}.pg-kitin{border-top:1px solid var(--rule);margin-top:12px;padding-top:12px}.pg-kitcap{display:block;font-size:13px;color:var(--graphite);margin-bottom:4px}.pg-book .pg-kitin{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:12px 14px;margin:0 0 12px}.pg-odds{display:inline-block;font-size:11px;font-weight:700;color:#C9648E;background:#FDEEF3;border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px}.pg-free{display:inline-block;font-size:10.5px;font-weight:700;color:#4E9A6E;background:#E8F5EE;border-radius:999px;padding:1px 7px;margin-left:2px}.pg-book1{margin:6px 0 0 4px}.pg-book1 summary{font-size:12.5px;cursor:pointer}.pg-book1 small{color:var(--graphite);font-size:11px;margin-left:4px}.pg-link{border:0;background:none;padding:0;color:var(--acc,#7B61D9);font:inherit;font-size:12px;font-weight:700;cursor:pointer}.pg-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:16px;margin:0 0 12px}.pg-t{font-size:16px}.pg-s{font-size:12.5px;color:var(--graphite);line-height:1.55;margin:6px 0}.pg-warn{font-size:12.5px;color:#8A6A12;background:#FFF1BF;border-radius:10px;padding:8px 10px}.pg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);font-size:13.5px}.pg-row small{color:var(--graphite);font-size:12px;text-align:right}.pg-in{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:#fff;max-width:55%}.pg-go{width:100%;margin-top:10px}.pg-sub{font-size:12.5px;color:var(--graphite)}.pg-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}.pg-big b{font-size:32px}.pg-big span{color:var(--graphite);font-size:13px}.pg-bar{height:8px;border-radius:9px;background:var(--chip,#F1F0F7);margin:10px 0 6px;position:relative;overflow:hidden}.pg-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc,#7B61D9);border-radius:9px}.pg-tri{display:flex;justify-content:space-between;font-size:11.5px;color:var(--graphite)}.pg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.pg-chips span{padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px}.pg-cap{font-size:13px;font-weight:700;color:var(--graphite);margin:4px 4px 8px}.pg-hid{display:flex;gap:10px;align-items:center;background:var(--acc-soft,#ECE7FC);border-radius:14px;padding:12px;font-size:13px}.pg-hid>b{font-size:20px}.pg-log{margin:0;padding:0}.pg-log li{list-style:none;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.5}.pg-log li:first-child{border-top:0}.pg-log em{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}.pg-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:4px;background:#E5F4EA;color:#2F7A47}.pg-soon{background:#FFF1BF;color:#8A6A12}.pg-btns{display:flex;gap:8px;margin-top:8px}.pg-btns .btn{flex:1}.bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
+    nav.top button[data-arg="mode"]{--ic:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.7%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2716%27%20rx%3D%274%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%279%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2715%27%20r%3D%271.1%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E")}.pg{padding:4px 2px 20px}.pg-mode{display:flex;gap:12px;align-items:center}.pg-mode>div{flex:1;min-width:0}.pg-mode b{font-size:15px}.pg-mode small{display:block;color:var(--graphite);font-size:12px;margin-top:2px;line-height:1.45}.pg-ic{font-size:24px;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:var(--chip,#F1F0F7);display:flex;align-items:center;justify-content:center}.pg-sw{flex:0 0 42px;width:42px;height:24px;border-radius:99px;border:0;padding:0;background:var(--rule);position:relative;cursor:pointer}.pg-sw i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.pg-sw[aria-pressed="true"]{background:var(--ink)}.pg-sw[aria-pressed="true"] i{left:21px}.pg-card .pg-hid{margin-top:12px}.pg-dim{opacity:.45}.pg-inj summary{font-size:13px;font-weight:700;color:var(--graphite);cursor:pointer}.pg-inj pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.55;margin:10px 0 0;color:var(--ink2);font-family:inherit}.pg-wchip{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);border:0;color:var(--graphite);cursor:pointer}.pg-row small{max-width:68%}.pg-card .pg-big{margin-top:12px}.pg-tri .pg-now{color:var(--acc,#7B61D9);font-weight:700}.pg-kit{position:relative;width:260px;max-width:100%;height:96px;margin:8px auto 2px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rule)}.pg-scr{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}.pg-stick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pg-win{display:flex;gap:20px;padding:10px 24px;background:#F7F5FA;border-radius:10px;border:1px solid var(--rule)}.pg-win i{width:4px;height:34px;border-radius:2px}.pg-win i.c,.pg-win i.t.on{background:#D9466F}.pg-stick small{font-size:10px;color:var(--graphite);letter-spacing:14px;margin-left:14px}.pg-more summary{font-size:12.5px;color:var(--graphite);cursor:pointer;font-weight:700}.pg-more .pg-log{margin-top:6px}.pg-open{display:block;border:0;background:none;padding:0;margin-top:4px;font:inherit;font-size:12.5px;font-weight:700;color:var(--acc,#7B61D9);cursor:pointer}.pg-back{border:0;background:none;padding:2px 4px 10px;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.pg-cover{background:#F1EDFC;border:1px solid #E4DCFA;border-radius:20px;padding:16px;margin:0 0 12px}.pg-ct{font-size:19px;font-weight:800;letter-spacing:-.3px}.pg-ct small{display:block;font-size:12px;font-weight:600;color:var(--graphite);margin-top:3px}.pg-label{font-size:11px;font-weight:700;color:var(--acc,#7B61D9);background:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:3px}.pg-cover .pg-bar{background:#fff}.pg-cover .pg-bar i{background:#A993E8}.pg-cover .pg-chips span,.pg-cover .pg-wchip{background:#fff}.pg-sec{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:14px 16px;margin:0 0 12px}.pg-sec h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:6px}.pg-sec h3 em{font-style:normal;font-size:11px;color:var(--graphite);font-weight:600;margin-left:auto;text-align:right}.pg-r{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;line-height:1.45}.pg-r+.pg-r{border-top:1px dashed var(--rule)}.pg-r span{color:var(--graphite);white-space:nowrap}.pg-r b{font-weight:600;text-align:right;color:var(--ink2)}.pg-scan{margin-top:2px}.pg-scan summary{cursor:pointer;font-size:12px;color:var(--graphite);padding:4px 0 6px}.pg-scan details>div:last-child::after{content:'';position:absolute;left:4px;top:24px;bottom:-8px;width:1px;background:#DDD3F7}.pg-scan div{position:relative;display:flex;align-items:baseline;gap:10px;padding:7px 0 7px 20px;font-size:13px;line-height:1.45}.pg-scan div::before{content:'';position:absolute;left:0;top:12px;width:9px;height:9px;border-radius:50%;background:var(--acc,#7B61D9);box-sizing:border-box}.pg-scan div:not(:last-child)::after{content:'';position:absolute;left:4px;top:24px;bottom:-8px;width:1px;background:#DDD3F7}.pg-scan b{min-width:32px;color:var(--acc,#7B61D9);font-weight:700}.pg-scan i{margin-left:auto;font-style:normal;font-size:11px;font-weight:600;color:var(--acc,#7B61D9);background:#F3EFFD;border-radius:6px;padding:1px 7px}.pg-scan .soon::before{background:#fff;border:1.5px solid #CBBDF2}.pg-scan .soon b,.pg-scan .soon span{color:var(--graphite)}.pg-book .pg-log em{color:var(--acc,#7B61D9);font-weight:700}.pg-book .pg-log li+li{border-top:1px dashed var(--rule)}.pg-hist{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}.pg-hist summary{font-size:12.5px;color:var(--graphite);font-weight:700;cursor:pointer}.pg-hist .pg-log li{font-size:12.5px}.pg-test{margin:0 0 10px;text-align:center;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);background:#F1EDFC;border-radius:999px;padding:5px 12px}.pg-vt{font-size:10.5px;color:var(--acc,#7B61D9);margin-left:4px}.pg-kitdone b{font-size:13.5px}.pg-kitdone .pg-s{margin:6px 0}.pg-hd{border:0;background:#F1EDFC;color:var(--acc,#7B61D9);font:inherit;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;margin-right:4px;cursor:pointer;white-space:nowrap;align-self:center}.pg-kitin{border-top:1px solid var(--rule);margin-top:12px;padding-top:12px}.pg-kitcap{display:block;font-size:13px;color:var(--graphite);margin-bottom:4px}.pg-book .pg-kitin{background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:12px 14px;margin:0 0 12px}.pg-odds{display:inline-block;font-size:11px;font-weight:700;color:#C9648E;background:#FDEEF3;border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px}.pg-free{display:inline-block;font-size:10.5px;font-weight:700;color:#4E9A6E;background:#E8F5EE;border-radius:999px;padding:1px 7px;margin-left:2px}.pg-book1{margin:6px 0 0 4px}.pg-book1 summary{font-size:12.5px;cursor:pointer}.pg-book1 small{color:var(--graphite);font-size:11px;margin-left:4px}.pg-link{border:0;background:none;padding:0;color:var(--acc,#7B61D9);font:inherit;font-size:12px;font-weight:700;cursor:pointer}.pg-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:16px;margin:0 0 12px}.pg-t{font-size:16px}.pg-s{font-size:12.5px;color:var(--graphite);line-height:1.55;margin:6px 0}.pg-warn{font-size:12.5px;color:#8A6A12;background:#FFF1BF;border-radius:10px;padding:8px 10px}.pg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);font-size:13.5px}.pg-row small{color:var(--graphite);font-size:12px;text-align:right}.pg-in{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:#fff;max-width:55%}.pg-go{width:100%;margin-top:10px}.pg-sub{font-size:12.5px;color:var(--graphite)}.pg-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}.pg-big b{font-size:32px}.pg-big span{color:var(--graphite);font-size:13px}.pg-bar{height:8px;border-radius:9px;background:var(--chip,#F1F0F7);margin:10px 0 6px;position:relative;overflow:hidden}.pg-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc,#7B61D9);border-radius:9px}.pg-tri{display:flex;justify-content:space-between;font-size:11.5px;color:var(--graphite)}.pg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.pg-chips span{padding:4px 10px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px}.pg-cap{font-size:13px;font-weight:700;color:var(--graphite);margin:4px 4px 8px}.pg-hid{display:flex;gap:10px;align-items:center;background:var(--acc-soft,#ECE7FC);border-radius:14px;padding:12px;font-size:13px}.pg-hid>b{font-size:20px}.pg-log{margin:0;padding:0}.pg-log li{list-style:none;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.5}.pg-log li:first-child{border-top:0}.pg-log em{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}.pg-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:4px;background:#E5F4EA;color:#2F7A47}.pg-soon{background:#FFF1BF;color:#8A6A12}.pg-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.pg-btns .btn{flex:1}.bd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center}.bd-empty small{font-size:12px;color:var(--graphite)}.bd-empty .ph-make{margin-top:10px;background:var(--mist)}
     .bd-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:14px 16px 10px;border-bottom:1px solid var(--rule)}.bd-top b{font-size:16px}.bd-top small{font-size:12px;color:var(--graphite)}
     .bd-top button{border:0;background:transparent;font-size:13.5px;color:var(--ink2);padding:0;cursor:pointer}
     .bd-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 16px;border-bottom:1px solid var(--rule)}
@@ -4684,6 +4691,9 @@
   async function gsSave(quiet = false) {
     try {
       const data = await backupData(); if (!data) { if (!quiet) toast('올릴 게 없어요.', 'info', 2500); return; }
+      // 드라이브의 좋은 백업을 덮지 않게: 이 기기에 전체 기억이 없으면(웹 모드 채팅엔 고른 일부만) 안 올리고, 기억이 비었으면 자동으로는 안 올려요(기억이 날아간 기기가 덮어쓰는 것 방지)
+      const n = snapshot?.note; if (n?.sel && !(fullNote && fullNote.upto === n.upto)) { if (!quiet) toast('이 기기엔 전체 기억이 없어서 안 올렸어요. 드라이브 백업을 덮어쓰지 않게요. 정리한 기기에서 올려 주세요.', 'info', 5000); return; }
+      if (!data.memory && quiet) return;
       if (!quiet) toast('구글 드라이브에 올리는 중…');
       await gsCall({ action: 'save', chat: data.chat, title: roomTitle(), data: JSON.stringify(data) });
       if (!quiet) toast('구글 드라이브에 백업했어요.', 'ok', 3000);
@@ -5669,22 +5679,23 @@
   }
   // 🖼 폰·모니터 이미지로 저장: 지금 보이는 기기 화면을 그대로 찍습니다(컴퓨터는 바로 내려받기, 아이폰은 공유 창).
   async function snapDevice(kind) {
-    const nodes = (kind === 'pc' ? [root.querySelector('.pc'), root.querySelector('.pc-stand')] : [root.querySelector('.iphone')]).filter(Boolean);
+    const nodes = (kind === 'pc' ? [root.querySelector('.pc'), root.querySelector('.pc-stand')] : kind === 'preg' ? [root.querySelector('.pg-book')] : [root.querySelector('.iphone')]).filter(Boolean);
     if (!nodes.length) return;
     const pad = 14, r0 = nodes[0].getBoundingClientRect(), r1 = nodes[nodes.length - 1].getBoundingClientRect();
-    const w = Math.ceil(r0.width) + pad * 2, h = Math.ceil(r1.bottom - r0.top) + pad * 2;
+    const cut = kind === 'preg' ? (nodes[0].querySelector(':scope>.pg-card:last-child')?.offsetHeight || 0) + 12 : 0; // 수첩 맨 아래 버튼 카드는 안 찍어요
+    const w = Math.ceil(r0.width) + pad * 2, h = Math.ceil(r1.bottom - r0.top) - cut + pad * 2;
     const ser = new XMLSerializer();
     const body = nodes.map(n => { const c = n.cloneNode(true); c.style.margin = '0 auto';
-      if (!n.classList.contains('pc-stand')) { c.style.width = n.offsetWidth + 'px'; c.style.height = n.offsetHeight + 'px'; }
+      if (!n.classList.contains('pc-stand')) { c.style.width = n.offsetWidth + 'px'; if (kind !== 'preg') c.style.height = n.offsetHeight + 'px'; }
       return ser.serializeToString(c); }).join('');
-    const css = [...root.querySelectorAll('style')].map(x => x.textContent).join('\n').replace(/:host/g, '.snap') + '\n.snap .bd,.snap .bd *,.snap .iphone,.snap .pc{box-shadow:none!important}';
+    const css = [...root.querySelectorAll('style')].map(x => x.textContent).join('\n').replace(/:host/g, '.snap') + '\n.snap .bd,.snap .bd *,.snap .iphone,.snap .pc{box-shadow:none!important}.snap .pg-btns,.snap .pg-link,.snap .pg-book>.pg-card:last-child{display:none!important}'; // 산모수첩: 버튼·고치기 링크는 빼고 찍어요
     // 아이폰(사파리·카톡)은 viewBox로 foreignObject를 안 키워줘서 1배로 왼쪽 위에만 그려지고 나머지가 하얘져요 → zoom으로 직접 2배
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * 2}" height="${h * 2}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="snap" style="zoom:2;width:${w}px;height:${h}px;box-sizing:border-box;padding:${pad}px;background:#fff"><style>${css.replace(/</g, '\\3c ')}</style>${body}</div></foreignObject></svg>`;
     const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     try { await img.decode(); } catch (_) { toast('이미지를 만들지 못했어요.', 'err'); return; }
     const scale = 2, cv = document.createElement('canvas'); cv.width = w * scale; cv.height = h * scale;
     const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height);
-    const name = `${kind === 'pc' ? '컴퓨터' : '폰'}-${String(nav.phWho || '').replace(/[\\/:*?"<>|]/g, '')}.png`;
+    const name = `${kind === 'pc' ? '컴퓨터' : kind === 'preg' ? '산모수첩' : '폰'}-${String(kind === 'preg' ? preg?.who || '' : nav.phWho || '').replace(/[\\/:*?"<>|]/g, '')}.png`;
     let blob; try { blob = await new Promise(r => cv.toBlob(r, 'image/png')); } catch (_) { blob = null; }
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (!blob) { nav.bdImg = img.src; render(); return; }
@@ -8867,6 +8878,8 @@
           Object.assign(preg, { on: true, who: who.trim(), me: true, start: st, w0: wk, why: ok ? `직접 시작 · 마지막 관계 ${P_STR(rel.d)} 기준` : '직접 시작 · 관계일을 못 찾아서 지금을 5주로', seed: preg.seed || ((Math.random() * 4294967296) >>> 0), at: Date.now() }); pregChat = pregChat || chatIdFromPath(); await pregSave(); return keepScroll(render); }
         const w0 = parseInt(prompt('지금 몇 주예요?', String(Math.floor((day - preg.start) / 7))), 10); if (!(w0 >= 3 && w0 <= 42)) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
         Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요', fixId: msgId([...(snapshot?.all || [])].filter(isChat).pop()) }); await pregSave(); return keepScroll(render); }
+      case 'pregsex': { if (!preg?.start) return; const s = pregPlan().sex, k = (s.reduce((a, x) => a * 2 + (x === '여'), 0) + 1) % (1 << s.length); // 아들↔딸(쌍둥이는 네 가지를 돌아가며)
+        preg.sexFix = s.map((_, i) => (k >> (s.length - 1 - i)) & 1 ? '여' : '남'); await pregSave(); return keepScroll(render); }
       case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
       case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
