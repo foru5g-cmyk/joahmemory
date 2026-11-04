@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.7
+// @version      4.3.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -179,9 +179,13 @@
   }
   // 글 그대로 받는 요청(Gemini 스트리밍용)
   function requestRaw(method, url, { body, headers = {}, timeout = 30000, onProgress } = {}) {
-    return new Promise((resolve, reject) => {
-      if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
-      gmRequest({ method, url, timeout, headers: { 'Content-Type': 'application/json', ...headers }, data: body === undefined ? undefined : JSON.stringify(body),
+    return new Promise((res0, rej0) => {
+      if (!gmRequest) { rej0(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
+      // 아이폰은 화면이 꺼지거나 다른 앱에 갔다 오면 연결이 끊겨도 알려 주지 않아 '만드는 중'이 끝없이 갔어요 → 시계를 직접 봐요
+      const t0 = Date.now(); let h = null;
+      const tick = setInterval(() => { if (Date.now() - t0 < timeout) return; reject(new Error('응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
+      const resolve = v => { clearInterval(tick); res0(v); }, reject = e => { clearInterval(tick); rej0(e); };
+      h = gmRequest({ method, url, timeout, headers: { 'Content-Type': 'application/json', ...headers }, data: body === undefined ? undefined : JSON.stringify(body),
         onprogress: r => { try { onProgress?.(r?.responseText || ''); } catch (_) {} },
         onload: r => { if (r.status >= 200 && r.status < 300) return resolve(r.responseText || '');
           let msg = ''; try { const j = JSON.parse(r.responseText); msg = (Array.isArray(j) ? j[0] : j)?.error?.message || ''; } catch (_) {}
@@ -3351,6 +3355,7 @@
     .gn{cursor:pointer}
     .gn .halo{fill:var(--paper);stroke-width:0;filter:drop-shadow(0 2px 4px rgba(75,63,138,.14))}.gn.sel .halo{stroke-width:3}
     .gn .nm{font-size:12.5px;font-weight:800}
+    .glh{font-size:12px;font-weight:700;fill:var(--graphite)}
     .dim{opacity:.16}
     .gctl{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
     .gctl button{width:40px;height:40px;border:1.5px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center}
@@ -7119,7 +7124,11 @@
         return `<li>${who ? `${nameChip(canon(who[1]))}${who[2] ? `<i class="nar">${sep}</i>${nameChip(canon(who[2]))}` : ''} ` : ''}${k ? `<em class="rk">${esc(k)}</em>` : ''}${esc(t)}${last ? ` <small class="pdim">${esc(last[1])}</small>` : ''}${quoteHtml(q)}</li>`; }).join(''); };
     const ruleLines = pick(/제약|약속|조건/).flatMap(b => b.lines), habitLines = pick(/습관|생활의 결/).flatMap(b => b.lines);
     const rulesHtml = rules.length ? `<div class="st-card"><div class="st-h">⏳ 약속 · 금지 · 조건</div><ul class="nrules">${chipRows(ruleLines, ruleKind)}</ul></div>` : '';
-    const habitsHtml = habitLines.length ? `<div class="st-card"><div class="st-h">🔁 되풀이되는 습관</div><ul class="nrules">${chipRows(habitLines, l => ['', l])}</ul></div>` : '';
+    // 끝에 "(삭제)"가 붙은 습관은 글자 대신 '삭제' 알약으로, 아래에 접어 둬요(근거·이유 줄도 같이)
+    const habitDel = [], habitKeep = []; let habitGone = false;
+    for (const l of habitLines) { if (!/^(근거|이유|번역)\s*[:：]/.test(l)) habitGone = /\(삭제\)\s*$/.test(l); (habitGone ? habitDel : habitKeep).push(habitGone ? l.replace(/\s*\(삭제\)\s*$/, '') : l); }
+    const habitDelN = habitDel.filter(l => !/^(근거|이유|번역)\s*[:：]/.test(l)).length;
+    const habitsHtml = habitLines.length ? `<div class="st-card"><div class="st-h">🔁 되풀이되는 습관</div>${habitKeep.length ? `<ul class="nrules">${chipRows(habitKeep, l => ['', l])}</ul>` : ''}${habitDelN ? `<details class="tl-done"><summary>지운 습관 ${habitDelN}</summary><ul class="nrules">${chipRows(habitDel, l => ['삭제', l])}</ul></details>` : ''}</div>` : '';
     // 둘만의 것: 첫 줄 "A와 B: 「푸들」 (날짜부터)" → 이름 칩 + 굵은 무엇 + 흐린 날짜, 아래 "ㄴ 이름: 뜻"은 ⤷ 한 줄씩.
     //   예전 모양("— 긴 설명 (처음 뜻이 생긴 날: 날짜-사건 제목)")도 날짜만 남기고 설명은 아래 줄로 내립니다.
     const bondHtml = lines => { const out = [];
@@ -7203,7 +7212,7 @@
     const nb = new Map(names.map(x => [x, new Set()]));
     rel.forEach(r => { nb.get(r.from).add(r.to); nb.get(r.to).add(r.from); });
     const ranked = [...names].sort((a, b) => nb.get(b).size - nb.get(a).size);
-    const rootName = names.includes(nav.center) ? nav.center : ranked[0];
+    const rootName = names.includes(nav.center) ? nav.center : names.find(n => PROF.get(n)?.isUser && nb.get(n).size) || ranked[0]; // 고른 사람 > 유저 캐릭터 > 관계 많은 사람
     const pt = (a, b) => rel.filter(r => r.from === a && r.to === b).map(r => r.text).join(' · ');
     if (!rootName || !rel.length) return seg + emptyBox('관계·감정선이 정리되면 관계도가 그려져요.');
     // 고른 사람이 아직 누구와도 이어져 있지 않아도 관계도를 지우지 않고, 다른 사람을 고를 수 있게 둡니다.
@@ -7303,6 +7312,7 @@
   };
   // 노트로 찾은 아이가 있으면 수첩의 '첫째 딸'은 안 겹치게(노트 먼저)
   const relAll = ppl => { const r0 = pairs('관계·감정선'), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
+  const chipW = n => [...n].length * 12.5 + 44; // 관계 없는 사람 이름표 폭(얼굴 + 이름)
   function graphModel() {
     const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()]; // 관계 줄이 없는 인물도 빠지지 않게(아래에 따로 줄 세워요)
     rel.forEach(r => { if (!names.includes(r.from)) names.push(r.from); if (!names.includes(r.to)) names.push(r.to); });
@@ -7316,7 +7326,8 @@
       while (q.length) { const x = q.shift(); comp.push(x); nb.get(x).forEach(y => { if (!seen.has(y)) { seen.add(y); q.push(y); } }); }
       comps.push(comp);
     }
-    const centerComp = comps.find(c => c.includes(nav.center)) || comps[0];
+    const isMe = n => !!PROF.get(n)?.isUser; // 가운데는 고른 사람 > 유저 캐릭터 > 관계가 가장 많은 사람
+    const centerComp = comps.find(c => c.includes(nav.center)) || comps.find(c => c.some(isMe)) || comps[0];
     if (centerComp) comps.splice(comps.indexOf(centerComp), 1), comps.unshift(centerComp);
     const pos = new Map(), lone = comps.filter((c, i) => i > 0 && c.length === 1 && !nb.get(c[0]).size).map(c => c[0]);
     // 누가 누구의 아이인지(관계 말 첫 마디로): '딸·아들'은 상대가 아이 · '엄마·아빠'는 내가 아이 · 노트·수첩으로 이은 아기는 from이 부모
@@ -7337,7 +7348,8 @@
       comp.filter(n => !L.has(n) && core.some(c => nb.get(c).has(n))).forEach(n => { const a = nb.get(c0).has(n), b = !!mate && nb.get(mate).has(n); (a && b ? top : b ? right : !mate && left.length > right.length ? right : left).push(n); });
       const col = (list, x, dir) => list.forEach((n, i) => { const per = 5, c = Math.floor(i / per), m = Math.min(per, list.length - c * per); put(n, x + dir * c * 150, (i % per - (m - 1) / 2) * 110, 1); });
       col(left, L.get(c0).x - 270, -1); col(right, (mate ? L.get(mate).x : 0) + 270, 1);
-      top.forEach((n, i) => put(n, (i - (top.length - 1) / 2) * 125, pars.length ? -340 : -220, 1));
+      // 둘 다 아는 사람은 두 사람 사이 세로줄에 위·아래 번갈아(아래에 아이가 있으면 위로만) · 옆으로 늘어놓으면 선이 X자로 엇갈려요
+      const down = !kidsC.length; top.forEach((n, i) => { const j = down ? Math.floor(i / 2) : i, s = down && i % 2 ? 1 : -1; put(n, 0, s * (170 + j * 120), 1); });
       for (let pass = 0; pass < 6; pass++) for (const n of comp) { if (L.has(n)) continue; const an = [...nb.get(n)].find(m => L.has(m)); if (!an) continue; const a = L.get(an);
         if (a.y > 120) put(n, a.x, a.y + 190, 2); else if (a.y < -120) put(n, a.x, a.y - 190, 2); else put(n, a.x + (a.x < 0 ? -220 : 220), a.y, 2); }
       comp.filter(n => !L.has(n)).forEach((n, i) => put(n, (i - 1) * 110, 440, 3));
@@ -7345,7 +7357,7 @@
     };
     let offsetX = null, root = null;
     for (const comp of comps.filter(c => !(c.length === 1 && lone.includes(c[0])))) {
-      const c0 = comp.includes(nav.center) ? nav.center : [...comp].sort((a, b) => nb.get(b).size - nb.get(a).size)[0];
+      const c0 = comp.includes(nav.center) ? nav.center : comp.find(isMe) || [...comp].sort((a, b) => nb.get(b).size - nb.get(a).size)[0];
       if (!root) { root = c0; const local = famLayout(comp, c0), xs = [...local.values()].map(p => p.x); local.forEach((p, n) => pos.set(n, p)); offsetX = Math.max(...xs); continue; }
       const local = new Map([[c0, { x: 0, y: 0, ring: 0, a: 0 }]]);
       const ring1 = [...nb.get(c0)];
@@ -7378,8 +7390,14 @@
         while (d < 600 && others.some(p => Math.hypot(p.x - at().x, p.y - at().y) < 95)) d += 60;
         pos.set(n, { ...at(), ring: pos.get(n).ring }); others.push(pos.get(n)); });
     }
-    if (lone.length) { const ps = [...pos.values()], x0 = Math.min(...ps.map(p => p.x)), y0 = Math.max(...ps.map(p => p.y)) + 170; lone.forEach((n, i) => pos.set(n, { x: x0 + (i % 6) * 110, y: y0 + Math.floor(i / 6) * 120, ring: 3 })); }
-    return { ppl, rel, names, pos, root, kids, fam };
+    // 관계 줄이 없는 사람은 작은 이름표로 아래 한 칸에 모아요(관계도 가운데 맞춰 줄 바꿈)
+    let loneAt = null;
+    if (lone.length) { const ps = [...pos.values()], x0 = ps.length ? Math.min(...ps.map(p => p.x)) : 0, x1 = ps.length ? Math.max(...ps.map(p => p.x)) : 0, cx = (x0 + x1) / 2, W = Math.max(460, x1 - x0);
+      loneAt = { x: cx, y: (ps.length ? Math.max(...ps.map(p => p.y)) + 120 : 0) };
+      const rows = [[]]; let rw = 0;
+      lone.forEach(n => { const w = chipW(n); if (rw && rw + w > W) { rows.push([]); rw = 0; } rows[rows.length - 1].push([n, w]); rw += w + 10; });
+      rows.forEach((r, ri) => { let x = cx - (r.reduce((t, [, w]) => t + w + 10, 0) - 10) / 2; r.forEach(([n, w]) => { pos.set(n, { x: x + w / 2, y: loneAt.y + 34 + ri * 40, ring: 4 }); x += w + 10; }); }); }
+    return { ppl, rel, names, pos, root, kids, fam, loneAt };
   }
 
   function graphHtml() {
@@ -7420,6 +7438,8 @@
       const on = !sel || n === sel || g.rel.some(x => (x.from === sel && x.to === n) || (x.to === sel && x.from === n));
       // 동물 이모지 얼굴 + 이름표(둥근 알약)
       const face = PROF.get(n)?.emoji || ANIM.get(n) || animalOf(n), w = [...n].length * 13 + 18;
+      if (p.ring === 4) { const cw = chipW(n); return `<g class="gn gl${on ? '' : ' dim'}${n === sel ? ' sel' : ''}" data-act="gnode" data-arg="${esc(n)}" transform="translate(${p.x},${p.y})">
+        <rect class="halo" x="${-cw / 2}" y="-15" width="${cw}" height="30" rx="15" stroke="${fg}"/><text x="${-cw / 2 + 17}" y="5.5" text-anchor="middle" font-size="15">${esc(face)}</text><text x="${-cw / 2 + 32}" y="4.5" class="nm" fill="${fg}">${esc(n)}</text></g>`; }
       return `<g class="gn${on ? '' : ' dim'}${n === sel ? ' sel' : ''}" data-act="gnode" data-arg="${esc(n)}" transform="translate(${p.x},${p.y})">
         <circle r="${r + 5}" class="halo" stroke="${fg}"/><circle r="${r}" fill="${bg}"/>
         <text y="${p.ring === 0 ? 11 : 9}" text-anchor="middle" font-size="${p.ring === 0 ? 30 : 24}">${esc(face)}</text>
@@ -7434,7 +7454,7 @@
         <button class="btn sm" data-act="person" data-arg="${esc(sel)}">자세히</button></div><div class="ginfo-body">${rows || '<div class="muted">이어진 관계가 없어요.</div>'}</div></div>`;
     })() : `<div class="ghint">사람을 누르면 그 사람의 관계가 선 위에 나타나요</div>`;
     return `<div class="gwrap" data-out="gwrap">
-        <svg data-out="gsvg" width="100%" height="100%"><g data-out="gvp">${trees}${edges}${nodes}</g></svg>
+        <svg data-out="gsvg" width="100%" height="100%"><g data-out="gvp">${trees}${edges}${g.loneAt ? `<text class="glh" x="${g.loneAt.x}" y="${g.loneAt.y}" text-anchor="middle">아직 관계 없음</text>` : ''}${nodes}</g></svg>
         ${relPillSw()}
         <div class="gctl"><button data-act="gzoom" data-arg="in" aria-label="확대">＋</button><button data-act="gzoom" data-arg="out" aria-label="축소">－</button><button data-act="gzoom" data-arg="fit" aria-label="전체 보기">${icon('globe', 'currentColor', 16)}</button></div>
         ${info}</div>`;
