@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.0
+// @version      4.4.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -24,6 +24,7 @@
 // @connect      api.anthropic.com
 // @connect      aiplatform.googleapis.com
 // @connect      api.openai.com
+// @connect      auth.openai.com
 // @connect      firebasevertexai.googleapis.com
 // @connect      content-firebaseappcheck.googleapis.com
 // @connect      script.google.com
@@ -81,11 +82,11 @@
     ['Claude', [['claude-fable-5-1', 'Fable 5.1 (가장 똑똑함)'], ['claude-opus-5-5', 'Opus 5.5'], ['claude-opus-5', 'Opus 5'], ['claude-sonnet-5-5', 'Sonnet 5.5'], ['claude-sonnet-5', 'Sonnet 5'], ['claude-haiku-5-5', 'Haiku 5.5 (가장 쌈)'], ['claude-haiku-4-5', 'Haiku 4.5']]],
   ];
   // Vertex = 같은 Gemini 모델을 구글 클라우드 키로(express 모드 API 키) · 이름 앞에 vertex:
-  MODELS.push(['Vertex', MODELS[0][1].map(([id, l]) => ['vertex:' + id, l])], ['Firebase', MODELS[0][1].map(([id, l]) => ['firebase:' + id, l])], ['OpenAI', [['gpt-5', 'GPT-5'], ['gpt-5-mini', 'GPT-5 mini'], ['gpt-4.1', 'GPT-4.1']]]);
+  MODELS.push(['Vertex', MODELS[0][1].map(([id, l]) => ['vertex:' + id, l])], ['Firebase', MODELS[0][1].map(([id, l]) => ['firebase:' + id, l])], ['OpenAI', [['gpt-5', 'GPT-5'], ['gpt-5-mini', 'GPT-5 mini'], ['gpt-4.1', 'GPT-4.1']]], ['ChatGPT', [['chatgpt:gpt-6.1-sol', 'GPT-6.1 Sol']]]); // ChatGPT: 구독 로그인 · 로그인하면 그 계정이 쓸 수 있는 모델로 바뀌어요(gptSetModels)
   const MODEL_IDS = MODELS.flatMap(([, list]) => list.map(([id]) => id));
   const isClaude = model => /^claude-/.test(model);
-  const provOf = m => isClaude(m) ? 'claude' : /^vertex:/.test(m) ? 'vertex' : /^firebase:/.test(m) ? 'firebase' : /^(gpt-|o\d|chatgpt-)/.test(m) ? 'openai' : 'gemini';
-  const KEYS = { gemini: ['apiKey', 'Gemini 키', 'AIza…'], claude: ['claudeKey', 'Claude 키', 'sk-ant-…'], vertex: ['vertexKey', 'Vertex 키', 'AQ.… · 구글 클라우드 API 키'], firebase: ['firebaseKey', 'Firebase 키', 'AIza… · 웹 API 키'], openai: ['openaiKey', 'OpenAI 키', 'sk-…'] };
+  const provOf = m => isClaude(m) ? 'claude' : /^chatgpt:/.test(m) ? 'chatgpt' : /^vertex:/.test(m) ? 'vertex' : /^firebase:/.test(m) ? 'firebase' : /^(gpt-|o\d|chatgpt-)/.test(m) ? 'openai' : 'gemini';
+  const KEYS = { gemini: ['apiKey', 'Gemini 키', 'AIza…'], claude: ['claudeKey', 'Claude 키', 'sk-ant-…'], vertex: ['vertexKey', 'Vertex 키', 'AQ.… · 구글 클라우드 API 키'], firebase: ['firebaseKey', 'Firebase 키', 'AIza… · 웹 API 키'], openai: ['openaiKey', 'OpenAI 키', 'sk-…'], chatgpt: ['chatgptAuth', 'ChatGPT 로그인', ''] }; // chatgptAuth: 키 칸 없이 로그인 버튼으로 채워요
   const keyOf = m => KEYS[provOf(m)][0];
   // 설정에서 켜고 끌 수 있는 칸. 끄면 정리할 때 AI가 그 칸을 만들지 않습니다.
   const OPTIONAL = [['소지품', 'secItems', '중요한 물건의 상태와 내력'], ['장소·조직', 'secPlaces', '다시 찾을 장소와 조직']];
@@ -1915,7 +1916,7 @@
   // 답이 출력 한도에서 잘림 → run()이 범위를 반으로 줄여 한 번 더 해요.
   const cutError = () => Object.assign(new Error('정리 결과가 너무 길어서 잘렸어요. 노트 크기를 줄여 주세요.'), { cut: true });
   // 한 번에 받으면 긴 정리에서 서버가 3분쯤에 끊는 일이 있어 스트리밍(SSE)으로 끝까지 받습니다. 끝맺음 표시 없이 끝나면 실패로 봅니다.
-  const askAny = (model, system, input, json = false, think = '') => ({ claude: askClaude, openai: askOpenAI }[provOf(model)] || askGemini)(model, system, input, json, think);
+  const askAny = (model, system, input, json = false, think = '') => ({ claude: askClaude, openai: askOpenAI, chatgpt: askChatGPT }[provOf(model)] || askGemini)(model, system, input, json, think);
   // Firebase App Check(2026-11-02부터 AI Logic에 강제): 콘솔에 등록한 디버그 토큰을 1시간짜리 App Check 토큰으로 바꿔 요청에 붙여요.
   //   앱 ID·디버그 토큰을 안 넣었으면 예전처럼 키만 보내요(강제 전·모니터링 상태에선 그대로 돼요).
   let fbCheck = { t: '', exp: 0 };
@@ -2014,6 +2015,123 @@
     if (finish === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.prompt_tokens) || 0, outTok: Number(u.completion_tokens) || 0, cached: Number(u.prompt_tokens_details?.cached_tokens) || 0 };
+  }
+
+  // ChatGPT 구독으로 정리(Sign in with ChatGPT). API 키 대신 로그인 토큰을 쓰고, client_id는 계정마다 처음 로그인할 때 발급받아요.
+  //   확장은 127.0.0.1 콜백을 받을 수 없어서, 로그인 뒤 안 열리는 화면의 주소를 설정에 붙여 넣어 끝냅니다.
+  // ponytail: 저장 칸이 하나라 계정도 하나만. 여러 계정을 쓰게 되면 sub별로 나눠 저장하세요.
+  const GPT_AUTH = 'https://auth.openai.com', GPT_TOKEN = GPT_AUTH + '/api/accounts/oauth/token', GPT_API = 'https://api.openai.com/v1', GPT_REDIRECT = 'http://127.0.0.1:1455/auth/callback';
+  const GPT_USE = 'chatgpt.tokens.use.direct', GPT_SCOPE = 'openid profile email offline_access resource.invoke ' + GPT_USE;
+  const GPT_DEAD = /^(invalid_grant|invalid_refresh_token|token_expired|refresh_token_expired|refresh_token_invalidated|refresh_token_reused)$/; // 이 토큰으론 더 못 갱신 → 다시 로그인
+  const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64url = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const gptRandom = () => b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const gptJson = async key => { try { return JSON.parse(String(await getValue(key, '')) || 'null'); } catch (_) { return null; } };
+  function gptForm(url, fields) {
+    return new Promise((resolve, reject) => {
+      if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
+      gmRequest({ method: 'POST', url, timeout: 30000, headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, data: new URLSearchParams(fields).toString(),
+        onload: r => { let j = null; try { j = JSON.parse(r.responseText); } catch (_) {}
+          if (r.status >= 200 && r.status < 300) return resolve(j || {});
+          const code = typeof j?.error === 'string' ? j.error : j?.error?.code || '';
+          reject(Object.assign(new Error(`ChatGPT 로그인 서버 오류 · HTTP ${r.status}${code ? ' · ' + code : ''}`), { code })); },
+        ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
+    });
+  }
+  // 받은 ID 토큰이 OpenAI가 이번 로그인에 준 게 맞는지(서명·발급처·대상·만료·nonce) 확인해요.
+  async function gptVerifyId(idToken, clientId, nonce) {
+    const [h, p, s] = String(idToken).split('.'), read = x => JSON.parse(new TextDecoder().decode(unb64url(x)));
+    if (!h || !p || !s) throw new Error('ChatGPT 계정 정보를 확인하지 못했어요.');
+    const head = read(h), c = read(p), jwk = (await request('GET', GPT_AUTH + '/.well-known/jwks.json'))?.keys?.find(k => k.kid === head.kid);
+    if (head.alg !== 'RS256' || !jwk) throw new Error('ChatGPT 계정 정보를 확인하지 못했어요.');
+    const alg = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, key = await crypto.subtle.importKey('jwk', jwk, alg, false, ['verify']);
+    const ok = await crypto.subtle.verify(alg, key, unb64url(s), new TextEncoder().encode(h + '.' + p));
+    if (!ok || c.iss !== GPT_AUTH || ![].concat(c.aud).includes(clientId) || !(c.exp * 1000 > Date.now()) || c.nonce !== nonce) throw new Error('ChatGPT 계정 정보를 확인하지 못했어요.');
+    return c;
+  }
+  // 토큰은 사람이 볼 일이 없어 GM 저장소에만 둬요. 노트·백업·구글 드라이브로 나가는 값이 아니에요.
+  const gptStore = (t, base) => setValue('chatgptAuth', JSON.stringify({ ...base, access: t.access_token, refresh: t.refresh_token || base.refresh, idToken: t.id_token || base.idToken, scope: t.scope || base.scope, exp: Date.now() + (Number(t.expires_in) || 3600) * 1000 }));
+  function gptSetModels(list) {
+    const g = MODELS.find(([n]) => n === 'ChatGPT'); if (!g || !list?.length) return;
+    g[1] = list; for (const [id] of list) if (!MODEL_IDS.includes(id)) MODEL_IDS.push(id);
+  }
+  gptJson('chatgptModels').then(gptSetModels);
+  async function gptLoadModels() {
+    const j = await request('GET', GPT_API + '/models', { headers: { Authorization: 'Bearer ' + await gptToken() } });
+    const list = (j?.models || []).filter(m => m.visibility === 'list' && m.slug).map(m => ['chatgpt:' + m.slug, String(m.display_name || m.slug)]);
+    if (list.length) { gptSetModels(list); await setValue('chatgptModels', JSON.stringify(list)); }
+    return list;
+  }
+  async function gptLoginUrl() {
+    let host = String(await getValue('chatgptHost', '')); if (!host) { host = 'urn:uuid:' + crypto.randomUUID(); await setValue('chatgptHost', host); }
+    const clientId = String(await getValue('chatgptClient', '')), verifier = gptRandom(), state = gptRandom(), nonce = gptRandom();
+    await setValue('chatgptPending', JSON.stringify({ verifier, state, nonce, clientId }));
+    const q = new URLSearchParams({ client_id: clientId || 'dynamic_agent_client', ext_agent_host_id: host, response_type: 'code', redirect_uri: GPT_REDIRECT, scope: GPT_SCOPE, resource: GPT_API, state, nonce,
+      code_challenge_method: 'S256', code_challenge: b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))) });
+    if (!clientId) q.set('agent_name_hint', '조아메모리');
+    return `${GPT_AUTH}/api/accounts/authorize?${q}`;
+  }
+  // 붙여 넣은 주소로 로그인을 끝내요. 돌려주는 값: 계정 이메일(없으면 빈 글자)
+  async function gptLoginFinish(pasted) {
+    const p = await gptJson('chatgptPending'); if (!p) throw new Error('로그인 버튼을 먼저 눌러 주세요.');
+    let q; try { q = new URL(String(pasted).trim()).searchParams; } catch (_) { throw new Error('안 열리는 화면의 주소(http://127.0.0.1…)를 통째로 붙여 주세요.'); }
+    if (q.get('state') !== p.state) throw new Error('이번 로그인 주소가 아니에요. 로그인 버튼부터 다시 해 주세요.');
+    if (q.get('error')) { await setValue('chatgptPending', ''); throw new Error(q.get('error') === 'access_denied' ? 'ChatGPT에서 연결을 거절했어요.' : 'ChatGPT 로그인 오류 · ' + q.get('error')); }
+    const given = q.get('client_id'), clientId = p.clientId || given, code = q.get('code');
+    if (p.clientId && given && given !== p.clientId) throw new Error('다른 앱의 로그인 주소예요. 로그인 버튼부터 다시 해 주세요.');
+    if (!clientId || !code) throw new Error('주소에 로그인 정보가 없어요. 주소를 통째로 붙여 주세요.');
+    await setValue('chatgptClient', clientId); // 코드 교환이 실패해도 다음 로그인 때 앱을 또 등록하지 않게 먼저 저장
+    let t; try { t = await gptForm(GPT_TOKEN, { grant_type: 'authorization_code', client_id: clientId, code, code_verifier: p.verifier, redirect_uri: GPT_REDIRECT, resource: GPT_API }); }
+    catch (e) { if (e.code === 'invalid_grant') { await setValue('chatgptPending', ''); throw new Error('로그인 코드가 만료됐어요. 로그인 버튼부터 다시 해 주세요.'); } throw e; }
+    const who = await gptVerifyId(t.id_token, clientId, p.nonce), scope = t.scope || q.get('scope') || '';
+    if (!scope.split(/\s+/).includes(GPT_USE)) throw new Error('구독 사용 권한이 승인되지 않았어요. 연결 화면에서 승인해 주세요.');
+    await gptStore({ ...t, scope }, { clientId, sub: who.sub, email: who.email || '' });
+    await setValue('chatgptPending', '');
+    await gptLoadModels().catch(e => logErr('ChatGPT', '모델 목록을 못 받음 · ' + e.message));
+    return who.email || '';
+  }
+  async function gptLogout() {
+    const a = await gptJson('chatgptAuth');
+    if (a?.refresh) await gptForm(GPT_AUTH + '/api/accounts/oauth/revoke', { token: a.refresh, token_type_hint: 'refresh_token', client_id: a.clientId }).catch(() => toast('서버 해제는 확인하지 못했어요. ChatGPT 설정에서 앱 연결을 끊어 주세요.', 'err', 6000));
+    await setValue('chatgptAuth', ''); // chatgptClient·chatgptHost는 다음 로그인을 위해 남겨요
+  }
+  // 쓸 수 있는 토큰을 돌려줘요. stale: 서버가 거절한 토큰(이걸 또 주지 않고 새로 받아요).
+  async function gptToken(stale = '') {
+    const fresh = a => a?.access && a.access !== stale && Date.now() < a.exp - 120000;
+    const now = await gptJson('chatgptAuth');
+    if (!now?.access) throw new Error('설정 › 정리 › AI에서 ChatGPT 로그인을 먼저 해 주세요.');
+    if (fresh(now)) return now.access;
+    // 갱신 토큰은 쓸 때마다 바뀌어서, 탭 여러 개가 동시에 갱신하면 로그인이 풀려요 → 한 번에 하나만
+    return navigator.locks.request('joamemory-chatgpt-refresh', async () => {
+      const a = await gptJson('chatgptAuth');
+      if (!a?.access) throw new Error('설정 › 정리 › AI에서 ChatGPT 로그인을 먼저 해 주세요.');
+      if (fresh(a)) return a.access;
+      try { const t = await gptForm(GPT_TOKEN, { grant_type: 'refresh_token', client_id: a.clientId, refresh_token: a.refresh, resource: GPT_API }); await gptStore(t, a); return t.access_token; }
+      catch (e) { if (!GPT_DEAD.test(e.code || '')) throw e; await setValue('chatgptAuth', ''); throw new Error('ChatGPT 로그인이 끝났어요. 설정에서 다시 로그인해 주세요.'); }
+    });
+  }
+  // 플랜 쪽 오류는 API 요금으로 돌리지 않고 그대로 멈춰요. 한도는 다시 시도해도 소용없어서 HTTP 번호를 뺍니다(askModel이 429를 재시도해요).
+  const gptFail = code => new Error({ subscription_sharing_usage_limit_exceeded: 'ChatGPT 사용 한도에 걸렸어요. ChatGPT 설정 › 사용량을 확인해 주세요.', subscription_sharing_user_not_eligible: '이 계정·워크스페이스는 ChatGPT 구독 연결을 쓸 수 없어요.',
+    subscription_sharing_usage_unavailable: 'HTTP 503 · ChatGPT가 잠깐 응답을 못 해요.', subscription_sharing_user_unavailable: 'HTTP 503 · ChatGPT가 잠깐 응답을 못 해요.' }[code] || 'ChatGPT 오류 · ' + (code || '알 수 없음'));
+  async function askChatGPT(model, system, input, json = false) {
+    const call = token => requestRaw('POST', GPT_API + '/responses', { timeout: 600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + token, Accept: 'text/event-stream' },
+      body: { model: model.slice('chatgpt:'.length), instructions: system + (json ? '\nJSON만 출력한다. 코드블록, 설명문, JSON 외 텍스트는 출력하지 않는다.' : ''), input: [{ role: 'user', content: input }], store: false, stream: true } });
+    const friendly = e => { const m = String(e?.message); return /HTTP 429\b/.test(m) ? gptFail('subscription_sharing_usage_limit_exceeded') : /HTTP 401\b/.test(m) ? new Error('ChatGPT가 로그인을 받아 주지 않아요. 설정에서 다시 로그인해 주세요.') : /HTTP 403\b/.test(m) ? new Error('ChatGPT 구독 연결이 막혔어요(계정·지역 제한일 수 있어요) · ' + m) : e; };
+    const token = await gptToken(); let raw;
+    try { raw = await call(token).catch(async e => { if (!/HTTP 401\b/.test(String(e?.message))) throw e; return call(await gptToken(token)); }); } catch (e) { throw friendly(e); }
+    let text = '', done = false, cut = '', u = {};
+    for (const line of raw.split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+      if (j.type === 'response.output_text.delta') text += j.delta || '';
+      else if (j.type === 'response.completed') { done = true; u = j.response?.usage || {}; }
+      else if (j.type === 'response.incomplete') cut = j.response?.incomplete_details?.reason || 'unknown';
+      else if (j.type === 'response.failed' || j.type === 'error') throw gptFail(j.response?.error?.code || j.error?.code || j.code);
+    }
+    if (cut === 'max_output_tokens') throw Object.assign(cutError(), { partial: text.trim() });
+    if (cut === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
+    if (cut || !done) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
+    return { text: text.trim(), inTok: Number(u.input_tokens) || 0, outTok: Number(u.output_tokens) || 0, cached: Number(u.input_tokens_details?.cached_tokens) || 0 };
   }
 
   // 공식 단가 (USD / 100만 토큰, 입력·출력). 생각 토큰은 출력 단가로 계산됩니다.
@@ -5644,7 +5762,7 @@
     g.recv = String(raw).length; let text = '';
     for (const line of String(raw).split('\n')) { if (!line.startsWith('data:')) continue;
       try { const j = JSON.parse(line.slice(5)); for (const p of j.candidates?.[0]?.content?.parts || []) if (!p.thought && p.text) text += p.text;
-        if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text; text += j.choices?.[0]?.delta?.content || ''; } catch (_) {} }
+        if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text; text += j.choices?.[0]?.delta?.content || ''; if (j.type === 'response.output_text.delta') text += j.delta || ''; } catch (_) {} }
     g.chars = text.length; g.posts = (text.match(/"board"\s*:/g) || []).length; g.comments = (text.match(/"text"\s*:/g) || []).length;
   }
   function genView() {
@@ -7971,7 +8089,8 @@
         <div class="pseg">${MODELS.map(([g]) => `<button type="button" data-act="prov" data-arg="${g.toLowerCase()}" aria-pressed="${g.toLowerCase() === prov}">${g}</button>`).join('')}</div>
         ${row('모델', `<select data-out="modelpick">${(MODELS.find(([g]) => g.toLowerCase() === prov)?.[1] || []).map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
-        ${Object.entries(KEYS).map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button>${p === 'firebase' ? '<button type="button" data-act="fbpastetog">채우기</button>' : ''}</span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
+        ${row('ChatGPT 로그인', `<span class="keybox"><input type="text" data-out="gptback" value="${esc(nav.gptBack || '')}" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1…"><button type="button" data-act="gptlogin">로그인</button><button type="button" data-act="gptfinish">완료</button><button type="button" data-act="gptlogout">해제</button></span>`, '<span data-out="gptstate"></span>').replace('<label class="srow"', `<label class="srow" data-prov="chatgpt"${prov === 'chatgpt' ? '' : ' hidden'}`)}
+        ${Object.entries(KEYS).filter(([p]) => p !== 'chatgpt').map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button>${p === 'firebase' ? '<button type="button" data-act="fbpastetog">채우기</button>' : ''}</span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
         ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('앱 ID', `<input type="text" data-set="firebaseAppId" autocomplete="off" spellcheck="false" placeholder="1:…:web:… · [채우기]가 넣어 줘요">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}<!-- 앱 ID: App Check용 · 숨겨 두면 옛 값이 남아도 안 보여서 보이게 -->
         ${row('App Check 디버그 토큰', `<span class="keybox"><input type="password" data-set="firebaseDebugToken" autocomplete="off" spellcheck="false" placeholder="콘솔 › App Check › 디버그 토큰 관리"><button type="button" data-act="peek">보기</button><button type="button" data-act="fbtest">확인</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
@@ -8952,7 +9071,8 @@
     // 접힌 줄: 지금 모델 · 넣은 키
     const ki = out('keyinfo'), mid = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     const mlabel = (MODELS.flatMap(([, list]) => list).find(([id]) => id === mid)?.[1] || mid).replace(/\s*\(.*\)$/, '');
-    if (ki) ki.textContent = `${mlabel} · ` + (ui(`[data-set="${keyOf(mid)}"]`)?.value ? '키 넣음' : '키 없음');
+    if (ki) ki.textContent = `${mlabel} · ` + (provOf(mid) === 'chatgpt' ? (String(await getValue('chatgptAuth', '')) ? '로그인함' : '로그인 안 함') : ui(`[data-set="${keyOf(mid)}"]`)?.value ? '키 넣음' : '키 없음');
+    const gs = out('gptstate'); if (gs) { const a = await gptJson('chatgptAuth'); gs.textContent = a?.access ? `${a.email || '연결됨'} · 구독으로 정리해요` : '① 로그인 ② 승인 후 안 열리는 화면의 주소 복사 ③ 여기 붙이고 완료'; }
     if (m && !m.value) { m.value = await getValue('model', DEFAULT_MODEL); pickModel(MODEL_IDS.includes(m.value) ? m.value : ''); }
     const a = ui('[data-set="autoMove"]'); if (a && !a.dataset.filled) { a.checked = String(await getValue('autoMove', 'on')) !== 'off'; a.dataset.filled = '1'; }
     const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
@@ -9009,6 +9129,7 @@
   root.addEventListener('keydown', e => { const el = e.target; if (!el?.dataset?.ed || !el.isContentEditable) return; e.stopPropagation();
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const all = [...root.querySelectorAll('.nc.editing [contenteditable="true"]')], i = all.indexOf(el); (all[i + 1] || el).focus(); }
     else if (e.key === 'Escape') { e.preventDefault(); nav.nedit = null; render(); } }, true);
+  root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; }); // ChatGPT 로그인 주소: 다시 그려져도 남게
   root.addEventListener('input', e => {
     if (e.target.dataset?.out !== 'psearch') return;
     const q = e.target.value.trim().toLowerCase();
@@ -9121,6 +9242,19 @@
       case 'injskip': injSkip.set(arg, lastInj?.recalled?.find(x => x.key === arg)?.title || arg); toast('이번 장면에선 뺄게요 · 그 일을 다시 직접 꺼내면 돌아와요', 'ok', 3000); keepScroll(render); return reinject(chatIdFromPath());
       case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); await fillSettings(); if (WIDE.matches) ui('[data-out="fbpaste"]')?.focus(); return; // 폰: 자동 포커스하면 키보드가 창을 밀어 올려서 안 해요
       case 'fbclose': nav.fbSheet = false; render(); return fillSettings();
+      case 'gptlogin': { e.preventDefault(); const w = window.open('about:blank', '_blank'); // 기다린 뒤에 열면 팝업 차단에 걸려서 먼저 열어요
+        if (!w) return toast('새 창이 막혔어요. 팝업을 허용하고 다시 눌러 주세요.', 'err', 6000);
+        w.opener = null;
+        try { w.location.href = await gptLoginUrl(); toast('승인 뒤 안 열리는 화면이 정상이에요. 그 주소를 복사해 여기 붙여 주세요.', 'info', 8000); } catch (err) { w.close(); toast(err.message, 'err', 6000); }
+        return; }
+      case 'gptfinish': { e.preventDefault();
+        let back = out('gptback')?.value || nav.gptBack || ''; if (!back.trim()) try { back = await navigator.clipboard.readText(); } catch (_) {} // 칸이 비었으면 복사해 둔 주소로
+        try { const mail = await gptLoginFinish(back); nav.gptBack = ''; if (out('gptback')) out('gptback').value = '';
+          const list = MODELS.find(([n]) => n === 'ChatGPT')[1]; if (!list.some(([id]) => id === curModel)) pickModel(list[0][0]);
+          await saveSettings(true); toast(`ChatGPT 연결 완료${mail ? ' · ' + mail : ''}`, 'ok', 4000); render(); }
+        catch (err) { toast(err.message, 'err', 7000); }
+        return; }
+      case 'gptlogout': { e.preventDefault(); await gptLogout(); toast('ChatGPT 연결을 해제했어요.', 'ok', 3000); return render(); }
       case 'trimmeasure': { // 미리 재기: AI를 부르지 않고, 다음 정리 때 보낼 노트 크기만 계산해요(노트는 안 바뀜)
         const base = noteMemory(), msgs = snapshot?.fresh || [], cut = trimLogForSummary(base, msgs), sent = dropProofLines(cut.memory);
         const n = msgs.filter(m => msgRole(m) === 'user').length, pct = base.length ? Math.round((1 - sent.length / base.length) * 100) : 0;
