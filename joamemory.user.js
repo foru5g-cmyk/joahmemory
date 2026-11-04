@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.3.9
+// @version      4.4.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -851,6 +851,7 @@
     if (preg.unaware && P_TELL.test(said) && !/못\s*하|아니야|아닐/.test(said)) { preg.unaware = false; preg.log.push({ w: wk, t: '임신 사실을 알게 됨', at: turn }); }
     if (preg.secret && P_TELL.test(said) && !/못\s*하|안\s*할|숨기|비밀로|말\s*못|말하지\s*말/.test(said)) { preg.secret = false; preg.log.push({ w: wk, t: '임신 사실을 밝힘(비밀 끝)', at: turn }); }
     const big = pregBig(p, world), checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
+    if (!preg.whoFix1) { const u = pPeople(noteMemory() || '').find(x => x.me); if (u) { if (preg.who !== u.name && !(preg.who && sameName(preg.who, u.name))) { preg.who = u.name; preg.me = true; } preg.whoFix1 = true; pregSave(); } } // 예전 판이 잘못 저장한 NPC 이름을 한 번만 유저 캐릭터로 고쳐요(그 뒤엔 안 바꿈: 정리 AI가 유저(PC) 표시를 잠깐 잘못 붙여도 임신한 사람이 바뀌지 않게)
     const who = preg.who || '임신한 사람', me = !!preg.me, ck = world === 'modern' ? '검진' : '진찰';
     // 지금 일: 나왔거나(AI 답에 그 말) 3턴 지나면 끝
     let cur = preg.cur;
@@ -916,7 +917,7 @@
     const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'}`);
+    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'}`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -958,7 +959,8 @@
     const ppl = body('인물').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
     const pick = () => ppl.find(p => p.me)?.name || '유저 캐릭터'; // 임신은 유저 캐릭터(페르소나)만 — 엄마·다른 여자 인물로 잡히지 않게
     const isMe = who => !!ppl.find(p => p.me && (p.name.includes(who) || who.includes(p.name)));
-    const line = body('현재상태').split('\n').find(l => /임신/.test(l) && !NEG.test(l) && !(/임신\s*여부|테스트기\s*(?:사|구입|준비)/.test(l) && !/두\s*줄|양성|확정/.test(l))) || ''; // '임신 여부 확인하려고 테스트기 사 옴'은 아직 아님
+    const labelOf = l => (l.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '', someoneElse = l => { const w = labelOf(l); return !!w && !isMe(w) && ppl.some(p => !p.me && (p.name.includes(w) || w.includes(p.name))); }; // 줄 앞 이름이 다른 인물(NPC)이면 그 사람 임신이에요 → 유저로 잡지 않아요
+    const line = body('현재상태').split('\n').find(l => /임신/.test(l) && !NEG.test(l) && !someoneElse(l) && !(/임신\s*여부|테스트기\s*(?:사|구입|준비)/.test(l) && !/두\s*줄|양성|확정/.test(l))) || ''; // '임신 여부 확인하려고 테스트기 사 옴'은 아직 아님
     const lineWho0 = (line.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '', lineWho = lineWho0 && isMe(lineWho0) ? lineWho0 : ''; // 현재상태에 적힌 사람이 유저 캐릭터일 때만
     const wm = line.match(/임신\s*(?:약\s*)?(\d{1,2})\s*주/) || line.match(/(\d{1,2})\s*주\s*(?:차|째)?[^\n]{0,6}임신/);
     const rel = pregKitRel(mem), relOk = rel && rel.d <= day && day - rel.d <= 280 && (after == null || rel.d > after);
@@ -1229,6 +1231,7 @@
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 지금 장면에 필요한 것만. 지난 일·열린 고리 억지로 꺼내거나 끝내지 않음. 기록된 말·반응·물건 되풀이 안 함. 노트에 없는 과거는 지어내지 않음`,
+        `※ 지난 일은 서사에 자연스럽게 녹여 씀. 날짜·장소·경위를 기록 읽듯 나열하거나 읊지 않음`,
         ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(되풀이 금지와 상관없음)`] : []),
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
@@ -3747,11 +3750,12 @@
 
   // 오류 기록: 빨간 알림(err)과 몰래 건너뛴 일(주입·검색 실패 등)을 남겨요. 방 id · 버전 · 무엇 · 왜
   let errLog = null;
-  async function logErr(where, msg) {
+  const errHere = () => { const id = chatIdFromPath(); return (errLog || []).filter(x => !id || x.room === id); }; // 지금 방에서 난 오류만(채팅 밖이면 전부)
+  async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
       const m = String(msg?.message || msg || '').slice(0, 300), last = errLog[errLog.length - 1];
       if (last && last.where === where && last.msg === m && Date.now() - last.at < 3000) return; // 같은 게 연달아 오면 한 번만
-      errLog.push({ at: Date.now(), where, msg: m, room: chatIdFromPath() || '' }); errLog = errLog.slice(-60);
+      errLog.push({ at: Date.now(), where, msg: m, room }); errLog = errLog.slice(-200); // 방마다 따로 보여서 넉넉히(한 방이 다른 방 기록을 밀어내지 않게)
       await setValue('errlog', JSON.stringify(errLog)); } catch (_) {}
   }
   function toast(text, kind = 'info', ms = 0) {
@@ -7985,7 +7989,7 @@
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
-        <button data-act="errlog"><b>오류 기록</b><span class="v">${errLog?.length ? `${errLog.length}개` : '없음'}</span></button>
+        <button data-act="errlog"><b>오류 기록</b><span class="v">${errHere().length ? `${errHere().length}개` : '없음'}</span></button>
         </div>`)
       + box('백업', '파일 · 나눠서 정리 · 구글 드라이브 · ETC 비우기', `
         ${backupHtml(true)}
@@ -8099,9 +8103,9 @@
       : nav.view === 'changes' ? changesView(histList)
       : nav.view === 'ltm' ? ltmHtml()
       : nav.view === 'notes' ? notesHtml()
-      : nav.view === 'errlog' ? `<section class="errl"><p class="muted" style="margin:0 2px 10px">안 될 때 남는 기록이에요(최근 60개 · 이 기기에만). 문제를 물어볼 땐 '복사'해서 같이 보내 주세요.</p>
+      : nav.view === 'errlog' ? `<section class="errl"><p class="muted" style="margin:0 2px 10px">이 방에서 안 될 때 남는 기록이에요(이 기기에만). 문제를 물어볼 땐 '복사'해서 같이 보내 주세요.</p>
         <div class="actions" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><button class="btn pri" data-act="errcopy">복사</button><button class="btn" data-act="errclear">지우기</button></div>
-        ${(errLog || []).length ? '<ol class="errl-list">' + [...errLog].reverse().map(x => `<li><small>${esc(new Date(x.at).toLocaleString('ko-KR'))} · ${esc(x.where)}</small><p>${esc(x.msg)}</p></li>`).join('') + '</ol>' : emptyBox('아직 오류가 없어요.')}</section>`
+        ${errHere().length ? '<ol class="errl-list">' + [...errHere()].reverse().map(x => `<li><small>${esc(new Date(x.at).toLocaleString('ko-KR'))} · ${esc(x.where)}</small><p>${esc(x.msg)}</p></li>`).join('') + '</ol>' : emptyBox('아직 오류가 없어요.')}</section>`
       : nav.tab === 'timeline' ? timelineHtml()
       : nav.tab === 'mode' ? modeHtml()
       : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
@@ -8183,7 +8187,7 @@
     if (snapshot.note?.sel && !(fullNote && fullNote.upto === snapshot.note.upto)) { if (once('nofull')) pageToast('이 기기엔 전체 기억이 없어 자동 정리를 건너뛰어요 · 조아메모리 홈에서 "처음부터 다시 만들기"를 눌러 주세요'); return; }
     if ((!snapshot.note || !snapshot.note.turns) && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 10턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
-    if (!String(await getValue(keyOf(m), '')).trim()) { if (once('nokey')) pageToast('웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 Gemini 키를 넣어 주세요'); return; }
+    if (!String(await getValue(keyOf(m), '')).trim()) { if (once('nokey')) pageToast(provOf(m) === 'chatgpt' ? '자동 정리엔 ChatGPT 로그인이 필요해요 · 조아메모리 › 설정 › 정리 › AI에서 로그인해 주세요' : `웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 ${KEYS[provOf(m)]?.[1] || '키'}를 넣어 주세요`); return; }
     { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') return; /* 답이 오면 말풍선이 바뀌어 다시 불려요 */ }
     autoBusy = true; repaintInline(); if (isOpen() && !nav.view) render();
     try {
@@ -8191,7 +8195,8 @@
       draft = null; await run('new');
       if (draft && nav.view === 'preview' && !(draft.lost || []).length && !(draft.dropped || []).length && !(draft.gone || []).length && !(draft.askNames || []).length) await apply();
       else if (draft) pageToast('기억 갱신 결과에 확인할 게 있어요 · 조아메모리를 열어 주세요');
-    } catch (e) { console.info('[조아메모리 실험판] 자동 정리 실패 · ' + e.message); logErr('자동 정리', e.message); }
+    } catch (e) { console.info('[조아메모리 실험판] 자동 정리 실패 · ' + e.message); logErr('자동 정리', e.message, chatId);
+      if (autoSum.failed !== chatId + '|' + e.message) { autoSum.failed = chatId + '|' + e.message; pageToast('자동 정리가 안 됐어요 · ' + String(e.message).slice(0, 80) + ' · 조아메모리 › 설정 › 기록 › 오류 기록에서 확인'); } }
     finally { autoBusy = false; repaintInline(); if (isOpen() && !nav.view) render(); }
   }
   async function reinject(cid) {
@@ -9178,9 +9183,9 @@
       case 'fixTurns': return fixTurns();
       case 'injected': nav.view = 'injected'; render(); out('main').scrollTop = 0; return;
       case 'errlog': { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } } nav.prevView = nav.view; nav.view = 'errlog'; render(); out('main').scrollTop = 0; return; }
-      case 'errcopy': { const t = [...(errLog || [])].reverse().map(x => `[${new Date(x.at).toLocaleString('ko-KR')}] ${x.where} · ${x.msg}${x.room ? ' · 방 ' + x.room : ''}`).join('\n');
+      case 'errcopy': { const t = [...errHere()].reverse().map(x => `[${new Date(x.at).toLocaleString('ko-KR')}] ${x.where} · ${x.msg}${x.room ? ' · 방 ' + x.room : ''}`).join('\n');
         const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
-      case 'errclear': if (!confirm('오류 기록을 지울까요?')) return; errLog = []; await setValue('errlog', '[]'); return render();
+      case 'errclear': { if (!confirm('이 방의 오류 기록을 지울까요?')) return; const id = chatIdFromPath(); errLog = (errLog || []).filter(x => id && x.room !== id); await setValue('errlog', JSON.stringify(errLog)); return render(); }
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
       case 'changes': histList = await historyOf(chatIdFromPath()); nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
