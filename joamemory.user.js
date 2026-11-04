@@ -4,7 +4,7 @@
 // @version      4.3.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -3305,7 +3305,7 @@
     .av[data-g]::after{position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--paper);font-size:10px;font-weight:800;line-height:12px;text-align:center;color:#fff}
     .av[data-g="f"]::after{content:"♀";background:#E58FB0}
     .av[data-g="m"]::after{content:"♂";background:#7FA8DE}
-    .bigmap{border:0;background:transparent;padding:4px 0;margin:0 0 12px;font-size:13.5px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+    .bigmap{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);padding:10px 12px;margin:0 0 12px;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;touch-action:manipulation}
     .rcenter{display:flex;align-items:center;gap:12px;padding:4px 0 10px}
     .rcenter .av{width:52px;height:52px;border-radius:26px;font-size:20px}
     .rcenter b{display:block;font-size:18px}.rcenter small{font-size:12.5px;color:var(--graphite);line-height:1.5}
@@ -7461,23 +7461,23 @@
     if (!wrap) return;
     if (fit) fitGraph(); else applyView();
     const pts = new Map();
-    let last = null, moved = 0;
+    let last = null, moved = 0, start = null; // moved: 손가락이 처음 닿은 곳에서 얼마나 멀어졌는지(손떨림으로 조금씩 움직인 건 탭으로 쳐요)
     const local = e => { const r = wrap.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-    wrap.addEventListener('pointerdown', e => { pts.set(e.pointerId, local(e)); moved = 0; last = null; });
+    wrap.addEventListener('pointerdown', e => { pts.set(e.pointerId, local(e)); if (pts.size === 1) { moved = 0; start = local(e); } last = null; });
     wrap.addEventListener('pointermove', e => {
       if (!pts.has(e.pointerId)) return;
       const prev = pts.get(e.pointerId), cur = local(e);
       pts.set(e.pointerId, cur);
-      if (pts.size === 1) { view.x += cur.x - prev.x; view.y += cur.y - prev.y; moved += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y); applyView(); }
+      if (pts.size === 1) { view.x += cur.x - prev.x; view.y += cur.y - prev.y; if (start) moved = Math.max(moved, Math.hypot(cur.x - start.x, cur.y - start.y)); applyView(); }
       else if (pts.size === 2) {
         const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         if (last) zoomAt(d / last, mid.x, mid.y);
-        last = d; moved += 10;
+        last = d; moved = 99;
       }
     });
     const end = e => { pts.delete(e.pointerId); if (pts.size < 2) last = null; };
     wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', end);
-    wrap.addEventListener('click', e => { if (moved > 8) { e.stopPropagation(); e.preventDefault(); } }, true);
+    wrap.addEventListener('click', e => { if (moved > 12) { e.stopPropagation(); e.preventDefault(); } }, true);
     wrap.addEventListener('wheel', e => { e.preventDefault(); const p = local(e); zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y); }, { passive: false });
   }
 
@@ -8009,7 +8009,7 @@
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
-      : nav.view === 'graph' ? graphHtml()
+      : nav.view === 'graph' ? (() => { try { return graphHtml(); } catch (e) { logErr('관계도', e.message); return emptyBox('관계도를 그리다 오류가 났어요 · ' + e.message + ' · 설정 › 오류 기록에서 복사해 보내 주세요'); } })()
       : nav.view === 'history' ? historyHtml()
       : nav.view === 'run' ? runHtml()
       : nav.view === 'changes' ? changesView(histList)
@@ -8055,7 +8055,7 @@
       + `<button class="rail-set" data-act="tab" data-arg="settings" aria-label="설정"${nav.tab === 'settings' ? ' aria-current="page"' : ''}>설정</button>`;
     if (nav.view === 'preview') updatePreviewCount();
     if (nav.tab === 'settings' && !nav.view) fillSettings();
-    if (nav.view === 'graph') setupGraph(!render.keepGraph); render.keepGraph = false;
+    if (nav.view === 'graph') { try { setupGraph(!render.keepGraph); } catch (e) { logErr('관계도', e.message); } } render.keepGraph = false;
   }
 
   // ══════════════════════════════════════════════════════════════
