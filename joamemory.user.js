@@ -4,7 +4,7 @@
 // @version      4.3.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
 // @noframes
@@ -3305,7 +3305,7 @@
     .av[data-g]::after{position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--paper);font-size:10px;font-weight:800;line-height:12px;text-align:center;color:#fff}
     .av[data-g="f"]::after{content:"♀";background:#E58FB0}
     .av[data-g="m"]::after{content:"♂";background:#7FA8DE}
-    .bigmap{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);padding:10px 12px;margin:0 0 12px;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;touch-action:manipulation}
+    .bigmap{border:0;background:transparent;padding:4px 0;margin:0 0 12px;font-size:13.5px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
     .rcenter{display:flex;align-items:center;gap:12px;padding:4px 0 10px}
     .rcenter .av{width:52px;height:52px;border-radius:26px;font-size:20px}
     .rcenter b{display:block;font-size:18px}.rcenter small{font-size:12.5px;color:var(--graphite);line-height:1.5}
@@ -7370,8 +7370,8 @@
     for (const n of names) { const ps = names.filter(m => m !== n && pos.has(m) && kidOf(n, m));
       if (ps.length === 2 && COUPLE.includes(pairKind(rel, ps[0], ps[1]))) { const k = ps.sort().join('\u0000'); kids.set(n, ps); (fam.get(k) || fam.set(k, []).get(k)).push(n); } }
     for (const [k, ks] of fam) {
-      if (k.split(' ').includes(root)) continue; // 가운데 부부의 아이는 가족 중심 배치에서 이미 아래에
-      const [a, b] = k.split(' ').map(x => pos.get(x)), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, len = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+      if (k.split('\u0000').includes(root)) continue; // 가운데 부부의 아이는 가족 중심 배치에서 이미 아래에
+      const [a, b] = k.split('\u0000').map(x => pos.get(x)), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, len = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
       const others = [...pos.entries()].filter(([n]) => !ks.includes(n)).map(([, p]) => p), crowd = sg => others.filter(p => Math.hypot(p.x - (mx - uy * 170 * sg), p.y - (my + ux * 170 * sg)) < 150).length;
       const sg = crowd(1) <= crowd(-1) ? 1 : -1;
       ks.forEach((n, i) => { const t = 0; let d = 170 + i * 105; const at = () => ({ x: mx - uy * d * sg + ux * t, y: my + ux * d * sg + uy * t });
@@ -7402,7 +7402,7 @@
       // 살짝 휘어진 선. 글자는 휜 곳 바깥쪽에 붙입니다.
       const bend = 28, cx = mx + nx * bend, cy = my + ny * bend;
       const lx = mx + nx * (bend / 2 + 12), ly = my + ny * (bend / 2 + 12) - (list.length - 1) * 8 + 4;
-      const k0 = relPillOn && !(sel && on) ? pairKind(list, x, y) : '', kid = k0 === '자녀' && (g.kids.has(x) ? x : g.kids.has(y) ? y : ''), fk = kid && g.kids.get(kid).join(' '), k = fk && kidPill.has(fk) ? '' : (fk && kidPill.add(fk), k0), px = (a.x + 2 * cx + b.x) / 4, py = (a.y + 2 * cy + b.y) / 4, pw = [...k].length * 12 + 20;
+      const k0 = relPillOn && !(sel && on) ? pairKind(list, x, y) : '', kid = k0 === '자녀' && (g.kids.has(x) ? x : g.kids.has(y) ? y : ''), fk = kid && g.kids.get(kid).join('\u0000'), k = fk && kidPill.has(fk) ? '' : (fk && kidPill.add(fk), k0), px = (a.x + 2 * cx + b.x) / 4, py = (a.y + 2 * cy + b.y) / 4, pw = [...k].length * 12 + 20;
       const pill = k ? `<g class="gp" transform="translate(${px},${py})"><rect x="${-pw / 2}" y="-11" width="${pw}" height="22" rx="11" fill="${REL_PILL[k][0]}" stroke="#fff" stroke-width="2"/><text y="4.5" text-anchor="middle" fill="${REL_PILL[k][1]}">${k}</text></g>` : '';
       const spans = sel && on ? list.map((r, i) => `<tspan x="${lx}" dy="${i ? 17 : 0}"><tspan class="who">${esc(r.from)}</tspan> ${esc(cut(r.text, 16))}</tspan>`).join('') : '';
       return `<g class="ge${on ? '' : ' dim'}${sel && on ? ' on' : ''}"><path d="M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}"/>
