@@ -4,7 +4,7 @@
 // @version      4.5.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -3815,9 +3815,9 @@
     .fx-sheet{position:absolute;inset:0;z-index:20;background:rgba(34,30,46,.28);display:flex;align-items:flex-end;justify-content:center}
     .fx-sheet-in{width:min(520px,100%);max-height:75%;overflow:auto;background:var(--paper,#fff);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(34,30,46,.12)}
     @media(min-width:900px){.fx-sheet{align-items:center}.fx-sheet-in{border-radius:18px}}
-    .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:flex;align-items:center;justify-content:space-between;padding:0 2px}.fx-pg-h b{font-size:17px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;cursor:pointer;padding:6px 14px;border:1.5px solid var(--ink);border-radius:10px;font-size:13.5px;font-weight:700;color:var(--ink)}
+    .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2px}.fx-pg-h b{font-size:16px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;justify-self:start;cursor:pointer;padding:6px 4px;font-size:15px;color:var(--ink2)}.fx-pg-ok{all:unset;justify-self:end;cursor:pointer;padding:6px 4px;font-size:15px;font-weight:800;color:var(--acc)}.fx-pg-ok:disabled{opacity:.4}
     .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:15.5px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
-    .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"▾";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--acc-ink);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:var(--acc-soft);color:var(--acc-ink);font:inherit;font-size:12.5px;font-weight:700;border-radius:999px;padding:6px 24px 6px 12px;cursor:pointer;outline:none}
+    .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"⌄";position:absolute;right:0;top:50%;transform:translateY(-62%);font-size:13px;color:var(--graphite);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:none;color:var(--graphite);font:inherit;font-size:13.5px;padding:4px 16px 4px 4px;cursor:pointer;outline:none}
     .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
     .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fx-acts2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.fx-libh{display:block;font-size:13px;margin:6px 2px 8px}.fx-lib label{flex:1;min-width:0}.fx-lib .fx-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fx-lib .fx-lt b{display:flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-lib .fx-lt small{font-size:11.5px;color:var(--graphite)}.fx-lib .fx-n{font-style:normal;font-size:11px;color:var(--graphite);opacity:.7;flex:0 0 auto}
@@ -4393,11 +4393,11 @@
     const flt = FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : '', shown = items.map((it, i) => [it, i]).filter(([it]) => !flt || it.cat === flt);
     const cnt = c => items.filter(it => it.cat === c).length;
     return `<section class="bk fx">
-      <div class="fx-top"><div><b>고정 설정</b><small>내가 쓰는 설정 · 주입을 켠 것만 매 턴 들어가요 · AI가 안 고쳐요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
+      <div class="fx-top"><div><b>고정 설정</b><small>켠 것만 매 턴 들어가요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
       <div class="fx-seg"><button data-act="fxfilter" data-arg="" aria-pressed="${!flt}">전체 <small>${items.length}</small></button>${FIX_CATS.map(c => `<button data-act="fxfilter" data-arg="${c}" aria-pressed="${flt === c}">${c} <small>${cnt(c)}</small></button>`).join('')}</div>
       ${shown.length ? `<ul class="fx-list">${shown.map(([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details><summary><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
           <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`).join('')}</ul>`
-        : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : 'NPC·지침·세계관처럼 바뀌면 안 되는 설정을 유저노트처럼 넣어 두세요.<br>웹 모드에선 보낼 때마다 그대로 들어가요.'}</p>`}
+        : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : '바뀌면 안 되는 설정을 넣어 두세요.'}</p>`}
       <div class="actions one"><button class="btn pri" data-act="fixopen" data-arg="new">+ 새로 추가</button></div>
       ${nav.fxLib ? fxLibHtml(items.length) : ''}
     </section>`;
@@ -4405,12 +4405,11 @@
   // 추가·수정: 메모장처럼 화면 전체 · 흰 카드 하나에 이름·카테고리·글
   function fxEditHtml() {
     const it = nav.fxEdit, old = Number.isInteger(nav.part);
-    return `<div class="fx-pg"><div class="fx-pg-h"><b>${old ? '고정 설정 수정' : '새 고정 설정'}</b><button class="fx-pg-x" data-act="fxedclose">닫기</button></div>
+    return `<div class="fx-pg"><div class="fx-pg-h"><button class="fx-pg-x" data-act="fxedclose">닫기</button><b>${old ? '고정 설정 수정' : '새 고정 설정'}</b><button class="fx-pg-ok" data-act="saveEdit"${busyNow ? ' disabled' : ''}>저장</button></div>
       <div class="fx-card"><div class="fx-card-top"><input class="fx-name" data-out="fxtitle" placeholder="이름 (예: 한도윤 · 말투 지침)" value="${esc(it.title)}">
         <label class="fx-catw"><select class="fx-cat" aria-label="카테고리">${FIX_CATS.map(c => `<option${it.cat === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
         <textarea data-out="editor" placeholder="여기에 쓰기 · 유저노트처럼 그대로 붙여 넣어요">${esc(it.text)}</textarea>
         <small class="fx-cnt">${it.text.length.toLocaleString()}자</small></div>
-      <button class="btn pri fx-save" data-act="saveEdit"${busyNow ? ' disabled' : ''}>저장</button>
       ${old ? '<p style="margin:0;text-align:center"><button class="linkbtn" data-act="fxdel">이 설정 지우기</button></p>' : ''}</div>`;
   }
   const fxHead = t => String(t).replace(/^조아메모리 고정 설정[^\n]*\n/, ''); // 내보낸 파일 첫 줄
@@ -5006,7 +5005,7 @@
   }
   // 구글 백업 창: 주소·비밀번호 · 처음 설정(스크립트 복사) · 지금 저장 · 불러오기
   // Firebase 설정 채우기 창(설정 › AI 카드 바로 뒤에 그려요 · 어느 설정 칸에서 눌러도 뜨게): 콘솔의 firebaseConfig를 통째로 붙여 넣고 [채우기] → 키·프로젝트 ID·앱 ID 저장
-  const fbSheetHtml = () => `<div class="fx-pg"><div class="fx-pg-h"><b>Firebase 설정 채우기</b><button class="fx-pg-x" data-act="fbclose">닫기</button></div>
+  const fbSheetHtml = () => `<div class="fx-pg"><div class="fx-pg-h"><button class="fx-pg-x" data-act="fbclose">닫기</button><b>Firebase 설정 채우기</b><span></span></div>
       <p class="muted" style="margin:0 2px">Firebase 콘솔 › 프로젝트 설정 › 내 앱 › SDK 설정의 firebaseConfig = { … } 를 통째로 복사해서 붙여 넣어요</p>
       <button class="btn pri fx-save" data-act="fbfill" data-arg="clip">복사한 거 바로 채우기</button>
       <div class="fx-card"><textarea data-out="fbpaste" spellcheck="false" placeholder="안 되면 여기에 붙여 넣기&#10;const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;,&#10;  appId: &quot;…&quot;&#10;};"></textarea></div>
