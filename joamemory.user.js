@@ -4,7 +4,7 @@
 // @version      4.5.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2356,7 +2356,7 @@
     + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
     + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}'
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide :is([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}}';
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide :is([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}';
   document.documentElement.appendChild(pageStyle);
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
   const NOTE_MARK = /\[\/\/\]: # ["(]|<!--MEMO_NOTE|MEMO_NOTE/;
@@ -9703,7 +9703,9 @@
     if (!chatIdFromPath()) { inlineBtn.remove(); ui('.fab').classList.remove('show'); return; }
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
-      const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
+      let [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
+      // 다른 확프가 보내기 버튼을 세로 묶음으로 감쌌으면 묶음 밖 같은 줄에 붙어요(아래로 밀려나지 않게)
+      for (let i = 0; i < 3 && box.parentElement && /column/.test(getComputedStyle(box).flexDirection) && getComputedStyle(box).display.includes('flex'); i++) { before = box; box = box.parentElement; }
       if (inlineBtn.parentElement !== box || inlineBtn.nextElementSibling !== before) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
