@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.8
+// @version      4.4.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2356,7 +2356,7 @@
     + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
     + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}'
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide :is([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}}';
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide :is([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}}';
   document.documentElement.appendChild(pageStyle);
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
   const NOTE_MARK = /\[\/\/\]: # ["(]|<!--MEMO_NOTE|MEMO_NOTE/;
