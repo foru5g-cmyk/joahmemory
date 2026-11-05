@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.9
+// @version      4.5.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2386,6 +2386,8 @@
         span.className = 'memo-note-hidden';
         t.parentNode.insertBefore(span, t);
         span.appendChild(t);
+        // 노트 바로 앞 줄바꿈도 같이 숨겨요(말풍선 아래 빈 줄로 남지 않게)
+        for (let s = span.previousSibling; s && (s.nodeName === 'BR' || (s.nodeType === 3 && !s.nodeValue.trim()));) { const prev = s.previousSibling; span.prepend(s); s = prev; }
       }
     }
   }
