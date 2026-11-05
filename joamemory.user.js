@@ -4,7 +4,7 @@
 // @version      4.5.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2542,7 +2542,7 @@
       display:none;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
     :host(.open) .screen{display:flex}
 
-    header{flex-shrink:0;display:flex;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 16px) 10px 6px 22px}
+    header{flex-shrink:0;display:flex;align-items:center;gap:2px;padding:max(calc(env(safe-area-inset-top) + 4px), 14px) 10px 6px 22px}
     .htitle{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
     .htitle b{font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sfx{margin-top:10px;border:1px solid var(--rule);border-radius:12px;padding:10px 12px;background:var(--paper)}.sfx summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink2);list-style:none}.sfx summary::after{content:' ▾';color:var(--graphite)}.sfx[open] summary::after{content:' ▴'}
