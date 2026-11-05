@@ -1113,7 +1113,7 @@
     const declared = !!(preg.unaware || preg.start != null); // 이야기·작가가 이미 임신으로 정함 → 주사위 말고 두 줄
     const res = declared && done !== 'pos' ? 'pos' : done || (!last ? 'neg' : hit ? 'pos' : tl ? 'neg' : 'early');
     const pill = r => r ? ` <span class="pg-odds" title="${esc(kitOdds(r.t)[1].join(' · '))}">🍼 ${Math.round(kitChance(r.t) * 100)}% · ${kitKind(r.t)}</span>` : '';
-    const md = d => P_STR(d).slice(5).replace('.', '/').replace(/^0/, '').replace('/0', '/');
+    const md = d => { const m = P_STR(d).match(/(\d{1,2})\.(\d{1,2})$/); return m ? `${+m[1]}/${+m[2]}` : P_STR(d); }; // 끝의 월.일만(1년차 11.20처럼 연도 없는 날짜도)
     const nowhy = r => kitOdds(r.t)[1].some(x => /피임함|사후피임약/.test(x)) ? '피임이 됐어요' : kitOdds(r.t)[1].includes('생리 중') ? '생리 중이었어요' : P_NOWHY[Math.floor(pR('nowhy' + r.d) * P_NOWHY.length)].replace(/\(.*\)/, '');
     const why = !last ? '최근 6주 안에 관계 기록이 없어요' : res === 'early' ? `아직 일러요 · ${md(last.d)} 관계 ${day - last.d}일째` : (r => `${md(r.d)} 관계 · ${nowhy(r)}${pill(r)}${rl && rl.d !== r.d ? ` ·${md(rl.d)} 관계는 2주 뒤에` : ''}`)(tl || last); // 2주 지난 관계가 없으면(작가 설정 직후 등) 마지막 관계로
     const force = last && preg.start == null ? `<button class="pg-link" data-act="pregforce">✍️ 작가 설정</button>` : '';
