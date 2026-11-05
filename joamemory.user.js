@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.5.8
+// @version      4.6.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -758,8 +758,9 @@
     const md = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)); let x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
-      if (x != null && x < cur - 180) x += 365; // 년도 없는 날짜가 12월→1월로 넘어가면 다음 해
-      else if (x != null && x > cur + 180) x -= 365; // 1월에 '12월 31일'(회상 등)이 나오면 지난해 · 1년 건너뛰지 않게
+      const noYr = x != null && !/년차|\d{4}\s*(?:[.\-/]|년)/.test(t.slice(0, 400)); // 년도가 적힌 날짜는 그대로(반년 넘게 건너뛴 이야기를 작년으로 착각하지 않게)
+      if (noYr && x < cur - 180) x += 365; // 년도 없는 날짜가 12월→1월로 넘어가면 다음 해
+      else if (noYr && x > cur + 180) x -= 365; // 1월에 '12월 31일'(회상 등)이 나오면 지난해 · 1년 건너뛰지 않게
       if (x != null && x >= d - 3 && x <= d + 400) cur = Math.max(cur, x); else cur += pSkip(t); }
     return cur; };
   // 태아 쪽 경우의 수(현실보다 살짝 높게): 염색체 이상 종류 · 정밀초음파 구조 이상 · 작은 소견 · 성장 지연 · 양수 · 탯줄 · 큰 아기 · 태동 감소
@@ -923,7 +924,7 @@
     const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'}`);
+    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'}`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -1024,7 +1025,8 @@
   // 👨 아빠: 임신된 날(시작 + 2주)에 가장 가까운 관계 장면에 나온 남자 인물(유저 캐릭터 말고) · 여러 사람과 관계했어도 그날 사람으로
   function pregFather(mem) {
     if (preg?.start == null) return '';
-    const ps = pPeople(mem), cd = preg.start + 14, rels = pregKitRels(mem).filter(r => Math.abs(r.d - cd) <= 14), w = new Map();
+    const ps = pPeople(mem), cd = preg.start + 14, all = pregKitRels(mem), found = preg.start + (preg.w0 || 5) * 7, w = new Map();
+    let rels = all.filter(r => Math.abs(r.d - cd) <= 14); if (!rels.length) rels = all.filter(r => r.d <= found && found - r.d <= 56); // 주수가 관계 날짜와 어긋나게 잡혔으면 임신을 안 날 전 8주 안의 관계로
     const has = (t, n) => [n, n.length >= 3 ? n.slice(-2) : ''].filter(Boolean).some(x => t.includes(x));
     for (const r of rels) { const c = ps.filter(p => !p.me && has(r.t, p.name)), m = c.filter(p => p.male).length ? c.filter(p => p.male) : c.filter(p => !p.female); for (const p of m) w.set(p.name, (w.get(p.name) || 0) + Math.max(0.01, kitChance(r.t))); }
     const cands = [...w.keys()]; if (!cands.length) return '';
@@ -1281,11 +1283,17 @@
     try { await rewriteNote(chatId, n.memory); preg.sig = pregSig; pregSave(); } catch (e) { logErr('임신 줄', '앱 방식 노트 고쳐 쓰기 실패 · ' + e.message); }
   }
 
+  // 고정 설정 칸은 채팅 노트 맨 끝으로(답 쓰기 직전에 읽게) · 노트끼리 비교할 때도 같은 순서로 맞춰요(chatShape)
+  function fxLast(t) {
+    const L = String(t).split('\n'), hd = l => /^(?:##(?!#)|■)\s*\S/.test(l), i = L.findIndex(l => /^(?:##(?!#)|■)\s*고정 설정\s*$/.test(l));
+    if (i < 0) return String(t); let j = i + 1; while (j < L.length && !hd(L[j])) j++;
+    return [...L.slice(0, i), ...L.slice(j), ...L.slice(i, j)].join('\n');
+  }
   function buildBlock(memory, uptoId, turns, at = new Date().toISOString(), by = DEVICE, keepSel = false) {
     const whole = memory; memory = selectInjection(memory); const sel = keepSel || !lastInj.all;
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => l.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
-    const lines = stripProof(memory).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim());
+    const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim());
     // 먼지쌓인곳은 이름만 한 줄로: 목록에서만 뺀 물건이라 없어진 걸로 연기하지 않게, 다시 나오면 처음 보는 것처럼 굴지 않게(본문은 화면에만)
     const shelf = shelfNames(whole).slice(-30).map(clean);
     return '\n\n' + [
@@ -2029,6 +2037,7 @@
       if (c?.finishReason) finish = c.finishReason;
       if (j.usageMetadata) u = j.usageMetadata;
       if (j.promptFeedback?.blockReason) finish = j.promptFeedback.blockReason;
+      if (j.error && !finish) throw new Error(`구글이 답 도중 오류를 보냈어요(${j.error.status || j.error.code || ''} · ${j.error.message || ''}). 잠시 뒤 다시 해 주세요.`); // 과부하·한도 같은 오류가 끊김으로 보이지 않게
     }
     if (/MAX_TOKENS/i.test(finish)) throw Object.assign(cutError(), { partial: text.trim() });
     if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw new Error(`AI 안전 필터가 막았어요(${finish}). 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.`);
@@ -3717,7 +3726,7 @@
     .wd{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
     .wd-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink2);padding:2px 2px 0}
     .wd-status span{margin-left:auto;font-weight:500;color:var(--graphite)}
-    .wd-dot{flex:0 0 8px;height:8px;border-radius:50%;background:var(--pencil)}.wd-dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(63,185,143,.16)}
+    .wd-dot{flex:0 0 8px;height:8px;border-radius:50%;background:var(--pencil)}.bk-tx .wd-dot{display:inline-block;width:8px;margin-right:4px;vertical-align:0}.wd-dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(63,185,143,.16)}
     .wd-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px;color:var(--ink)}.nf-help>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}.nf-help>summary::-webkit-details-marker{display:none}.nf-help>summary b{font-size:15px;font-weight:800;color:var(--ink)}.nf-q{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;color:var(--graphite);background:var(--mist)}.nf-help[open] .nf-q{background:var(--acc,#7B61D9);border-color:transparent;color:#fff}.nf-more{margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--mist);font-size:12.5px;line-height:1.6;color:var(--graphite)}.nf-more p{margin:0 0 6px}.nf-more p:last-child{margin:0}.nf-more b{color:var(--ink)}
     .pg-hw{margin-left:auto;position:relative;display:inline-flex;align-items:center}
     .pg-hq{position:absolute;right:-7px;top:-7px}
@@ -3976,7 +3985,7 @@
   let histList = []; // 회차별 바뀐 것 화면이 보는 기록
   const noteMemory = () => { const n = snapshot?.note; return n ? (fullNote && fullNote.upto === n.upto ? fullNote.memory : n.memory) : ''; };
   // 전체본을 채팅에 넣으면 나올 글과 실제 채팅 노트가 같은지(공백·따옴표 모양 차이는 무시).
-  const chatShape = t => String(t).replace(/["“”]/g, '').replace(/\s+/g, '');
+  const chatShape = t => fxLast(t).replace(/["“”]/g, '').replace(/\s+/g, '');
   const sameAsChat = (full, chatMemory) => chatShape(stripProof(full)) === chatShape(chatMemory);
   const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { fullNote = { upto, memory, turns, at }; return setValue('full:' + chatId, JSON.stringify(fullNote)); };
   const sections = () => (snapshot?.note ? splitSections(noteMemory()) : []);
@@ -4583,8 +4592,9 @@
       <div class="bk-list">
         <div class="bk-it"><span class="bk-ic">🕘</span><span class="bk-tx"><b>자동 백업</b><small>${hl.length ? `1~${last.to}턴 · ${when} · ${hl.length}개` : '아직 없어요'}</small></span><span class="bk-act"><button class="btn" data-act="changes">되돌리기</button></span></div>
         <div class="bk-it"><span class="bk-ic">💾</span><span class="bk-tx"><b>파일 백업</b><small>기억·기록을 파일 하나로</small></span><span class="bk-act"><button class="btn pri" data-act="backup"${dis}>받기</button><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></span></div>
-        <div class="bk-it"><span class="bk-ic">☁️</span><span class="bk-tx"><b>구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · <button class="linkbtn" data-act="gsopen">설정</button>' : '폰·컴퓨터가 같은 기억을 써요'}</small></span><span class="bk-act">${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>올리기</button><button class="btn" data-act="gload"${dis}>받기</button>` : '<button class="btn pri" data-act="gsopen">연결</button>'}</span></div>
+        <div class="bk-it"><span class="bk-ic">☁️</span><span class="bk-tx"><b>구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · <button class="linkbtn" data-act="gsopen">설정</button>' : '폰·컴퓨터가 같은 기억을 써요'}</small></span><span class="bk-act">${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>올리기</button><button class="btn" data-act="gslist"${dis}>받기</button>` : '<button class="btn pri" data-act="gsopen">연결</button>'}</span></div>
       </div>
+      ${nav.gsList ? `<div class="nf-pick"><small>드라이브 백업 · 다른 방 것도 이 방으로 가져올 수 있어요</small>${nav.gsList.length ? nav.gsList.map(x => `<button class="nf-pi" data-act="gsfrom" data-arg="${esc(x.chat)}"><b>${esc(x.title)}${x.here ? ' · 이 방' : ''}</b><small>${esc(x.when)}</small></button>`).join('') : '<small>드라이브에 백업이 없어요</small>'}</div>` : ''}
       <p class="bk-g">정리 도구</p>
       <div class="bk-list">
         <div class="bk-it"><span class="bk-ic">✂️</span><span class="bk-tx"><b>나눠서 정리</b><small>밀린 턴 · 처음부터 · 다른 AI</small></span><span class="bk-act"><button class="btn pri" data-act="runsheet" data-arg="chunk"${dis}>이어 정리</button><button class="btn" data-act="runsheet" data-arg="pick"${dis}>다른 방법</button></span></div>
@@ -5079,7 +5089,7 @@
       <label class="gsf"><span>비밀번호</span><span class="keybox"><input type="password" data-set="gsKey" autocomplete="off" spellcheck="false" placeholder="스크립트의 SECRET"><button type="button" data-act="peek">보기</button></span></label>
       <label class="etcsw"><input type="checkbox" data-act="etcsync"${nav.etcSyncOn ? ' checked' : ''}><i></i><span>ETC(커뮤·폰 등)도 기기끼리 맞추기<small>끄면 기기마다 따로 봐요 · 기억 노트는 켜고 끄기와 상관없이 맞춰져요</small></span></label>
       <button class="btn pri" data-act="gskeep">연결 저장</button>
-      <div class="gsrow"><button class="btn" data-act="gsave">지금 저장</button><button class="btn" data-act="gload">불러오기</button></div>
+      <div class="gsrow"><button class="btn" data-act="gsave">지금 저장</button><button class="btn" data-act="gslist">불러오기</button></div>
       <details class="gshow"${nav.gsGuide ? ' open' : ''}><summary>처음 연결하는 방법 (한 번만, 5분)</summary><ol>
         <li><button class="btn" data-act="gscode">구글 스크립트 복사</button> 를 눌러요. 내 구글 드라이브에 백업을 받아 줄 작은 프로그램 글이 복사돼요(복사가 막히면 .txt 파일로 받아져요).</li>
         <li>컴퓨터나 폰 브라우저에서 <b>script.google.com</b> 에 들어가 <b>새 프로젝트</b>를 눌러요.</li>
@@ -9194,7 +9204,7 @@
 
   root.addEventListener('change', async e => {
     if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
-    if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) await importBackup(f); return; }
+    if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
     if (e.target.dataset?.out === 'extfile') {
       const file = e.target.files?.[0]; e.target.value = '';
       if (file) await importResult(await file.text());
@@ -9589,6 +9599,11 @@
       case 'backup': return exportBackup();
       case 'gsave': return gsSave();
       case 'gload': return gsLoad();
+      case 'gslist': { try { toast('드라이브 백업 목록을 읽는 중…'); const cid = chatIdFromPath(), items = await gsList(), when = a => a ? new Date(a).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        nav.gsList = items.map(x => ({ ...x, here: x.chat === cid, when: when(x.at) })).sort((a, b) => b.here - a.here || new Date(b.at) - new Date(a.at)); nav.gsSheet = false; quiet(); render(); }
+        catch (e) { toast('목록 불러오기 실패 · ' + e.message, 'err', 5000); } return; }
+      case 'gsfrom': { if (!arg || busyNow) return; nav.gsList = null; if (arg === chatIdFromPath()) return gsLoad();
+        try { toast('드라이브에서 백업을 받는 중…'); const r = await gsCall({ action: 'load', chat: arg }); quiet(); await importBackupText(r.data); } catch (e) { toast('불러오기 실패 · ' + e.message, 'err', 5000); } return; }
       case 'gscode': return gsCopyCode();
       case 'gspick': { try { toast('드라이브에서 이 방과 맞는 백업을 찾는 중…'); const items = await gsList(), t = roomTitle(), cid = chatIdFromPath(), c = snapshot?.note, when = a => a ? new Date(a).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
         const others = items.filter(x => x.chat !== cid), found = [];
@@ -9795,8 +9810,10 @@
     const l = Number(await getValue('noteLimit', '50000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
   // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
-  let backAt = 0;
-  const comeBack = () => { if (document.visibilityState !== 'visible' || !chatIdFromPath() || busyNow || (loading && !stuckLoad()) || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
+  let backAt = 0, filePick = false;
+  // 폰은 파일 고르는 창에서 돌아올 때도 '돌아옴'이 먼저 와요 → 그때 다시 그리면 파일 칸이 바뀌어 고른 파일을 놓쳐요
+  root.addEventListener('click', e => { if (e.target.closest?.('label')?.querySelector('input[type=file]')) filePick = true; }, true);
+  const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
   document.addEventListener('visibilitychange', comeBack);
   window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
