@@ -4,7 +4,7 @@
 // @version      4.5.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -9703,9 +9703,7 @@
     if (!chatIdFromPath()) { inlineBtn.remove(); ui('.fab').classList.remove('show'); return; }
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
-      let [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
-      // 다른 확프가 보내기 버튼을 세로 묶음으로 감쌌으면 묶음 밖 같은 줄에 붙어요(아래로 밀려나지 않게)
-      for (let i = 0; i < 3 && box.parentElement && /column/.test(getComputedStyle(box).flexDirection) && getComputedStyle(box).display.includes('flex'); i++) { before = box; box = box.parentElement; }
+      const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
       if (inlineBtn.parentElement !== box || inlineBtn.nextElementSibling !== before) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
