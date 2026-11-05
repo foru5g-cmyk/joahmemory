@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.5.3
+// @version      4.5.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1046,14 +1046,14 @@
   //   두 줄이면 관계한 날 + 2주 = 4주 식으로 임신 기록 시작 + 다음 2턴 동안 채팅에 '임테기 두 줄'을 넣어요(유저가 직접 긁은 거라 장면에 써도 돼요)
   const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf), male: /·\s*남\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
   const pregWhoDefault = mem => pPeople(mem).find(p => p.me) || { name: '유저 캐릭터', me: true }; // 유저 캐릭터(페르소나)만
-  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|정사(?:를|가|를\s*나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
   function pregKitRels(mem) { // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
     const base = storyDay(mem), out = [];
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = b.title + ' ' + b.lines.join(' '), d = P_DAY(b.title); if (d != null && P_SEX.test(t)) out.push({ d, t }); }
     const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
     for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m));
       if (msgRole(m) === 'assistant') { const x = P_DAY2(t.slice(0, 400)); if (x != null) cur = x; else if (cur != null) cur += pSkip(t); } else if (cur != null) cur += pSkip(t);
-      if (P_SEX.test(t)) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + t; else out.push({ d, t }); } } }
+      if (P_SEX.test(t.replace(/["“][^"”\n]*["”]/g, ''))) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + t; else out.push({ d, t }); } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
@@ -8545,7 +8545,7 @@
         if (nav.fullTried !== tryKey) { nav.fullTried = tryKey;
           gsPeek(chatId).then(async g => { if (!g || g.upto !== n.upto || !sameAsChat(g.memory, n.memory) || chatIdFromPath() !== chatId) return;
             if (String(await getValue('fullSkip:' + chatId, '')) === tryKey) return;
-            nav.fullAsk = { chatId, key: tryKey, g, n: { upto: n.upto, turns: n.turns, at: n.at } }; render(); }); }
+            await saveFull(chatId, n.upto, g.memory, n.turns, n.at); render(); }); } // 묻지 않고 알아서 받아요(채팅은 안 건드림)
       }
       // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남아 있는 것 중 가장 최신으로 다시 넣을지 묻습니다.
       //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만. '그냥 두기'를 누른 같은 후보로는 다시 안 물어요.
