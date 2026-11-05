@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.5.1
+// @version      4.5.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3815,7 +3815,11 @@
     .fx-sheet{position:absolute;inset:0;z-index:20;background:rgba(34,30,46,.28);display:flex;align-items:flex-end;justify-content:center}
     .fx-sheet-in{width:min(520px,100%);max-height:75%;overflow:auto;background:var(--paper,#fff);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(34,30,46,.12)}
     @media(min-width:900px){.fx-sheet{align-items:center}.fx-sheet-in{border-radius:18px}}
-    .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-in{display:flex;flex-direction:column}.fx-sheet-in>*{flex-shrink:0}.fx-sheet .fx-ed{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}.fx-sheet .fx-ed textarea{flex:1 1 180px;min-height:72px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:flex;align-items:center;justify-content:space-between;padding:0 2px}.fx-pg-h b{font-size:17px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;cursor:pointer;padding:6px 14px;border:1.5px solid var(--ink);border-radius:10px;font-size:13.5px;font-weight:700;color:var(--ink)}
+    .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:15.5px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
+    .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"▾";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--acc-ink);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:var(--acc-soft);color:var(--acc-ink);font:inherit;font-size:12.5px;font-weight:700;border-radius:999px;padding:6px 24px 6px 12px;cursor:pointer;outline:none}
+    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
+    .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fx-acts2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.fx-libh{display:block;font-size:13px;margin:6px 2px 8px}.fx-lib label{flex:1;min-width:0}.fx-lib .fx-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fx-lib .fx-lt b{display:flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-lib .fx-lt small{font-size:11.5px;color:var(--graphite)}.fx-lib .fx-n{font-style:normal;font-size:11px;color:var(--graphite);opacity:.7;flex:0 0 auto}
     .fx-sheet ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
     .fx-sheet li{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--rule);border-radius:12px}.fx-sheet li>div{flex:1;min-width:0}.fx-sheet li b{display:block;font-size:14px}.fx-sheet li small{display:block;font-size:12px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4384,6 +4388,7 @@
   };
   const fxOff = it => !!it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)); // 노트관리의 넣음/뺌과 같은 저장소
   function fixedHtml() {
+    if (nav.fxEdit) return `<section class="bk fx">${fxEditHtml()}</section>`; // 추가·수정은 메모장처럼 화면 전체로(키보드가 올라와도 안 찌그러지게)
     const items = fixItems((splitSections(noteMemory()).find(x => x.key === FIXED)?.body || '')), total = items.reduce((a, it) => a + it.title.length + it.text.length, 0);
     const flt = FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : '', shown = items.map((it, i) => [it, i]).filter(([it]) => !flt || it.cat === flt);
     const cnt = c => items.filter(it => it.cat === c).length;
@@ -4394,18 +4399,19 @@
           <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`).join('')}</ul>`
         : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : 'NPC·지침·세계관처럼 바뀌면 안 되는 설정을 유저노트처럼 넣어 두세요.<br>웹 모드에선 보낼 때마다 그대로 들어가요.'}</p>`}
       <div class="actions one"><button class="btn pri" data-act="fixopen" data-arg="new">+ 새로 추가</button></div>
-      ${nav.fxEdit ? fxEditHtml() : nav.fxLib ? fxLibHtml(items.length) : ''}
+      ${nav.fxLib ? fxLibHtml(items.length) : ''}
     </section>`;
   }
-  // 추가·수정: 목록 위 작은 창(옮기기 창과 같은 모양). 바깥을 눌러도 안 닫혀요(쓰던 글이 날아가지 않게).
+  // 추가·수정: 메모장처럼 화면 전체 · 흰 카드 하나에 이름·카테고리·글
   function fxEditHtml() {
     const it = nav.fxEdit, old = Number.isInteger(nav.part);
-    return `<div class="fx-sheet"><div class="fx-sheet-in"><div class="fx-sheet-h"><b>${old ? '고정 설정 수정' : '새 고정 설정'}</b><button class="ia" data-act="fxedclose" aria-label="닫기">✕</button></div>
-      <div class="editwrap fx-ed"><div class="fx-seg">${FIX_CATS.map(c => `<button data-act="fxcat" data-arg="${c}" aria-pressed="${it.cat === c}">${c}</button>`).join('')}</div>
-      <input class="fx-title" data-out="fxtitle" placeholder="이름 (예: 한도윤 · 말투 지침)" value="${esc(it.title)}">
-      <textarea data-out="editor" placeholder="유저노트처럼 그대로 붙여 넣어요 · 형식 상관없어요">${esc(it.text)}</textarea></div>
-      <div class="actions" style="grid-template-columns:1fr 1fr;margin-top:10px"><button class="btn" data-act="fxedclose">취소</button><button class="btn pri" data-act="saveEdit"${busyNow ? ' disabled' : ''}>저장</button></div>
-      ${old ? '<p style="margin:10px 2px 0;text-align:center"><button class="linkbtn" data-act="fxdel">이 설정 지우기</button></p>' : ''}</div></div>`;
+    return `<div class="fx-pg"><div class="fx-pg-h"><b>${old ? '고정 설정 수정' : '새 고정 설정'}</b><button class="fx-pg-x" data-act="fxedclose">닫기</button></div>
+      <div class="fx-card"><div class="fx-card-top"><input class="fx-name" data-out="fxtitle" placeholder="이름 (예: 한도윤 · 말투 지침)" value="${esc(it.title)}">
+        <label class="fx-catw"><select class="fx-cat" aria-label="카테고리">${FIX_CATS.map(c => `<option${it.cat === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
+        <textarea data-out="editor" placeholder="여기에 쓰기 · 유저노트처럼 그대로 붙여 넣어요">${esc(it.text)}</textarea>
+        <small class="fx-cnt">${it.text.length.toLocaleString()}자</small></div>
+      <button class="btn pri fx-save" data-act="saveEdit"${busyNow ? ' disabled' : ''}>저장</button>
+      ${old ? '<p style="margin:0;text-align:center"><button class="linkbtn" data-act="fxdel">이 설정 지우기</button></p>' : ''}</div>`;
   }
   const fxHead = t => String(t).replace(/^조아메모리 고정 설정[^\n]*\n/, ''); // 내보낸 파일 첫 줄
   const roomName = () => document.title.split('|')[0].trim() || '이 방';
@@ -5000,11 +5006,11 @@
   }
   // 구글 백업 창: 주소·비밀번호 · 처음 설정(스크립트 복사) · 지금 저장 · 불러오기
   // Firebase 설정 채우기 창(설정 › AI 카드 바로 뒤에 그려요 · 어느 설정 칸에서 눌러도 뜨게): 콘솔의 firebaseConfig를 통째로 붙여 넣고 [채우기] → 키·프로젝트 ID·앱 ID 저장
-  const fbSheetHtml = () => `<div class="rsheet" data-act="fbclose"><div class="rbox gsbox" data-act="noop">
-      <b>Firebase 설정 채우기</b><small>Firebase 콘솔 › 프로젝트 설정 › 내 앱 › SDK 설정의 firebaseConfig = { … } 를 통째로 복사해서 붙여 넣어요</small>
-      <button class="btn pri" data-act="fbfill" data-arg="clip">복사한 거 바로 채우기</button><small>안 되면 아래 칸에 붙여 넣고 [채우기]</small>
-      <textarea data-out="fbpaste" rows="7" spellcheck="false" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;,&#10;  appId: &quot;…&quot;&#10;};"></textarea>
-      <button class="btn pri" data-act="fbfill">채우기</button></div></div>`;
+  const fbSheetHtml = () => `<div class="fx-pg"><div class="fx-pg-h"><b>Firebase 설정 채우기</b><button class="fx-pg-x" data-act="fbclose">닫기</button></div>
+      <p class="muted" style="margin:0 2px">Firebase 콘솔 › 프로젝트 설정 › 내 앱 › SDK 설정의 firebaseConfig = { … } 를 통째로 복사해서 붙여 넣어요</p>
+      <button class="btn pri fx-save" data-act="fbfill" data-arg="clip">복사한 거 바로 채우기</button>
+      <div class="fx-card"><textarea data-out="fbpaste" spellcheck="false" placeholder="안 되면 여기에 붙여 넣기&#10;const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;,&#10;  appId: &quot;…&quot;&#10;};"></textarea></div>
+      <button class="btn fx-save" data-act="fbfill">붙여 넣은 걸로 채우기</button></div>`;
   function gsSheetHtml() {
     return `<div class="rsheet" data-act="gsclose"><div class="rbox gsbox" data-act="noop">
       <b>구글 드라이브 백업</b><small>내 구글 드라이브 "조아메모리 백업" 폴더에 방 제목으로 저장돼요</small>
@@ -8094,6 +8100,7 @@
   // 설정: 묶음별로 한 줄씩. 고르는 건 드롭다운, 켜고 끄는 건 스위치.
   // 설정: 모든 줄 = 왼쪽 이름 · 오른쪽 조작. 묶음 셋(정리 / AI / 칸·화면) + 정리 기록·도구 한 줄
   function settingsHtml() {
+    if (nav.fbSheet) return fbSheetHtml(); // Firebase 채우기: 고정 설정처럼 화면 전체로
     const opt = (v, label, cur) => `<option value="${v}"${v === cur ? ' selected' : ''}>${label}</option>`;
     const row = (name, control, hint = '') => `<label class="srow"><div><b>${name}</b>${hint ? `<small>${hint}</small>` : ''}</div>${control}</label>`;
     const sw = key => `<input type="checkbox" class="switch" data-set="${key}">`;
@@ -8117,7 +8124,7 @@
         ${row('App Check 디버그 토큰', `<span class="keybox"><input type="password" data-set="firebaseDebugToken" autocomplete="off" spellcheck="false" placeholder="콘솔 › App Check › 디버그 토큰 관리"><button type="button" data-act="peek">보기</button><button type="button" data-act="fbtest">확인</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
         ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요). App Check: ① 웹 앱은 하나만 ② [채우기]에 그 앱의 firebaseConfig ③ App Check › 그 앱 ⋮ › 디버그 토큰 관리에서 만든 토큰(저장까지) ④ [확인]으로 점검.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
-        </details>${nav.fbSheet ? fbSheetHtml() : ''}
+        </details>
 `)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
@@ -8274,7 +8281,7 @@
     else bottom.innerHTML = '';
     // 폰: 위쪽 3칸(설정은 톱니). 컴퓨터: 왼쪽 세로 메뉴 4칸. 어느 쪽을 보일지는 CSS가 data-mode로 정합니다.
     // 인물·노트 보기 같은 화면에서도 위 메뉴는 그대로 둡니다. 고치는 중(편집·새 기억 확인)일 때만 숨겨요.
-    ui('.screen').dataset.mode = ['edit', 'pvEdit', 'preview'].includes(nav.view) ? 'edit' : nav.view ? 'view' : nav.tab;
+    ui('.screen').dataset.mode = ['edit', 'pvEdit', 'preview'].includes(nav.view) || nav.fxEdit ? 'edit' : nav.view ? 'view' : nav.tab;
     ui('.screen').classList.toggle('fx-open', !!ui('.fx-sheet'));
     if (hadSheet) main.querySelectorAll('.fx-sheet-in').forEach(x => { x.style.animation = 'none'; }); // 이미 떠 있던 창은 다시 튀어나오지 않게
     if (nav.tab === 'phone' && !nav.view) centerEmoji(main);
@@ -8316,6 +8323,8 @@
     try { await dropOldNote(chatId, n.carrierId, msgText(snap.all.find(m => msgId(m) === n.carrierId))); } catch (_) { /* 예전 자리 정리가 실패해도 새 자리에는 이미 들어감 */ }
     return true;
   }
+  root.addEventListener('change', e => { if (e.target?.classList?.contains('fx-cat') && nav.fxEdit) nav.fxEdit.cat = e.target.value; });
+  root.addEventListener('input', e => { if (e.target?.closest?.('.fx-card') && e.target.tagName === 'TEXTAREA') { const c = root.querySelector('.fx-cnt'); if (c) c.textContent = e.target.value.length.toLocaleString() + '자'; } });
   root.addEventListener('change', e => { if (e.target?.id === 'pg-world' && preg?.start != null) { preg.world = e.target.value; pregSave(); render(); } });
   root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq')) root.querySelectorAll('.pg-hq[open]').forEach(d => { d.open = false; }); }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
@@ -9266,7 +9275,7 @@
         await setValue('pins:' + cid, JSON.stringify([...injPins]));
         toast(injPins.has(arg) ? '고정했어요 · 이 사건은 늘 채팅에 들어가요' : '고정을 풀었어요', 'ok', 2500); keepScroll(render); return reinject(cid); }
       case 'injskip': injSkip.set(arg, lastInj?.recalled?.find(x => x.key === arg)?.title || arg); toast('이번 장면에선 뺄게요 · 그 일을 다시 직접 꺼내면 돌아와요', 'ok', 3000); keepScroll(render); return reinject(chatIdFromPath());
-      case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); await fillSettings(); if (WIDE.matches) ui('[data-out="fbpaste"]')?.focus(); return; // 폰: 자동 포커스하면 키보드가 창을 밀어 올려서 안 해요
+      case 'fbpastetog': e.preventDefault(); await saveSettings(true); nav.fbSheet = true; render(); out('main').scrollTop = 0; await fillSettings(); if (WIDE.matches) ui('[data-out="fbpaste"]')?.focus(); return; // 폰: 자동 포커스하면 키보드가 창을 밀어 올려서 안 해요
       case 'fbclose': nav.fbSheet = false; render(); return fillSettings();
       case 'gptlogin': { e.preventDefault(); const w = window.open('about:blank', '_blank'); // 기다린 뒤에 열면 팝업 차단에 걸려서 먼저 열어요
         if (!w) return toast('새 창이 막혔어요. 팝업을 허용하고 다시 눌러 주세요.', 'err', 6000);
@@ -9610,8 +9619,8 @@
         const list = fixItems(editBody(FIXED)), i = arg === 'new' ? 'new' : Number(arg);
         nav.fxEdit = i === 'new' ? { cat: FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : 'NPC', title: '', text: '' } : { ...list[i] };
         if (nav.tab === 'story') nav.mem = FIXED; // 저장 뒤에도 고정 탭에 그대로(정리 전 방은 저장하면 탭이 새로 생겨요)
-        nav.prevView = nav.view; nav.prevKey = nav.key; nav.key = FIXED; nav.lines = false; nav.part = i; render(); return; } // 화면은 그대로 · 작은 창으로
-      case 'fxedclose': nav.fxEdit = null; nav.key = nav.prevKey || null; nav.part = null; return keepScroll(render);
+        nav.prevView = nav.view; nav.prevKey = nav.key; nav.key = FIXED; nav.lines = false; nav.part = i; nav.fxY = out('main').scrollTop; render(); out('main').scrollTop = 0; return; } // 메모장처럼 화면 전체로 · 닫으면 보던 자리로
+      case 'fxedclose': nav.fxEdit = null; nav.key = nav.prevKey || null; nav.part = null; render(); out('main').scrollTop = nav.fxY || 0; return;
       case 'edit': { if (loading || !snapshot?.note) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); nav.fxEdit = null;
         const [k, mode] = String(arg).split('|'); nav.prevView = nav.view; nav.prevKey = nav.key; nav.view = 'edit'; nav.key = k; nav.lines = String(mode || '').startsWith('→'); nav.relMode = String(mode || '').slice(1) || 'r'; nav.part = null; render(); return; }
       case 'relinline': if (arg === '') { nav.inlineRel = null; nav.part = null; nav.lines = false; } else { nav.inlineRel = Number(arg); nav.key = '인물'; nav.lines = true; nav.relMode = 's'; nav.part = Number(arg); } return keepScroll(render);
