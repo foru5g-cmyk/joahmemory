@@ -3535,7 +3535,7 @@
     .jump button>svg{display:none}
     .jump .jumprow{width:100%;display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--rule);cursor:pointer}
     .jump .jumprow::after{content:"›";color:var(--pencil);font-size:18px}.jump button::after{content:"›";color:var(--pencil);font-size:18px}
-    .jump b{flex:1;font-size:15px;font-weight:600;color:var(--ink)}.jump span.v{font-size:12.5px;color:var(--graphite)}
+    .jump b{flex:1;font-size:15px;font-weight:600;color:var(--ink)}.jump span.v{font-size:12.5px;color:var(--graphite)}.jump button,.jump .jumprow{flex-wrap:wrap;row-gap:3px}.jump b{white-space:nowrap}.jump button::after,.jump .jumprow::after{order:2}.jump span.v{order:3;flex-basis:100%}
     .bars{display:flex;align-items:flex-end;gap:8px;height:120px;margin-top:12px}
     .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;min-width:0}
     .bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
@@ -9339,7 +9339,7 @@
         const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
       case 'errclear': { if (!confirm('이 방의 오류 기록을 지울까요?')) return; const id = chatIdFromPath(); errLog = (errLog || []).filter(x => id && x.room !== id); await setValue('errlog', JSON.stringify(errLog)); return render(); }
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
-      case 'changes': histList = await historyOf(chatIdFromPath()); nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
+      case 'changes': histList = await historyOf(chatIdFromPath()); if (nav.branchRoom !== chatIdFromPath()) nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
       case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
       case 'prov': { const list = MODELS.find(([g]) => g.toLowerCase() === arg)?.[1] || []; // 회사를 누르면 그 회사 모델로(같은 회사면 그대로)
@@ -9479,12 +9479,12 @@
       case 'phback': { const sc = nav.phScreen || 'home'; const BACK = { sys: 'home', xapp: 'home', post: 'insta', dm: 'insta', dmt: 'dm', thread: 'msg', note: 'memo', photo: 'album', item: 'market', secret: 'memo', snote: 'secret' }; nav.phScreen = BACK[sc.split(':')[0]] || 'home'; return keepScroll(render); }
       case 'tlperson': nav.view = null; nav.tab = 'timeline'; nav.tlWho = arg; render(); out('main').scrollTop = 0; return;
       case 'branchopen': { const cid = chatIdFromPath(); if (!cid || busyNow || nav.branchBusy) return; nav.branchBusy = '방마다 대화를 읽어요'; keepScroll(render);
-        try { nav.branchList = await branchFind(cid, (i, n) => { nav.branchBusy = `${i}/${n}번째 방 읽는 중`; keepScroll(render); }); } catch (err) { nav.branchList = []; logErr('분기', '다른 방 기록 찾기 실패 · ' + err.message); }
+        nav.branchRoom = cid; try { nav.branchList = await branchFind(cid, (i, n) => { nav.branchBusy = `${i}/${n}번째 방 읽는 중`; keepScroll(render); }); } catch (err) { nav.branchList = []; logErr('분기', '다른 방 기록 찾기 실패 · ' + err.message); }
         finally { nav.branchBusy = null; }
         return keepScroll(render); }
       case 'branchgo': { const x = nav.branchList?.[Number(arg)]; if (!x || busyNow) return;
         draft = { sections: splitSections(x.memory), uptoId: x.uptoId, turns: x.turn, evidence: { ok: 0, bad: 0 }, kept: [], lost: [], restore: true, sub: `대화 끝이 이 방과 같은 1~${x.turn}턴 기억이에요. 넣으면 다음 정리 때 그 뒤 대화를 이어서 정리해요.` };
-        nav.branchList = null; nav.view = 'preview'; render(); out('main').scrollTop = 0; return; }
+        nav.view = 'preview'; render(); out('main').scrollTop = 0; return; }
       case 'restore': {
         const h = histList[Number(arg)]; if (!h || busyNow) return;
         if (!confirm(`${h.from + 1}~${h.to}턴 정리 전 노트(1~${h.from}턴)로 되돌릴까요? 미리보기에서 확인한 뒤 넣어요. 그 뒤 대화는 다음 정리 때 다시 정리돼요.`)) return;
