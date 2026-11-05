@@ -9213,7 +9213,7 @@
         catch (err) { toast('꺼내기 실패 · ' + errMsg(err), 'err'); } finally { busyNow = false; render(); } return; }
       case 'ncfold': { const d = el.closest('details'); if (d) { d.open = false; d.scrollIntoView({ block: 'nearest' }); } return; } // 홈 노트 구성 접기
       case 'tab': nav.tab = arg; nav.view = null; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게) render(); out('main').scrollTop = 0; return;
-      case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); } render(); out('main').scrollTop = 0; return;
+      case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || ltmData.chatId !== chatIdFromPath() || Date.now() - ltmData.at > 30000) { if (ltmData?.chatId !== chatIdFromPath()) ltmData = null; ltmLoad(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); } render(); out('main').scrollTop = 0; return;
       case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return (ltmBy || (nav.ltmHasKey === false ? 'file' : 'api')) === 'file' ? ltmCopy() : ltmAdd();
       case 'ltmby': ltmBy = arg; await setValue('ltmBy', arg); return keepScroll(render);
@@ -9222,7 +9222,7 @@
       case 'ltmfull': { const cid = chatIdFromPath(), cands = ltmOldest(noteMemory(), ltmDone); if (!cid) return;
         if (!cands.length) return toast('옮길 수 있는 오래된 사건이 없어요(최근 사건 10개는 노트에 둬요).', 'info', 3500);
         ltmQ = { turns: snapshot?.note?.turns || 0, cands, kind: 'full' }; await setValue('ltmq:' + cid, JSON.stringify(ltmQ));
-        nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); render(); out('main').scrollTop = 0; return; }
+        nav.view = 'ltm'; nav.key = null; if (!ltmData || ltmData.chatId !== chatIdFromPath() || Date.now() - ltmData.at > 30000) { if (ltmData?.chatId !== chatIdFromPath()) ltmData = null; ltmLoad(); } render(); out('main').scrollTop = 0; return; }
       case 'factmode': { e.preventDefault(); const cid = chatIdFromPath(); if (!cid) return; const i = String(arg).lastIndexOf('|'), k = String(arg).slice(0, i), v = String(arg).slice(i + 1);
         injSet = { ...injSet, facts: { ...(injSet.facts || {}), [k]: v } }; await setValue('injset:' + cid, JSON.stringify(injSet));
         toast(v === 'on' ? '이 사실은 항상 채팅에 넣어요' : v === 'off' ? '이 사실은 채팅에 안 넣어요' : '대화에 나올 때만 넣어요', 'ok', 2200); keepScroll(render); return reinject(cid); }
