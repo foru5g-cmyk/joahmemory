@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.5.5
+// @version      4.5.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1047,13 +1047,19 @@
   const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf), male: /·\s*남\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
   const pregWhoDefault = mem => pPeople(mem).find(p => p.me) || { name: '유저 캐릭터', me: true }; // 유저 캐릭터(페르소나)만
   const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  // 관계 장면 줄 중 임신할 사람(페르소나) 것만: 그 사람 이름이 있거나 아무 인물 이름도 없는 줄 · 다른 인물끼리(그남과 내연녀 등)는 빼요
+  function pRelMine(mem) {
+    const who = preg?.who || pregWhoDefault(mem).name, forms = n => [n, n.length >= 3 ? n.slice(-2) : ''].filter(Boolean), has = (l, n) => forms(n).some(x => l.includes(x));
+    const others = pPeople(mem).map(p => p.name).filter(n => n && !(who && (n === who || has(who, n) || has(n, who))));
+    return t => String(t).split(/\n+|(?<=[.!?。])\s+/).filter(l => P_SEX.test(l) && ((who && has(l, who)) || !others.some(n => has(l, n)))).join('\n');
+  }
   function pregKitRels(mem) { // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
-    const base = storyDay(mem), out = [];
-    for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = b.title + ' ' + b.lines.join(' '), d = P_DAY(b.title); if (d != null && P_SEX.test(t)) out.push({ d, t }); }
+    const base = storyDay(mem), out = [], mine = pRelMine(mem);
+    for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = mine([b.title, ...b.lines].join('\n')), d = P_DAY(b.title); if (d != null && t) out.push({ d, t }); }
     const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
     for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m));
       if (msgRole(m) === 'assistant') { const x = P_DAY2(t.slice(0, 400)); if (x != null) cur = x; else if (cur != null) cur += pSkip(t); } else if (cur != null) cur += pSkip(t);
-      if (P_SEX.test(t.replace(/["“][^"”\n]*["”]/g, ''))) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + t; else out.push({ d, t }); } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
+      const st = mine(t.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
