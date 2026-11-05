@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.3
+// @version      4.4.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -327,12 +327,12 @@
     '그리고', '하지만', '그러나', '사실', '자신', '모습', '사람', '생각', '마음', '이야기', '시작', '다른', '모든', '어떤', '이미', '아직', '바로', '먼저', '내용', '정확', '여부', '관련']);
   // 낱말 끝 조사 떼기(남는 게 두 글자 이상일 때만): '하비에게' → '하비' · '은반지를' → '은반지'
   const injStem = w => { const m = /[가-힣]$/.test(w) && w.match(/(에게서|으로부터|에서는|에게는|에서|에게|한테|으로|부터|까지|처럼|보다|이랑|과의|와의|의|을|를|이|가|은|는|에|와|과|도|로|만)$/); return m && w.length - m[1].length >= 2 ? w.slice(0, -m[1].length) : w; };
-  const FIX_CATS = ['NPC', '지침', '세계관', '기타'];
+  const FIX_CATS = ['유저 설정', 'NPC', '지침', '세계관', '기타'];
   function fixItems(body) { // [{ cat, title, text }]
     const out = []; let cur = null;
     for (const l of String(body || '').split('\n')) {
       const m = l.match(/^▸\s*(.*)$/);
-      if (m) { const t = m[1].trim(), c = t.match(/^\[(NPC|지침|세계관|기타)\]\s*(.*)$/), only = FIX_CATS.includes(t);
+      if (m) { const t = m[1].trim(), c = t.match(/^\[(유저 설정|NPC|지침|세계관|기타)\]\s*(.*)$/), only = FIX_CATS.includes(t);
         cur = { cat: c ? c[1] : only ? t : '기타', title: c ? c[2] : only ? '' : t, head: t, text: [] }; out.push(cur); continue; }
       if (!cur) { if (!l.trim() || isNone(l)) continue; cur = { cat: '기타', title: '', text: [] }; out.push(cur); }
       cur.text.push(l);
@@ -2506,6 +2506,11 @@
   host.id = 'memo-note-host';
   document.documentElement.appendChild(host);
   const root = host.attachShadow({ mode: 'open' });
+  // 아이폰은 글씨가 작은 입력칸을 누르면 화면을 확대해요 → 조아메모리 칸을 누른 동안만 확대를 막고, 나오면 크랙 원래 설정으로 돌려요
+  { let saved = null; const vp = () => document.querySelector('meta[name="viewport"]');
+    root.addEventListener('focusin', e => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || saved !== null) return; let m = vp(); if (!m) { m = document.createElement('meta'); m.name = 'viewport'; m.dataset.memoNote = '1'; document.head.appendChild(m); }
+      saved = m.getAttribute('content') || ''; m.setAttribute('content', (saved ? saved.replace(/,?\s*maximum-scale\s*=\s*[^,]*/i, '') + ', ' : 'width=device-width, initial-scale=1, ') + 'maximum-scale=1'); });
+    root.addEventListener('focusout', () => setTimeout(() => { const a = root.activeElement; if (saved === null || /^(INPUT|TEXTAREA|SELECT)$/.test(a?.tagName || '')) return; const m = vp(); if (m) { if (m.dataset.memoNote) m.remove(); else m.setAttribute('content', saved); } saved = null; }, 0)); }
   root.innerHTML = `
   <style>
     /* 조아메모리ෆ — 흰 종이 · 먹색 글씨 · 칸마다 파스텔 형광펜. 상자 카드와 아이콘 대신 '실'과 '형광펜'으로 구분합니다. */
@@ -3700,6 +3705,7 @@
     .ia[data-act="pin"]:not(.on){filter:grayscale(1);opacity:.55}.ia[data-act="pin"]:not(.on):hover{filter:none;opacity:1}
     .ia.on{background:var(--acc-soft);border-color:var(--acc)}
     /* ── 아래에 떠 있는 메뉴(독) ── 아이콘만, 고른 메뉴만 이름이 나오며 늘어나요 */
+    .gwrap .ginfo{bottom:calc(env(safe-area-inset-bottom) + 84px);max-height:calc(45% - 40px)} /* 관계도 설명 카드: 아래 메뉴(독)에 안 가리게 그 위로 */
     nav.top{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 14px);transform:translateX(-50%);z-index:6;display:flex;align-items:center;justify-content:center;gap:2px;
       width:auto;max-width:calc(100% - 20px);padding:6px;border:1px solid var(--rule);border-radius:999px;overflow:visible;
       background:rgba(255,255,255,.84);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
@@ -7998,12 +8004,14 @@
     const mine = cur.slice(at, at + tail.length); if (mine.length !== tail.length || !tail.every((m, i) => msgRole(m) === msgRole(mine[i]) && norm(m) === norm(mine[i]))) return null;
     return { turn, uptoId: msgId(mine[mine.length - 1]) };
   }
-  async function branchFind(chatId) {
+  async function branchFind(chatId, tick = () => {}) {
     const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []);
     const cur = await readAll(chatId), found = [];
     // ponytail: 최근 기록이 있는 방 12개만 읽어요(방마다 대화 전체를 읽어서). 더 오래된 방은 백업 파일로
     const rooms = []; for (const k of keys) { if (!/^hist:/.test(k) || k === 'hist:' + chatId) continue; const hl = await historyOf(k.slice(5)); if (hl.length) rooms.push({ room: k.slice(5), hl, at: hl[hl.length - 1].at || 0 }); }
-    for (const { room, hl } of rooms.sort((a, b) => b.at - a.at).slice(0, 12)) {
+    const pick = rooms.sort((a, b) => b.at - a.at).slice(0, 12);
+    for (const [i, { room, hl }] of pick.entries()) {
+      tick(i + 1, pick.length);
       let src; try { src = await readAll(room); } catch (_) { continue; }
       const seen = new Set();
       for (const h of [...hl].reverse()) for (const [memory, upto, at] of [[h.after, h.afterUpto, h.at], [h.before, h.beforeUpto, h.at]]) {
@@ -8016,6 +8024,8 @@
   const branchHtml = () => nav.branchList ? (nav.branchList.length
     ? `<div class="h3" style="margin-top:14px">대화 끝이 이 방과 같은 기억</div>` + nav.branchList.map((x, i) => `<div class="jump" style="margin-top:8px"><button data-act="branchgo" data-arg="${i}"><b>1~${x.turn}턴 기억${i ? '' : ' ⭐추천'}</b><span class="v">${esc(lastEvent(x.memory) || '미리보기 후 넣기')}</span></button></div>`).join('')
     : emptyBox('대화 끝이 이 방과 같은 기억을 못 찾았어요. 이 기기에 기록이 없거나 원래 방이 지워졌을 수 있어요.'))
+    : nav.branchBusy
+    ? `<div class="jump" style="margin-top:14px"><button disabled><b><i style="display:inline-block;width:13px;height:13px;margin-right:7px;vertical-align:-2px;border:2px solid var(--acc-soft);border-top-color:var(--acc);border-radius:50%;animation:jm-spin .8s linear infinite"></i>다른 방 기록을 찾는 중…</b><span class="v">${nav.branchBusy}</span></button></div>`
     : `<div class="jump" style="margin-top:14px"><button data-act="branchopen"${busyNow ? ' disabled' : ''}><b>다른 방 기록에서 가져오기</b><span class="v">분기한 방이면 대화 끝이 같은 기억을 찾아요</span></button></div>`;
   // 정리 기록 화면: 회차를 고르면 그 회차에 바뀐 것 + 그 정리 전 노트로 되돌리기
   function changesView(list) {
@@ -8994,6 +9004,7 @@
     if (nav.view === 'pvEdit') {
       const s = draft.sections.find(x => x.key === nav.key);
       if (s) s.body = body; else draft.sections.push({ key: nav.key, body });
+      nav.fxEdit = null;
       if (part) { nav.part = null; render(); return; }
       nav.view = 'preview'; render(); return;
     }
@@ -9201,7 +9212,7 @@
         try { await rewriteNote(cid, joinSections(list.filter(x => x.body.trim()))); toast(itemName(String(it.key)) + '을(를) 소지품으로 다시 꺼냈어요.', 'ok', 2500); await refresh(); }
         catch (err) { toast('꺼내기 실패 · ' + errMsg(err), 'err'); } finally { busyNow = false; render(); } return; }
       case 'ncfold': { const d = el.closest('details'); if (d) { d.open = false; d.scrollIntoView({ block: 'nearest' }); } return; } // 홈 노트 구성 접기
-      case 'tab': nav.tab = arg; nav.view = null; quiet(); render(); out('main').scrollTop = 0; return;
+      case 'tab': nav.tab = arg; nav.view = null; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게) render(); out('main').scrollTop = 0; return;
       case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || Date.now() - ltmData.at > 30000) ltmLoad(); ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); } render(); out('main').scrollTop = 0; return;
       case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return (ltmBy || (nav.ltmHasKey === false ? 'file' : 'api')) === 'file' ? ltmCopy() : ltmAdd();
@@ -9315,7 +9326,7 @@
       case 'jump': { const k = arg.split('|').pop(); nav.tab = tabFor(k); nav.view = null;
         if (nav.tab === 'story' || nav.tab === 'now') nav.mem = k; else if (nav.tab === 'people') nav.ppl = k === '인지·비밀' ? 'know' : k === '호칭·말투' ? 'speech' : k === '관계·감정선' ? 'map' : k === '감정선' ? 'feel' : 'list';
         render(); out('main').scrollTop = 0; return; }
-      case 'mem': nav.mem = arg; nav.grp = ''; render(); out('main').scrollTop = 0; return;
+      case 'mem': nav.mem = arg; nav.grp = ''; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; render(); out('main').scrollTop = 0; return;
       case 'ppl': nav.ppl = arg; render(); out('main').scrollTop = 0; return;
       case 'thread': nav.thread = arg; return keepScroll(render);
       case 'graph': nav.view = 'graph'; nav.gsel = null; render(); return;
@@ -9467,8 +9478,9 @@
       case 'phhome': nav.phScreen = 'home'; return keepScroll(render);
       case 'phback': { const sc = nav.phScreen || 'home'; const BACK = { sys: 'home', xapp: 'home', post: 'insta', dm: 'insta', dmt: 'dm', thread: 'msg', note: 'memo', photo: 'album', item: 'market', secret: 'memo', snote: 'secret' }; nav.phScreen = BACK[sc.split(':')[0]] || 'home'; return keepScroll(render); }
       case 'tlperson': nav.view = null; nav.tab = 'timeline'; nav.tlWho = arg; render(); out('main').scrollTop = 0; return;
-      case 'branchopen': { const cid = chatIdFromPath(); if (!cid || busyNow) return; toast('다른 방 기록을 찾는 중이에요… (방마다 대화를 읽어요)', 'info', 4000);
-        try { nav.branchList = await branchFind(cid); } catch (err) { nav.branchList = []; logErr('분기', '다른 방 기록 찾기 실패 · ' + err.message); }
+      case 'branchopen': { const cid = chatIdFromPath(); if (!cid || busyNow || nav.branchBusy) return; nav.branchBusy = '방마다 대화를 읽어요'; keepScroll(render);
+        try { nav.branchList = await branchFind(cid, (i, n) => { nav.branchBusy = `${i}/${n}번째 방 읽는 중`; keepScroll(render); }); } catch (err) { nav.branchList = []; logErr('분기', '다른 방 기록 찾기 실패 · ' + err.message); }
+        finally { nav.branchBusy = null; }
         return keepScroll(render); }
       case 'branchgo': { const x = nav.branchList?.[Number(arg)]; if (!x || busyNow) return;
         draft = { sections: splitSections(x.memory), uptoId: x.uptoId, turns: x.turn, evidence: { ok: 0, bad: 0 }, kept: [], lost: [], restore: true, sub: `대화 끝이 이 방과 같은 1~${x.turn}턴 기억이에요. 넣으면 다음 정리 때 그 뒤 대화를 이어서 정리해요.` };
@@ -9585,7 +9597,8 @@
       case 'fxcat': { if (!nav.fxEdit) return; nav.fxEdit.cat = arg; // 다시 그리지 않고 버튼만 바꿔요(창이 다시 떠서 깜빡이지 않게)
         root.querySelectorAll('[data-act="fxcat"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.arg === arg))); return; }
       case 'fxdel': if (!confirm('이 설정을 지울까요?')) return; nav.fxDel = true; return saveEdit();
-      case 'fixopen': { if (loading || !snapshot) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500);
+      case 'fixopen': { for (let w = 0; (loading || !snapshot) && w < 75; w++) await new Promise(r => setTimeout(r, 200)); // 읽는 중이면 끝날 때까지 기다렸다 바로 열어요(최대 15초)
+        if (!snapshot) return toast('기억을 못 읽었어요. 새로고침한 뒤 다시 눌러 주세요.', 'info', 3000);
         const list = fixItems(editBody(FIXED)), i = arg === 'new' ? 'new' : Number(arg);
         nav.fxEdit = i === 'new' ? { cat: FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : 'NPC', title: '', text: '' } : { ...list[i] };
         if (nav.tab === 'story') nav.mem = FIXED; // 저장 뒤에도 고정 탭에 그대로(정리 전 방은 저장하면 탭이 새로 생겨요)
