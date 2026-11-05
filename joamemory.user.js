@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.2
+// @version      4.4.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2341,7 +2341,9 @@
   }
   // 노트 자리 = 맨 아래에서 AI 답변 두 개 위(전전 버블). 맨 아래를 리롤하거나 OOC 문답을 지워도 노트가 같이 지워지지 않게.
   //   더 위로 올리면 앱에서 오래 대화하는 사이 크랙이 AI에게 보내는 최근 대화 밖으로 밀려날 수 있어서 두 칸만. 답변이 3개가 안 되면 가장 위 답변.
-  const pickCarrier = all => { const ai = all.filter(m => msgRole(m) === 'assistant'); return ai.length ? ai[Math.max(0, ai.length - 3)] : null; };
+  // 크랙 에러 말풍선(생성 실패로 남은 답)은 수정이 막혀 있어서 노트를 못 붙여요 → 고르지 않아요. 표시가 없는 것도 한 번 거절당하면 기억해 둬요(NO_CARRIER).
+  const NO_CARRIER = new Set(), isErrMsg = m => NO_CARRIER.has(msgId(m)) || m?.isError === true || /error|fail/i.test(String(m?.status || m?.state || m?.type || m?.messageType || ''));
+  const pickCarrier = all => { const ai = all.filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)); return ai.length ? ai[Math.max(0, ai.length - 3)] : null; };
 
   // ══════════════════════════════════════════════════════════════
   // 7. 웹 화면에서 노트 가리기 (혹시 그려졌을 때)
@@ -8293,7 +8295,8 @@
     let whole = await wholeOf(chatId, n);
     // 본판이 넣은 노트(전체)를 실험판이 처음 옮길 때: 고른 일부로 덮기 전에 전체를 이 기기에 먼저 저장해요
     if (!whole && !n.sel) { await saveFull(chatId, n.upto, n.memory, n.turns, n.at); whole = n.memory; }
-    await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(whole || n.memory, n.upto, n.turns, n.at || undefined, n.by || '', n.sel && !whole));
+    try { await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(whole || n.memory, n.upto, n.turns, n.at || undefined, n.by || '', n.sel && !whole)); }
+    catch (e) { if (!/수정할 수 없|에러 메시지/.test(String(e?.message)) || NO_CARRIER.has(msgId(carrier))) throw e; NO_CARRIER.add(msgId(carrier)); return moveNote(chatId, snap); } // 에러 말풍선이었으면 빼고 다른 답변에
     try { await dropOldNote(chatId, n.carrierId, msgText(snap.all.find(m => msgId(m) === n.carrierId))); } catch (_) { /* 예전 자리 정리가 실패해도 새 자리에는 이미 들어감 */ }
     return true;
   }
