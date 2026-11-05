@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.5
+// @version      4.4.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -9212,7 +9212,7 @@
         try { await rewriteNote(cid, joinSections(list.filter(x => x.body.trim()))); toast(itemName(String(it.key)) + '을(를) 소지품으로 다시 꺼냈어요.', 'ok', 2500); await refresh(); }
         catch (err) { toast('꺼내기 실패 · ' + errMsg(err), 'err'); } finally { busyNow = false; render(); } return; }
       case 'ncfold': { const d = el.closest('details'); if (d) { d.open = false; d.scrollIntoView({ block: 'nearest' }); } return; } // 홈 노트 구성 접기
-      case 'tab': nav.tab = arg; nav.view = null; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게) render(); out('main').scrollTop = 0; return;
+      case 'tab': nav.tab = arg; nav.view = null; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); render(); out('main').scrollTop = 0; return; // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게)
       case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || ltmData.chatId !== chatIdFromPath() || Date.now() - ltmData.at > 30000) { if (ltmData?.chatId !== chatIdFromPath()) ltmData = null; ltmLoad(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); } render(); out('main').scrollTop = 0; return;
       case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return (ltmBy || (nav.ltmHasKey === false ? 'file' : 'api')) === 'file' ? ltmCopy() : ltmAdd();
