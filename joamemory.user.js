@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.1
+// @version      4.4.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -195,6 +195,8 @@
         ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
     });
   }
+  const httpWhy = (status, text) => { let why = ''; try { const j = JSON.parse(text); const x = Array.isArray(j) ? j[0] : j; why = [x?.error?.message, x?.message, typeof x?.error === 'string' ? x.error : '', x?.detail, x?.code].filter(v => typeof v === 'string' && v.trim()).join(' · '); } catch (_) { why = String(text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
+    return Object.assign(new Error(`HTTP ${status}${why ? ' · ' + why.slice(0, 160) : ''}`), { status }); };
   function request(method, url, { body, headers = {}, timeout = 30000 } = {}) {
     return new Promise((resolve, reject) => {
       if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
@@ -206,7 +208,7 @@
           let data = null;
           try { data = r.responseText ? JSON.parse(r.responseText) : null; } catch (_) {}
           if (r.status >= 200 && r.status < 300) resolve(data);
-          else reject(new Error(`HTTP ${r.status}${data?.error?.message ? ' · ' + data.error.message : ''}`));
+          else reject(httpWhy(r.status, r.responseText));
         },
         ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')),
         onerror: () => reject(new Error('네트워크 요청에 실패했어요.')),
@@ -569,12 +571,13 @@
   //   줄은 모두 '※ '로 시작 → 채팅 노트를 다시 읽을 때 본문에서 빠져서 정리 AI·노트에 섞이지 않아요(parseNote).
   //   확률은 현실보다 살짝 높게(롤플레잉용).
   let preg = null, pregChat = '', pregOut = [], pregSig = '', pregMode = true, pregHasKey = false; // pregHasKey: AI 키가 있으면 임신 말이 나올 때 AI가 확인해 자동으로 켜요 · 없으면 직접 시작만 // pregMode: 임신 기능 전체(끄면 찾기·AI 확인·채팅에 넣기 다 안 함 · 기록은 남음)
-  const P_DAY = s => { const m = String(s || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
-  const P_STR = d => { const x = new Date(d * 864e5); return x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
+  const P_DAY = s => { const n = String(s || '').match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})/); if (n) return Math.round(Date.UTC(2899 + +n[1], n[2] - 1, +n[3]) / 864e5); // 연도 없는 이야기: 1년차 = 2900년
+    const m = String(s || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
+  const P_STR = d => { const x = new Date(d * 864e5); if (x.getUTCFullYear() >= 2900) return (x.getUTCFullYear() - 2899) + '년차 ' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); return x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
   function storyDay(mem) {
     const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB);
     if (d != null) return d;
-    const all = [...String(mem || '').matchAll(/\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
+    const all = [...String(mem || '').matchAll(/\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
     if (all.length) return Math.max(...all);
     // 노트가 없거나 날짜가 없으면(정리 전·앱 방식) 대화에서 바로: 최근 AI 답 머리말의 날짜(돈 안 듦)
     for (const m of [...(snapshot?.all || [])].reverse()) { if (msgRole(m) !== 'assistant') continue; const x = P_DAY2(stripBlocks(msgText(m)).slice(0, 400)); if (x != null) return x; }
@@ -751,7 +754,7 @@
     }
   }
   const P_NOYEAR = 2900;
-  const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
+  const P_DAY2 = s => { s = String(s || ''); { const n = P_DAY(s); if (n != null && /년차/.test(s)) return n; } const m = s.match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
     const md = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)); let x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
@@ -1147,14 +1150,15 @@
   }
   async function pregKitDone(day, res, rel) { // rel: 임신된 관계 날(이유는 kitHow로)
     if (!preg) return;
+    const kw = pWorld(noteMemory() || ''), yes = { old: '태기가 잡혔어요! 🎉', fantasy: '수정구슬이 빛나요! 🎉' }[kw] || '두 줄! 🎉', knew = { old: '진맥으로 태기를 확인함', fantasy: '수정구슬로 임신을 알게 됨' }[kw] || '임테기 두 줄로 임신을 알게 됨';
     if (preg.unaware) { // 작가가 정해 둔 임신: 임테기로 본인이 알게 돼요
       preg.tests = { ...(preg.tests || {}), [day]: res };
-      if (res === 'pos') { preg.unaware = false; preg.kit = 1; preg.kitAt = null; preg.secret = confirm('두 줄! 🎉\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림)'); preg.log = [...(preg.log || []), { w: Math.floor((day - preg.start) / 7), t: '임테기 두 줄로 임신을 알게 됨', at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
+      if (res === 'pos') { preg.unaware = false; preg.kit = 1; preg.kitAt = null; preg.secret = confirm(yes + '\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림)'); preg.log = [...(preg.log || []), { w: Math.floor((day - preg.start) / 7), t: knew, at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
       await pregSave(); render(); return;
     }
     if (preg.start != null) return;
     preg.tests = { ...(preg.tests || {}), [day]: res };
-    if (res === 'pos') { const w = pregWhoDefault(noteMemory() || ''); Object.assign(preg, { secret: confirm('두 줄! 🎉\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림 · 나중에 모드 탭에서 바꿀 수 있어요)'), on: true, who: w.name || '임신한 사람', me: w.me, start: rel - 14, w0: Math.max(3, Math.floor((day - rel + 14) / 7)), why: `임테기 두 줄(직접 긁음) · ${P_STR(rel)} 관계 기준으로 셌어요`, kit: 1, at: Date.now() }); }
+    if (res === 'pos') { const w = pregWhoDefault(noteMemory() || ''); Object.assign(preg, { secret: confirm(yes + '\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림 · 나중에 모드 탭에서 바꿀 수 있어요)'), on: true, who: w.name || '임신한 사람', me: w.me, start: rel - 14, w0: Math.max(3, Math.floor((day - rel + 14) / 7)), why: `임테기 두 줄(직접 긁음) · ${P_STR(rel)} 관계 기준으로 셌어요`, kit: 1, at: Date.now() }); }
     await pregSave(); render();
   }
   // 🎲 모드 탭(설정 왼쪽) · 목록: 🍼 임신 카드(켜기·임테기) / 임신 중이면 '📔 산모수첩 열기' → 수첩(연보라 · 우리 포인트 색)
@@ -1188,7 +1192,7 @@
     // ── 산모수첩 ──
     const stage = wk == null ? -1 : wk < 14 ? 0 : wk < 28 ? 1 : 2;
     const anyShown = Object.keys(shown).some(k => /^c\d/.test(k) && shown[k] >= 0) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
-    const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">산모수첩</span>${who}<small>예정일 ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
+    const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">${world === 'old' ? '태중 일지' : '산모수첩'}</span>${who}<small>${world === 'old' ? '해산 예정' : '예정일'} ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>D-${dday}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
       <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(preg.why || '')} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p></div>`;
@@ -1202,7 +1206,7 @@
     const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
     const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
     const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${c[0]}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
-    const scan = sec(world === 'modern' ? '🩻 초음파 기록' : '🩺 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
+    const scan = sec(world === 'modern' ? '🩻 초음파 기록' : world === 'old' ? '🩺 진맥 기록' : '🔮 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
     const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="devimg" data-arg="preg">📸 수첩 캡처</button>${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
@@ -2248,7 +2252,7 @@
       if (!gmRequest) { reject(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       gmRequest({ method: 'PATCH', url, timeout: 30000, data: utf16Blob(json),
         headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' },
-        onload: r => r.status >= 200 && r.status < 300 ? resolve() : reject(Object.assign(new Error(`HTTP ${r.status}`), { status: r.status })),
+        onload: r => r.status >= 200 && r.status < 300 ? resolve() : reject(httpWhy(r.status, r.responseText)),
         ontimeout: () => reject(new Error('응답 시간이 초과됐어요.')), onerror: () => reject(new Error('네트워크 요청에 실패했어요.')), onabort: () => reject(new Error('요청이 끊겼어요.')) });
     });
   }
@@ -2257,7 +2261,7 @@
     let r; const tk = await waitToken();
     try { r = await fetch(url, { method: 'PATCH', body: utf16Blob(json), headers: { 'Content-Type': 'application/json; charset=utf-16le', Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' } }); }
     catch (_) { throw new Error('전송 불가'); }
-    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
+    if (!r.ok) { let t = ''; try { t = await r.text(); } catch (_) {} throw httpWhy(r.status, t); }
   }
   // 줄바꿈 표기(\r\n·\r)만 다른 건 같은 글로 봅니다(서버가 바꿔 저장해도 UTF-16LE를 끄지 않게).
   const sameText = (a, b) => a.replace(/\r\n?/g, '\n') === b.replace(/\r\n?/g, '\n');
@@ -2294,7 +2298,7 @@
       } catch (e) { lastError = e; }
     }
     if (lastError && await savedAs(chatId, id, nextText)) return true;
-    throw lastError || new Error('메시지를 수정하지 못했어요.');
+    const e = lastError || new Error('메시지를 수정하지 못했어요.'); e.message += ` · ${Math.round(Math.min(u8, utf16On ? u16 : u8) / 1024)}KB${utf16On ? '' : ' · UTF-8로 보냄'}`; throw e;
   }
   // 노트를 쓰는 길은 모두 여기로. 답변+노트가 100KB를 넘으면 노트 뒷부분(칸·항목 경계에서 자름)을 바로 다음 AI 답변(전)에 MEMO_NOTE_MORE로 넣어요.
   //   전전·전 둘 다 AI가 끝까지 읽는 걸 크랙에서 확인(2026.10.27, 둘 합쳐 약 9만 자). 압축·장기기억은 그대로 돌고, 그래도 넘칠 때만 나눠요.
@@ -7421,12 +7425,12 @@
     const h = String(text || '').split(/\s*[·,;/(（]\s*|\s+[—–-]\s+/)[0].trim();
     if (!h || /직전|척|행세|위장|계약|짝사랑|썸|같은|처럼|후보|뻔|아닌|아님/.test(h)) return '';
     if (/^(?:남편|아내|부인|와이프|배우자|약혼자|애인|남친|여친|엄마|아빠|어머니|아버지|딸|아들|형|오빠|언니|누나|동생)\s+(?!사이)[가-힣]/.test(h)) return ''; // '아내 친구'·'남편 동료'
+    if (/[가-힣A-Za-z]의\s/.test(h)) return ''; // '친구의 딸'·'네이선의 약혼녀'처럼 다른 사람 이야기
     if (/^(?:전|옛|예전)\s*(?:연인|애인|남친|여친|남자\s*친구|여자\s*친구|남편|아내|부인|약혼)|헤어진|이혼/.test(h)) return '전 연인';
     if (/결혼\s*(?:을\s*)?약속|결혼\s*예정/.test(h)) return '약혼';
     if (/부부|남편|아내|배우자|신혼|결혼한|기혼/.test(h)) return '부부';
     if (/약혼|예비\s*(?:신랑|신부|부부)/.test(h)) return '약혼';
     if (/연인|애인|남친|여친|남자\s*친구|여자\s*친구|사귀|교제/.test(h)) return '연인';
-    if (/의\s/.test(h)) return ''; // '친구의 딸'·'형의 친구'
     if (/(?:^|\s)(?:친?딸|친?아들|자녀|자식|아기|모녀|부녀|모자|엄마|아빠|어머니|아버지|부모)(?:\s|$)/.test(h)) return '자녀';
     if (/(?:^|\s)(?:형제|자매|남매|형|오빠|언니|누나|남동생|여동생|동생|쌍둥이)(?:\s|$)/.test(h)) return '형제';
     return '';
@@ -7491,7 +7495,7 @@
       const pars = comp.filter(n => !L.has(n) && core.some(c => kidOf(c, n)));
       pars.forEach(n => { const c = core.find(c => kidOf(c, n)); put(n, L.get(c).x, -220, 1); });
       const left = [], right = [], top = [];
-      comp.filter(n => !L.has(n) && core.some(c => nb.get(c).has(n))).forEach(n => { const a = nb.get(c0).has(n), b = !!mate && nb.get(mate).has(n); (a && b ? top : b ? right : !mate && left.length > right.length ? right : left).push(n); });
+      comp.filter(n => !L.has(n) && core.some(c => nb.get(c).has(n))).forEach(n => { const a = nb.get(c0).has(n), b = !!mate && nb.get(mate).has(n); (a && b ? top : b ? right : !mate ? (left.some(x => nb.get(n).has(x)) ? left : right.some(x => nb.get(n).has(x)) ? right : left.length > right.length ? right : left) : left).push(n); }); // 짝이 없으면 서로 아는 사람끼리 같은 쪽에 위아래로(양옆에 두면 둘 사이 선이 가운데 사람을 지나가며 겹쳐 보여요)
       const col = (list, x, dir) => list.forEach((n, i) => { const per = 5, c = Math.floor(i / per), m = Math.min(per, list.length - c * per); put(n, x + dir * c * 150, (i % per - (m - 1) / 2) * 110, 1); });
       col(left, L.get(c0).x - 270, -1); col(right, (mate ? L.get(mate).x : 0) + 270, 1);
       // 둘 다 아는 사람은 두 사람 사이 세로줄에 위·아래 번갈아(아래에 아이가 있으면 위로만) · 옆으로 늘어놓으면 선이 X자로 엇갈려요
