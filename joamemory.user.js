@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.4.7
+// @version      4.4.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2349,11 +2349,14 @@
   // 7. 웹 화면에서 노트 가리기 (혹시 그려졌을 때)
   // ══════════════════════════════════════════════════════════════
   const pageStyle = document.createElement('style');
+  getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
   pageStyle.textContent = '.memo-note-hidden{display:none!important}'
     + '#memo-note-inline .jm-sp{animation:jm-sp 1s linear infinite!important}@keyframes jm-sp{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}'
     + '#memo-note-inline .jm-dot{animation:jm-dot .9s ease-in-out infinite!important;opacity:.2}@keyframes jm-dot{0%,100%{opacity:.2}50%{opacity:1}}'
     + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
-    + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}';
+    + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}'
+    // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide :is([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}}';
   document.documentElement.appendChild(pageStyle);
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
   const NOTE_MARK = /\[\/\/\]: # ["(]|<!--MEMO_NOTE|MEMO_NOTE/;
@@ -8120,6 +8123,7 @@
         ${sceneOn ? row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝').replace('<label class="srow"', '<label class="srow" hidden') : row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
         ${row('노트 자동 옮기기', sw('autoMove'))}
         ${row('말풍선 턴 번호', sw('badges'))}
+        ${row('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
         <p class="sfoot">칸을 끄면 다음 정리부터 그 칸을 만들지 않아요.</p>`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
@@ -9072,6 +9076,7 @@
       if (on !== sceneOn) { await applyScene(on, chatIdFromPath(), true);
         toast(on ? '이 방은 웹 모드를 켰어요 · 10턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
+    { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
     for (const k of ['gsUrl', 'gsKey', 'firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
     turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
@@ -9095,6 +9100,7 @@
     const a = ui('[data-set="autoMove"]'); if (a && !a.dataset.filled) { a.checked = String(await getValue('autoMove', 'on')) !== 'off'; a.dataset.filled = '1'; }
     const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
+    const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el && !el.dataset.filled) { el.checked = String(await getValue(key, 'on')) !== 'off'; el.dataset.filled = '1'; } }
   }
