@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.0
+// @version      4.6.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3062,7 +3062,7 @@
     .bd-cmts{padding:6px 16px 12px}.bd-c{padding:8px 0;border-bottom:1px dashed var(--rule)}.bd-c.re{padding-left:18px}.bd-c p{margin:0;font-size:13.5px;line-height:1.55}.bd-to{color:var(--graphite);font-size:12.5px}
     .bd-site{padding:14px 16px 12px;color:#fff;display:flex;flex-direction:column;gap:2px}.bd-site b{font-size:17px;font-weight:800}.bd-site small{font-size:12px;opacity:.85}
     .bd-cover{height:86px}
-    .bd-head{display:flex;align-items:flex-end;gap:12px;padding:0 16px 12px;margin-top:-30px;border-bottom:1px solid var(--rule)}
+    .bd-head{position:relative;display:flex;align-items:flex-end;gap:12px;padding:0 16px 12px;margin-top:-30px;border-bottom:1px solid var(--rule)}
     .bd-logo{flex:none;width:64px;height:64px;border-radius:18px;border:3px solid var(--paper);color:#fff;font-size:20px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.15)}
     .bd-hn{display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:34px}.bd-post h4{color:var(--ink)}.bd-hn b{font-size:17px;font-weight:800;color:var(--ink)}.bd-hn small{font-size:12px;color:var(--graphite)}.bd-hn small:nth-of-type(1){color:var(--ink2);font-size:12.5px}
     .bd-notice{border-bottom:1px solid var(--rule)}.bd-notice details{margin:0;border-top:1px solid var(--rule)}.bd-notice details:first-child{border-top:0}
@@ -6204,7 +6204,7 @@
     const nm = String(d.name || '커뮤니티'), hash = [...nm].reduce((a, ch) => a + ch.codePointAt(0), 0);
     const [c1, c2] = [['#FF7A59', '#FFB36B'], ['#7B61FF', '#C08CFF'], ['#13B38B', '#7EDBB8'], ['#E24A6A', '#FF9AA2'], ['#2E3A59', '#6B7FB0'], ['#F2994A', '#F2C94C']][hash % 6];
     const members = d.members || 3000 + (hash * 37) % 47000, today = Math.round(members * 0.08);
-    const refreshBtn = open ? '' : `<span class="bd-tools" style="margin:0 0 0 auto;flex:none"><button data-act="bdrefresh" data-arg="${esc(cur)}" style="font-size:11.5px;padding:4px 9px"${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : cur ? '🔄 이 게시판 새로고침' : '🔄 전체 새로고침'}</button></span>`;
+    const refreshBtn = open ? '' : `<span class="bd-tools" style="position:absolute;right:12px;top:0;margin:0"><button data-act="bdrefresh" data-arg="${esc(cur)}" style="font-size:11.5px;padding:4px 9px"${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : cur ? '🔄 이 게시판 새로고침' : '🔄 전체 새로고침'}</button></span>`;
     const bar = `<div class="bd-cover" style="background:linear-gradient(135deg,${c1},${c2})"></div>
       <div class="bd-head"><span class="bd-logo" style="background:linear-gradient(135deg,${c1},${c2})">${esc([...nm.replace(/\s/g, '')].slice(0, 2).join(''))}</span>
         <span class="bd-hn"><b>${esc(nm)}</b><small>${esc(d.about || '')}</small><small>회원 ${fmt(members)} · 오늘 방문 ${fmt(today)}</small></span>${refreshBtn}</div>
@@ -9789,7 +9789,8 @@
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
       const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
-      if (inlineBtn.parentElement !== box || inlineBtn.nextElementSibling !== before) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
+      let gap = 0; for (let n = inlineBtn.nextElementSibling; n && n !== before && gap < 3; n = n.nextElementSibling) gap++; // 다른 확장이 사이에 끼운 버튼 2개까지는 그대로 둬요(서로 자리 뺏기 안 하게)
+      if (inlineBtn.parentElement !== box || gap >= 3 || !before.isConnected || (inlineBtn.compareDocumentPosition(before) & 4) === 0) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
