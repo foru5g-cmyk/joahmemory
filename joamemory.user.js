@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.6
+// @version      4.6.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1591,6 +1591,11 @@
       if (proof && noProof) continue;
       if (out.some(l => flat(l) === flat(line))) continue;
       if (proof && anchor >= 0) { if (fresh) out.splice(anchor + 1, proofsAfter(anchor)); out.splice(anchor + 1 + (fresh ? 0 : proofsAfter(anchor)), 0, line); fresh = false; continue; }
+      // 새 전환 줄은 블록 끝이 아니라 그 관계 줄 아래로: 바로 앞에서 고친 관계 줄 → 없으면 전환 글에 이름이 나온 상대의 관계 줄(하나일 때만)
+      if (/^\s*-\s*전환\s*[:：]/.test(line)) { const relTo = l => !/^\s*-\s*(?:전환|근거|번역)\s*[:：]/.test(l) && (l.match(/^\s*-\s*.+?\s*(?:→|->)\s*(.+?)\s*[:：]/) || [])[1];
+        let k = anchor >= 0 && relTo(out[anchor]) ? anchor : -1;
+        if (k < 0) { const c = out.map((l, q) => { const to = relTo(l); return to && line.includes(to.split(/\s+/)[0]) ? q : -1; }).filter(q => q > 0); if (c.length === 1) k = c[0]; }
+        if (k > 0) { let e = k + 1; while (e < out.length && /^\s*-\s*(?:전환|근거|번역)\s*[:：]/.test(out[e])) e++; out.splice(e, 0, line); anchor = -1; fresh = false; continue; } }
       let at = out.length; if (!proof) while (at > 1 && (PROOF_LINE.test(out[at - 1]) || (!/^\s*⤿/.test(line) && /^\s*⤿/.test(out[at - 1])))) at--;
       out.splice(at, 0, line); anchor = proof ? -1 : at; fresh = false;
     }
@@ -1934,8 +1939,9 @@
 - ■ 현재상태 ▸ 몸 상태에 지금 몸이 아닌 줄이 섞여 있으면 옮긴다(이것만 내용을 옮기는 예외): 지켜야 할 지시·금지·기한('~까지 피하기', '~하지 말 것') → ▸ 진행 중인 제약 · 매일 하는 일(약 복용·알람) → ▸ 되풀이되는 습관 · 지난 일(언제 어디서 무슨 일이 있었고 무슨 검사를 받았는지) → 날짜로그에 그 일이 있으면 빼고, 없으면 그대로 둔다. 몸 상태에는 지금 몸(다친 곳·붕대·아픔·쉰 목·반점 등)만 이름마다 남긴다. 옮긴 소제목(몸 상태·진행 중인 제약·되풀이되는 습관)은 그 소제목 전체를 다시 쓴다. 옮길 줄이 없으면 현재상태는 쓰지 않는다.
 - 고칠 항목이 없으면 '변화 없음' 한 줄만 쓴다.`;
   // 웹 모드(노트 제한 없음): 날짜로그 사건을 500~600자로 자세히 써요(홈에선 6줄까지만 보이고 '더 보기') · 글자 제한 모드는 2~5줄 그대로
-  const WEB_LONG = [['결과·남은 조건을 2~5줄로.', '결과·남은 조건을 원문에 있는 그대로 자세히, 보통 300~600자.'], ['한 줄에 한 단계(원인 한 줄, 행동 한 줄, 반응 한 줄, 결과 한 줄)씩 2~5줄로 쓴다.', '한 줄에 한 단계씩 쓴다. 장면을 바꾼 말·행동이 오갈 때마다(양쪽 다) 한 단계다.'], ['대사는 진짜 중요할 때만 넣는다(대사 없는 사건도 괜찮다)', '장면을 바꾼 결정적 한 마디가 원문에 있으면 넣는다'], ['사건 하나에 0~1줄이 기본', '사건 하나에 1줄이 기본'], ['- 날짜로그 사건은 2~5줄로 씀.', '- 날짜로그 사건은 원문에 있는 그대로 자세히, 보통 300~600자로 씀.'],
-    ['은 줄 수를 더 써도 됨', '은 더 길게 써도 됨'], ['사건 본문은 6줄 안팎(', '사건 본문은 보통 300~600자('], ['줄 수를 채우려고 지어내지 않음', '길이를 채우려고 지어내지 않음'], ['본문이 6줄을 넘게 되면', '본문이 600자를 넘게 되면'],
+  const WEB_LONG = [['결과·남은 조건을 2~5줄로.', '결과·남은 조건을 원문에 있는 그대로 자세히, 보통 300~700자.'], ['한 줄에 한 단계(원인 한 줄, 행동 한 줄, 반응 한 줄, 결과 한 줄)씩 2~5줄로 쓴다.', '한 줄에 한 단계씩 쓴다. 장면을 바꾼 말·행동이 오갈 때마다(양쪽 다) 한 단계다.'], ['대사는 진짜 중요할 때만 넣는다(대사 없는 사건도 괜찮다)', '장면을 바꾼 결정적 한 마디가 원문에 있으면 넣는다'], ['사건 하나에 0~1줄이 기본', '사건 하나에 1줄이 기본'], ['- 날짜로그 사건은 2~5줄로 씀.', '- 날짜로그 사건은 원문에 있는 그대로 자세히, 보통 300~700자로 씀. 길이는 원문에 있는 이유·몸짓·짧은 대사·결과로 채움.'],
+    ['은 줄 수를 더 써도 됨', '은 더 길게 써도 됨'], ['사건 본문은 6줄 안팎(', '사건 본문은 보통 300~700자('], ['줄 수를 채우려고 지어내지 않음', '길이를 채우려고 지어내지 않음'], ['본문이 6줄을 넘게 되면', '본문이 700자를 넘게 되면'], ['같은 자리에서 쭉 이어진 일(싸우다가 그 자리에서 화해)은 하나로.', '끊김 없이 이어진 한 흐름(싸우다가 그 자리에서 화해)만 하나로. 같은 자리여도 새 결정·고백·다툼이 시작되면 나눈다.'],
+    ["'이어지는 사건은 합친다'를 따름", "'이어지는 사건'을 따름"], ['무엇을, 왜 사과했는지와 상대 반응까지.', '무엇을, 왜 사과했는지와 상대 반응까지. 행동한 감정적 이유가 원문(대사·서술)에 있으면 행동과 함께 씀.'],
     ['이어지는 사건은 합친다: 새 로그의 일이 기존 날짜로그 마지막 사건과 같은 날·같은 장소·같은 사람들로 그 일이 그대로 이어질 때만 새 사건을 만들지 않는다.', '이어지는 사건: 기존 날짜로그 마지막 사건에 덧붙이는 건 그 장면에서 빠진 결말 한두 줄뿐이다. 새로 말·행동이 오갔으면 같은 날·같은 장소여도 새 사건으로 쓴다.']];
   async function buildSystem(delta = false, base = noteMemory()) {
     const off = await offSections();
@@ -3006,6 +3012,7 @@
 .gtg{position:absolute;left:12px;top:12px;font:inherit;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;color:var(--graphite);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:5px 9px;cursor:pointer}.gtg.on{color:#C2416B;border-color:#FFD6E4;background:#FFF5F8}.gwrap .ghint{top:48px}
 .ge .gp text{stroke:none;font-size:11.5px;font-weight:800}.gn .gb{fill:var(--paper);stroke:var(--rule);stroke-width:2}
     .phero .av{width:58px;height:58px;font-size:25px}
+    @media(max-width:480px){.phero{gap:10px;padding:12px}.phero .av{width:44px;height:44px;font-size:20px}}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
     .phero em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--graphite);margin-left:8px}
     .phero p{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2);word-break:keep-all}
@@ -7594,7 +7601,7 @@
     if (!h || /직전|척|행세|위장|계약|짝사랑|썸|같은|처럼|후보|뻔|아닌|아님/.test(h)) return '';
     if (/^(?:남편|아내|부인|와이프|배우자|약혼자|애인|남친|여친|엄마|아빠|어머니|아버지|딸|아들|형|오빠|언니|누나|동생)\s+(?!사이)[가-힣]/.test(h)) return ''; // '아내 친구'·'남편 동료'
     if (/[가-힣A-Za-z]의\s/.test(h)) return ''; // '친구의 딸'·'네이선의 약혼녀'처럼 다른 사람 이야기
-    if (/^(?:전|옛|예전)\s*(?:연인|애인|남친|여친|남자\s*친구|여자\s*친구|남편|아내|부인|약혼)|헤어진|이혼|파혼(?!s*(?:위기|하려|할|고민|얘기|이야기))/.test(h)) return '전 연인';
+    if (/(?:^|\s)(?:전|옛|예전)\s*(?:연인|애인|남친|여친|남자\s*친구|여자\s*친구|남편|아내|부인|약혼)|헤어진|이혼|파혼(?!\s*(?:위기|하려|할|고민|얘기|이야기))/.test(h)) return '전 연인';
     if (/결혼\s*(?:을\s*)?약속|결혼\s*예정/.test(h)) return '약혼';
     if (/(?<![가-힣])(?:부부|남편|아내|배우자|신혼|기혼)|결혼한/.test(h)) return '부부'; // 앞에 글자가 붙으면 다른 말('쏟아내'의 '아내')
     if (/약혼|예비\s*(?:신랑|신부|부부)/.test(h)) return '약혼';
@@ -7989,8 +7996,8 @@
     // 이름 옆 알약: 마지막으로 나온 턴(100턴 넘게 안 나왔으면 '오래 안 나옴'), 관계 줄에 "교류 없음"이 있으면 그것도
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
     const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
-    const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName));
-    return `<div class="phero">${heroPill}${avB(name)}<div style="min-width:0${heroPill ? ';padding-right:58px' : ''}"><b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
+    const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName), 'float:right;margin:2px 0 4px 8px');
+    return `<div class="phero">${avB(name)}<div style="min-width:0;flex:1">${heroPill}<b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}${pr.isUser ? ' · 유저(PC)' : ''}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
       // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
       const nz = s => String(s).replace(/[(（][^)）]*[)）]/g, '').replace(/[\s·,]/g, ''), tags = String(pr.tag || '').split(/\s*·\s*/).map(nz).filter(t => t.length >= 3);
       const ps = d.split(/\s+·\s+/).filter(x => x && !tags.some(t => nz(x).includes(t) || (nz(x).length >= 3 && t.includes(nz(x))))), sh = ps.filter(x => x.length <= 16), lg = ps.filter(x => x.length > 16);
