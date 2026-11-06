@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.5
+// @version      4.6.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1483,6 +1483,8 @@
       if (h) { cur = { key: h[1].replace(/\s*\(고침\)\s*$/, ''), del: /\(삭제\)\s*$/.test(t), patch: /\(고침\)\s*$/.test(t), lines: [l] }; items.push(cur); continue; }
       (cur ? cur.lines : head).push(l);
     }
+    // 고친 줄 조각이 아닌데 AI가 '+ - 근거'처럼 붙인 '+ '는 떼요
+    for (const it of items) if (!it.patch) it.lines = it.lines.map((l, k) => k ? l.replace(/^(\s*)\+\s+(?=\S)/, '$1') : l);
     return { head, items };
   }
   const shrunkOnly = (oldT, newT) => {
@@ -1501,6 +1503,8 @@
       if (m) { cur = { open: m[1] === '열림', key: itemKey(m[2].split('·').pop().replace(/\s*\(고침\)\s*$/, '')), del: /\(삭제\)/.test(l), patch: /\(고침\)\s*$/.test(l.trim()), lines: [l] }; items.push(cur); continue; }
       (cur ? cur.lines : head).push(l);
     }
+    // 고친 줄 조각이 아닌데 AI가 '+ - 근거'처럼 붙인 '+ '는 떼요
+    for (const it of items) if (!it.patch) it.lines = it.lines.map((l, k) => k ? l.replace(/^(\s*)\+\s+(?=\S)/, '$1') : l);
     return { head, items };
   }
   // 닫힌 고리는 한 줄로: ':' 뒤에 어떻게 끝났는지가 있으면 근거·번역 줄을 빼요(그 장면은 날짜로그에 남아 있어요) · 비어 있으면 근거를 남겨요(제목만 남으면 기억을 잃으니)
