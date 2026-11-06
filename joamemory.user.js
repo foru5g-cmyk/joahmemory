@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.3
+// @version      4.6.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1498,7 +1498,7 @@
     const head = [], items = []; let cur = null;
     for (const l of String(body || '').split('\n')) {
       const m = l.trim().replace(/^(?:[-•]\s*)+/, '').match(/^\[(열림|닫힘)\]\s*(.+?)(?:[:：]|$)/);
-      if (m) { cur = { open: m[1] === '열림', key: itemKey(m[2].split('·').pop()), del: /\(삭제\)/.test(l), lines: [l] }; items.push(cur); continue; }
+      if (m) { cur = { open: m[1] === '열림', key: itemKey(m[2].split('·').pop().replace(/\s*\(고침\)\s*$/, '')), del: /\(삭제\)/.test(l), patch: /\(고침\)\s*$/.test(l.trim()), lines: [l] }; items.push(cur); continue; }
       (cur ? cur.lines : head).push(l);
     }
     return { head, items };
@@ -1543,13 +1543,20 @@
   }
   function mergeHooks(oldBody, newBody) {
     const o = hookItems(oldBody), n = hookItems(newBody);
+    if (!o.items.length) n.items = n.items.filter(x => !x.patch || (patchMiss.push(x.key), false)); // 고칠 예전 고리가 없으면 고친 줄 조각은 버려요(날것 '+ ' 줄이 안 남게)
     if (!o.items.length || !n.items.length) return n.items.length || n.head.some(l => l.trim() && !isNone(l)) ? [...n.head, ...n.items.filter(x => !x.del).map(shrinkHook).flatMap(x => x.lines)].join('\n').trim() : oldBody; // (삭제) 고리가 그대로 남아 '아직 끝나지 않은 일'에 뜨지 않게
     const out = o.items.slice(); // 끝난 고리도 [닫힘]으로 남겨요(화면 '끝난 일' · 채팅엔 안 넣음)
     // 닫으면서 제목을 조금 다르게 쓰면('…드라이브 데이트' → '…드라이브') 열린 고리가 남아 예정·완료에 둘 다 떠요.
     //   이번에 닫힌 고리와 제목이 비슷한 예전 열린 고리가 딱 하나면 그걸 닫힌 것으로 바꿔요. 비슷한 게 둘 이상이면 헷갈려서 안 건드려요. (이미 생긴 중복은 아래 hookDrop이 정리)
     const near = hookNear;
-    for (const it of n.items) {
+    for (let it of n.items) {
       let i = out.findIndex(x => x.key === it.key);
+      if (it.patch) { // 고친 줄만 온 고리: 예전 고리에 끼워 넣어요(다른 칸과 같은 방식)
+        if (i < 0) { patchMiss.push(it.key); continue; }
+        const p = applyPatch(out[i].lines, it.lines.slice(1));
+        if (p.miss.length) patchMiss.push(`${it.key}: ${p.miss.length}줄`);
+        out[i] = { ...out[i], lines: p.lines }; continue;
+      }
       if (i < 0 && !it.open && !it.del) { const cand = out.map((x, k) => x.open && !n.items.some(y => y.key === x.key) && near(x.key, it.key, x.lines[0], it.lines[0]) ? k : -1).filter(k => k >= 0); if (cand.length === 1) i = cand[0]; }
       if (it.del) { if (i >= 0) { if (delOk(it)) out.splice(i, 1); else delKept.push(it.key); } } else if (i >= 0) out[i] = it; else out.push(it);
     }
@@ -5113,6 +5120,7 @@
       let pv = null; try { pv = r.prev ? JSON.parse(r.prev) : null; } catch (_) {}
       const sum = x => x ? `1~${x.turns || 0}턴 · ${x.at ? new Date(x.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름'}${x.by ? ' · ' + x.by : ''}${x.reset ? ' (초기화)' : ''}` : '';
       const usable = x => x && x.app === 'memo-note' && x.chat === chatId && !x.reset && (x.memory || Object.keys(x.store || {}).some(k => x.store[k]));
+      const two = usable(pv) && usable(d); // 백업이 둘이면 첫 창에서 '최신'을 고른 게 곧 불러오기 확인이에요(같은 걸 두 번 안 물어요)
       if (usable(pv) && (!usable(d) || !confirm(`구글 드라이브에 이 방 백업이 두 개 있어요.\n\n· 최신: ${sum(d)}\n· 이전: ${sum(pv)}\n\n[확인] 최신으로 진행\n[취소] 이전 백업 보기`))) {
         if (!confirm(`이전 백업을 불러올까요?\n\n· ${sum(pv)}\n\n노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
         return importBackupText(r.prev, false); // 이전 백업은 ETC를 바꾸기 전에 한 번 더 물어요(잘못 눌렀을 때 바로 덮어쓰지 않게)
@@ -5122,7 +5130,7 @@
       if (d.reset || (!d.memory && !Object.keys(d.store || {}).some(k => d.store[k]))) { if (!auto) toast('구글 백업이 비어 있어요(초기화된 방이에요).', 'info', 3000); return; }
       const when = d.at ? new Date(d.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
       const now = snapshot?.note;
-      if (!confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
+      if (!two && !confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
       await importBackupText(r.data, true);
     }
     catch (e) { if (!auto) toast('구글에서 불러오기 실패 · ' + e.message, 'err', 5000); }
