@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.4
+// @version      4.6.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -9876,13 +9876,14 @@
     }
     return null;
   }
+  // 하트는 입력창 줄에 이미 붙어 있으면 안 옮겨요(다른 확장이 보내기 앞자리를 잡아도 서로 1초마다 자리 뺏기 안 하게)
   function placeInlineButton() {
     if (!chatIdFromPath()) { inlineBtn.remove(); ui('.fab').classList.remove('show'); return; }
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
       const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
       let gap = 0; for (let n = inlineBtn.nextElementSibling; n && n !== before && gap < 3; n = n.nextElementSibling) gap++; // 다른 확장이 사이에 끼운 버튼 2개까지는 그대로 둬요(서로 자리 뺏기 안 하게)
-      if (inlineBtn.parentElement !== box || gap >= 3 || !before.isConnected || (inlineBtn.compareDocumentPosition(before) & 4) === 0) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
+      if (!inlineBtn.isConnected || !(box.contains(inlineBtn) || box.parentElement?.contains(inlineBtn))) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
