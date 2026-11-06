@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.1
+// @version      4.6.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -113,7 +113,7 @@
     { key: '인물',        short: '인물',     group: 'people', color: '#EFA6C4', icon: 'person' },
     { key: '인지·비밀',   short: '인지',     group: 'people', color: '#A6D9B5', icon: 'eye'    },
     { key: '소지품',      short: '소지품',   group: 'memory', color: '#E8C48A', icon: 'note'   },
-    { key: '장소·조직',   short: '장소·조직', group: 'memory', color: '#B7D8C2', icon: 'globe'  },
+    { key: '장소·조직',   short: '장소·조직', group: 'memory', color: '#D6C1AA', icon: 'globe'  },
     { key: '서사 고리',   short: '서사 고리', group: 'memory', color: '#F2B190', icon: 'thread' },
     { key: '명대사',      short: '명대사',   group: 'memory', color: '#D9C8F0', icon: 'quote'  },
     { key: '감정선',      short: '감정선',   group: 'people', color: '#F4BCD3', icon: 'heart'  },
@@ -2979,6 +2979,7 @@
     .pnt{margin:3px 0 0;font-size:13px;line-height:1.55;color:var(--graphite);overflow-wrap:anywhere}
     .pnt::before{content:"⤷ ";opacity:.7}
     .pnt i{font-style:normal;font-weight:700;margin-right:6px}
+    .pnt i.pba{display:inline-block;font-size:11px;line-height:1.6;padding:0 8px;border-radius:99px;background:#FBF0C9;color:var(--ink);vertical-align:1px}
     .prow.pstk .pline{margin:3px 0 0}
     .pmem .prow{padding:4px 0;align-items:start}
     .pmem .pk{padding-top:1px}
@@ -3571,6 +3572,7 @@
     .gwrap svg{display:block}
     .ge path{fill:none;stroke:#D8CFF6;stroke-width:3;stroke-linecap:round}
     .ge.on path{stroke:#9D8CEB}
+    .ge.faint path{stroke:#ECE8F8;stroke-width:2}
     .ge text{font-size:11.5px;font-weight:600;fill:var(--ink2);paint-order:stroke;stroke:#FBFAFE;stroke-width:5px;stroke-linejoin:round}
     .ge .who{font-weight:800;fill:var(--ink)}
     .gn{cursor:pointer}
@@ -3774,6 +3776,7 @@
     .bk-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.bk-row .btn{width:100%;display:flex;align-items:center;justify-content:center;font-size:13.5px}
     .bk-row .btn:only-child{grid-column:1/-1}.bk-g{margin:8px 6px -6px;font-size:12px;font-weight:700;color:var(--graphite)}.bk-list{background:var(--paper);border:1px solid var(--rule);border-radius:18px;overflow:hidden}.bk-it{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0;list-style:none}.bk-list>*+*{border-top:1px solid var(--rule)}.bk-ic{flex:none;width:34px;height:34px;border-radius:11px;background:var(--mist);display:grid;place-items:center;font-size:17px}.bk-tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}.bk-tx b{font-size:14px;font-weight:700;color:var(--ink)}.bk-tx small{font-size:11.5px;color:var(--graphite);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bk-tx .linkbtn{font-size:11.5px}.bk-act{flex:none;display:flex;align-items:center}.bk-act .btn{width:auto;min-width:0;height:auto;flex:none;border:0;box-shadow:none;border-radius:0;padding:2px 4px;font-size:13px;font-weight:600;white-space:nowrap;background:none;color:var(--graphite)}.bk-act .btn.pri{font-weight:700;color:var(--ink)}.bk-act .btn:hover,.bk-act .btn:active,.bk-act .btn:focus-visible{color:var(--ink);background:linear-gradient(transparent 55%,#E3DAFB 55%);outline:0}.bk-act .btn+.btn{position:relative;margin-left:13px}.bk-act .btn+.btn::before{content:"·";position:absolute;left:-10px;top:50%;transform:translateY(-50%);color:var(--pencil);font-weight:400;background:none;pointer-events:none}.bk-act .btn:hover{opacity:.7}.bk-act .btn:disabled{color:var(--pencil)}.bk-fold summary{cursor:pointer}.bk-fold summary::-webkit-details-marker{display:none}.bk-chev{font-style:normal;color:var(--pencil);font-size:18px;transition:transform .15s}.bk-fold[open] .bk-chev{transform:rotate(90deg)}.bk-sub{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 14px 12px 60px}@media (max-width:360px){.bk-it{flex-wrap:wrap}.bk-act{width:100%;padding-left:36px}.bk-sub{padding-left:14px}}
     .bk-more{margin-top:10px;font-size:12.5px}.bk-note{font-size:12.5px;margin:2px 4px}
+    .bk-carry{display:flex;flex-direction:column;gap:8px;margin-top:-4px;padding:12px 14px;border-radius:16px;background:var(--mist)}.bk-carry small{font-size:12px;color:var(--graphite)}
     .inj-list li{position:relative;padding:9px 84px 9px 0}
     .inj-list .inj-acts{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;gap:6px}
     .ia{width:34px;height:34px;border-radius:50%;border:1px solid var(--rule);background:var(--paper);display:grid;place-items:center;padding:0;font-size:14px;line-height:1;color:var(--graphite)}
@@ -4584,29 +4587,36 @@
     // 백업 한 화면: 파일로 받기 · 파일로 되돌리기 · 구글 드라이브(연결돼 있으면 넣을 때마다 자동)
     const dis = busyNow ? ' disabled' : '';
     const hl = histList || [], last = hl[hl.length - 1];
-    // 2칸 타일: 자주 쓰는 네 가지만 작게 나란히 · ETC 비우기·기억 다시 확인·확프연동은 아래 한 줄씩
     const when = last ? esc(new Date(last.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })) : '';
-    const rvDis = busyNow || noFullHere() ? ' disabled' : '';
+    // 하고 싶은 일별로: 보관하기 · 되돌리기 · 다른 방으로 이어가기 · 아래에 연결(드라이브·확프)
     return `<section class="bk">
-      <p class="bk-g">백업</p>
+      <p class="bk-g">무엇을 할까요?</p>
       <div class="bk-list">
-        <div class="bk-it"><span class="bk-ic">🕘</span><span class="bk-tx"><b>자동 백업</b><small>${hl.length ? `1~${last.to}턴 · ${when} · ${hl.length}개` : '아직 없어요'}</small></span><span class="bk-act"><button class="btn" data-act="changes">되돌리기</button></span></div>
-        <div class="bk-it"><span class="bk-ic">💾</span><span class="bk-tx"><b>파일 백업</b><small>기억·기록을 파일 하나로</small></span><span class="bk-act"><button class="btn pri" data-act="backup"${dis}>받기</button><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></span></div>
-        <div class="bk-it"><span class="bk-ic">☁️</span><span class="bk-tx"><b>구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · <button class="linkbtn" data-act="gsopen">설정</button>' : '폰·컴퓨터가 같은 기억을 써요'}</small></span><span class="bk-act">${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>올리기</button><button class="btn" data-act="gslist"${dis}>받기</button>` : '<button class="btn pri" data-act="gsopen">연결</button>'}</span></div>
+        <div class="bk-it"><span class="bk-ic">💾</span><span class="bk-tx"><b>보관하기</b><small>이 방 기억을 그대로 저장</small></span><span class="bk-act"><button class="btn" data-act="backup"${dis}>파일</button>${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>드라이브</button>` : ''}</span></div>
+        <div class="bk-it"><span class="bk-ic">⏪</span><span class="bk-tx"><b>되돌리기</b><small>${hl.length ? `정리가 꼬였을 때 · 자동 백업 ${hl.length}개 · 마지막 ${when}` : '정리가 꼬였을 때 · 자동 백업이 아직 없어요'}</small></span><span class="bk-act"><button class="btn" data-act="changes">목록</button></span></div>
+        <div class="bk-it"><span class="bk-ic">📦</span><span class="bk-tx"><b>다른 방으로 이어가기</b><small>단체방 → 갠방처럼 서사 들고 이어서</small></span><span class="bk-act"><button class="btn${nav.carry ? '' : ' pri'}" data-act="carry">${nav.carry ? '닫기' : '가져오기'}</button></span></div>
       </div>
+      ${nav.carry ? `<div class="bk-carry"><small>어디서 가져올까요? · 고르면 미리보기 뒤 이 방에 넣어요(원래 방 기억은 그대로)</small><div class="bk-act">${nav.gsOn ? `<button class="btn pri" data-act="gslist"${dis}>드라이브 목록</button>` : '<button class="btn" data-act="gsopen">드라이브 연결</button>'}<label class="btn">파일 고르기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>` : ''}
       ${nav.gsList ? `<div class="nf-pick"><small>드라이브 백업 · 다른 방 것도 이 방으로 가져올 수 있어요</small>${nav.gsList.length ? nav.gsList.map(x => `<button class="nf-pi" data-act="gsfrom" data-arg="${esc(x.chat)}"><b>${esc(x.title)}${x.here ? ' · 이 방' : ''}</b><small>${esc(x.when)}</small></button>`).join('') : '<small>드라이브에 백업이 없어요</small>'}</div>` : ''}
-      <p class="bk-g">정리 도구</p>
+      <p class="bk-g">연결</p>
       <div class="bk-list">
-        <div class="bk-it"><span class="bk-ic">✂️</span><span class="bk-tx"><b>나눠서 정리</b><small>밀린 턴 · 처음부터 · 다른 AI</small></span><span class="bk-act"><button class="btn pri" data-act="runsheet" data-arg="chunk"${dis}>이어 정리</button><button class="btn" data-act="runsheet" data-arg="pick"${dis}>다른 방법</button></span></div>
-      </div>
-      <p class="bk-g">기타</p>
-      <div class="bk-list">
+        <div class="bk-it"><span class="bk-ic">☁️</span><span class="bk-tx"><b>구글 드라이브</b><small>${nav.gsOn ? '<i class="wd-dot on"></i> 연결됨 · 폰·컴퓨터가 같은 기억' : '폰·컴퓨터가 같은 기억을 써요'}</small></span><span class="bk-act"><button class="btn${nav.gsOn ? '' : ' pri'}" data-act="gsopen">${nav.gsOn ? '설정' : '연결'}</button></span></div>
         ${hwHtml()}
-        ${etc ? `<div class="bk-it"><span class="bk-ic">🧹</span><span class="bk-tx"><b>ETC 비우기</b><small>커뮤·폰·단톡만 · 기억은 그대로</small></span><span class="bk-act"><button class="btn" data-act="etcopen"${dis}>비우기</button></span></div>` : ''}
-        <div class="bk-it"><span class="bk-ic">🔍</span><span class="bk-tx"><b>기억 다시 확인</b><small>${noFullHere() ? '이 기기엔 전체 기억이 없어요' : '틀린 기억만 원문과 다시 맞춰요'}</small></span><span class="bk-act"><button class="btn" data-act="rvpick" data-arg="timeline"${rvDis}>사건</button><button class="btn" data-act="rvpick" data-arg="people"${rvDis}>인물</button></span></div>
       </div>
       ${sceneOn ? '<p class="muted bk-note">웹 모드의 전체 기억은 이 기기에 있어요. 다른 기기에서 쓰거나 브라우저를 지우기 전에 꼭 백업해 두세요.</p>' : ''}
       ${nav.fxPick ? fxLibHtml(true) : ''}
+    </section>`;
+  }
+  // 설정 › 정리 아래: 나눠서 정리 · 기억 다시 확인 · ETC 비우기(백업이 아니라 정리 쪽 일)
+  function tidyToolsHtml() {
+    const dis = busyNow ? ' disabled' : '', rvDis = busyNow || noFullHere() ? ' disabled' : '';
+    return `<section class="bk">
+      <p class="bk-g">정리 도구</p>
+      <div class="bk-list">
+        <div class="bk-it"><span class="bk-ic">✂️</span><span class="bk-tx"><b>나눠서 정리</b><small>밀린 턴 · 처음부터 · 다른 AI</small></span><span class="bk-act"><button class="btn pri" data-act="runsheet" data-arg="chunk"${dis}>이어 정리</button><button class="btn" data-act="runsheet" data-arg="pick"${dis}>다른 방법</button></span></div>
+        <div class="bk-it"><span class="bk-ic">🔍</span><span class="bk-tx"><b>기억 다시 확인</b><small>${noFullHere() ? '이 기기엔 전체 기억이 없어요' : '틀린 기억만 원문과 다시 맞춰요'}</small></span><span class="bk-act"><button class="btn" data-act="rvpick" data-arg="timeline"${rvDis}>사건</button><button class="btn" data-act="rvpick" data-arg="people"${rvDis}>인물</button></span></div>
+        <div class="bk-it"><span class="bk-ic">🧹</span><span class="bk-tx"><b>ETC 비우기</b><small>커뮤·폰·단톡만 · 기억은 그대로</small></span><span class="bk-act"><button class="btn" data-act="etcopen"${dis}>비우기</button></span></div>
+      </div>
     </section>`;
   }
   // 홈 ☁️: 웹 모드는 톱니 창(자동 주입·자동 정리) 안 한 줄 · 아니면 '정리하기' 옆(톱니와 같은 모양): 구글 드라이브에 연결돼 있으면 바로 올리기 · 아니면 연결 창(설정 › 백업)
@@ -7586,20 +7596,24 @@
       pars.forEach(n => { const c = core.find(c => kidOf(c, n)); put(n, L.get(c).x, -220, 1); });
       const left = [], right = [], top = [];
       comp.filter(n => !L.has(n) && core.some(c => nb.get(c).has(n))).forEach(n => { const a = nb.get(c0).has(n), b = !!mate && nb.get(mate).has(n); (a && b ? top : b ? right : !mate ? (left.some(x => nb.get(n).has(x)) ? left : right.some(x => nb.get(n).has(x)) ? right : left.length > right.length ? right : left) : left).push(n); }); // 짝이 없으면 서로 아는 사람끼리 같은 쪽에 위아래로(양옆에 두면 둘 사이 선이 가운데 사람을 지나가며 겹쳐 보여요)
-      const col = (list, x, dir) => list.forEach((n, i) => { const per = 5, c = Math.floor(i / per), m = Math.min(per, list.length - c * per); put(n, x + dir * c * 150, (i % per - (m - 1) / 2) * 110, 1); });
-      col(left, L.get(c0).x - 270, -1); col(right, (mate ? L.get(mate).x : 0) + 270, 1);
-      // 둘 다 아는 사람은 두 사람 사이 세로줄에 위·아래 번갈아(아래에 아이가 있으면 위로만) · 옆으로 늘어놓으면 선이 X자로 엇갈려요
-      const down = !kidsC.length; top.forEach((n, i) => { const j = down ? Math.floor(i / 2) : i, s = down && i % 2 ? 1 : -1; put(n, 0, s * (170 + j * 120), 1); });
-      for (let pass = 0; pass < 6; pass++) for (const n of comp) { if (L.has(n)) continue; const an = [...nb.get(n)].find(m => L.has(m)); if (!an) continue; const a = L.get(an);
-        if (a.y > 120) put(n, a.x, a.y + 190, 2); else if (a.y < -120) put(n, a.x, a.y - 190, 2); else put(n, a.x + (a.x < 0 ? -220 : 220), a.y, 2); }
+      // 나머지는 가운데를 둥글게 둘러싸요: 둘 다 아는 사람은 위(아이가 없으면 아래도) · 짝만 아는 사람은 오른쪽 · 가운데 사람만 아는 사람은 왼쪽 · 세로 한 줄이면 선이 사람을 뚫고 지나가요
+      const down = !kidsC.length, topU = top.filter((n, i) => !down || i % 2 === 0), topD = top.filter(n => !topU.includes(n));
+      let R = mate ? 340 : 280, s, a0, a1; const side = Math.max(left.length, right.length) + 1;
+      for (; R < 3000; R += 20) { s = 120 / R; a0 = -Math.PI / 2 + (topU.length ? (topU.length + 1) / 2 * s : 0); a1 = Math.PI / 2 - (topD.length ? (topD.length + 1) / 2 * s : 0); if ((a1 - a0) * R / side >= 120 && (Math.max(topU.length, topD.length) - 1) * s < Math.PI / 2) break; } // 둘레 사람 사이가 넉넉해질 때까지 원을 키워요
+      const at = (n, a) => put(n, Math.cos(a) * R, Math.sin(a) * R, 1);
+      topU.forEach((n, i) => at(n, -Math.PI / 2 + (i - (topU.length - 1) / 2) * s)); topD.forEach((n, i) => at(n, Math.PI / 2 + (i - (topD.length - 1) / 2) * s));
+      right.forEach((n, i) => at(n, a0 + (i + 1) * (a1 - a0) / (right.length + 1))); left.forEach((n, i) => at(n, Math.PI - a0 - (i + 1) * (a1 - a0) / (left.length + 1)));
+      for (let pass = 0; pass < 6; pass++) for (const n of comp) { if (L.has(n)) continue; const an = [...nb.get(n)].find(m => L.has(m)); if (!an) continue; const a = L.get(an), dd = Math.hypot(a.x, a.y) || 1;
+        put(n, a.x + a.x / dd * 190, a.y + (a.y || 1) / dd * 190, 2); } // 둘레 사람의 지인은 그 사람 바깥쪽으로
       comp.filter(n => !L.has(n)).forEach((n, i) => put(n, (i - 1) * 110, 440, 3));
+      core.forEach(n => coreSet.add(n));
       return L;
     };
-    let offsetX = null, root = null;
+    let offsetX = null, root = null; const coreSet = new Set(); // 가운데 사람(과 짝) · 이 둘과 이어지지 않은 선은 평소 흐리게
     for (const comp of comps.filter(c => !(c.length === 1 && lone.includes(c[0])))) {
       const c0 = comp.includes(nav.center) ? nav.center : comp.find(isMe) || [...comp].sort((a, b) => nb.get(b).size - nb.get(a).size)[0];
       if (!root) { root = c0; const local = famLayout(comp, c0), xs = [...local.values()].map(p => p.x); local.forEach((p, n) => pos.set(n, p)); offsetX = Math.max(...xs); continue; }
-      const local = new Map([[c0, { x: 0, y: 0, ring: 0, a: 0 }]]);
+      const local = new Map([[c0, { x: 0, y: 0, ring: 0, a: 0 }]]); coreSet.add(c0);
       const ring1 = [...nb.get(c0)];
       const R1 = ring1.length <= 1 ? 190 : Math.max(210, ring1.length * 46);
       ring1.forEach((n, i) => { const a = ring1.length === 2 ? (i ? -Math.PI / 5 : -Math.PI * 4 / 5) : -Math.PI / 2 + (i / ring1.length) * Math.PI * 2; local.set(n, { x: Math.cos(a) * R1, y: Math.sin(a) * R1, ring: 1, a }); });
@@ -7637,7 +7651,7 @@
       const rows = [[]]; let rw = 0;
       lone.forEach(n => { const w = chipW(n); if (rw && rw + w > W) { rows.push([]); rw = 0; } rows[rows.length - 1].push([n, w]); rw += w + 10; });
       rows.forEach((r, ri) => { let x = cx - (r.reduce((t, [, w]) => t + w + 10, 0) - 10) / 2; r.forEach(([n, w]) => { pos.set(n, { x: x + w / 2, y: loneAt.y + 34 + ri * 40, ring: 4 }); x += w + 10; }); }); }
-    return { ppl, rel, names, pos, root, kids, fam, loneAt };
+    return { ppl, rel, names, pos, root, kids, fam, loneAt, core: coreSet };
   }
 
   function graphHtml() {
@@ -7663,7 +7677,8 @@
       const k0 = relPillOn && !(sel && on) ? pairKind(list, x, y) : '', kid = k0 === '자녀' && (g.kids.has(x) ? x : g.kids.has(y) ? y : ''), fk = kid && g.kids.get(kid).join('\u0000'), k = fk && kidPill.has(fk) ? '' : (fk && kidPill.add(fk), k0), px = (a.x + 2 * cx + b.x) / 4, py = (a.y + 2 * cy + b.y) / 4, pw = [...k].length * 12 + 20;
       const pill = k ? `<g class="gp" transform="translate(${px},${py})"><rect x="${-pw / 2}" y="-11" width="${pw}" height="22" rx="11" fill="${REL_PILL[k][0]}" stroke="#fff" stroke-width="2"/><text y="4.5" text-anchor="middle" fill="${REL_PILL[k][1]}">${k}</text></g>` : '';
       const spans = sel && on ? list.map((r, i) => `<tspan x="${lx}" dy="${i ? 17 : 0}"><tspan class="who">${esc(r.from)}</tspan> ${esc(cut(r.text, 16))}</tspan>`).join('') : '';
-      return `<g class="ge${on ? '' : ' dim'}${sel && on ? ' on' : ''}"><path d="M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}"/>
+      const tip = (p, q) => q.y - p.y > Math.abs(q.x - p.x) ? { x: p.x, y: p.y + (p.ring === 0 ? 32 : 26) + 33 } : p, a1 = tip(a, b), b1 = tip(b, a), bd = Math.min(bend, Math.hypot(b1.x - a1.x, b1.y - a1.y) / 3); // 아래쪽 사람으로 가는 선은 이름표 밑에서 시작(이름표를 지나가지 않게)
+      return `<g class="ge${on ? '' : ' dim'}${sel && on ? ' on' : ''}${!sel && !g.core.has(x) && !g.core.has(y) ? ' faint' : ''}"><path d="M${a1.x},${a1.y} Q${(a1.x + b1.x) / 2 + nx * bd},${(a1.y + b1.y) / 2 + ny * bd} ${b1.x},${b1.y}"/>
         ${spans ? `<text x="${lx}" y="${ly}" text-anchor="${anchor}">${spans}</text>` : ''}${pill}</g>`;
     }).join('');
     const trees = [...g.fam].map(([k, ks]) => { const [pa, pb] = k.split('\u0000'), a = g.pos.get(pa), b = g.pos.get(pb);
@@ -7719,6 +7734,7 @@
   function setupGraph(fit) {
     const wrap = out('gwrap');
     if (!wrap) return;
+    { const gi = wrap.querySelector('.ginfo'), dk = ui('nav.top'); if (gi && dk?.offsetParent) { const over = gi.getBoundingClientRect().bottom - dk.getBoundingClientRect().top; if (over > -8) gi.style.bottom = parseFloat(getComputedStyle(gi).bottom) + over + 10 + 'px'; } } // 폰에서 아래 메뉴(독)에 설명 카드가 가리면 실제 독 위치를 재서 그 위로
     if (fit) fitGraph(); else applyView();
     const pts = new Map();
     let last = null, moved = 0, start = null; // moved: 손가락이 처음 닿은 곳에서 얼마나 멀어졌는지(손떨림으로 조금씩 움직인 건 탭으로 쳐요)
@@ -7779,7 +7795,7 @@
   // 줄 앞의 짧은 이름표: 화면에선 콜론 없이 굵게(저장된 글은 그대로) · 시간(17:30)·대사 속 콜론·화살표 줄은 이름표로 안 봐요
   const LABEL = /^([^\s:："“”'「」()（）\d→][^:："“”'「」()（）→.]{0,15}?)\s*[:：]\s+(.+)$/;
   const labelHtml = x => { const m = String(x).match(LABEL); return m ? `<b>${esc(m[1])}</b> ${esc(m[2])}` : esc(x); };
-  const bitHtml = x => { const m = x.match(/^(지금|원인|위험|배경|다음|결과)\s*[:：]\s*(.+)$/) || x.match(LABEL); return m ? `<p class="pnt"><i>${esc(m[1])}</i>${esc(m[2])}</p>` : `<p class="pnt">${esc(x)}</p>`; };
+  const bitHtml = x => { const ba = x.match(/^전\s*(?:→|->)\s*후\s*[:：]?\s*(.+)$/); if (ba) return `<p class="pnt"><i class="pba">전 → 후</i>${esc(ba[1])}</p>`; const m = x.match(/^(지금|원인|위험|배경|다음|결과)\s*[:：]\s*(.+)$/) || x.match(LABEL); return m ? `<p class="pnt"><i>${esc(m[1])}</i>${esc(m[2])}</p>` : `<p class="pnt">${esc(x)}</p>`; };
   // 물건을 사람이 가지고 있으면 👤, 어딘가에 놓여 있으면 📦(위 "놓인 곳" 동그라미와 같은 아이콘) ("루루" · "루루 가방 안" → 👤)
   const whereIcon = loc => { const head = String(loc).trim().split(/[\s(（,·]/)[0]; return [...people().keys()].some(n => sameName(n, head) || sameName(n, String(loc).trim())) ? '👤 ' : '📦 '; };
   // 소지품 하나: 📍 지금 있는 곳(제목 괄호) · ⤷ 상태 조각 · ⤷ 내력 · 근거
@@ -8196,6 +8212,7 @@
         ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
         ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요). App Check: ① 웹 앱은 하나만 ② [채우기]에 그 앱의 firebaseConfig ③ App Check › 그 앱 ⋮ › 디버그 토큰 관리에서 만든 토큰(저장까지) ④ [확인]으로 점검.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
         </details>
+        ${tidyToolsHtml()}${nav.etcSheet ? etcSheetHtml() : ''}
 `)
       + box('칸 · 화면', '칸 켜고 끄기 · 자동 옮기기 · 턴 번호', `
         ${OPTIONAL.map(([k, key]) => row(k, sw(key))).join('')}
@@ -8210,9 +8227,9 @@
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
         <button data-act="errlog"><b>오류 기록</b><span class="v">${errHere().length ? `${errHere().length}개` : '없음'}</span></button>
         </div>`)
-      + box('백업', '파일 · 나눠서 정리 · 구글 드라이브 · ETC 비우기', `
-        ${backupHtml(true)}
-        ${nav.gsSheet ? gsSheetHtml() : ''}${nav.etcSheet ? etcSheetHtml() : ''}
+      + box('백업', '보관 · 되돌리기 · 다른 방으로 · 연결', `
+        ${backupHtml()}
+        ${nav.gsSheet ? gsSheetHtml() : ''}
         <details class="bk-info"><summary>자세히 · 무엇이 담기나요</summary><p class="muted">· 담기는 것: 기억 노트(근거·감정선까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
         · API 키는 담기지 않아요(파일이 새도 안전하게).<br>
         · 구글 드라이브를 연결해 두면 정리해서 넣을 때마다 자동으로 올라가고, 새 기기에서 방을 열면 불러올지 물어봐요.<br>
@@ -9624,6 +9641,7 @@
       case 'gsclose': nav.gsSheet = false; return render();
       case 'gskeep': return gsKeep();
       case 'etcopen': nav.etcSheet = true; return render();
+      case 'carry': nav.carry = !nav.carry; if (!nav.carry) nav.gsList = null; return render();
       case 'etcclose': nav.etcSheet = false; return render();
       case 'etcwipe': return etcWipe(arg);
       case 'etcpull': return etcPull(true);
