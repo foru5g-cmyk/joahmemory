@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.7
+// @version      4.6.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -987,7 +987,7 @@
   }
   function pregEnsure(mem, snap = snapshot) {
     if (preg.userOff && !preg.on) return false; // 직접 끄거나 기록을 지웠으면 대화에서 임신 얘기가 나와도 다시 안 켜요(직접 켤 때까지)
-    if (preg.start != null) { if (preg.father == null) { const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; pregSave(); } } return true; }
+    if (preg.start != null) { if (preg.father == null || !preg.dadFix1) { const first = !preg.dadFix1; preg.dadFix1 = 1; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; } // dadFix1: 띄어 쓴 이름(' 힐')으로 잘못 잡힌 아빠 후보를 한 번 다시 찾아요
     { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(stripBlocks(msgText(m))); } // 유저 말 + AI 답(유저 캐릭터가 보낸 문자·대사로 나오기도 해요)
       const tell = told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
       const unaware = !!tell && P_AUTHOR.test(tell) && P_UNAWARE.test(tell);
@@ -1023,11 +1023,14 @@
     finally { pregAsk.busy = null; }
   }
   // 👨 아빠: 임신된 날(시작 + 2주)에 가장 가까운 관계 장면에 나온 남자 인물(유저 캐릭터 말고) · 여러 사람과 관계했어도 그날 사람으로
+  // 이름 짧은 꼴: '강태정' → '태정' · 띄어 쓴 이름은 앞 이름('아서 힐' → '아서'). 끝 두 글자를 자르면 ' 힐'이 돼서 '네이선 힐'까지 같은 사람으로 잡혔어요
+  const nameNick = n => { n = String(n || '').trim(); if (/\s/.test(n)) { const f = n.split(/\s+/)[0]; return [...f].length >= 2 ? f : ''; } return [...n].length >= 3 ? [...n].slice(-2).join('') : ''; };
+  const nameIn = (t, n) => [n, nameNick(n)].filter(Boolean).some(x => String(t).includes(x));
   function pregFather(mem) {
     if (preg?.start == null) return '';
     const ps = pPeople(mem), cd = preg.start + 14, all = pregKitRels(mem), found = preg.start + (preg.w0 || 5) * 7, w = new Map();
     let rels = all.filter(r => Math.abs(r.d - cd) <= 14); if (!rels.length) rels = all.filter(r => r.d <= found && found - r.d <= 56); // 주수가 관계 날짜와 어긋나게 잡혔으면 임신을 안 날 전 8주 안의 관계로
-    const has = (t, n) => [n, n.length >= 3 ? n.slice(-2) : ''].filter(Boolean).some(x => t.includes(x));
+    const has = nameIn;
     for (const r of rels) { const c = ps.filter(p => !p.me && has(r.t, p.name)), m = c.filter(p => p.male).length ? c.filter(p => p.male) : c.filter(p => !p.female); for (const p of m) w.set(p.name, (w.get(p.name) || 0) + Math.max(0.01, kitChance(r.t))); }
     const cands = [...w.keys()]; if (!cands.length) return '';
     let x = pR('dad') * [...w.values()].reduce((a, v) => a + v, 0), name = cands[0]; for (const [n, v] of w) { if ((x -= v) < 0) { name = n; break; } }
@@ -1056,7 +1059,7 @@
   const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
   // 관계 장면 줄 중 임신할 사람(페르소나) 것만: 그 사람 이름이 있거나 아무 인물 이름도 없는 줄 · 다른 인물끼리(그남과 내연녀 등)는 빼요
   function pRelMine(mem) {
-    const who = preg?.who || pregWhoDefault(mem).name, forms = n => [n, n.length >= 3 ? n.slice(-2) : ''].filter(Boolean), has = (l, n) => forms(n).some(x => l.includes(x));
+    const who = preg?.who || pregWhoDefault(mem).name, has = nameIn;
     const others = pPeople(mem).map(p => p.name).filter(n => n && !(who && (n === who || has(who, n) || has(n, who))));
     return t => String(t).split(/\n+|(?<=[.!?。])\s+/).filter(l => P_SEX.test(l) && ((who && has(l, who)) || !others.some(n => has(l, n)))).join('\n');
   }
@@ -4244,7 +4247,7 @@
     if (!list.length && newFormat()) for (const x of persons()) if (x.outfit) list.push({ name: x.name, text: x.outfit, quote: x.outfitQ?.quote || '', tr: x.outfitQ?.tr || '' });
     // 근거가 엉뚱한 사람에게 붙지 않게(AI가 근거를 칸 끝에 몰아 쓰면 마지막 사람에게 붙었어요)
     //   다른 사람 이름만 나오는 근거는 그 사람에게 옮기고, 이름도 없고 옷·모습 낱말이 하나도 안 겹치면 빼요
-    const named = (q, n) => q.includes(n) || [...n].length > 2 && q.includes([...n].slice(-2).join(''));
+    const named = nameIn;
     const shares = (q, t) => (String(t).match(/[가-힣]{2,}/g) || []).some(w => q.includes(w.slice(0, 2)));
     for (const x of list) {
       if (!x.quote || named(x.quote, x.name)) continue;
@@ -9925,8 +9928,11 @@
   // 새 답이 다 올라오면(말풍선 목록이 바뀌고 8초 동안 조용하면) 다시 읽어요. 노트가 밀려났으면 refresh가 자동 옮기기를 해요.
   //   창을 안 열고 계속 채팅해도 노트가 크랙 AI가 읽는 최근 대화 안에 머물게. 답 하나에 한 번만(15초 간격).
   let seenMsgs = '', settleTimer = null, settledAt = 0;
-  new MutationObserver(() => {
+  // 말풍선 쪽 변화만 셉니다: 다른 확프가 입력창 버튼을 1초마다 고쳐 그리면 '8초 조용'이 영영 안 와서 턴 세기·자동 정리가 멈췄어요
+  const MSG_SEL = '[data-message-id],[data-message-group-id]', msgMut = n => n?.nodeType === 1 && (n.matches(MSG_SEL) || !!n.closest(MSG_SEL) || !!n.querySelector(MSG_SEL));
+  new MutationObserver(ms => {
     if (!chatIdFromPath()) return;
+    if (!ms.some(m => msgMut(m.target) || [...m.addedNodes, ...m.removedNodes].some(msgMut))) return;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(function settle() {
       const ids = chatIdFromPath() + '|' + [...document.querySelectorAll('[data-message-id],[data-message-group-id]')].map(e => e.getAttribute('data-message-id') || e.getAttribute('data-message-group-id')).join(',');
