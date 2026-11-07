@@ -4,7 +4,7 @@
 // @version      4.7.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2616,7 +2616,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
   //   말풍선 색과 섞여도 크롬과 같은 색이 되게: 밝은 말풍선은 곱하기(펜색÷말풍선색), 어두운 말풍선은 스크린(크롬의 '펜 30% + 말풍선 70%'가 나오게)
   const PEN_OV = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|Android/.test(navigator.userAgent) || /CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
   const PEN_L = 'jm-pen-l', penCss = document.createElement('style');
-  penCss.textContent = `.${PEN_L}{position:absolute;inset:0;pointer-events:none;z-index:1}.${PEN_L}>i{position:absolute;border-radius:2px}`;
+  penCss.textContent = `.${PEN_L}{position:absolute;inset:0;pointer-events:none}.${PEN_L}>i{position:absolute;border-radius:2px}`;
   if (PEN_OV) document.documentElement.appendChild(penCss);
   function penPlace() {
     if (!PEN_OV) return;
@@ -2628,6 +2628,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
       const O = dark ? B.map((b, i) => { const want = .3 * P[i] + .7 * b; return b >= 255 ? 0 : Math.max(0, Math.min(255, Math.round(255 - (255 - want) * 255 / (255 - b)))); })
         : B.map((b, i) => Math.min(255, Math.round(P[i] * 255 / Math.max(1, b))));
       if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+      box.style.isolation = 'isolate'; // 상자를 말풍선 안 층에 가둬요(z-index를 주면 스크롤할 때 아래 입력창 위로 올라와 보였어요)
       let l = box.querySelector(':scope>.' + PEN_L); if (!l) { l = document.createElement('div'); l.className = PEN_L; box.appendChild(l); }
       l.style.mixBlendMode = dark ? 'screen' : 'multiply';
       const o = box.getBoundingClientRect(), html = [];
