@@ -4,7 +4,7 @@
 // @version      4.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2485,9 +2485,10 @@
   const pageStyle = document.createElement('style');
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
   getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 편의 › 폰에서 위 메뉴 숨기기
-  { let ty = null; // 폰: 손가락을 위로 쓸면(아래로 읽기) 맨 위 줄 숨김 · 아래로 쓸면 다시 보임 — 스크롤 값 대신 손가락 방향을 봐서 줄이 사라질 때 생기는 들썩임에 안 흔들려요
+  { let ty = null; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
     addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
-    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.toggle('jm-hidehead', y < ty); ty = y; }, { passive: true }); }
+    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
+    addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 56 && !e.target.closest?.('button,a,input,textarea,[role="button"]')) h.classList.remove('jm-hidehead'); }, true); }
   pageStyle.textContent = '.memo-note-hidden{display:none!important}'
     + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '#memo-note-inline .jm-sp{animation:jm-sp 1s linear infinite!important}@keyframes jm-sp{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}'
@@ -8323,7 +8324,7 @@
       + box('편의', '크랙 화면 편의', `
         ${row('말풍선 턴 번호', sw('badges'))}
         ${row('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
-        ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '글을 내려 읽으면 맨 위 ☰ 크랙 줄이 숨어요 · 아래로 살짝 끌면 다시 나와요')}`)
+        ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
