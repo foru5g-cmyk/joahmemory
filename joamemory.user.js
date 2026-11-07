@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.7.2
+// @version      4.7.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2579,36 +2579,43 @@
   const thMix = (a, b, t) => '#' + thRgb(a).map((x, i) => Math.round(x + (thRgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join(''); // a→b로 t만큼
   const thDark = h => { const [r, g, b] = thRgb(h); return (r * 299 + g * 587 + b * 114) / 1000 < 110; };
   async function themeLoad() {
+    theme.on = String(await getValue('thOn', 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요)
     theme.bub = /^#[0-9a-f]{6}$/i.test(String(await getValue('thBub', ''))) ? String(await getValue('thBub', '')) : '';
     theme.pen = String(await getValue('thPen', 'off')) === 'on'; theme.penc = String(await getValue('thPenC', '#FFE58A')) || '#FFE58A';
     try { const m = JSON.parse(String(await getValue('thMarks', '')) || 'null'); theme.marks = Array.isArray(m) ? m.filter(x => Array.isArray(x) && x[0] && x[1]) : TH_MARKS; } catch (_) { theme.marks = TH_MARKS; }
-    const b = theme.bub, dark = b && thDark(b), p = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
+    const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
     themeCss.textContent = !b ? '' : dark
       ? `.bg-bg_screen{background:#131218!important}.shrink-0:has(>.grid),.z-docked.h-12{background:#17161D!important;border-bottom:1px solid #26242F}.shrink-0:has(>.grid) .pointer-events-none.absolute.inset-0{opacity:.12}.z-docked.h-12 *{color:#E4E1EC!important}
-${TH_AI}{background:${b}!important;border:1px solid ${thMix(b, '#ffffff', .1)}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
-${TH_ME}{background:#2C2A36!important;border:1px solid #3A3747}${TH_ME} *{color:#F1EFF6!important}[data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}
+${TH_AI}{background:${b}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
+${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}
 .bg-background:has(.ProseMirror){background:#1E1D25!important;border-color:#34313F!important}.bg-background:has(.ProseMirror) .ProseMirror,.bg-background:has(.ProseMirror) .ProseMirror *{color:#EDEAF4!important}.bg-background:has(.ProseMirror) button{background:transparent;border-color:#3A3747!important;color:#CFCBDB!important}`
-      : `.bg-bg_screen{background:${thMix(b, '#ffffff', .65)}!important}${TH_AI}{background:${b}!important;border:1.5px solid ${thMix(b, '#000000', .08)}!important}${TH_ME}{background:#fff!important;border:1px solid #E4E2EC}${TH_ME} *{color:#2E2C3A!important}`;
+      : `.bg-bg_screen{background:${thMix(b, '#ffffff', .65)}!important}${TH_AI}{background:${b}!important}${TH_ME}{background:#fff!important}${TH_ME} *{color:#2E2C3A!important}`;
     themeCss.textContent += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
-    const alt = theme.marks.map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^\\n]){1,400}' + reEsc(c));
-    theme.re = theme.pen && alt.length ? new RegExp(alt.join('|'), 'g') : null;
+    const dq = ([o, c]) => /^["“”]$/.test(o) && /^["“”]$/.test(c); // " “ ” 는 한 식구로: “…" 처럼 섞어 써도 칠해요
+    const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”\\n]{1,400}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^\\n]){1,400}' + reEsc(c))];
+    theme.re = theme.on && theme.pen && alt.length ? new RegExp(alt.join('|'), 'g') : null;
     penPaint();
   }
-  function penPaint() { // 대사 형광펜: AI 말풍선 글자에서 기호 사이를 찾아 칠해요
+  function penPaint() { // 대사 형광펜: AI 말풍선 글자에서 기호 사이를 찾아 칠해요 · 문단마다 글자 조각을 이어 붙여 찾아요(대사 안에 굵은 글씨·기울임이 섞여 조각이 나뉘어도 칠해지게)
     if (!MASK_OK) return; const out = [];
-    if (theme.re) for (const box of document.querySelectorAll(TH_AI)) { const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
-      for (let n; (n = w.nextNode());) { if (n.data.length < 2 || n.parentElement?.closest('pre,code')) continue; theme.re.lastIndex = 0;
-        for (let m; (m = theme.re.exec(n.data));) { const r = new Range(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); out.push(r); } } }
+    if (theme.re) for (const box of document.querySelectorAll(TH_AI)) {
+      const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT); let txt = '', map = [], blk = null;
+      const flush = () => { theme.re.lastIndex = 0; for (let m; (m = theme.re.exec(txt));) { const a = m.index, z = a + m[0].length, s0 = map.find(x => a < x.at + x.n.length), s1 = map.find(x => z <= x.at + x.n.length);
+          if (s0 && s1) { const r = new Range(); r.setStart(s0.n, a - s0.at); r.setEnd(s1.n, z - s1.at); out.push(r); } } txt = ''; map = []; };
+      for (let n; (n = w.nextNode());) { const pe = n.parentElement; if (!pe || pe.closest('pre,code')) continue;
+        const b = pe.closest('p,li,blockquote,h1,h2,h3,h4,h5,h6,td') || box; if (b !== blk) { flush(); blk = b; }
+        map.push({ n, at: txt.length }); txt += n.data; }
+      flush(); }
     CSS.highlights.set('jm-pen', new Highlight(...out));
   }
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = setTimeout(() => { theme.t = 0; penPaint(); }, 60); };
-  async function themeSet(k, v) { await setValue(k, v); await themeLoad(); const o = ui('.thbox'); if (o) o.outerHTML = themeHtml(); } // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
+  async function themeSet(k, v) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (o) o.outerHTML = themeHtml(); } // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
   function themeHtml() { // 설정 › 편의 › 테마 화면
-    const b = theme.bub, dark = b && thDark(b), p = theme.penc, sw = (act, c, on, label) => `<button type="button" class="msw" data-act="${act}" data-arg="${c}" style="background:${c || '#FFF4E0'}" aria-pressed="${on}" aria-label="${label || c}"></button>`;
-    const pv = `<div class="thpv" style="background:${!b ? '#fff' : dark ? '#131218' : thMix(b, '#ffffff', .65)}"><div class="thai" style="background:${b || '#FFF4E0'};border-color:${!b ? 'transparent' : dark ? thMix(b, '#ffffff', .1) : thMix(b, '#000000', .08)};color:${dark ? '#DEDAE8' : '#55526A'}">태정은 대꾸 없이 고개만 돌렸다. <span style="${theme.pen ? (dark ? `background:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#fff)` : `background:${p};color:#2B2418`) : ''}">“지금은 바빠.”</span></div><div class="thme" style="${dark ? 'background:#2C2A36;color:#F1EFF6;border-color:#3A3747' : ''}">놔, 사람들 봐.</div></div>`;
-    return `<div class="thbox"><div class="thhd"><button type="button" class="ia" data-act="themeback" aria-label="뒤로">‹</button><b>테마</b></div>${pv}
-      <div class="mrow"><b>AI 말풍선 색</b><div class="mpills">${sw('thbub', '', !b, '크랙 기본')}${TH_BUBS.map(c => sw('thbub', c, b.toUpperCase() === c)).join('')}<label class="msw mplus" aria-label="다른 색"${b && !TH_BUBS.includes(b.toUpperCase()) ? ` style="background:${b};color:${dark ? '#fff' : 'var(--ink)'}"` : ''}>+<input type="color" data-th="thBub" value="${b || '#F3EFFF'}"></label></div></div>
-      <p class="muted" style="margin:-2px 0 6px;font-size:11.5px">첫 칸 = 크랙 기본(테마 꺼짐) · 내 말풍선은 늘 하얀색(어두운 색이면 회색)</p>
+    const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = theme.penc, sw = (act, c, on, label) => `<button type="button" class="msw" data-act="${act}" data-arg="${c}" style="background:${c || '#FFF4E0'}" aria-pressed="${on}" aria-label="${label || c}"></button>`;
+    const pv = `<div class="thpv" style="background:${!b ? '#fff' : dark ? '#131218' : thMix(b, '#ffffff', .65)}"><div class="thai" style="background:${b || '#FFF4E0'};color:${dark ? '#DEDAE8' : '#55526A'}">태정은 대꾸 없이 고개만 돌렸다. <span style="${theme.pen ? (dark ? `background:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#fff)` : `background:${p};color:#2B2418`) : ''}">“지금은 바빠.”</span></div><div class="thme" style="${dark ? 'background:#2C2A36;color:#F1EFF6' : ''}">놔, 사람들 봐.</div></div>`;
+    return `<div class="thbox"><div class="thhd"><button type="button" class="ia" data-act="themeback" aria-label="뒤로">‹</button><b>테마</b><label class="thon"><input type="checkbox" class="switch" data-th="thOn"${theme.on ? ' checked' : ''}><span>${theme.on ? '켜짐' : '꺼짐 · 크랙 그대로'}</span></label></div>${pv}
+      <div class="mrow"><b>AI 말풍선 색</b><div class="mpills">${TH_BUBS.map(c => sw('thbub', c, b.toUpperCase() === c)).join('')}<label class="msw mplus" aria-label="다른 색"${b && !TH_BUBS.includes(b.toUpperCase()) ? ` style="background:${b};color:${dark ? '#fff' : 'var(--ink)'}"` : ''}>+<input type="color" data-th="thBub" value="${b || '#F3EFFF'}"></label></div></div>
+      <p class="muted" style="margin:-2px 0 6px;font-size:11.5px">내 말풍선은 늘 하얀색(어두운 색이면 회색)</p>
       <label class="mrow mchk"><input type="checkbox" data-th="thPen"${theme.pen ? ' checked' : ''}><span>대사 형광펜</span></label>
       ${theme.pen ? `<div class="mrow"><b>형광펜 색</b><div class="mpills">${TH_PENS.map(c => sw('thpenc', c, p.toUpperCase() === c)).join('')}<label class="msw mplus" aria-label="다른 색"${!TH_PENS.includes(p.toUpperCase()) ? ` style="background:${p}"` : ''}>+<input type="color" data-th="thPenC" value="${p}"></label></div></div>
       <div class="mrow" style="align-items:flex-start"><b>대사 기호</b><div class="mpills">${theme.marks.map(([o, c], i) => `<span class="mchip">${esc(o)} ${esc(c)}<button type="button" data-act="thmarkdel" data-arg="${i}" aria-label="빼기">✕</button></span>`).join('')}<span class="thadd"><input type="text" data-thm="o" maxlength="3" placeholder="여는"><input type="text" data-thm="c" maxlength="3" placeholder="닫는"><button type="button" class="mpill" data-act="thmarkadd">추가</button></span></div></div>
@@ -3841,7 +3848,7 @@ ${TH_ME}{background:#2C2A36!important;border:1px solid #3A3747}${TH_ME} *{color:
     .sg{font-family:var(--serif);font-size:16.5px;font-weight:700;margin:30px 0 2px;color:var(--ink)}
     main>.sg:first-child{margin-top:2px}
     .srow{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--rule);cursor:default;min-height:58px}
-    .throw{width:100%;background:none;border:0;border-bottom:1px solid var(--rule);text-align:left;font:inherit;color:inherit;cursor:pointer}.thmini{display:flex;align-items:center;gap:4px;color:var(--graphite);font-size:15px}.thmini i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}.thhd{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.thhd b{font-size:16px}.thpv{border:1px solid var(--rule);border-radius:16px;padding:10px;margin-bottom:8px}.thai{border:1.5px solid;border-radius:4px 20px 20px 20px;padding:10px 12px;font-size:13px;line-height:1.7}.thme{margin:8px 0 0 auto;width:fit-content;background:#fff;border:1px solid #E4E2EC;color:#2E2C3A;border-radius:20px 20px 4px 20px;padding:6px 11px;font-size:13px}.thadd{display:inline-flex;gap:4px;align-items:center}.thadd input{width:46px;padding:5px 6px;border:1px solid var(--rule);border-radius:8px;font-size:13px;text-align:center;background:var(--paper);color:var(--ink)}.mopts{padding:2px 0 8px;border-bottom:1px solid var(--rule)}.mchk{gap:8px;font-size:13px;cursor:pointer}.mchk input{width:17px;height:17px;accent-color:var(--acc);margin:0}.mchk small{color:var(--graphite);font-size:11.5px}.mrow{display:flex;align-items:center;gap:12px;padding:7px 0}.mrow>b{flex:0 0 74px;font-size:13px}.mpills{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+    .throw{width:100%;background:none;border:0;border-bottom:1px solid var(--rule);text-align:left;font:inherit;color:inherit;cursor:pointer}.thmini{display:flex;align-items:center;gap:4px;color:var(--graphite);font-size:15px}.thmini i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}.thhd{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.thon{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--graphite);cursor:pointer}.thhd b{font-size:16px}.thpv{border:1px solid var(--rule);border-radius:16px;padding:10px;margin-bottom:8px}.thai{border-radius:4px 20px 20px 20px;padding:10px 12px;font-size:13px;line-height:1.7}.thme{margin:8px 0 0 auto;width:fit-content;background:#fff;color:#2E2C3A;border-radius:20px 20px 4px 20px;padding:6px 11px;font-size:13px}.thadd{display:inline-flex;gap:4px;align-items:center}.thadd input{width:46px;padding:5px 6px;border:1px solid var(--rule);border-radius:8px;font-size:13px;text-align:center;background:var(--paper);color:var(--ink)}.mopts{padding:2px 0 8px;border-bottom:1px solid var(--rule)}.mchk{gap:8px;font-size:13px;cursor:pointer}.mchk input{width:17px;height:17px;accent-color:var(--acc);margin:0}.mchk small{color:var(--graphite);font-size:11.5px}.mrow{display:flex;align-items:center;gap:12px;padding:7px 0}.mrow>b{flex:0 0 74px;font-size:13px}.mpills{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
     .mchip{display:inline-flex;align-items:center;gap:2px;padding:4px 4px 4px 11px;border-radius:99px;background:var(--acc-soft);color:var(--ink);font-size:13px;font-weight:700}.mchip button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:50%;text-align:center;line-height:20px;font-size:11px;color:var(--graphite)}
     .mpills input[data-mask="add"]{width:96px;padding:5px 11px;border:1px dashed var(--rule);border-radius:99px;font-size:13px;background:transparent;color:var(--ink)}
     .mpill{padding:6px 12px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:13px}.mpill[aria-pressed="true"]{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc);font-weight:700}
@@ -4097,7 +4104,7 @@ ${TH_ME}{background:#2C2A36!important;border:1px solid #3A3747}${TH_ME} *{color:
     .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2px}.fx-pg-h b{font-size:16px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;justify-self:start;cursor:pointer;padding:6px 4px;font-size:15px;color:var(--ink2)}.fx-pg-ok{all:unset;justify-self:end;cursor:pointer;padding:6px 4px;font-size:15px;font-weight:800;color:var(--acc)}.fx-pg-ok:disabled{opacity:.4}
     .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:15.5px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
     .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"⌄";position:absolute;right:0;top:50%;transform:translateY(-62%);font-size:13px;color:var(--graphite);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:none;color:var(--graphite);font:inherit;font-size:13.5px;padding:4px 16px 4px 4px;cursor:pointer;outline:none}
-    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
+    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
     .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fx-acts2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.fx-libh{display:block;font-size:13px;margin:6px 2px 8px}.fx-lib label{flex:1;min-width:0}.fx-lib .fx-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fx-lib .fx-lt b{display:flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-lib .fx-lt small{font-size:11.5px;color:var(--graphite)}.fx-lib .fx-n{font-style:normal;font-size:11px;color:var(--graphite);opacity:.7;flex:0 0 auto}
     .fx-sheet ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -9508,6 +9515,8 @@ ${TH_ME}{background:#2C2A36!important;border:1px solid #3A3747}${TH_ME} *{color:
     }
   }
   root.addEventListener('change', async e => { if (e.target.dataset?.out !== 'fximport') return; const file = e.target.files?.[0]; e.target.value = ''; if (file) fxPickOpen(file.name, await file.text()); });
+  // 조아메모리 칸(글 칸·입력칸)에서 친 키는 뒤의 크랙 페이지로 안 보내요: 아이폰에서 줄바꿈(↵)을 누르면 크랙이 그 키를 받아 화면을 채팅 아래로 휙 끌어내렸어요
+  for (const ev of ['keydown', 'keypress', 'keyup']) root.addEventListener(ev, e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) e.stopPropagation(); });
   root.addEventListener('keydown', e => { const el = e.target; if (!el?.dataset?.ed || !el.isContentEditable) return; e.stopPropagation();
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const all = [...root.querySelectorAll('.nc.editing [contenteditable="true"]')], i = all.indexOf(el); (all[i + 1] || el).focus(); }
     else if (e.key === 'Escape') { e.preventDefault(); nav.nedit = null; render(); } }, true);
