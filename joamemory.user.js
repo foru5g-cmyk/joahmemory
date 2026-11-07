@@ -4,7 +4,7 @@
 // @version      4.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2483,21 +2483,96 @@
   // 7. 웹 화면에서 노트 가리기 (혹시 그려졌을 때)
   // ══════════════════════════════════════════════════════════════
   const pageStyle = document.createElement('style');
+  pageStyle.textContent = '.memo-note-hidden{display:none!important}'
+    + '#memo-note-inline .jm-sp{animation:jm-sp 1s linear infinite!important}@keyframes jm-sp{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}'
+    + '#memo-note-inline .jm-dot{animation:jm-dot .9s ease-in-out infinite!important;opacity:.2}@keyframes jm-dot{0%,100%{opacity:.2}50%{opacity:1}}'
+    + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
+    + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}';
+  document.documentElement.appendChild(pageStyle);
+
+  // ══════════════════════════════════════════════════════════════
+  // 7-1. 편의: 크랙 화면 (설정 › 편의) — 채팅 넓게 · 위 메뉴 숨기기 · 캡처할 때 이름 가리기
+  //      편의 기능은 여기 한곳에 모아요(말풍선 턴 번호는 턴 세기와 붙어 있어서 제자리)
+  // ══════════════════════════════════════════════════════════════
+  const easeStyle = document.createElement('style');
+  easeStyle.textContent = ''
+    // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
+    + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
+    + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로)
+    + '#jm-mask-emo{position:fixed;inset:0;pointer-events:none;z-index:2147483647}#jm-mask-emo>i{position:fixed;font-style:normal;line-height:1;display:flex;align-items:center;justify-content:center}';
+  document.documentElement.appendChild(easeStyle);
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
   getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 편의 › 폰에서 위 메뉴 숨기기
   { let ty = null; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
     addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
     addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
     addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 56 && !e.target.closest?.('button,a,input,textarea,[role="button"]')) h.classList.remove('jm-hidehead'); }, true); }
-  pageStyle.textContent = '.memo-note-hidden{display:none!important}'
-    + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
-    + '#memo-note-inline .jm-sp{animation:jm-sp 1s linear infinite!important}@keyframes jm-sp{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}'
-    + '#memo-note-inline .jm-dot{animation:jm-dot .9s ease-in-out infinite!important;opacity:.2}@keyframes jm-dot{0%,100%{opacity:.2}50%{opacity:1}}'
-    + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
-    + '@media (prefers-reduced-motion:reduce){#memo-note-inline.jm-flash{animation:none!important}}'
-    // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]){padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10:has([data-message-id],[data-message-group-id]) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}';
-  document.documentElement.appendChild(pageStyle);
+  // 캡처할 때 이름 가리기: 글자(DOM)는 안 건드리고 브라우저 강조(CSS Highlight)로만 칠해요 → 크랙이 답을 이어 써도 안 깨져요
+  //   모자이크 = 글자 투명 + 번진 그림자 · 박스 = 글자색·배경을 같은 색으로 · 이모지 = 글자 투명 + 그 자리 위에 이모지 띄우기
+  //   켜고 끄기: 하트 꾹(0.5초) · 설정 › 편의 · 한 번 켜면 끌 때까지 그대로(방 옮겨도 · 새로 고침해도)
+  const mask = { on: false, raw: [], names: [], mode: 'box', color: '#1F1D27', emoji: '💜', ranges: [], t: 0 };
+  const MASK_OK = typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function';
+  const maskCss = document.createElement('style'), maskCss2 = document.createElement('style'), maskEmo = document.createElement('div'); maskEmo.id = 'jm-mask-emo';
+  document.documentElement.appendChild(maskCss);
+  async function maskLoad() {
+    mask.on = String(await getValue('maskOn', 'off')) === 'on'; mask.panel = String(await getValue('maskPanel', 'off')) === 'on';
+    const raw = String(await getValue('maskNames', '')).split(/[,，\n]/).map(x => x.trim()).filter(Boolean);
+    mask.raw = raw; mask.names = [...new Set(raw.flatMap(n => [n, nameNick(n)]).filter(x => [...x].length >= 2))].sort((a, b) => b.length - a.length); // '주나나' → '나나'도 · 긴 이름부터
+    mask.mode = String(await getValue('maskMode', 'box')); mask.color = String(await getValue('maskColor', '#1F1D27')); mask.emoji = String(await getValue('maskEmoji', '💜')).trim() || '💜';
+    const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
+    maskCss.textContent = maskCss2.textContent = mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
+      : mask.mode === 'emoji' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:none}'
+      : `::highlight(jm-mask){color:${c};-webkit-text-fill-color:${c};background-color:${c};text-shadow:none}`;
+    if (!maskCss2.isConnected) { root.appendChild(maskCss2); root.addEventListener('scroll', maskEmoSoon, { capture: true, passive: true }); } // 조아메모리 창 안 스크롤도 따라가요 // 조아메모리 화면(그림자 칸) 안에도 같은 칠
+    inlineBtn.classList.toggle('jm-masked', mask.on);
+    maskPaint();
+  }
+  function maskPaint() { // 화면 글자에서 이름 찾기: 크랙 채팅 로그만 · '조아메모리 창도'를 켜면 창 안도(설정 칸은 빼고)
+    if (!MASK_OK) return;
+    const out = [];
+    if (mask.on && mask.names.length) {
+      const re = new RegExp(mask.names.map(reEsc).join('|'), 'gi'); // 영어는 대소문자 안 가려요(Nana = nana = NANA)
+      const ok = (n, inPanel) => { const p = n.parentElement; return !!p && !p.closest('script,style,textarea,input,noscript') && (inPanel ? !p.closest('[data-sec]') : !!p.closest('[data-message-id],[data-message-group-id]')); }; // 채팅: 말풍선 안 글자만 · 창: 설정 칸([data-sec])은 빼요
+      for (const [top, inPanel] of [[document.body, false], ...(mask.panel ? [[root, true]] : [])]) {
+        const w = document.createTreeWalker(top, NodeFilter.SHOW_TEXT, { acceptNode: n => ok(n, inPanel) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+        for (let n; (n = w.nextNode());) { const t = n.data; if (t.length < 2) continue; re.lastIndex = 0;
+          for (let m; (m = re.exec(t));) { const r = new Range(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); out.push(r); } } }
+    }
+    mask.ranges = out; CSS.highlights.set('jm-mask', new Highlight(...out)); maskEmoPlace();
+  }
+  function maskEmoPlace() { // 이모지 모드: 가린 자리마다 이모지를 띄워요(스크롤하면 따라가요)
+    if (!(mask.on && mask.mode === 'emoji' && mask.ranges.length)) { maskEmo.remove(); maskEmo.textContent = ''; return; }
+    if (!maskEmo.isConnected) document.documentElement.appendChild(maskEmo);
+    const H = innerHeight, html = [];
+    for (const r of mask.ranges) { const b = r.getClientRects()[0]; if (!b || b.bottom < 0 || b.top > H || !b.width) continue;
+      const pe = r.startContainer.parentElement, hit = pe && r.startContainer.getRootNode().elementFromPoint?.(b.left + b.width / 2, b.top + b.height / 2); if (!hit || !(hit === pe || pe.contains(hit) || hit.contains(pe))) continue; // 그 자리가 실제로 보일 때만(조아메모리 창에 가려진 채팅 이름 위에 안 띄워요)
+      html.push(`<i style="left:${b.left}px;top:${b.top}px;width:${b.width}px;height:${b.height}px;font-size:${Math.round(b.height * 0.8)}px">${esc(mask.emoji)}</i>`); }
+    maskEmo.innerHTML = html.join('');
+  }
+  const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
+  new MutationObserver(ms => { if (ms.every(m => maskEmo.contains(m.target))) return; maskSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
+  let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
+  { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
+  async function maskToggle() { await setValue('maskOn', mask.on ? 'off' : 'on'); await maskLoad();
+    if (mask.on && !mask.names.length) toast('가릴 이름이 없어요 · 설정 › 편의에서 넣어 주세요', 'err', 3500); else toast(mask.on ? '🙈 이름 가리기 켰어요 · 하트를 다시 꾹 누르면 꺼져요' : '이름 가리기 껐어요', 'ok', 2500);
+    const sw = ui('[data-set="maskOn"]'); if (sw) sw.checked = mask.on; const mo = ui('.mopts'); if (mo) mo.hidden = !mask.on; }
+  const MASK_COLORS = ['#FFFFFF', '#1F1D27', '#7B68D9', '#F4B6CC', '#FFE27A'], MASK_EMOJIS = ['💜', '🙈', '⭐', '🐰', '🌸'];
+  async function maskSet(k, v) { await setValue(k, v); await maskLoad(); const m = out('main'), y = m?.scrollTop || 0; render(); if (m) m.scrollTop = y; } // 설정 › 편의 › 이름 가리기 칸을 바꾸면 바로 다시 그려요
+  function maskInput(el) { const v = el.value.trim(), k = el.dataset.mask; // 이름 추가 칸(엔터·칸 밖 누르기) · 다른 색 · 직접 넣은 이모지
+    if (k === 'add') return v && maskSet('maskNames', [...new Set([...mask.raw, ...v.split(/[,，]/).map(x => x.trim()).filter(Boolean)])].join(', '));
+    if (k === 'color') return maskSet('maskColor', v);
+    if (k === 'panel') return maskSet('maskPanel', el.checked ? 'on' : 'off');
+    if (k === 'emo' && v) return maskSet('maskEmoji', v); }
+  function maskOptsHtml() { // 설정 › 편의: 스위치를 켜야 펼쳐져요 · 모두 가로로
+    const pills = (act, list, cur, label) => list.map(([v, l]) => `<button type="button" class="mpill" data-act="${act}" data-arg="${esc(v)}" aria-pressed="${cur === v}">${label ? label(v, l) : esc(l)}</button>`).join('');
+    return `<div class="mopts"${mask.on ? '' : ' hidden'}>
+      <label class="mrow mchk"><input type="checkbox" data-mask="panel"${mask.panel ? ' checked' : ''}><span>조아메모리 창도 가리기 <small>(꺼 두면 크랙 채팅 로그만 · 설정은 늘 그대로)</small></span></label>
+      <div class="mrow"><b>가릴 이름</b><div class="mpills">${mask.raw.map((n, i) => `<span class="mchip">${esc(n)}<button type="button" data-act="maskdel" data-arg="${i}" aria-label="${esc(n)} 빼기">✕</button></span>`).join('')}<input type="text" data-mask="add" placeholder="+ 이름 추가" autocomplete="off" spellcheck="false" enterkeyhint="done"></div></div>
+      <div class="mrow"><b>가리는 모양</b><div class="mpills">${pills('maskmode', [['blur', '모자이크'], ['box', '박스'], ['emoji', '이모지']], mask.mode)}</div></div>
+      ${mask.mode === 'emoji' ? `<div class="mrow"><b>이모지</b><div class="mpills">${MASK_EMOJIS.map(x => `<button type="button" class="mem" data-act="maskemo" data-arg="${x}" aria-pressed="${mask.emoji === x}">${x}</button>`).join('')}<input type="text" class="mem" data-mask="emo" maxlength="8" placeholder="+" value="${MASK_EMOJIS.includes(mask.emoji) ? '' : esc(mask.emoji)}" aria-label="다른 이모지"></div></div>`
+        : mask.mode === 'box' ? `<div class="mrow"><b>박스 색</b><div class="mpills">${MASK_COLORS.map(c => `<button type="button" class="msw" data-act="maskcolor" data-arg="${c}" style="background:${c}" aria-pressed="${mask.color.toUpperCase() === c}" aria-label="${c}"></button>`).join('')}<label class="msw mplus" aria-label="다른 색"${MASK_COLORS.includes(mask.color.toUpperCase()) ? '' : ` style="background:${esc(mask.color)};color:#fff"`}>+<input type="color" data-mask="color" value="${esc(mask.color)}"></label></div></div>` : ''}
+    </div>`; }
   // 화면 구조와 상관없이, 노트 글자가 들어 있는 글 조각을 찾아 그 부분만 가립니다.
   const NOTE_MARK = /\[\/\/\]: # ["(]|<!--MEMO_NOTE|MEMO_NOTE/;
   function hideRenderedNotes() {
@@ -2651,6 +2726,7 @@
   host.id = 'memo-note-host';
   document.documentElement.appendChild(host);
   const root = host.attachShadow({ mode: 'open' });
+  setTimeout(() => maskLoad().catch(e => logErr('이름 가리기', e.message)), 0); // 편의 › 이름 가리기(하트 버튼이 만들어진 뒤에)
   // 아이폰은 글씨가 작은 입력칸을 누르면 화면을 확대해요 → 조아메모리 칸을 누른 동안만 확대를 막고, 나오면 크랙 원래 설정으로 돌려요
   { let saved = null; const vp = () => document.querySelector('meta[name="viewport"]');
     root.addEventListener('focusin', e => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || saved !== null) return; let m = vp(); if (!m) { m = document.createElement('meta'); m.name = 'viewport'; m.dataset.memoNote = '1'; document.head.appendChild(m); }
@@ -3714,6 +3790,12 @@
     .sg{font-family:var(--serif);font-size:16.5px;font-weight:700;margin:30px 0 2px;color:var(--ink)}
     main>.sg:first-child{margin-top:2px}
     .srow{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--rule);cursor:default;min-height:58px}
+    .mopts{padding:2px 0 8px;border-bottom:1px solid var(--rule)}.mchk{gap:8px;font-size:13px;cursor:pointer}.mchk input{width:17px;height:17px;accent-color:var(--acc);margin:0}.mchk small{color:var(--graphite);font-size:11.5px}.mrow{display:flex;align-items:center;gap:12px;padding:7px 0}.mrow>b{flex:0 0 74px;font-size:13px}.mpills{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+    .mchip{display:inline-flex;align-items:center;gap:2px;padding:4px 4px 4px 11px;border-radius:99px;background:var(--acc-soft);color:var(--ink);font-size:13px;font-weight:700}.mchip button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:50%;text-align:center;line-height:20px;font-size:11px;color:var(--graphite)}
+    .mpills input[data-mask="add"]{width:96px;padding:5px 11px;border:1px dashed var(--rule);border-radius:99px;font-size:13px;background:transparent;color:var(--ink)}
+    .mpill{padding:6px 12px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:13px}.mpill[aria-pressed="true"]{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc);font-weight:700}
+    .msw{width:26px;height:26px;border-radius:5px;border:1px solid var(--rule);padding:0;cursor:pointer;position:relative}.msw[aria-pressed="true"]{outline:2.5px solid var(--acc);outline-offset:2px}.mplus{display:grid;place-items:center;border-style:dashed;color:var(--graphite);font-size:14px;background:var(--paper);overflow:hidden}.mplus input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+    .mem{width:34px;height:34px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);font-size:17px;padding:0;text-align:center;color:var(--ink)}.mem[aria-pressed="true"]{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
     .srow>div{flex:1;min-width:0}.hw-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hw-grid .btn{width:100%;margin:0;justify-content:flex-start;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.srow-col{flex-direction:column;align-items:stretch;gap:8px}.srow-col>div{flex:none}.gsbox textarea[data-out=fbpaste]{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none;margin:4px 0 10px}.fbpbox textarea{width:100%;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:8px 10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none}.fbp summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2);list-style:none}.fbp summary::-webkit-details-marker{display:none}.fbp summary small{font-weight:400;color:var(--graphite);margin-left:4px}.fbp textarea{width:100%;margin-top:8px;font-size:12px;border:1.5px solid var(--rule);border-radius:12px;padding:8px 10px;resize:vertical;background:var(--paper);color:var(--ink);outline:none}
     .srow b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
     .srow small{display:block;font-size:12.5px;color:var(--graphite);line-height:1.5;margin-top:3px}
@@ -8324,6 +8406,7 @@
       + box('편의', '크랙 화면 편의', `
         ${row('말풍선 턴 번호', sw('badges'))}
         ${row('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
+        ${row('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}
         ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
@@ -8483,6 +8566,7 @@
     if (nav.view === 'preview') updatePreviewCount();
     if (nav.tab === 'settings' && !nav.view) fillSettings();
     if (nav.view === 'graph') { try { setupGraph(!render.keepGraph); } catch (e) { logErr('관계도', e.message); } } render.keepGraph = false;
+    maskSoon(); // 편의 › 이름 가리기: 창이 새로 그려지면 다시 칠해요(가려진 채팅 위 이모지도 다시 맞춤)
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -9288,6 +9372,7 @@
         toast(on ? '이 방은 웹 모드를 켰어요 · 10턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
     { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
+    { const m = ui('[data-set="maskOn"]'); if (m && (m.checked ? 'on' : 'off') !== (mask.on ? 'on' : 'off')) { await setValue('maskOn', m.checked ? 'on' : 'off'); await maskLoad(); const o = ui('.mopts'); if (o) o.hidden = !mask.on; } }
     { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
     for (const k of ['gsUrl', 'gsKey', 'firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
@@ -9313,6 +9398,7 @@
     const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
     const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
+    const mo = ui('[data-set="maskOn"]'); if (mo) mo.checked = mask.on;
     const hh = ui('[data-set="hideHead"]'); if (hh && !hh.dataset.filled) { hh.checked = String(await getValue('hideHead', 'on')) !== 'off'; hh.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el && !el.dataset.filled) { el.checked = String(await getValue(key, 'on')) !== 'off'; el.dataset.filled = '1'; } }
@@ -9334,6 +9420,7 @@
   }
 
   root.addEventListener('change', async e => {
+    if (e.target.dataset?.mask) return maskInput(e.target); // 편의 › 이름 가리기(이름 추가·다른 색·이모지)
     if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
     if (e.target.dataset?.out === 'extfile') {
@@ -9396,6 +9483,10 @@
     const keepScroll = fn => { const m = out('main'), y = m.scrollTop, STRIP = '.bd-menu,.bd-tabs,.bd-spots', xs = [...m.querySelectorAll(STRIP)].map(el => el.scrollLeft); fn(); m.scrollTop = y; [...m.querySelectorAll(STRIP)].forEach((el, i) => { el.scrollLeft = xs[i] || 0; }); };
     switch (act) {
       case 'toggle': return toggleSheet();
+      case 'maskdel': return maskSet('maskNames', mask.raw.filter((_, i) => i !== +arg).join(', '));
+      case 'maskmode': return maskSet('maskMode', arg);
+      case 'maskcolor': return maskSet('maskColor', arg);
+      case 'maskemo': return maskSet('maskEmoji', arg);
       case 'close': return openSheet(false);
       case 'notes': nav.view = 'notes'; nav.key = null; if (arg) nav.ngrp = N_GROUPS.find(([, ks]) => ks.includes(arg))?.[0] || nav.ngrp; nav.nopen = nav.nedit = null; render(); out('main').scrollTop = 0; return;
       case 'nfold': { if (e.target.closest('.nh-add')) return; const o = nav.nshow?.open || []; nav.nshow = { g: nav.ngrp, open: o.includes(arg) ? o.filter(x => x !== arg) : [...o, arg] }; return keepScroll(render); }
@@ -9864,7 +9955,12 @@
   inlineBtn.style.cssText = 'all:unset;box-sizing:border-box;flex:0 0 30px;width:30px;height:30px;min-width:30px;max-width:30px;margin:0 4px;' +
     'display:inline-flex;align-items:center;justify-content:center;position:relative;cursor:pointer;line-height:1;' +
     '-webkit-tap-highlight-color:transparent;align-self:center';
-  inlineBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); toggleSheet(); });
+  { let lp = 0, fired = false; // 하트 꾹(0.5초) = 이름 가리기 켜고 끄기 · 짧게 = 조아메모리 열기
+    const stop = () => { clearTimeout(lp); lp = 0; };
+    inlineBtn.addEventListener('pointerdown', () => { fired = false; stop(); lp = setTimeout(() => { lp = 0; fired = true; navigator.vibrate?.(15); maskToggle(); }, 500); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) inlineBtn.addEventListener(ev, stop);
+    inlineBtn.addEventListener('contextmenu', e => e.preventDefault()); // 폰에서 꾹 누를 때 뜨는 메뉴 막기
+    inlineBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); if (fired) { fired = false; return; } toggleSheet(); }); }
   function paintInlineButton(_label, due) {
     const turns = snapshot ? Math.min(freshTurns(), cycle) : 0, left = Math.max(0, cycle - turns);
     const r = 12.5, c = 2 * Math.PI * r, p = snapshot ? turns / cycle : 0;
