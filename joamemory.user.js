@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.7.8
+// @version      4.7.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1025,7 +1025,7 @@
   }
   // 👨 아빠: 임신된 날(시작 + 2주)에 가장 가까운 관계 장면에 나온 남자 인물(유저 캐릭터 말고) · 여러 사람과 관계했어도 그날 사람으로
   // 이름 짧은 꼴: '강태정' → '태정' · 띄어 쓴 이름은 앞 이름('아서 힐' → '아서'). 끝 두 글자를 자르면 ' 힐'이 돼서 '네이선 힐'까지 같은 사람으로 잡혔어요
-  const nameNick = n => { n = String(n || '').trim(); if (/\s/.test(n)) { const f = n.split(/\s+/)[0]; return [...f].length >= 2 ? f : ''; } return [...n].length >= 3 ? [...n].slice(-2).join('') : ''; };
+  const nameNick = n => { n = String(n || '').trim(); if (/^[A-Za-z]+$/.test(n)) return ''; if (/\s/.test(n)) { const f = n.split(/\s+/)[0]; return [...f].length >= 2 ? f : ''; } return [...n].length >= 3 ? [...n].slice(-2).join('') : ''; };
   const nameIn = (t, n) => [n, nameNick(n)].filter(Boolean).some(x => String(t).includes(x));
   function pregFather(mem) {
     if (preg?.start == null) return '';
@@ -2516,6 +2516,7 @@
   //   켜고 끄기: 하트 꾹(0.5초) · 설정 › 편의 · 한 번 켜면 끌 때까지 그대로(방 옮겨도 · 새로 고침해도)
   const mask = { on: false, raw: [], names: [], mode: 'box', color: '#1F1D27', emoji: '💜', ranges: [], t: 0 };
   const MASK_OK = typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function';
+  { const mc = document.createElement('style'); mc.textContent = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute;border-radius:2px}'; document.documentElement.appendChild(mc); }
   const maskCss = document.createElement('style'), maskCss2 = document.createElement('style'), maskEmo = document.createElement('div'); maskEmo.id = 'jm-mask-emo';
   document.documentElement.appendChild(maskCss);
   async function maskLoad() {
@@ -2543,6 +2544,24 @@
           for (let m; (m = re.exec(t));) { const r = new Range(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); out.push(r); } } }
     }
     mask.ranges = out; CSS.highlights.set('jm-mask', new Highlight(...out)); maskEmoPlace();
+    maskLay();
+  }
+  // 아이폰 사파리: 칠(Highlight)이 일부 이름에만 먹어서(형광펜과 같은 문제) 말풍선 안에 가림 상자를 직접 얹어요 · 바뀐 게 있을 때만 다시 그려 깜빡이지 않게
+  const MASK_L = 'jm-mask-l';
+  function maskLay() {
+    if (!PEN_OV) return;
+    const by = new Map(), lay = mask.on && mask.mode !== 'emoji';
+    if (lay) for (const r of mask.ranges) { const pe = r.startContainer.parentElement, box = pe?.closest(TH_AI + ',' + TH_ME) || pe?.closest('[data-message-id],[data-message-group-id]'); if (box) (by.get(box) || by.set(box, []).get(box)).push(r); }
+    document.querySelectorAll('.' + MASK_L).forEach(l => { if (!by.has(l.parentElement)) l.remove(); });
+    const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
+    const st = mask.mode === 'blur' ? 'background:rgba(40,36,60,.18);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)' : `background:${c}`;
+    for (const [box, rs] of by) {
+      if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+      box.style.isolation = 'isolate';
+      let l = box.querySelector(':scope>.' + MASK_L); if (!l) { l = document.createElement('div'); l.className = MASK_L; box.appendChild(l); }
+      const o = box.getBoundingClientRect(), html = [];
+      for (const r of rs) for (const q of r.getClientRects()) if (q.width >= 1) html.push(`<i style="left:${(q.left - o.left).toFixed(1)}px;top:${(q.top - o.top).toFixed(1)}px;width:${q.width.toFixed(1)}px;height:${q.height.toFixed(1)}px;${st}"></i>`);
+      const h = html.join(''); if (l.__h !== h) { l.__h = h; l.innerHTML = h; } }
   }
   function maskEmoPlace() { // 이모지 모드: 가린 자리마다 이모지를 띄워요(스크롤하면 따라가요)
     if (!(mask.on && mask.mode === 'emoji' && mask.ranges.length)) { maskEmo.remove(); maskEmo.textContent = ''; return; }
@@ -2554,7 +2573,7 @@
     maskEmo.innerHTML = html.join('');
   }
   const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
-  new MutationObserver(ms => { if (ms.every(m => maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
+  new MutationObserver(ms => { if (ms.every(m => maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
   { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
   async function maskToggle() { await setValue('maskOn', mask.on ? 'off' : 'on'); await maskLoad();
@@ -2636,7 +2655,14 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
   addEventListener('resize', () => PEN_OV && penSoon());
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = setTimeout(() => { theme.t = 0; penPaint(); }, 60); };
   addEventListener('scroll', () => penSoon(), { capture: true, passive: true }); // 위로 올려 옛 답을 불러오거나 크랙이 말풍선을 다시 그렸을 때도 다시 칠해요(한 번에 1~2ms)
-  async function themeSet(k, v) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (o) o.outerHTML = themeHtml(); } // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
+  async function themeSet(k, v, keep) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (!o) return; // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
+    if (!keep) { o.outerHTML = themeHtml(); return; }
+    // 색 고르는 창(input color)이 열린 채면 그 칸은 그대로 둬요: 통째로 다시 그리면 칸이 사라져 슬라이더를 누르는 순간 창이 꺼졌어요(아이폰은 끄는 중에도 change가 와요)
+    const t = document.createElement('div'); t.innerHTML = themeHtml(); const n = t.firstElementChild;
+    o.querySelector('.thpv')?.replaceWith(n.querySelector('.thpv'));
+    const ob = [...o.querySelectorAll('.msw,input[data-th]')], nb = [...n.querySelectorAll('.msw,input[data-th]')];
+    ob.forEach((x, i) => { const y = nb[i]; if (!y || x.tagName !== y.tagName) return; if (x.tagName === 'INPUT') { if (x.type === 'checkbox') x.checked = y.checked; return; }
+      x.style.cssText = y.style.cssText; if (y.hasAttribute('aria-pressed')) x.setAttribute('aria-pressed', y.getAttribute('aria-pressed')); }); }
   function themeHtml() { // 설정 › 편의 › 테마 화면
     const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = theme.penc, sw = (act, c, on, label) => `<button type="button" class="msw" data-act="${act}" data-arg="${c}" style="background:${c || '#FFF4E0'}" aria-pressed="${on}" aria-label="${label || c}"></button>`;
     const pv = `<div class="thpv" style="background:${!b ? '#fff' : dark ? '#131218' : thMix(b, '#ffffff', .65)}"><div class="thai" style="background:${b || '#FFF4E0'};color:${dark ? '#DEDAE8' : '#55526A'}">태정은 대꾸 없이 고개만 돌렸다. <span style="${theme.pen ? (dark ? `background:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#fff)` : `background:${p};color:#2B2418`) : ''}">“지금은 바빠.”</span></div><div class="thme" style="${dark ? 'background:#2C2A36;color:#F1EFF6' : ''}">놔, 사람들 봐.</div></div>`;
@@ -9514,7 +9540,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
 
   root.addEventListener('change', async e => {
     if (e.target.dataset?.thm) return; // 테마 › 대사 기호 입력칸은 '추가'를 누를 때 읽어요
-    if (e.target.dataset?.th) return themeSet(e.target.dataset.th, e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value); // 편의 › 테마
+    if (e.target.dataset?.th) return themeSet(e.target.dataset.th, e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value, e.target.type === 'color' ? e.target : null); // 편의 › 테마
     if (e.target.dataset?.mask) return maskInput(e.target); // 편의 › 이름 가리기(이름 추가·다른 색·이모지)
     if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
@@ -10156,16 +10182,17 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     + '#jm-cap-bar{position:fixed;z-index:2147483646;display:flex;align-items:center;gap:2px;background:#fff;color:#221E2E;border:1px solid #E6E1F0;border-radius:18px;padding:5px 5px 5px 6px;font:500 12.5px/1.2 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;letter-spacing:-.2px;box-shadow:0 8px 28px rgba(34,30,46,.08)}'
     + '#jm-cap-bar button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:7px 7px;color:#565068;white-space:nowrap;flex:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}#jm-cap-bar button:hover{background:#F6F4FB}#jm-cap-bar button[aria-pressed="true"]{background:#EFECF7;color:#221E2E;font-weight:700}#jm-cap-bar svg{width:14px;height:14px;flex:none}#jm-cap-bar .n{color:#8C869C;font-size:12px;padding:0 4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}'
     + '#jm-cap-bar .go,#jm-cap-bar .go:hover{background:#221E2E;color:#fff;font-weight:700;padding:7px 12px}#jm-cap-bar .sp{margin-left:auto}#jm-cap-bar .x{padding:7px 4px;color:#C2BCD1}'
-    + '#jm-cap-pv{position:fixed;inset:0;z-index:2147483647;background:rgba(34,30,46,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;font:500 13px/1.4 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;letter-spacing:-.2px}'
-    + '#jm-cap-pv .card{background:#fff;border:1px solid #E6E1F0;border-radius:20px;padding:16px 16px 14px;box-shadow:0 18px 50px rgba(34,30,46,.18);display:flex;flex-direction:column;gap:12px;max-width:100%}'
-    + '#jm-cap-pv .hdr{display:flex;align-items:baseline;gap:8px}#jm-cap-pv .hdr b{font-size:15px;color:#221E2E;font-weight:700}#jm-cap-pv .hdr span{font-size:12px;color:#8C869C}'
-    + '#jm-cap-pv .sc{max-height:66vh;overflow:auto;border-radius:10px;width:fit-content;max-width:100%;margin:0 auto;box-shadow:0 0 0 1px #E6E1F0}#jm-cap-pv img{display:block;width:min(340px,calc(100vw - 64px));height:auto}'
-    + '#jm-cap-pv .bt{display:flex;gap:6px;justify-content:flex-end}#jm-cap-pv button{all:unset;cursor:pointer;padding:9px 16px;border-radius:999px;font:600 13px/1 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;color:#565068;-webkit-tap-highlight-color:transparent}#jm-cap-pv button:hover{background:#F6F4FB}#jm-cap-pv button.k,#jm-cap-pv button.k:hover{background:#221E2E;color:#fff;font-weight:700}'
-    + '#jm-cap-pv .wr{position:relative;width:fit-content;touch-action:pan-y}#jm-cap-pv .dim{position:absolute;left:0;right:0;top:0;background:rgba(246,244,251,.78);pointer-events:none}'
-    + '#jm-cap-pv .hd{position:absolute;left:0;right:0;height:0;touch-action:none;cursor:ns-resize}#jm-cap-pv .hd::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:#7B61D9}'
-    + '#jm-cap-pv .hd span{position:absolute;left:50%;top:-14px;width:44px;height:28px;margin-left:-22px;border-radius:999px;background:#fff;box-shadow:0 0 0 1.5px #7B61D9,0 4px 12px rgba(34,30,46,.15);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1}'
-    + '#jm-cap-pv .hd.t span{top:0}#jm-cap-pv .hd.b span{top:-28px}'
-    + '#jm-cap-pv p{margin:0;color:#8C869C;font-size:12px;text-align:center}';
+    + '#jm-cap-pv{position:fixed;inset:0;z-index:2147483647;background:#F6F4FB;display:flex;flex-direction:column;font:500 14px/1.4 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;letter-spacing:-.2px;color:#221E2E}'
+    + '#jm-cap-pv .card{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;background:#F6F4FB}'
+    + '@media(min-width:900px){#jm-cap-pv{background:rgba(34,30,46,.28);align-items:center;justify-content:center}#jm-cap-pv .card{flex:none;width:min(760px,92vw);height:92vh;border-radius:18px;overflow:hidden}}'
+    + '#jm-cap-pv button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent}'
+    + '#jm-cap-pv .top{background:#fff;display:flex;align-items:center;gap:4px;padding:calc(10px + env(safe-area-inset-top)) 10px 8px 6px}#jm-cap-pv .top .bk{width:36px;height:36px;display:grid;place-items:center;font-size:26px;line-height:1;color:#565068}#jm-cap-pv .top b{flex:1;font-size:16px;font-weight:700}#jm-cap-pv .top .sv{padding:8px 10px;color:#7B61D9;font-weight:700;font-size:15px}'
+    + '#jm-cap-pv nav{background:#fff;display:flex;gap:6px;padding:4px 16px 12px;border-bottom:1px solid #E6E1F0}#jm-cap-pv nav button{padding:7px 15px;border-radius:999px;font-size:14px;font-weight:600;color:#8C869C}#jm-cap-pv nav button[aria-pressed="true"]{background:#ECE7FC;color:#4A3A96;font-weight:800}'
+    + '#jm-cap-pv .sc{flex:1;min-height:0;overflow:auto;padding:16px;display:flex}#jm-cap-pv .fr{margin:auto;background:#fff;border:1px solid #E6E1F0;border-radius:14px;padding:12px}#jm-cap-pv img{display:block;height:auto}'
+    + '#jm-cap-pv .wr{position:relative;width:fit-content;height:fit-content;touch-action:pan-y}#jm-cap-pv .dim{position:absolute;left:0;right:0;top:0;background:rgba(255,255,255,.75);pointer-events:none}'
+    + '#jm-cap-pv .hd{position:absolute;left:0;right:0;height:0;touch-action:none;cursor:ns-resize}#jm-cap-pv .hd::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:#7B61D9}#jm-cap-pv .hd::after{content:"";position:absolute;left:0;right:0;top:-16px;height:32px}'
+    + '#jm-cap-pv .pk{position:absolute;left:0;right:0;background:rgba(255,255,255,.75);cursor:pointer;touch-action:none}#jm-cap-pv .pk.on{background:none}'
+    + '#jm-cap-pv .tp{margin:0;padding:0 16px 14px;color:#8C869C;font-size:12px;text-align:center}';
   document.documentElement.appendChild(capCss);
   const capAll = () => [...document.querySelectorAll(CAP_BUB)].filter(b => b.getBoundingClientRect().height > 0).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); // 화면 위→아래 순서(크랙은 목록을 거꾸로 쌓아요)
   const capIsMe = b => b.matches(TH_ME);
@@ -10182,8 +10209,8 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     const dim = n && !cap.busy ? '' : ' style="opacity:.35;pointer-events:none"';
     const html = `<button type="button" class="x" data-c="x" aria-label="캡처 끄기">${CAP_IC.x}</button><span class="n">${cap.busy ? '만드는 중…' : n > 1 ? '' : n ? '1개' : '말풍선을 눌러 골라요'}</span><span class="sp"></span>`
       + `${n > 1 ? `<span class="seg"><button type="button" data-c="one" aria-pressed="${!cap.sep}">한 장</button><button type="button" data-c="sep" aria-pressed="${cap.sep}">따로</button></span>` : ''}`
-      + `${mask.names.length ? `<button type="button" data-c="mask" aria-pressed="${cap.mask}" title="이름 가리기">🙈 이름</button>` : ''}`
-      + `<button type="button" data-c="crop"${dim}>✂️ 자르기</button><button type="button" class="go" data-c="go"${dim}>${CAP_IC.dl}저장</button>`;
+      + `<button type="button" data-c="mask" aria-pressed="${cap.mask}" title="이름 가리기">🙈 이름</button>`
+      + `<button type="button" data-c="crop"${dim}>✏️ 편집</button><button type="button" class="go" data-c="go"${dim}>${CAP_IC.dl}저장</button>`;
     if (capBar.__h !== html) { capBar.__h = html; capBar.innerHTML = html; }
     if (!capBar.isConnected) document.documentElement.appendChild(capBar);
     capBarPlace();
@@ -10201,7 +10228,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
   capBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); cap.ready = null; if (cap.on) return capOff(); cap.on = true; cap.mask = mask.on && !!mask.names.length; capPaint(); });
   capBar.addEventListener('click', e => { const k = e.target.closest('[data-c]')?.dataset.c; if (!k || cap.busy) return; e.stopPropagation();
     if (k === 'x') return capOff();
-    if (k === 'mask') { cap.mask = !cap.mask; return capPaint(); }
+    if (k === 'mask') { if (!mask.names.length) return toast('가릴 이름이 없어요 · 설정 › 편의 › 이름 가리기에서 넣어 주세요', 'err', 3500); cap.mask = !cap.mask; return capPaint(); }
     if (k === 'one' || k === 'sep') { cap.sep = k === 'sep'; return capPaint(); }
     if (k === 'go') capShot();
     if (k === 'crop') capShot(true);
@@ -10252,7 +10279,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     const B = b.getBoundingClientRect(), cs = getComputedStyle(b), items = [];
     const rel = q => ({ x: q.left - B.left, y: q.top - B.top, w: q.width, h: q.height });
     items.push({ t: 'box', ...rel(B), c: capClear(cs.backgroundColor) ? '#ffffff' : cs.backgroundColor, rad: capRad(cs) });
-    const skip = el => el.closest('.jm-pen-l,.memo-note-hidden,.memo-turn-badge,#memo-note-inline,#jm-cap-btn,button');
+    const skip = el => el.closest('.jm-mask-l,.jm-pen-l,.memo-note-hidden,.memo-turn-badge,#memo-note-inline,#jm-cap-btn,button');
     for (const el of b.querySelectorAll('*')) { if (skip(el)) continue; const q = el.getBoundingClientRect(); if (!q.width || !q.height) continue; const s = getComputedStyle(el);
       if (el.tagName === 'IMG') { items.push({ t: 'img', ...rel(q), src: el.currentSrc || el.src, fit: s.objectFit, rad: capRad(s) }); continue; }
       if (el.tagName === 'HR') { items.push({ t: 'box', ...rel(q), h: Math.max(1, q.height), c: capClear(s.backgroundColor) ? s.borderTopColor : s.backgroundColor, rad: [0, 0, 0, 0] }); continue; }
@@ -10282,7 +10309,12 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
           if (q) items.push({ t: 'ch', ...rel(q), ch, font, c: capIn(pIv, i) ? penTx : s.color }); }
         i += len; } }
     for (const m of masks) for (const q of m.getClientRects()) if (q.width > 0) items.push({ t: 'mask', ...rel(q) });
-    return { w: B.width, h: B.height, x: B.left, me: capIsMe(b), items };
+    // 편집 › 버블 안에서 고르기: 문단(제일 안쪽 글 덩어리) 자리 · 겹치면 하나로
+    const BLK = 'p,li,pre,blockquote,h1,h2,h3,h4,h5,h6,img,table,figure', blocks = [];
+    for (const q of [...b.querySelectorAll(BLK)].filter(el => !skip(el) && !el.querySelector(BLK)).map(el => rel(el.getBoundingClientRect())).filter(q => q.h > 0).sort((a, c) => a.y - c.y)) {
+      const l = blocks[blocks.length - 1]; if (l && q.y < l.y + l.h - 1) l.h = Math.max(l.y + l.h, q.y + q.h) - l.y; else blocks.push({ y: q.y, h: q.h }); }
+    if (!blocks.length) blocks.push({ y: 0, h: B.height });
+    return { w: B.width, h: B.height, x: B.left, me: capIsMe(b), items, blocks };
   }
   function capRR(ctx, x, y, w, h, rad) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, rad.map(v => Math.min(v, w / 2, h / 2))); else ctx.rect(x, y, w, h); }
   function capDraw(ctx, it, ox, oy, imgs) {
@@ -10303,22 +10335,39 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     cap.busy = true; capPaint();
     try {
       const names = cap.mask ? mask.names : [], bubs = list.map(b => capBubble(b, names));
-      const PAD = 14, GAP = 12, minX = Math.min(...bubs.map(b => b.x)), W = Math.ceil(Math.max(...bubs.map(b => b.x - minX + b.w)) + PAD * 2);
-      let yy = PAD; const placed = bubs.map(b => { const p = { ...b, ox: PAD + b.x - minX, oy: yy }; yy += b.h + GAP; return p; }); const H = Math.ceil(yy - GAP + PAD);
-      const srcs = [...new Set(placed.flatMap(b => b.items.filter(i => i.t === 'img').map(i => i.src)))], imgs = new Map();
+      const srcs = [...new Set(bubs.flatMap(b => b.items.filter(i => i.t === 'img').map(i => i.src)))], imgs = new Map();
       await Promise.all(srcs.map(async s => imgs.set(s, await capImg(s))));
-      { const fm = new Map(); for (const b of placed) for (const i of b.items) if (i.t === 'ch') fm.set(i.font, (fm.get(i.font) || '') + i.ch); // 글꼴 조각이 아직 안 받아졌으면 받고 그려요(안 그러면 기본 글꼴로 그려져요)
+      { const fm = new Map(); for (const b of bubs) for (const i of b.items) if (i.t === 'ch') fm.set(i.font, (fm.get(i.font) || '') + i.ch); // 글꼴 조각이 아직 안 받아졌으면 받고 그려요(안 그러면 기본 글꼴로 그려져요)
         await Promise.all([...fm].map(([f, t]) => document.fonts?.load(f, t).catch(() => {}))); }
       const scr = document.querySelector('.bg-bg_screen'), pageBg = scr && !capClear(getComputedStyle(scr).backgroundColor) ? getComputedStyle(scr).backgroundColor : '#ffffff';
-      const S = Math.min(3, Math.max(2, devicePixelRatio || 1)), spans = placed.flatMap(b => b.items.filter(i => i.t !== 'box' || i.h < 400).map(i => [b.oy + i.y, b.oy + i.y + i.h]));
+      const S = Math.min(3, Math.max(2, devicePixelRatio || 1));
       const stamp = (d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`)(new Date());
-      const job = { placed, imgs, W, H, pageBg, S, spans, stamp, sep: cap.sep && placed.length > 1, pad: PAD, lost: srcs.filter(s => !imgs.get(s)).length, top: 0, bot: H };
+      const job = { els: list, mask: cap.mask, bubs, imgs, pageBg, S, stamp, sep: cap.sep && bubs.length > 1, pad: 14, lost: srcs.filter(s => !imgs.get(s)).length };
+      capLay(job);
       const files = await capRender(job);
       capOff();
-      if (cropFirst) return capPreview(job, files, true);
-      if (navigator.userActivation ? navigator.userActivation.isActive : true) return capSave(files);
-      cap.ready = files; capPaint(); // 만드는 사이 누른 순간이 지나가 브라우저가 막아요 → 바에서 '저장' 한 번 더
+      if (cropFirst) return capEdit(job, files);
+      capDone(files);
     } catch (e) { cap.busy = false; capPaint(); logErr('말풍선 캡처', e.message || String(e)); toast('캡처 실패 · ' + (e.message || e), 'err', 4000); }
+  }
+  function capDone(files) { if (navigator.userActivation ? navigator.userActivation.isActive : true) return capSave(files);
+    cap.ready = files; capPaint(); } // 만드는 사이 누른 순간이 지나가 브라우저가 막아요 → 바에서 '저장' 한 번 더
+  function capLay(job, picks) { // 버블을 세로로 놓기 · picks(버블 번호 → 고른 문단 번호들)가 있으면 고른 문단만 남기고 붙여요
+    const bubs = picks ? job.bubs.map((b, i) => capPick(b, picks.get(i))).filter(Boolean) : job.bubs, PAD = job.pad, GAP = 12;
+    const minX = Math.min(...bubs.map(b => b.x)), W = Math.ceil(Math.max(...bubs.map(b => b.x - minX + b.w)) + PAD * 2);
+    let yy = PAD; const placed = bubs.map(b => { const p = { ...b, ox: PAD + b.x - minX, oy: yy }; yy += b.h + GAP; return p; }); const H = Math.ceil(yy - GAP + PAD);
+    const spans = placed.flatMap(b => b.items.filter(i => i.t !== 'box' || i.h < 400).map(i => [b.oy + i.y, b.oy + i.y + i.h]));
+    Object.assign(job, { placed, W, H, spans, top: 0, bot: H, sep: job.sep && placed.length > 1 });
+  }
+  function capPick(b, set) { // 고른 문단만: 빠진 문단 자리(다음 문단 앞까지)를 접어 올려요 · 글자는 빠진 자리에 있으면 빼고, 칠(배경·테두리)은 접힌 만큼 줄여요
+    if (!set || !set.size) return null; const bl = b.blocks, n = bl.length; if (set.size >= n) return b;
+    const cut = []; for (let i = 0; i < n; i++) { if (set.has(i)) continue; cut.push(i < n - 1 ? [bl[i].y, bl[i + 1].y] : [i ? bl[i - 1].y + bl[i - 1].h : bl[i].y, bl[i].y + bl[i].h]); }
+    cut.sort((a, c) => a[0] - c[0]); const rg = []; for (const c of cut) { const l = rg[rg.length - 1]; if (l && c[0] <= l[1]) l[1] = Math.max(l[1], c[1]); else rg.push([...c]); }
+    const map = y => { let d = 0; for (const [a, z] of rg) { if (y >= z) d += z - a; else if (y > a) return a - d; } return y - d; };
+    const gone = y => rg.some(([a, z]) => y >= a && y < z), items = [];
+    for (const it of b.items) { if (it.t === 'box') { const y = map(it.y), h = map(it.y + it.h) - y; if (h > .5) items.push({ ...it, y, h }); continue; }
+      const c = it.y + it.h / 2; if (!gone(c)) items.push({ ...it, y: it.y + (map(c) - c) }); }
+    return { ...b, h: map(b.h), items, blocks: [] };
   }
   async function capRender(job) { // job.top~job.bot(자르기)만 그려요 · 선명하게: 폰 화면 배율 그대로(2~3배) PNG · 아이폰 캔버스 한도(약 1,600만 화소) 넘으면 글줄 사이에서 나눠요
     //   따로(sep): 말풍선마다 한 장 — 자른 범위 안에 든 부분만, 위아래 여백 붙여서
@@ -10347,43 +10396,67 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     for (const f of files) { const a = document.createElement('a'), u = URL.createObjectURL(f); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
     toast(`📸 저장했어요${files.length > 1 ? ` · ${files.length}장` : ''}`, 'ok', 2500);
   }
-  function capPreview(job, files, cropFirst) {
-    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); // 아이폰은 다운로드 대신 공유 창 → '이미지 저장'
-    const pv = document.createElement('div'); pv.id = 'jm-cap-pv'; let urls = [], crop = cropFirst ? { t: 0, b: null, h: 0 } : null, busy = false;
-    const share = () => IOS && !!navigator.canShare?.({ files });
-    const place = () => { const wr = pv.querySelector('.wr'); if (!wr || !crop) return;
+  function capEdit(job, files) { // 편집: 아래에서 올라오는 창 · ① 버블 통째(위아래 자르기) ② 버블 안에서 고르기(문단 골라 이어 붙이기)
+    const pv = document.createElement('div'); pv.id = 'jm-cap-pv'; let urls = [], tab = 'crop', busy = false, note = '';
+    const crop = { t: 0, b: null, h: 0 }, picks = new Map(), base = { placed: job.placed, H: job.H };
+    base.placed.forEach((b, bi) => picks.set(bi, new Set(b.blocks.map((_, i) => i)))); // 처음엔 전부 들어간 채 · 뺄 것만 누르거나 쭉 그어요
+    const nPick = () => [...picks.values()].reduce((a, s) => a + s.size, 0);
+    const place = () => { const wr = pv.querySelector('.wr'); if (!wr || tab !== 'crop') return;
       wr.querySelector('.dim.t').style.height = crop.t + 'px'; const db = wr.querySelector('.dim.b'); db.style.top = crop.b + 'px'; db.style.height = Math.max(0, crop.h - crop.b) + 'px';
       wr.querySelector('.hd.t').style.top = crop.t + 'px'; wr.querySelector('.hd.b').style.top = crop.b + 'px'; };
+    const pickBoxes = k => base.placed.flatMap((b, bi) => b.blocks.map((q, i) => { const nx = b.blocks[i + 1], y = b.oy + q.y, z = b.oy + (nx ? nx.y : q.y + q.h);
+      return `<i class="pk${picks.get(bi)?.has(i) ? ' on' : ''}" data-k="${bi}:${i}" style="top:${(y * k).toFixed(1)}px;height:${((z - y) * k).toFixed(1)}px"></i>`; })).join('');
     const paint = () => { urls.forEach(u => URL.revokeObjectURL(u)); urls = files.map(f => URL.createObjectURL(f));
-      const tip = [files.length > 1 ? files.length + '장으로 나눴어요' : '', job.lost ? `그림 ${job.lost}개는 못 넣었어요` : '', share() ? "저장 → '이미지 저장'" : IOS ? '그림을 꾹 눌러 저장해 주세요' : ''].filter(Boolean).join(' · ');
-      pv.innerHTML = `<div class="card"><div class="hdr"><b>${crop ? '자르기' : '미리보기'}</b><span>${crop ? '손잡이를 끌어 남길 부분만' : tip}</span></div><div class="sc"><div class="wr">${urls.map(u => `<img src="${u}" alt="">`).join('')}${crop ? '<i class="dim t"></i><i class="dim b"></i><b class="hd t" data-h="t"><span>✂️</span></b><b class="hd b" data-h="b"><span>✂️</span></b>' : ''}</div></div>`
-        + `<div class="bt">${crop ? '<button type="button" data-p="cropno">취소</button><button type="button" class="k" data-p="cropok">완료</button>'
-          : `<button type="button" data-p="close">닫기</button><button type="button" data-p="crop">✂️ 다시 자르기</button>${IOS && !share() ? '' : '<button type="button" class="k" data-p="save">저장</button>'}`}</div></div>`;
-      // 자르기 땐 그림 전체가 한눈에 보이게 줄여요(두 손잡이가 다 보이게)
-      if (crop) { const wr = pv.querySelector('.wr'), ims = [...wr.querySelectorAll('img')], fit = () => { if (ims.some(im => !im.naturalWidth)) return;
-          const tot = ims.reduce((a, im) => a + im.naturalHeight / im.naturalWidth, 0), w = Math.max(120, Math.min(340, innerWidth - 64, (innerHeight * .62 - 6) / tot));
-          ims.forEach(im => { im.style.width = w + 'px'; }); crop.h = wr.clientHeight; crop.b = crop.b == null ? crop.h : Math.min(crop.b, crop.h); place(); };
-        wr.querySelectorAll('img').forEach(im => { if (!im.complete) im.addEventListener('load', fit); }); fit(); } };
+      pv.innerHTML = `<div class="card"><div class="top"><button type="button" class="bk" data-p="close" aria-label="뒤로">‹</button><b>캡처 편집</b><button type="button" class="sv" data-p="save">${busy ? '만드는 중…' : '저장'}</button></div>`
+        + `<nav><button type="button" data-p="tcrop" aria-pressed="${tab === 'crop'}">자르기</button><button type="button" data-p="tpick" aria-pressed="${tab === 'pick'}">문단 고르기</button><button type="button" data-p="tmask" aria-pressed="${!!job.mask}">🙈 이름</button></nav>`
+        + `<div class="sc"><div class="fr"><div class="wr">${urls.map(u => `<img src="${u}" alt="">`).join('')}${tab === 'crop' ? '<i class="dim t"></i><i class="dim b"></i><b class="hd t" data-h="t"></b><b class="hd b" data-h="b"></b>' : ''}</div></div></div>`
+        + (note || job.lost ? `<p class="tp">${note || `그림 ${job.lost}개는 못 넣었어요`}</p>` : '') + '</div>';
+      const wr = pv.querySelector('.wr'), ims = [...wr.querySelectorAll('img')];
+      const fit = () => { if (ims.some(im => !im.naturalWidth)) return;
+        if (tab === 'crop') { const tot = ims.reduce((a, im) => a + im.naturalHeight / im.naturalWidth, 0), sc = pv.querySelector('.sc'), w = Math.max(120, Math.min(sc.clientWidth - 58, base.W, (sc.clientHeight - 62) / tot)); // 통째: 창 안에 다 보이게(두 손잡이 다)
+          ims.forEach(im => { im.style.width = w + 'px'; }); crop.h = wr.clientHeight; crop.b = crop.b == null ? crop.h : Math.min(crop.b, crop.h); place(); }
+        else { const sc = pv.querySelector('.sc'), tot = ims.reduce((a, im) => a + im.naturalHeight / im.naturalWidth, 0), w = Math.max(Math.min(260, sc.clientWidth - 58), Math.min(sc.clientWidth - 58, base.W, (sc.clientHeight - 62) / tot)); ims.forEach(im => { im.style.width = w + 'px'; }); wr.insertAdjacentHTML('beforeend', pickBoxes(w / base.W)); } }; // 고르기: 글이 읽히는 크기 그대로(길면 스크롤)
+      ims.forEach(im => { if (!im.complete) im.addEventListener('load', fit); }); fit(); };
+    base.W = job.W;
     // 손잡이 끌기(손가락·마우스 같이) · 두 손잡이 사이는 최소 40px
-    pv.addEventListener('pointerdown', e => { const h = e.target.closest('[data-h]')?.dataset.h; if (!h || !crop) return; e.preventDefault();
+    // 고르기: 누르면 그 문단이 빠지거나 들어가고, 누른 채 쭉 그으면 지나간 문단이 다 같이 바뀌어요
+    const pkSet = (el, v) => { const [bi, i] = el.dataset.k.split(':').map(Number), s = picks.get(bi) || new Set(); v ? s.add(i) : s.delete(i); picks.set(bi, s); el.classList.toggle('on', v); };
+    pv.addEventListener('pointerdown', e => { const pk = tab === 'pick' && e.target.closest('.pk'); if (!pk || busy) return; e.preventDefault();
+      const v = !pk.classList.contains('on'); pkSet(pk, v);
+      const mv = ev => { const o = document.elementFromPoint(ev.clientX, ev.clientY)?.closest?.('.pk'); if (o && pv.contains(o) && o.classList.contains('on') !== v) pkSet(o, v); };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up); });
+    pv.addEventListener('pointerdown', e => { const h = e.target.closest('[data-h]')?.dataset.h; if (!h || tab !== 'crop') return; e.preventDefault();
       const wr = pv.querySelector('.wr'), mv = ev => { const y = ev.clientY - wr.getBoundingClientRect().top;
         if (h === 't') crop.t = Math.max(0, Math.min(y, crop.b - 40)); else crop.b = Math.min(crop.h, Math.max(y, crop.t + 40)); place(); };
       const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
       addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up); });
     const close = () => { pv.remove(); setTimeout(() => urls.forEach(u => URL.revokeObjectURL(u)), 60000); };
-    pv.addEventListener('click', async e => { const k = e.target.closest('[data-p]')?.dataset.p; if (busy) return; if (e.target === pv || k === 'close') return close(); // 바깥 어두운 곳을 눌러도 닫혀요
-      if (k === 'crop') { crop = { t: 0, b: null, h: 0 }; return paint(); }
-      if (k === 'cropno') { if (cropFirst && !job.cut) return close(); crop = null; return paint(); }
-      if (k === 'cropok') { const r = (job.bot - job.top) / (crop.h || 1); let t = job.top + crop.t * r, b = job.top + crop.b * r;
-        for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < t && z > t); if (!hit) break; t = hit[0] - 2; } // 글줄 중간에서 안 잘리게: 위는 그 줄 위로, 아래는 그 줄 아래로
-        for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < b && z > b); if (!hit) break; b = hit[1] + 2; }
-        busy = true; job.cut = 1; job.top = Math.max(0, Math.floor(t)); job.bot = Math.min(job.H, Math.ceil(b)); crop = null;
-        try { files = await capRender(job); } catch (er) { toast('자르기 실패 · ' + (er.message || er), 'err', 3000); }
+    pv.addEventListener('click', async e => { if (busy) return; const pk = e.target.closest('.pk'); const k = e.target.closest('[data-p]')?.dataset.p;
+      if (e.target === pv || k === 'close') return close(); // PC: 바깥 어두운 곳을 눌러도 닫혀요
+      if (pk) return; // 고르기는 pointerdown에서 해요(그어서 여러 개)
+      if (k === 'tcrop' || k === 'tpick') { tab = k === 'tcrop' ? 'crop' : 'pick'; note = ''; return paint(); }
+      if (k === 'tmask') { // 이름 가리기 켜고 끄기: 말풍선을 다시 읽어 다시 그려요
+        if (!mask.names.length) { note = '가릴 이름이 없어요 · 설정 › 편의 › 이름 가리기에서 넣어 주세요'; return paint(); }
+        const els = job.els.filter(el => el.isConnected); if (!els.length) { note = '말풍선이 화면에서 사라져 다시 그릴 수 없어요'; return paint(); }
+        busy = true; note = ''; paint();
+        try { job.mask = !job.mask; job.bubs = els.map(el => capBubble(el, job.mask ? mask.names : [])); capLay(job); files = await capRender(job); Object.assign(base, { placed: job.placed, H: job.H, W: job.W }); }
+        catch (er) { note = '다시 그리기 실패 · ' + (er.message || er); }
         busy = false; return paint(); }
       if (k !== 'save') return;
-      close(); capSave(files); });
-    paint(); document.documentElement.appendChild(pv);
+      if (tab === 'pick' && !nPick()) { note = '남길 문단이 없어요'; return paint(); }
+      busy = true; paint();
+      try {
+        if (tab === 'pick') capLay(job, picks);
+        else { capLay(job); const r = job.H / (crop.h || 1); let t = crop.t * r, b = crop.b * r;
+          for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < t && z > t); if (!hit) break; t = hit[0] - 2; } // 글줄 중간에서 안 잘리게: 위는 그 줄 위로, 아래는 그 줄 아래로
+          for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < b && z > b); if (!hit) break; b = hit[1] + 2; }
+          job.top = Math.max(0, Math.floor(t)); job.bot = Math.min(job.H, Math.ceil(b)); }
+        const out = await capRender(job); close(); capDone(out);
+      } catch (er) { busy = false; note = '저장 실패 · ' + (er.message || er); paint(); } });
+    document.documentElement.appendChild(pv); paint(); // 창이 붙은 뒤 그려야 창 크기에 맞춰요
   }
+
 
   // 방을 옮기면 초기화하고 가볍게 다시 확인
   (async () => {
