@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.7
+// @version      4.7.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2601,7 +2601,9 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     if (!MASK_OK) return; const out = [];
     if (theme.re) for (const box of document.querySelectorAll(TH_AI)) {
       const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT); let txt = '', map = [], blk = null;
-      const flush = () => { theme.re.lastIndex = 0; for (let m; (m = theme.re.exec(txt));) { const a = m.index, z = a + m[0].length, s0 = map.find(x => a < x.at + x.n.length), s1 = map.find(x => z <= x.at + x.n.length);
+      const flush = () => { theme.re.lastIndex = 0; for (let m; (m = theme.re.exec(txt));) { const a = m.index, z = a + m[0].length;
+          if ([...m[0]].length <= 14 && /^\s*[‒–—\-:：|ㅣ]/.test(txt.slice(z))) continue; // ❝ 첫째 아들 ❞ ‒ 처럼 기호 뒤에 줄표·콜론이 오는 짧은 건 말하는 사람 이름표 → 안 칠해요
+          const s0 = map.find(x => a < x.at + x.n.length), s1 = map.find(x => z <= x.at + x.n.length);
           if (s0 && s1) { const r = new Range(); r.setStart(s0.n, a - s0.at); r.setEnd(s1.n, z - s1.at); out.push(r); } } txt = ''; map = []; };
       for (let n; (n = w.nextNode());) { const pe = n.parentElement; if (!pe || pe.closest('pre,code')) continue;
         const b = pe.closest('p,li,blockquote,h1,h2,h3,h4,h5,h6,td') || box; if (b !== blk) { flush(); blk = b; }
@@ -8491,6 +8493,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
         ${row('말풍선 턴 번호', sw('badges'))}
         ${row('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
         ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
+        ${row('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
         ${row('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
@@ -9463,6 +9466,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
     { const m = ui('[data-set="maskOn"]'); if (m && (m.checked ? 'on' : 'off') !== (mask.on ? 'on' : 'off')) { await setValue('maskOn', m.checked ? 'on' : 'off'); await maskLoad(); const o = ui('.mopts'); if (o) o.hidden = !mask.on; } }
     { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
+    { const w = ui('[data-set="capShow"]'); if (w) { await setValue('capShow', w.checked ? 'on' : 'off'); capShow = w.checked; if (!capShow) { if (cap.on) capOff(); capBtn.remove(); } else placeCapBtn(); } }
     for (const k of ['gsUrl', 'gsKey', 'firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
     turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
@@ -9488,6 +9492,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
     const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
     const mo = ui('[data-set="maskOn"]'); if (mo) mo.checked = mask.on;
+    const cs = ui('[data-set="capShow"]'); if (cs && !cs.dataset.filled) { cs.checked = capShow; cs.dataset.filled = '1'; }
     const hh = ui('[data-set="hideHead"]'); if (hh && !hh.dataset.filled) { hh.checked = String(await getValue('hideHead', 'on')) !== 'off'; hh.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el && !el.dataset.filled) { el.checked = String(await getValue(key, 'on')) !== 'off'; el.dataset.filled = '1'; } }
@@ -10129,6 +10134,250 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     placeTimer = setTimeout(() => { placeTimer = null; placeInlineButton(); }, inlineBtn.isConnected ? 400 : 200);
   }).observe(document.documentElement, { childList: true, subtree: true });
 
+  // ══════════════════════════════════════════════════════════════
+  // 14-1. 말풍선 캡처: 입력창 왼쪽 버튼 줄(✳ / ☰ 옆) 📸 → 켜면 말풍선을 눌러 고르고 💾 저장 · 다시 누르면 꺼짐
+  //   화면을 찍지 않고, 브라우저가 이미 줄을 나눠 놓은 글자 자리(Range)를 읽어 캔버스에 글자마다 다시 그려요
+  //   → 화면 밖까지 긴 말풍선도 통째로 · 이름 가리기·형광펜·테마 색 그대로 · 아이폰은 공유 창(이미지 저장) · 갤럭시·PC는 바로 다운로드
+  // ══════════════════════════════════════════════════════════════
+  const CAP_BUB = TH_AI + ',' + TH_ME;
+  let capShow = true; getValue('capShow', 'on').then(v => { capShow = String(v) !== 'off'; placeCapBtn(); });
+  const cap = { on: false, sel: new Set(), mask: false, busy: false, ready: null, sep: false }; // sep: 여러 개 고르면 '따로'(말풍선마다 한 장) · 아니면 세로로 한 장 // ready: 다 만들었는데 브라우저가 막아 한 번 더 눌러야 할 때의 파일들
+  const capBtn = document.createElement('button'); capBtn.type = 'button'; capBtn.id = 'jm-cap-btn'; capBtn.setAttribute('aria-label', '말풍선 캡처'); capBtn.title = '말풍선 캡처';
+  capBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="4.5"/><path d="M8.5 7l1.2-2.2h4.6L15.5 7"/><path d="M12 16.6s-3-1.8-3-3.7c0-.9.7-1.6 1.5-1.6.6 0 1.1.3 1.5.9.4-.6.9-.9 1.5-.9.8 0 1.5.7 1.5 1.6 0 1.9-3 3.7-3 3.7z" fill="currentColor" stroke-width="1.2"/><circle cx="17.6" cy="10.2" r=".7" fill="currentColor" stroke="none"/></svg>'; // 말랑한 카메라 · 렌즈 자리에 하트
+  const capBar = document.createElement('div'); capBar.id = 'jm-cap-bar';
+  const capSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`; // 바 아이콘: 크랙 버튼처럼 가는 선
+  const CAP_IC = { eye: capSvg('<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4.5 19.5l15-15"/>'), cut: capSvg('<circle cx="6.5" cy="17" r="2.8"/><circle cx="17.5" cy="17" r="2.8"/><path d="M8.6 15.2L18 4M15.4 15.2L6 4"/>'),
+    dl: capSvg('<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>'), x: capSvg('<path d="M6 6l12 12M18 6L6 18"/>') };
+  const capCss = document.createElement('style');
+  capCss.textContent = '#jm-cap-btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;flex:none;-webkit-tap-highlight-color:transparent}'
+    + '#jm-cap-btn.on{background:#9B87E8!important;border-color:#9B87E8!important;color:#fff!important}'
+    + 'html.jm-cap .jm-cap-b{cursor:pointer;opacity:.45;transition:opacity .15s}html.jm-cap .jm-cap-b.jm-cap-sel{opacity:1;outline:1.5px solid #9B87E8;outline-offset:3px}'
+    + 'html.jm-cap .jm-cap-sel[data-jmn]{position:relative;overflow:visible!important}html.jm-cap .jm-cap-sel[data-jmn]::after{content:attr(data-jmn);position:absolute;left:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:#221E2E;color:#fff;font:700 10px/16px "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;text-align:center;z-index:5;box-shadow:0 0 0 2px #fff;pointer-events:none}' // 2개 이상 고르면 순서 번호(검정 동그라미)
+    + '#jm-cap-bar .seg{flex:none;display:inline-flex;background:#EFECF7;border-radius:999px;padding:2px;margin-right:2px}#jm-cap-bar .seg button{padding:5px 7px}#jm-cap-bar .seg button[aria-pressed="true"]{background:#fff;color:#221E2E;font-weight:700;box-shadow:0 1px 3px rgba(34,30,46,.12)}'
+    + '#jm-cap-bar{position:fixed;z-index:2147483646;display:flex;align-items:center;gap:2px;background:#fff;color:#221E2E;border:1px solid #E6E1F0;border-radius:18px;padding:5px 5px 5px 6px;font:500 12.5px/1.2 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;letter-spacing:-.2px;box-shadow:0 8px 28px rgba(34,30,46,.08)}'
+    + '#jm-cap-bar button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:7px 7px;color:#565068;white-space:nowrap;flex:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}#jm-cap-bar button:hover{background:#F6F4FB}#jm-cap-bar button[aria-pressed="true"]{background:#EFECF7;color:#221E2E;font-weight:700}#jm-cap-bar svg{width:14px;height:14px;flex:none}#jm-cap-bar .n{color:#8C869C;font-size:12px;padding:0 4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}'
+    + '#jm-cap-bar .go,#jm-cap-bar .go:hover{background:#221E2E;color:#fff;font-weight:700;padding:7px 12px}#jm-cap-bar .sp{margin-left:auto}#jm-cap-bar .x{padding:7px 4px;color:#C2BCD1}'
+    + '#jm-cap-pv{position:fixed;inset:0;z-index:2147483647;background:rgba(34,30,46,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;font:500 13px/1.4 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;letter-spacing:-.2px}'
+    + '#jm-cap-pv .card{background:#fff;border:1px solid #E6E1F0;border-radius:20px;padding:16px 16px 14px;box-shadow:0 18px 50px rgba(34,30,46,.18);display:flex;flex-direction:column;gap:12px;max-width:100%}'
+    + '#jm-cap-pv .hdr{display:flex;align-items:baseline;gap:8px}#jm-cap-pv .hdr b{font-size:15px;color:#221E2E;font-weight:700}#jm-cap-pv .hdr span{font-size:12px;color:#8C869C}'
+    + '#jm-cap-pv .sc{max-height:66vh;overflow:auto;border-radius:10px;width:fit-content;max-width:100%;margin:0 auto;box-shadow:0 0 0 1px #E6E1F0}#jm-cap-pv img{display:block;width:min(340px,calc(100vw - 64px));height:auto}'
+    + '#jm-cap-pv .bt{display:flex;gap:6px;justify-content:flex-end}#jm-cap-pv button{all:unset;cursor:pointer;padding:9px 16px;border-radius:999px;font:600 13px/1 "Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;color:#565068;-webkit-tap-highlight-color:transparent}#jm-cap-pv button:hover{background:#F6F4FB}#jm-cap-pv button.k,#jm-cap-pv button.k:hover{background:#221E2E;color:#fff;font-weight:700}'
+    + '#jm-cap-pv .wr{position:relative;width:fit-content;touch-action:pan-y}#jm-cap-pv .dim{position:absolute;left:0;right:0;top:0;background:rgba(246,244,251,.78);pointer-events:none}'
+    + '#jm-cap-pv .hd{position:absolute;left:0;right:0;height:0;touch-action:none;cursor:ns-resize}#jm-cap-pv .hd::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:#7B61D9}'
+    + '#jm-cap-pv .hd span{position:absolute;left:50%;top:-14px;width:44px;height:28px;margin-left:-22px;border-radius:999px;background:#fff;box-shadow:0 0 0 1.5px #7B61D9,0 4px 12px rgba(34,30,46,.15);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1}'
+    + '#jm-cap-pv .hd.t span{top:0}#jm-cap-pv .hd.b span{top:-28px}'
+    + '#jm-cap-pv p{margin:0;color:#8C869C;font-size:12px;text-align:center}';
+  document.documentElement.appendChild(capCss);
+  const capAll = () => [...document.querySelectorAll(CAP_BUB)].filter(b => b.getBoundingClientRect().height > 0).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); // 화면 위→아래 순서(크랙은 목록을 거꾸로 쌓아요)
+  const capIsMe = b => b.matches(TH_ME);
+  const capList = () => capAll().filter(b => cap.sel.has(b));
+  function capPaint() { // 고른 말풍선 표시 + 아래 바
+    document.querySelectorAll('.jm-cap-b').forEach(b => { if (!cap.on) { b.classList.remove('jm-cap-b', 'jm-cap-sel'); delete b.dataset.jmn; } });
+    for (const b of cap.sel) if (!b.isConnected) cap.sel.delete(b);
+    if (cap.ready) { capBar.__h = ''; capBar.innerHTML = `<button type="button" class="x" data-c="rx" aria-label="닫기">${CAP_IC.x}</button><span class="n">이미지가 준비됐어요</span><span class="sp"></span><button type="button" class="go" data-c="rsave">${CAP_IC.dl}저장</button>`; if (!capBar.isConnected) document.documentElement.appendChild(capBar); capBarPlace(); }
+    if (!cap.on) { if (!cap.ready) capBar.remove(); capBtn.classList.remove('on'); document.documentElement.classList.remove('jm-cap'); return; }
+    capBtn.classList.add('on'); document.documentElement.classList.add('jm-cap');
+    const order = capList();
+    for (const b of capAll()) { b.classList.add('jm-cap-b'); b.classList.toggle('jm-cap-sel', cap.sel.has(b)); const i = order.indexOf(b), v = order.length > 1 && i >= 0 ? String(i + 1) : ''; if ((b.dataset.jmn || '') !== v) { if (v) b.dataset.jmn = v; else delete b.dataset.jmn; } }
+    const n = order.length;
+    const dim = n && !cap.busy ? '' : ' style="opacity:.35;pointer-events:none"';
+    const html = `<button type="button" class="x" data-c="x" aria-label="캡처 끄기">${CAP_IC.x}</button><span class="n">${cap.busy ? '만드는 중…' : n > 1 ? '' : n ? '1개' : '말풍선을 눌러 골라요'}</span><span class="sp"></span>`
+      + `${n > 1 ? `<span class="seg"><button type="button" data-c="one" aria-pressed="${!cap.sep}">한 장</button><button type="button" data-c="sep" aria-pressed="${cap.sep}">따로</button></span>` : ''}`
+      + `${mask.names.length ? `<button type="button" data-c="mask" aria-pressed="${cap.mask}" title="이름 가리기">🙈 이름</button>` : ''}`
+      + `<button type="button" data-c="crop"${dim}>✂️ 자르기</button><button type="button" class="go" data-c="go"${dim}>${CAP_IC.dl}저장</button>`;
+    if (capBar.__h !== html) { capBar.__h = html; capBar.innerHTML = html; }
+    if (!capBar.isConnected) document.documentElement.appendChild(capBar);
+    capBarPlace();
+  }
+  function capBarPlace() { // 입력창 바로 위
+    if (!capBar.isConnected) return;
+    let box = capBtn.isConnected ? capBtn.parentElement : null;
+    while (box && box.parentElement && !box.querySelector('textarea,[contenteditable="true"],[role="textbox"]')) box = box.parentElement;
+    const r = box?.getBoundingClientRect();
+    if (r && r.width) { capBar.style.left = Math.max(8, r.left) + 'px'; capBar.style.right = Math.max(8, innerWidth - r.right) + 'px'; capBar.style.bottom = (innerHeight - r.top + 8) + 'px'; }
+    else { capBar.style.left = capBar.style.right = '8px'; capBar.style.bottom = '96px'; }
+  }
+  addEventListener('resize', () => cap.on && capBarPlace());
+  function capOff() { cap.on = false; cap.sel.clear(); cap.busy = false; capPaint(); }
+  capBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); cap.ready = null; if (cap.on) return capOff(); cap.on = true; cap.mask = mask.on && !!mask.names.length; capPaint(); });
+  capBar.addEventListener('click', e => { const k = e.target.closest('[data-c]')?.dataset.c; if (!k || cap.busy) return; e.stopPropagation();
+    if (k === 'x') return capOff();
+    if (k === 'mask') { cap.mask = !cap.mask; return capPaint(); }
+    if (k === 'one' || k === 'sep') { cap.sep = k === 'sep'; return capPaint(); }
+    if (k === 'go') capShot();
+    if (k === 'crop') capShot(true);
+    if (k === 'rsave') { const f = cap.ready; cap.ready = null; capPaint(); capSave(f); }
+    if (k === 'rx') { cap.ready = null; capPaint(); } });
+  // 켜져 있을 때 말풍선 누르기: 누른 것만 들어가요 · 다시 누르면 빠져요
+  addEventListener('click', e => {
+    if (!cap.on || cap.busy) return; const b = e.target.closest?.(CAP_BUB); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    if (cap.sel.has(b)) cap.sel.delete(b); else cap.sel.add(b);
+    capPaint();
+  }, true);
+  function placeCapBtn() { // ✳ / ☰ 같은 왼쪽 버튼들 바로 뒤 · 모양(크기·테두리·색)은 옆 버튼을 따라요
+    if (!chatIdFromPath() || !capShow) { capBtn.remove(); if (cap.on) capOff(); return; } // 설정 › 편의 › 말풍선 캡처 버튼을 끄면 안 붙여요
+    if (capBtn.isConnected) return; // 이미 붙어 있으면 안 옮겨요(다른 확프와 자리 뺏기 안 하게)
+    const send = findSendSpot(); if (!send) return;
+    const sr = send.getBoundingClientRect(), sy = (sr.top + sr.bottom) / 2;
+    for (let row = send.parentElement, i = 0; row && i < 5; row = row.parentElement, i++) {
+      const left = [...row.querySelectorAll('button')].filter(b => b !== inlineBtn && b.offsetParent !== null && !send.contains(b) && !host.contains(b))
+        .filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.width < 60 && Math.abs((r.top + r.bottom) / 2 - sy) < 14 && r.right < sr.left - 60; })
+        .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+      if (!left.length) continue;
+      const last = left[left.length - 1], r = last.getBoundingClientRect(), cs = getComputedStyle(last);
+      let at = last; while (at.parentElement && at.parentElement !== row && at.parentElement.querySelectorAll('button').length === 1) at = at.parentElement; // 버튼 하나만 감싼 상자면 그 상자 뒤에
+      const pg = parseFloat(getComputedStyle(at.parentElement).columnGap) || 0, prev = left[left.length - 2], gap = prev ? Math.max(0, r.left - prev.getBoundingClientRect().right) : 6;
+      capBtn.style.cssText = `width:${r.width}px;height:${r.height}px;border:${cs.borderTopWidth} solid ${cs.borderTopColor};color:${cs.color};margin-left:${pg ? 0 : gap}px`;
+      at.after(capBtn); return;
+    }
+  }
+  { const ours = n => n === capBar || n === capBtn || n.id === 'jm-cap-pv' || capBar.contains(n); // 바를 다시 그린 것도 '화면 변화'로 잡혀 0.3초마다 또 그리는 고리가 생겨, 누르는 사이 버튼이 바뀌어 클릭이 사라졌어요
+    let t = 0; new MutationObserver(ms => { if (ms.every(m => ours(m.target) || [...m.addedNodes, ...m.removedNodes].every(ours))) return;
+      if ((!capBtn.isConnected || cap.on) && !t) t = setTimeout(() => { t = 0; placeCapBtn(); if (cap.on) capPaint(); }, 300); }).observe(document.documentElement, { childList: true, subtree: true }); }
+  setTimeout(placeCapBtn, 1500);
+
+  // ── 그리기 ──
+  const capClear = c => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c);
+  const capRad = cs => ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius'].map(k => parseFloat(cs[k]) || 0);
+  function capIntervals(n, ranges) { // 이 글 조각 안에서 range가 덮는 [시작, 끝]
+    const out = []; for (const r of ranges) { try { if (!r.intersectsNode(n)) continue; } catch (_) { continue; }
+      const a = n === r.startContainer ? r.startOffset : 0, z = n === r.endContainer ? r.endOffset : n.length; if (z > a) out.push([a, z]); }
+    return out; }
+  const capIn = (iv, i) => iv.some(([a, z]) => i >= a && i < z);
+  async function capImg(src) { // 말풍선 안 그림: 막히면(다른 사이트 그림) 빼요
+    try { const res = await fetch(src, { mode: 'cors', credentials: 'omit' }); if (!res.ok) throw 0; return await createImageBitmap(await res.blob()); } catch (_) {}
+    return new Promise(ok => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src + (src.includes('?') ? '&' : '?') + 'jmcap=1'; setTimeout(() => ok(null), 8000); });
+  }
+  function capBubble(b, names) { // 말풍선 하나 → 그릴 것 목록(말풍선 기준 좌표)
+    const B = b.getBoundingClientRect(), cs = getComputedStyle(b), items = [];
+    const rel = q => ({ x: q.left - B.left, y: q.top - B.top, w: q.width, h: q.height });
+    items.push({ t: 'box', ...rel(B), c: capClear(cs.backgroundColor) ? '#ffffff' : cs.backgroundColor, rad: capRad(cs) });
+    const skip = el => el.closest('.jm-pen-l,.memo-note-hidden,.memo-turn-badge,#memo-note-inline,#jm-cap-btn,button');
+    for (const el of b.querySelectorAll('*')) { if (skip(el)) continue; const q = el.getBoundingClientRect(); if (!q.width || !q.height) continue; const s = getComputedStyle(el);
+      if (el.tagName === 'IMG') { items.push({ t: 'img', ...rel(q), src: el.currentSrc || el.src, fit: s.objectFit, rad: capRad(s) }); continue; }
+      if (el.tagName === 'HR') { items.push({ t: 'box', ...rel(q), h: Math.max(1, q.height), c: capClear(s.backgroundColor) ? s.borderTopColor : s.backgroundColor, rad: [0, 0, 0, 0] }); continue; }
+      if (!capClear(s.backgroundColor)) items.push({ t: 'box', ...rel(q), c: s.backgroundColor, rad: capRad(s) }); }
+    const pens = (PEN_OV ? theme.ranges || [] : [...(CSS.highlights?.get('jm-pen') || [])]).filter(r => b.contains(r.startContainer));
+    const dark = theme.on && theme.bub && thDark(theme.bub), pc = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
+    const bg = (cs.backgroundColor.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number), bgHex = '#' + bg.map(x => x.toString(16).padStart(2, '0')).join('');
+    const penBg = dark ? thMix(bgHex, pc, .3) : pc, penTx = dark ? thMix('#ffffff', pc, .55) : '#2B2418';
+    for (const r of pens) for (const q of r.getClientRects()) if (q.width >= 2) items.push({ t: 'box', ...rel(q), c: penBg, rad: [2, 2, 2, 2] });
+    const masks = [];
+    if (names.length) { const re = new RegExp(names.map(reEsc).join('|'), 'gi'), w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+      for (let n; (n = w.nextNode());) { if (!n.parentElement || skip(n.parentElement)) continue; re.lastIndex = 0;
+        for (let m; (m = re.exec(n.data));) { const r = new Range(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); masks.push(r); } } }
+    const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), r = new Range();
+    for (let n; (n = w.nextNode());) { const pe = n.parentElement; if (!pe || skip(pe) || !n.data.trim()) continue; const s = getComputedStyle(pe); if (s.visibility === 'hidden' || +s.opacity === 0) continue;
+      const font = `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`, pIv = capIntervals(n, pens), mIv = capIntervals(n, masks);
+      for (let i = 0; i < n.data.length;) { const cp = n.data.codePointAt(i), len = cp > 0xffff ? 2 : 1, ch = n.data.slice(i, i + len);
+        if (ch.trim() && !capIn(mIv, i)) { r.setStart(n, i); r.setEnd(n, i + len); const qs = [...r.getClientRects()].filter(q => q.width > 0), q = qs[qs.length - 1];
+          if (q) items.push({ t: 'ch', ...rel(q), ch, font, c: capIn(pIv, i) ? penTx : s.color }); }
+        i += len; } }
+    for (const m of masks) for (const q of m.getClientRects()) if (q.width > 0) items.push({ t: 'mask', ...rel(q) });
+    return { w: B.width, h: B.height, x: B.left, me: capIsMe(b), items };
+  }
+  function capRR(ctx, x, y, w, h, rad) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, rad.map(v => Math.min(v, w / 2, h / 2))); else ctx.rect(x, y, w, h); }
+  function capDraw(ctx, it, ox, oy, imgs) {
+    const x = ox + it.x, y = oy + it.y;
+    if (it.t === 'box') { ctx.fillStyle = it.c; capRR(ctx, x, y, it.w, it.h, it.rad); ctx.fill(); return; }
+    if (it.t === 'img') { const im = imgs.get(it.src); if (!im) return; ctx.save(); capRR(ctx, x, y, it.w, it.h, it.rad); ctx.clip();
+      const iw = im.width, ih = im.height, k = it.fit === 'cover' ? Math.max(it.w / iw, it.h / ih) : it.fit === 'contain' ? Math.min(it.w / iw, it.h / ih) : 0;
+      if (k) ctx.drawImage(im, x + (it.w - iw * k) / 2, y + (it.h - ih * k) / 2, iw * k, ih * k); else ctx.drawImage(im, x, y, it.w, it.h); ctx.restore(); return; }
+    if (it.t === 'ch') { ctx.font = it.font; ctx.fillStyle = it.c; const m = ctx.measureText(it.ch), a = m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent ?? it.h * .8, d = m.fontBoundingBoxDescent ?? it.h * .2;
+      ctx.fillText(it.ch, x, y + (it.h - (a + d)) / 2 + a); return; }
+    if (it.t === 'mask') { const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
+      if (mask.mode === 'emoji') { ctx.font = `${Math.round(it.h * .8)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(mask.emoji, x + it.w / 2, y + it.h / 2); ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'; return; }
+      if (mask.mode === 'blur') { ctx.save(); ctx.shadowColor = 'rgba(40,36,60,.75)'; ctx.shadowBlur = it.h * .45; ctx.shadowOffsetX = 10000; ctx.fillStyle = '#000'; capRR(ctx, x - 10000 + 1, y + it.h * .2, it.w - 2, it.h * .6, [3, 3, 3, 3]); ctx.fill(); ctx.restore(); return; } // 사파리는 캔버스 흐림(filter)이 없어서 그림자로 번지게
+      ctx.fillStyle = c; capRR(ctx, x, y, it.w, it.h, [2, 2, 2, 2]); ctx.fill(); }
+  }
+  async function capShot(cropFirst) { // 저장: 누른 그 순간이 아직 살아 있으면 창 없이 바로 저장 · 자르기: 자르는 화면부터
+    const list = capList(); if (!list.length) return toast('찍을 말풍선을 먼저 눌러 골라요', 'err', 2500);
+    cap.busy = true; capPaint();
+    try {
+      const names = cap.mask ? mask.names : [], bubs = list.map(b => capBubble(b, names));
+      const PAD = 14, GAP = 12, minX = Math.min(...bubs.map(b => b.x)), W = Math.ceil(Math.max(...bubs.map(b => b.x - minX + b.w)) + PAD * 2);
+      let yy = PAD; const placed = bubs.map(b => { const p = { ...b, ox: PAD + b.x - minX, oy: yy }; yy += b.h + GAP; return p; }); const H = Math.ceil(yy - GAP + PAD);
+      const srcs = [...new Set(placed.flatMap(b => b.items.filter(i => i.t === 'img').map(i => i.src)))], imgs = new Map();
+      await Promise.all(srcs.map(async s => imgs.set(s, await capImg(s))));
+      { const fm = new Map(); for (const b of placed) for (const i of b.items) if (i.t === 'ch') fm.set(i.font, (fm.get(i.font) || '') + i.ch); // 글꼴 조각이 아직 안 받아졌으면 받고 그려요(안 그러면 기본 글꼴로 그려져요)
+        await Promise.all([...fm].map(([f, t]) => document.fonts?.load(f, t).catch(() => {}))); }
+      const scr = document.querySelector('.bg-bg_screen'), pageBg = scr && !capClear(getComputedStyle(scr).backgroundColor) ? getComputedStyle(scr).backgroundColor : '#ffffff';
+      const S = Math.min(3, Math.max(2, devicePixelRatio || 1)), spans = placed.flatMap(b => b.items.filter(i => i.t !== 'box' || i.h < 400).map(i => [b.oy + i.y, b.oy + i.y + i.h]));
+      const stamp = (d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`)(new Date());
+      const job = { placed, imgs, W, H, pageBg, S, spans, stamp, sep: cap.sep && placed.length > 1, pad: PAD, lost: srcs.filter(s => !imgs.get(s)).length, top: 0, bot: H };
+      const files = await capRender(job);
+      capOff();
+      if (cropFirst) return capPreview(job, files, true);
+      if (navigator.userActivation ? navigator.userActivation.isActive : true) return capSave(files);
+      cap.ready = files; capPaint(); // 만드는 사이 누른 순간이 지나가 브라우저가 막아요 → 바에서 '저장' 한 번 더
+    } catch (e) { cap.busy = false; capPaint(); logErr('말풍선 캡처', e.message || String(e)); toast('캡처 실패 · ' + (e.message || e), 'err', 4000); }
+  }
+  async function capRender(job) { // job.top~job.bot(자르기)만 그려요 · 선명하게: 폰 화면 배율 그대로(2~3배) PNG · 아이폰 캔버스 한도(약 1,600만 화소) 넘으면 글줄 사이에서 나눠요
+    //   따로(sep): 말풍선마다 한 장 — 자른 범위 안에 든 부분만, 위아래 여백 붙여서
+    const { placed, imgs, W, pageBg, S, spans, top, bot } = job, P = job.pad || 14, maxH = Math.min(Math.floor(16000 / S), Math.floor(15e6 / (W * S * S)));
+    const segs = job.sep ? placed.map(b => ({ a: Math.max(top, b.oy), z: Math.min(bot, b.oy + b.h), bs: [b], clip: 1 })).filter(g => g.z - g.a > 4) : [{ a: top, z: bot, bs: placed }];
+    const cvs = [];
+    for (const g of segs) {
+      const A = g.clip ? g.a - P : g.a, Z = g.clip ? g.z + P : g.z;
+      const cuts = [A]; while (Z - cuts[cuts.length - 1] > maxH) { const y0 = cuts[cuts.length - 1]; let c = y0 + maxH;
+        for (let k = 0; k < 50; k++) { const hit = spans.find(([x, y]) => x < c && y > c); if (!hit || hit[0] <= y0 + 200) break; c = hit[0] - 2; } cuts.push(c); }
+      cuts.push(Z);
+      for (let p = 0; p < cuts.length - 1; p++) { const y0 = cuts[p], h = Math.ceil(cuts[p + 1] - y0), cv = document.createElement('canvas'); cv.width = W * S; cv.height = h * S;
+        const ctx = cv.getContext('2d'); ctx.scale(S, S); ctx.fillStyle = pageBg; ctx.fillRect(0, 0, W, h); ctx.translate(0, -y0);
+        if (g.clip) { ctx.save(); ctx.beginPath(); ctx.rect(0, g.a, W, g.z - g.a); ctx.clip(); }
+        for (const b of g.bs) { if (b.oy > y0 + h || b.oy + b.h < y0) continue; for (const it of b.items) capDraw(ctx, it, b.ox, b.oy, imgs); }
+        if (g.clip) ctx.restore();
+        cvs.push(cv); } }
+    const files = [];
+    for (let i = 0; i < cvs.length; i++) { const blob = await new Promise(ok => cvs[i].toBlob(ok, 'image/png')); if (!blob) throw new Error('이미지가 너무 커요');
+      files.push(new File([blob], `조아메모리-캡처-${job.stamp}${cvs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })); }
+    return files;
+  }
+  const capIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  async function capSave(files) { // 아이폰: 공유 창 → '이미지 저장' · 갤럭시·PC: 바로 다운로드
+    if (capIOS() && navigator.canShare?.({ files })) { try { await navigator.share({ files }); } catch (er) { if (er?.name === 'AbortError') return; cap.ready = files; capPaint(); toast('한 번 더 눌러 주세요', 'info', 2500); } return; }
+    for (const f of files) { const a = document.createElement('a'), u = URL.createObjectURL(f); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+    toast(`📸 저장했어요${files.length > 1 ? ` · ${files.length}장` : ''}`, 'ok', 2500);
+  }
+  function capPreview(job, files, cropFirst) {
+    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); // 아이폰은 다운로드 대신 공유 창 → '이미지 저장'
+    const pv = document.createElement('div'); pv.id = 'jm-cap-pv'; let urls = [], crop = cropFirst ? { t: 0, b: null, h: 0 } : null, busy = false;
+    const share = () => IOS && !!navigator.canShare?.({ files });
+    const place = () => { const wr = pv.querySelector('.wr'); if (!wr || !crop) return;
+      wr.querySelector('.dim.t').style.height = crop.t + 'px'; const db = wr.querySelector('.dim.b'); db.style.top = crop.b + 'px'; db.style.height = Math.max(0, crop.h - crop.b) + 'px';
+      wr.querySelector('.hd.t').style.top = crop.t + 'px'; wr.querySelector('.hd.b').style.top = crop.b + 'px'; };
+    const paint = () => { urls.forEach(u => URL.revokeObjectURL(u)); urls = files.map(f => URL.createObjectURL(f));
+      const tip = [files.length > 1 ? files.length + '장으로 나눴어요' : '', job.lost ? `그림 ${job.lost}개는 못 넣었어요` : '', share() ? "저장 → '이미지 저장'" : IOS ? '그림을 꾹 눌러 저장해 주세요' : ''].filter(Boolean).join(' · ');
+      pv.innerHTML = `<div class="card"><div class="hdr"><b>${crop ? '자르기' : '미리보기'}</b><span>${crop ? '손잡이를 끌어 남길 부분만' : tip}</span></div><div class="sc"><div class="wr">${urls.map(u => `<img src="${u}" alt="">`).join('')}${crop ? '<i class="dim t"></i><i class="dim b"></i><b class="hd t" data-h="t"><span>✂️</span></b><b class="hd b" data-h="b"><span>✂️</span></b>' : ''}</div></div>`
+        + `<div class="bt">${crop ? '<button type="button" data-p="cropno">취소</button><button type="button" class="k" data-p="cropok">완료</button>'
+          : `<button type="button" data-p="close">닫기</button><button type="button" data-p="crop">✂️ 다시 자르기</button>${IOS && !share() ? '' : '<button type="button" class="k" data-p="save">저장</button>'}`}</div></div>`;
+      // 자르기 땐 그림 전체가 한눈에 보이게 줄여요(두 손잡이가 다 보이게)
+      if (crop) { const wr = pv.querySelector('.wr'), ims = [...wr.querySelectorAll('img')], fit = () => { if (ims.some(im => !im.naturalWidth)) return;
+          const tot = ims.reduce((a, im) => a + im.naturalHeight / im.naturalWidth, 0), w = Math.max(120, Math.min(340, innerWidth - 64, (innerHeight * .62 - 6) / tot));
+          ims.forEach(im => { im.style.width = w + 'px'; }); crop.h = wr.clientHeight; crop.b = crop.b == null ? crop.h : Math.min(crop.b, crop.h); place(); };
+        wr.querySelectorAll('img').forEach(im => { if (!im.complete) im.addEventListener('load', fit); }); fit(); } };
+    // 손잡이 끌기(손가락·마우스 같이) · 두 손잡이 사이는 최소 40px
+    pv.addEventListener('pointerdown', e => { const h = e.target.closest('[data-h]')?.dataset.h; if (!h || !crop) return; e.preventDefault();
+      const wr = pv.querySelector('.wr'), mv = ev => { const y = ev.clientY - wr.getBoundingClientRect().top;
+        if (h === 't') crop.t = Math.max(0, Math.min(y, crop.b - 40)); else crop.b = Math.min(crop.h, Math.max(y, crop.t + 40)); place(); };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up); });
+    const close = () => { pv.remove(); setTimeout(() => urls.forEach(u => URL.revokeObjectURL(u)), 60000); };
+    pv.addEventListener('click', async e => { const k = e.target.closest('[data-p]')?.dataset.p; if (busy) return; if (e.target === pv || k === 'close') return close(); // 바깥 어두운 곳을 눌러도 닫혀요
+      if (k === 'crop') { crop = { t: 0, b: null, h: 0 }; return paint(); }
+      if (k === 'cropno') { if (cropFirst && !job.cut) return close(); crop = null; return paint(); }
+      if (k === 'cropok') { const r = (job.bot - job.top) / (crop.h || 1); let t = job.top + crop.t * r, b = job.top + crop.b * r;
+        for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < t && z > t); if (!hit) break; t = hit[0] - 2; } // 글줄 중간에서 안 잘리게: 위는 그 줄 위로, 아래는 그 줄 아래로
+        for (let i = 0; i < 50; i++) { const hit = job.spans.find(([a, z]) => a < b && z > b); if (!hit) break; b = hit[1] + 2; }
+        busy = true; job.cut = 1; job.top = Math.max(0, Math.floor(t)); job.bot = Math.min(job.H, Math.ceil(b)); crop = null;
+        try { files = await capRender(job); } catch (er) { toast('자르기 실패 · ' + (er.message || er), 'err', 3000); }
+        busy = false; return paint(); }
+      if (k !== 'save') return;
+      close(); capSave(files); });
+    paint(); document.documentElement.appendChild(pv);
+  }
+
   // 방을 옮기면 초기화하고 가볍게 다시 확인
   (async () => {
     sceneOn = false; // 웹 모드는 방에 들어가면 그 방 것으로(refresh)
@@ -10172,7 +10421,7 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     lastPath = nowChat;
     openSheet(false);
     snapshot = null; draft = null; nav = fresh();
-    inlineBtn.remove();
+    inlineBtn.remove(); capBtn.remove(); if (cap.on) capOff();
     placeInlineButton();
     render();
     if (chatIdFromPath()) setTimeout(() => refresh(), 500);
