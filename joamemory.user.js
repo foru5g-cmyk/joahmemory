@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.7.5
+// @version      4.7.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2554,7 +2554,7 @@
     maskEmo.innerHTML = html.join('');
   }
   const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
-  new MutationObserver(ms => { if (ms.every(m => maskEmo.contains(m.target))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
+  new MutationObserver(ms => { if (ms.every(m => maskEmo.contains(m.target) || m.target === penOv || penOv.contains(m.target) || [...m.addedNodes, ...m.removedNodes].includes(penOv))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
   { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
   async function maskToggle() { await setValue('maskOn', mask.on ? 'off' : 'on'); await maskLoad();
@@ -2579,7 +2579,7 @@
   const thMix = (a, b, t) => '#' + thRgb(a).map((x, i) => Math.round(x + (thRgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join(''); // a→b로 t만큼
   const thDark = h => { const [r, g, b] = thRgb(h); return (r * 299 + g * 587 + b * 114) / 1000 < 110; };
   async function themeLoad() {
-    theme.on = String(await getValue('thOn', 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요)
+    theme.on = String(await getValue('thOn', String(await getValue('thPen', 'off')) === 'on' || String(await getValue('thBub', '')) ? 'on' : 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요) · 스위치가 생기기 전에 형광펜·색을 골라 둔 사람은 켜진 채로
     theme.bub = /^#[0-9a-f]{6}$/i.test(String(await getValue('thBub', ''))) ? String(await getValue('thBub', '')) : '';
     theme.pen = String(await getValue('thPen', 'off')) === 'on'; theme.penc = String(await getValue('thPenC', '#FFE58A')) || '#FFE58A';
     try { const m = JSON.parse(String(await getValue('thMarks', '')) || 'null'); theme.marks = Array.isArray(m) ? m.filter(x => Array.isArray(x) && x[0] && x[1]) : TH_MARKS; } catch (_) { theme.marks = TH_MARKS; }
@@ -2607,8 +2607,31 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
         const b = pe.closest('p,li,blockquote,h1,h2,h3,h4,h5,h6,td') || box; if (b !== blk) { flush(); blk = b; }
         map.push({ n, at: txt.length }); txt += n.data; }
       flush(); }
-    CSS.highlights.set('jm-pen', new Highlight(...out));
+    if (PEN_OV) { theme.ranges = out; CSS.highlights.delete('jm-pen'); penPlace(); } else CSS.highlights.set('jm-pen', new Highlight(...out));
   }
+  // 사파리(아이폰·맥): 브라우저 강조(Highlight)가 첫 대사 하나만 그리고 나머지를 안 그려요 → 대사 자리에 색 상자를 겹쳐 그려요(이름 가리기 이모지와 같은 방식)
+  //   상자는 글자 위에 '곱하기'로 겹쳐서 형광펜처럼 보여요 · 조아메모리 창에 가려진 자리엔 안 그려요 · 스크롤하면 따라가요
+  const PEN_OV = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|Android/.test(navigator.userAgent) || /CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+  const penOv = document.createElement('div'); penOv.id = 'jm-pen-ov';
+  function penPlace() {
+    if (!PEN_OV) return;
+    if (!theme.re || !theme.ranges?.length) { penOv.remove(); penOv.textContent = ''; return; }
+    if (!penOv.isConnected) document.documentElement.appendChild(penOv);
+    const H = innerHeight, dark = theme.on && theme.bub && thDark(theme.bub), P = thRgb(/^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A'), html = [], cache = new Map();
+    // 말풍선 색과 섞여도 크롬과 똑같은 색으로 보이게: 곱하기(밝은 말풍선)는 펜색÷말풍선색, 스크린(어두운 말풍선)은 크롬의 '펜색 30% + 말풍선 70%'가 나오게 거꾸로 계산해요
+    const tint = box => { if (cache.has(box)) return cache.get(box); const B = (getComputedStyle(box).backgroundColor.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number);
+      const O = dark ? B.map((b, i) => { const r = .3 * P[i] + .7 * b; return b >= 255 ? 0 : Math.max(0, Math.min(255, Math.round(255 - (255 - r) * 255 / (255 - b)))); })
+        : B.map((b, i) => Math.min(255, Math.round(P[i] * 255 / Math.max(1, b))));
+      const v = `rgb(${O.join(',')})`; cache.set(box, v); return v; };
+    for (const r of theme.ranges) { const pe = r.startContainer.parentElement; if (!pe) continue;
+      const bg = tint(pe.closest(TH_AI) || pe);
+      for (const b of r.getClientRects()) { if (b.bottom < 0 || b.top > H || b.width < 2) continue;
+        const hit = document.elementFromPoint(b.left + Math.min(b.width / 2, 8), b.top + b.height / 2); if (!hit || !(hit === pe || pe.contains(hit) || hit.contains(pe) || hit.closest?.(TH_AI) === pe.closest(TH_AI))) continue; // 창에 가려진 자리는 건너뛰어요
+        html.push(`<i style="position:fixed;left:${b.left}px;top:${b.top}px;width:${b.width}px;height:${b.height}px;background:${bg};border-radius:2px"></i>`); } }
+    penOv.style.cssText = `position:fixed;inset:0;pointer-events:none;z-index:2147483646;mix-blend-mode:${dark ? 'screen' : 'multiply'}`;
+    penOv.innerHTML = html.join('');
+  }
+  { let raf = 0; addEventListener('scroll', () => { if (!PEN_OV || raf || !theme.re) return; raf = requestAnimationFrame(() => { raf = 0; penPlace(); }); }, { capture: true, passive: true }); addEventListener('resize', () => PEN_OV && penPlace()); }
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = setTimeout(() => { theme.t = 0; penPaint(); }, 60); };
   addEventListener('scroll', () => penSoon(), { capture: true, passive: true }); // 위로 올려 옛 답을 불러오거나 크랙이 말풍선을 다시 그렸을 때도 다시 칠해요(한 번에 1~2ms)
   async function themeSet(k, v) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (o) o.outerHTML = themeHtml(); } // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
