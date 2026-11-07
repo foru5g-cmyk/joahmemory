@@ -507,7 +507,8 @@
       // 키: Gemini 키가 있으면 의미 검색 + AI 재검토 · 없으면 정리에 쓰는 Firebase·Vertex 키로 AI 재검토만(의미 검색 임베딩은 Gemini 키 전용)
       const key = String(await getValue('apiKey', '')).trim(); injGemKey = !!key; let headers = { 'x-goog-api-key': key }, getHdr = async () => headers, genUrl = m => 'https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent';
       if (!key) { const fk = String(await getValue('firebaseKey', '')).trim(), fp = String(await getValue('firebaseProject', '')).trim(), vk = String(await getValue('vertexKey', '')).trim();
-        if (fk && fp) { getHdr = () => fbHeaders(fk, fp); genUrl = m => `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(fp)}/locations/global/publishers/google/models/${m}:generateContent`; }
+        const vxFirst = provOf(String(await getValue('model', DEFAULT_MODEL))) === 'vertex' && vk; // 정리를 Vertex로 하면 예전에 넣어 둔 Firebase 키보다 Vertex를 먼저(App Check 401 안 나게)
+        if (fk && fp && !vxFirst) { getHdr = () => fbHeaders(fk, fp); genUrl = m => `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(fp)}/locations/global/publishers/google/models/${m}:generateContent`; }
         else if (vk) { headers = { 'x-goog-api-key': vk }; genUrl = m => `https://aiplatform.googleapis.com/v1/publishers/google/models/${m}:generateContent`; }
         else return; }
       const hash = t => { let x = 0; for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) | 0; return String(x) + ':' + t.length; };
