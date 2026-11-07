@@ -4,7 +4,7 @@
 // @version      4.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2558,7 +2558,7 @@
     if (mask.on && !mask.names.length) toast('가릴 이름이 없어요 · 설정 › 편의에서 넣어 주세요', 'err', 3500); else toast(mask.on ? '🙈 이름 가리기 켰어요 · 하트를 다시 꾹 누르면 꺼져요' : '이름 가리기 껐어요', 'ok', 2500);
     const sw = ui('[data-set="maskOn"]'); if (sw) sw.checked = mask.on; const mo = ui('.mopts'); if (mo) mo.hidden = !mask.on; }
   const MASK_COLORS = ['#FFFFFF', '#1F1D27', '#7B68D9', '#F4B6CC', '#FFE27A'], MASK_EMOJIS = ['💜', '🙈', '⭐', '🐰', '🌸'];
-  async function maskSet(k, v) { await setValue(k, v); await maskLoad(); const m = out('main'), y = m?.scrollTop || 0; render(); if (m) m.scrollTop = y; } // 설정 › 편의 › 이름 가리기 칸을 바꾸면 바로 다시 그려요
+  async function maskSet(k, v) { await setValue(k, v); await maskLoad(); const o = ui('.mopts'); if (o) o.outerHTML = maskOptsHtml(); } // 설정 › 편의 › 이름 가리기 칸만 다시 그려요(화면 전체를 다시 그리면 위 스위치들이 다시 켜지며 움찔해서)
   function maskInput(el) { const v = el.value.trim(), k = el.dataset.mask; // 이름 추가 칸(엔터·칸 밖 누르기) · 다른 색 · 직접 넣은 이모지
     if (k === 'add') return v && maskSet('maskNames', [...new Set([...mask.raw, ...v.split(/[,，]/).map(x => x.trim()).filter(Boolean)])].join(', '));
     if (k === 'color') return maskSet('maskColor', v);
