@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.9
+// @version      4.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2484,7 +2484,12 @@
   // ══════════════════════════════════════════════════════════════
   const pageStyle = document.createElement('style');
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
+  getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 편의 › 폰에서 위 메뉴 숨기기
+  { let ty = null; // 폰: 손가락을 위로 쓸면(아래로 읽기) 맨 위 줄 숨김 · 아래로 쓸면 다시 보임 — 스크롤 값 대신 손가락 방향을 봐서 줄이 사라질 때 생기는 들썩임에 안 흔들려요
+    addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
+    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.toggle('jm-hidehead', y < ty); ty = y; }, { passive: true }); }
   pageStyle.textContent = '.memo-note-hidden{display:none!important}'
+    + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '#memo-note-inline .jm-sp{animation:jm-sp 1s linear infinite!important}@keyframes jm-sp{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}'
     + '#memo-note-inline .jm-dot{animation:jm-dot .9s ease-in-out infinite!important;opacity:.2}@keyframes jm-dot{0%,100%{opacity:.2}50%{opacity:1}}'
     + '#memo-note-inline.jm-flash{animation:jm-flash 2.4s ease-in-out 1!important}@keyframes jm-flash{0%{transform:scale(1);filter:none}14%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}28%{transform:scale(1.02);filter:drop-shadow(0 0 2px rgba(157,140,235,.5))}42%{transform:scale(1.18);filter:drop-shadow(0 0 6px rgba(123,97,217,1)) drop-shadow(0 0 14px rgba(157,140,235,.9))}100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(157,140,235,0))}}'
@@ -7959,7 +7964,7 @@
     return h.split(/(<[^>]*>)/).map(s => s.startsWith('<') ? s : s.replace(re, '<b class="tn">$1</b>')).join(''); };
   const evBody = l => nameBold(qPaint(evBody0(l)));
   const evBody0 = l => { const r = String(l).match(/^[⤿ㄴ↳]\s*(.+)$/); if (r) { const n = r[1].match(/^(.{1,16}?)\s*[:：]\s*(.+)$/);
-      return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b> ${esc(n[2])}` : esc(r[1])}</p>`; }
+      return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b>: ${esc(n[2])}` : esc(r[1])}</p>`; }
     // "장소 · 루루 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 루루, 네이선 힐, …
     const pm = String(l).match(/^\u0001(.*)\u0002(.*)$/); // 장소 줄 + 인물 줄을 합친 것(evMeta2)
     if (pm) return `<p class="tl-meta">${pm[1] ? `📍 ${esc(pm[1])} · ` : ''}👥 ${esc(pm[2])}</p>`;
@@ -8288,8 +8293,8 @@
     const sw = key => `<input type="checkbox" class="switch" data-set="${key}">`;
     // 설정은 위 알약 탭으로 하나씩: 정리·AI / 칸·화면 / 도구 / 지침. 다른 칸도 화면에는 있어서(숨김) 저장할 때 같이 저장돼요.
     const prov = provOf(curModel);
-    const cur = ['ai', 'view', 'tool', 'backup'].includes(nav.setTab) ? nav.setTab : 'ai';
-    const tabs = [['ai', '정리'], ['view', '칸 · 화면'], ['tool', '기록'], ['backup', '백업']];
+    const cur = ['ai', 'view', 'ease', 'tool', 'backup'].includes(nav.setTab) ? nav.setTab : 'ai';
+    const tabs = [['ai', '정리'], ['view', '칸'], ['ease', '편의'], ['tool', '기록'], ['backup', '백업']];
     let i = 0; const box = (title, info, body) => { const k = tabs[i++][0]; return `<section data-sec="${k}"${k === cur ? '' : ' hidden'}>${body}</section>`; };
     const seg = `<div class="seg">${tabs.map(([k, l]) => `<button data-act="stab" data-arg="${k}" aria-pressed="${k === cur}">${l}</button>`).join('')}</div>`;
     return seg + box('정리 · AI', `${cycle}턴마다 · ${fmt(NOTE_LIMIT)}자 · <span data-out="keyinfo"></span>`, `
@@ -8314,9 +8319,11 @@
         ${row('웹 모드', sw('sceneMode'), '켜면 전체 기억은 이 기기에 두고, 채팅엔 지금 장면에 맞는 것만 5만 자까지 골라 넣어요 · 새 답마다 다시 고르고(이름·낱말 + 제미나이 의미 검색) · 10턴마다 자동 정리(키 필요) · 노트 크기 제한 없음(안 줄이고 장기기억으로 안 옮겨요) · 끄면 원래대로')}
         ${sceneOn ? row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝').replace('<label class="srow"', '<label class="srow" hidden') : row('줄인 사건 → 장기기억', sw('ltmAsk'), '켜면 정리 결과를 넣을 때 (요약)으로 묶이거나 짧아진 사건을 장기기억 탭에서 넣을지 물어요 · 끄면 예전처럼 줄이고 끝')}
         ${row('노트 자동 옮기기', sw('autoMove'))}
+        <p class="sfoot">칸을 끄면 다음 정리부터 그 칸을 만들지 않아요.</p>`)
+      + box('편의', '크랙 화면 편의', `
         ${row('말풍선 턴 번호', sw('badges'))}
         ${row('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
-        <p class="sfoot">칸을 끄면 다음 정리부터 그 칸을 만들지 않아요.</p>`)
+        ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '글을 내려 읽으면 맨 위 ☰ 크랙 줄이 숨어요 · 아래로 살짝 끌면 다시 나와요')}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
@@ -9280,6 +9287,7 @@
         toast(on ? '이 방은 웹 모드를 켰어요 · 10턴마다 자동 정리 · 노트는 안 줄이고 다 기억 · 채팅엔 장면에 맞춰 5만 자까지' : '웹 모드를 껐어요 · 20턴마다 정리 · 노트 5만 자', 'ok', 4500); } }
     await setValue('badges', ui('[data-set="badges"]').checked ? 'on' : 'off');
     { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
+    { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
     for (const k of ['gsUrl', 'gsKey', 'firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
     turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
@@ -9304,6 +9312,7 @@
     const sm = ui('[data-set="sceneMode"]'); if (sm) sm.checked = sceneOn; // 늘 지금 방 상태
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
     const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
+    const hh = ui('[data-set="hideHead"]'); if (hh && !hh.dataset.filled) { hh.checked = String(await getValue('hideHead', 'on')) !== 'off'; hh.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el && !el.dataset.filled) { el.checked = String(await getValue(key, 'on')) !== 'off'; el.dataset.filled = '1'; } }
   }
