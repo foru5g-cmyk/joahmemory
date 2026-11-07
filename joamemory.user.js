@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.7.4
+// @version      4.7.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2591,8 +2591,9 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
 .bg-background:has(.ProseMirror){background:#1E1D25!important;border-color:#34313F!important}.bg-background:has(.ProseMirror) .ProseMirror,.bg-background:has(.ProseMirror) .ProseMirror *{color:#EDEAF4!important}.bg-background:has(.ProseMirror) button{background:transparent;border-color:#3A3747!important;color:#CFCBDB!important}`
       : `.bg-bg_screen{background:${thMix(b, '#ffffff', .65)}!important}${TH_AI}{background:${b}!important}${TH_ME}{background:#fff!important}${TH_ME} *{color:#2E2C3A!important}`;
     themeCss.textContent += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
+    // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
     const dq = ([o, c]) => /^["“”]$/.test(o) && /^["“”]$/.test(c); // " “ ” 는 한 식구로: “…" 처럼 섞어 써도 칠해요
-    const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”\\n]{1,400}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^\\n]){1,400}' + reEsc(c))];
+    const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”]{1,400}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^]){1,400}' + reEsc(c))];
     theme.re = theme.on && theme.pen && alt.length ? new RegExp(alt.join('|'), 'g') : null;
     penPaint();
   }
@@ -2609,11 +2610,12 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     CSS.highlights.set('jm-pen', new Highlight(...out));
   }
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = setTimeout(() => { theme.t = 0; penPaint(); }, 60); };
+  addEventListener('scroll', () => penSoon(), { capture: true, passive: true }); // 위로 올려 옛 답을 불러오거나 크랙이 말풍선을 다시 그렸을 때도 다시 칠해요(한 번에 1~2ms)
   async function themeSet(k, v) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (o) o.outerHTML = themeHtml(); } // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
   function themeHtml() { // 설정 › 편의 › 테마 화면
     const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = theme.penc, sw = (act, c, on, label) => `<button type="button" class="msw" data-act="${act}" data-arg="${c}" style="background:${c || '#FFF4E0'}" aria-pressed="${on}" aria-label="${label || c}"></button>`;
     const pv = `<div class="thpv" style="background:${!b ? '#fff' : dark ? '#131218' : thMix(b, '#ffffff', .65)}"><div class="thai" style="background:${b || '#FFF4E0'};color:${dark ? '#DEDAE8' : '#55526A'}">태정은 대꾸 없이 고개만 돌렸다. <span style="${theme.pen ? (dark ? `background:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#fff)` : `background:${p};color:#2B2418`) : ''}">“지금은 바빠.”</span></div><div class="thme" style="${dark ? 'background:#2C2A36;color:#F1EFF6' : ''}">놔, 사람들 봐.</div></div>`;
-    return `<div class="thbox"><div class="thhd"><button type="button" class="ia" data-act="themeback" aria-label="뒤로">‹</button><b>테마</b><label class="thon"><input type="checkbox" class="switch" data-th="thOn"${theme.on ? ' checked' : ''}><span>${theme.on ? '켜짐' : '꺼짐 · 크랙 그대로'}</span></label></div>${pv}
+    return `<div class="thbox"><div class="thhd"><button type="button" class="ia" data-act="themeback" aria-label="뒤로">‹</button><b>테마</b><label class="thon"><input type="checkbox" class="switch" data-th="thOn"${theme.on ? ' checked' : ''}><span>테마 사용</span></label></div>${pv}
       <div class="mrow"><b>AI 말풍선 색</b><div class="mpills">${TH_BUBS.map(c => sw('thbub', c, b.toUpperCase() === c)).join('')}<label class="msw mplus" aria-label="다른 색"${b && !TH_BUBS.includes(b.toUpperCase()) ? ` style="background:${b};color:${dark ? '#fff' : 'var(--ink)'}"` : ''}>+<input type="color" data-th="thBub" value="${b || '#F3EFFF'}"></label></div></div>
       <p class="muted" style="margin:-2px 0 6px;font-size:11.5px">내 말풍선은 늘 하얀색(어두운 색이면 회색)</p>
       <label class="mrow mchk"><input type="checkbox" data-th="thPen"${theme.pen ? ' checked' : ''}><span>대사 형광펜</span></label>
