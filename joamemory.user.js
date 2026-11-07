@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.6.8
+// @version      4.6.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -1918,7 +1918,7 @@
 - 현재상태에는 다음 장면까지 이어질 상태만 씀. 곧 바뀔 순간 상태(앉은 자리·자세·손에 든 컵·잠깐의 표정)는 쓰지 않음.
 - 한 번 허락·동의한 것을 늘 허락한 것으로 넓히지 않음. 약속·합의는 실제로 정한 범위·조건까지만 씀.
 - 근거 줄은 [근거]에 적힌 칸에 더해, 현재상태의 둘만의 것에도 붙임(형식 예시대로). 줄거리·이정표·세계관에는 붙이지 않음.
-- 사건마다 그 장면을 다시 생생하게 떠올리게 하는 원문 단서(몸짓·표정·감각·날씨·소리)를 2~3개(짧은 장면은 1개), 짧은 구절로 남김. 기본 지침의 '1~2개'보다 이 규칙이 우선함. 성관계 장면에는 남기지 않음.
+- 사건마다 그 장면을 다시 생생하게 떠올리게 하는 원문 단서(몸짓·표정·감각·날씨·소리)를 2~3개(짧은 장면은 1개), 짧은 구절로 남김. 단서는 누가 무엇을 했는지 쓴 그 문장 안에 넣음('세스가 귓바퀴 피어싱을 만지작거리며 비꼼'). '장면 단서:' 같은 목록 줄을 따로 만들지 않음. 기본 지침의 '1~2개'보다 이 규칙이 우선함. 성관계 장면에는 남기지 않음.
 - 서사 고리 줄은 '- [열림] 종류 · 누가→누구 · 제목: …' 꼴로, 종류 다음에 그 약속·예정을 꺼낸 사람→받은 사람을 쓴다(둘이 함께 정했으면 '나나·니콜라스', 혼자 품은 목표면 이름 하나). 이미 있는 고리에 이게 없으면 이번에 그 고리를 고칠 때 붙인다.
 - 서사 고리: 이미 열려 있는 고리와 같은 약속·예정·일이 진행되거나 날짜·장소가 정해지면 새 고리를 만들지 않음. 그 고리를 제목 그대로 다시 써서 바뀐 것과 '지금:'·(마지막 언급)만 고치고, 원래 있던 내용(언제·누가 제안했는지·이어진 다른 약속)은 빼지 않음(예: '공연 및 작업실 초대'가 있는데 작업실 날짜가 정해지면 그 고리를 고침 · '작업실 방문' 고리를 새로 만들지 않음).
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
@@ -3479,6 +3479,7 @@
     .tline li{position:relative;padding:0 0 18px}
     .tline li::before{content:"";position:absolute;box-sizing:border-box;left:-30px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink)}
     .tline li.old::before{border-color:var(--pencil)}
+    b.tn{font-weight:700;color:var(--ink)}
     mark.tq{color:inherit;border-radius:4px;padding:0 2px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
     .tline li.side{opacity:.7;padding-bottom:12px}.tl-side{margin-left:10px;color:var(--ink2);font-size:13px}.tl-side b{font-weight:700;color:var(--ink)}.tline li.side .tl-title{font-weight:600}
     .inj-card{margin:10px 0 0;padding:10px 12px;border-radius:14px;background:var(--mist);font-size:13px}.inj-card summary{cursor:pointer;list-style:none}.inj-card summary small{color:var(--ink2);font-weight:400}
@@ -7950,7 +7951,12 @@
         while ((i = before.lastIndexOf(f, i - 1)) >= 0) { if (!subj || /^(이|가|은|는|께서)(?![가-힣])|^(이|가|은|는)\s/.test(before.slice(i + f.length))) { if (i > best) { best = i; who = n; } break; } if (!i) break; } }
       if (who) break; }
     return `<mark class="tq" style="background:${who ? avColor(who)[0] : '#FFF3C4'}">${a}${body}${z}</mark>`; });
-  const evBody = l => qPaint(evBody0(l));
+  // 본문 인물 이름 굵게(화면만): 태그 밖 글자에서만 · 긴 이름부터 · 앞에 글자가 붙은 건 다른 낱말이라 건너뜀 · 📍👥 줄은 그대로
+  const nameBold = h => { if (/^<p class="tl-meta"/.test(h)) return h; avColor('');
+    const fs = [...new Set(avOrder.list.flatMap(n => [n, nameNick(n)]).filter(f => [...f].length >= 2))].sort((a, b) => b.length - a.length);
+    if (!fs.length) return h; const re = new RegExp(`(?<![가-힣A-Za-z])(${fs.map(reEsc).join('|')})`, 'g');
+    return h.split(/(<[^>]*>)/).map(s => s.startsWith('<') ? s : s.replace(re, '<b class="tn">$1</b>')).join(''); };
+  const evBody = l => nameBold(qPaint(evBody0(l)));
   const evBody0 = l => { const r = String(l).match(/^[⤿ㄴ↳]\s*(.+)$/); if (r) { const n = r[1].match(/^(.{1,16}?)\s*[:：]\s*(.+)$/);
       return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b> ${esc(n[2])}` : esc(r[1])}</p>`; }
     // "장소 · 루루 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 루루, 네이선 힐, …
