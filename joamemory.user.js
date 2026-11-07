@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.7.7
+// @version      4.7.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2568,7 +2568,7 @@
     if (k === 'panel') return maskSet('maskPanel', el.checked ? 'on' : 'off');
     if (k === 'emo' && v) return maskSet('maskEmoji', v); }
   // 테마(설정 › 편의 › 테마): AI 말풍선 색 · 대사 형광펜 — 처음엔 다 꺼져 있고(크랙 그대로) 고르면 켜져요
-  //   바꾸는 건 색뿐(배경·말풍선 바탕·테두리·형광펜) · 글꼴·크기·정렬·말풍선 모양은 크랙 그대로 · 어두운 색을 고르면 안 보이는 글자만 밝게
+  //   바꾸는 건 말풍선 색·글자색·형광펜뿐(화면 배경·위 메뉴·입력창은 크랙 그대로) · 글꼴·크기·정렬·말풍선 모양은 크랙 그대로 · 어두운 색을 고르면 안 보이는 글자만 밝게
   //   형광펜은 이름 가리기처럼 글자(DOM)를 안 건드리고 CSS Highlight로 칠해요 · 대사 = 기호(" " · “ ” · ❝ ❞ …) 사이 글자
   const TH_AI = '[data-message-group-id] .rounded-\\[4px_20px_20px_20px\\]', TH_ME = '[data-message-group-id] .rounded-\\[20px_20px_4px_20px\\]'; // ponytail: 크랙 말풍선 class로 찾아요 · 크랙이 class를 바꾸면 테마만 조용히 꺼져요(대화는 그대로)
   const TH_BUBS = ['#F3EFFF', '#FFF0F5', '#ECF8F2', '#EDF4FD', '#FFF9E3', '#201F28'], TH_PENS = ['#FFE58A', '#FFC9DC', '#C8EEDC', '#CFE2FA', '#E0D6FF'];
@@ -2585,11 +2585,9 @@
     try { const m = JSON.parse(String(await getValue('thMarks', '')) || 'null'); theme.marks = Array.isArray(m) ? m.filter(x => Array.isArray(x) && x[0] && x[1]) : TH_MARKS; } catch (_) { theme.marks = TH_MARKS; }
     const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
     themeCss.textContent = !b ? '' : dark
-      ? `.bg-bg_screen{background:#131218!important}.shrink-0:has(>.grid),.z-docked.h-12{background:#17161D!important;border-bottom:1px solid #26242F}.shrink-0:has(>.grid) .pointer-events-none.absolute.inset-0{opacity:.12}.z-docked.h-12 *{color:#E4E1EC!important}
-${TH_AI}{background:${b}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
-${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}
-.bg-background:has(.ProseMirror){background:#1E1D25!important;border-color:#34313F!important}.bg-background:has(.ProseMirror) .ProseMirror,.bg-background:has(.ProseMirror) .ProseMirror *{color:#EDEAF4!important}.bg-background:has(.ProseMirror) button{background:transparent;border-color:#3A3747!important;color:#CFCBDB!important}`
-      : `.bg-bg_screen{background:${thMix(b, '#ffffff', .65)}!important}${TH_AI}{background:${b}!important}${TH_ME}{background:#fff!important}${TH_ME} *{color:#2E2C3A!important}`;
+      ? `${TH_AI}{background:${b}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
+${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}`
+      : `${TH_AI}{background:${b}!important}${TH_AI} *:not(pre,pre *){color:#2E2C3A!important}${TH_AI} em:not(pre *),${TH_AI} em *:not(pre *){color:#6E6982!important}${TH_AI} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}${TH_ME}{background:#fff!important}${TH_ME} *{color:#2E2C3A!important}`;
     themeCss.textContent += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
     const dq = ([o, c]) => /^["“”]$/.test(o) && /^["“”]$/.test(c); // " “ ” 는 한 식구로: “…" 처럼 섞어 써도 칠해요
@@ -10258,7 +10256,15 @@ ${TH_ME}{background:#2C2A36!important}${TH_ME} *{color:#F1EFF6!important}[data-m
     for (const el of b.querySelectorAll('*')) { if (skip(el)) continue; const q = el.getBoundingClientRect(); if (!q.width || !q.height) continue; const s = getComputedStyle(el);
       if (el.tagName === 'IMG') { items.push({ t: 'img', ...rel(q), src: el.currentSrc || el.src, fit: s.objectFit, rad: capRad(s) }); continue; }
       if (el.tagName === 'HR') { items.push({ t: 'box', ...rel(q), h: Math.max(1, q.height), c: capClear(s.backgroundColor) ? s.borderTopColor : s.backgroundColor, rad: [0, 0, 0, 0] }); continue; }
-      if (!capClear(s.backgroundColor)) items.push({ t: 'box', ...rel(q), c: s.backgroundColor, rad: capRad(s) }); }
+      const qs = s.display === 'inline' ? [...el.getClientRects()].filter(x => x.width > 0) : [q]; // 줄바꿈된 `코드`는 줄마다 따로 칠해요(한 덩어리로 칠하면 옆 글까지 덮여요)
+      if (!capClear(s.backgroundColor)) for (const x of qs) items.push({ t: 'box', ...rel(x), c: s.backgroundColor, rad: capRad(s) });
+      for (const [k, side] of [['Left', 'l'], ['Right', 'r'], ['Top', 't'], ['Bottom', 'b']]) { const bw = parseFloat(s['border' + k + 'Width']) || 0; // 테두리(> 인용 줄 · 코드 칸 테두리)도 보이는 그대로
+        if (bw < .5 || s['border' + k + 'Style'] === 'none' || capClear(s['border' + k + 'Color'])) continue;
+        for (const x of qs) { const R = rel(x); items.push({ t: 'box', x: side === 'r' ? R.x + R.w - bw : R.x, y: side === 'b' ? R.y + R.h - bw : R.y, w: side === 'l' || side === 'r' ? bw : R.w, h: side === 't' || side === 'b' ? bw : R.h, c: s['border' + k + 'Color'], rad: [0, 0, 0, 0] }); } }
+      if (el.tagName === 'LI' && s.listStylePosition !== 'inside' && s.listStyleType !== 'none') { // 목록 앞 • · 1. (글자가 아니라 브라우저가 그려서 따로 넣어요)
+        const fr = document.createRange(); fr.selectNodeContents(el); const f = [...fr.getClientRects()].find(x => x.width > 0) || q, t = s.listStyleType;
+        const mk = t === 'decimal' ? ([...el.parentElement.children].filter(x => x.tagName === 'LI').indexOf(el) + (+el.parentElement.getAttribute('start') || 1)) + '.' : t === 'circle' ? '◦' : t === 'square' ? '▪' : '•';
+        items.push({ t: 'ch', x: q.left - B.left - parseFloat(s.fontSize) * (mk.length > 1 ? 1.1 : .9), y: f.top - B.top, w: 0, h: f.height, ch: mk, font: `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`, c: s.color }); } }
     const pens = (PEN_OV ? theme.ranges || [] : [...(CSS.highlights?.get('jm-pen') || [])]).filter(r => b.contains(r.startContainer));
     const dark = theme.on && theme.bub && thDark(theme.bub), pc = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
     const bg = (cs.backgroundColor.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number), bgHex = '#' + bg.map(x => x.toString(16).padStart(2, '0')).join('');
