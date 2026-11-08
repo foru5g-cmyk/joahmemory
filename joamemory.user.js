@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.1
+// @version      4.8.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -5027,7 +5027,7 @@
         if (!(cursor = next)) break;
       }
       etcQuiet = true;
-      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'lostSkip', 'fullSkip', 'etcSkip', 'gsAsked']) await setValue(k + ':' + chatId, ''); }
+      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked']) await setValue(k + ':' + chatId, ''); }
       finally { etcQuiet = false; }
       const now = new Date().toISOString();
       await setValue('resetAt:' + chatId, now); await setValue('etcAt:' + chatId, now);
@@ -5386,25 +5386,6 @@
   const whenOf = t => t ? new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
   const memCol = (label, m, best) => `<div class="dcol${best ? ' best' : ''}"><small>${label}${best ? ' <em>⭐추천</em>' : ''}</small><b>1~${m.turns || '?'}턴</b><small>${esc([m.by, whenOf(m.at)].filter(Boolean).join(' · '))}</small>${lastEvent(m.memory) ? `<p>마지막 사건: “${esc(lastEvent(m.memory))}”</p>` : ''}</div>`;
   function devAskHtml() {
-    const l = nav.lostAsk;
-    if (l && l.chatId === chatIdFromPath() && (l.local || l.g)) {
-      const same = l.local && l.g && l.local.upto === l.g.upto && (l.local.turns || 0) === (l.g.turns || 0);
-      const opts = [l.local && ['local', l.local], l.g && !same && ['g', l.g]].filter(Boolean);
-      const tOf = c => Date.parse(c.at || c.savedAt || '') || 0;
-      const away = c => !!c.notHere || (c.src === 'g' && l.alive && !l.alive.has(c.upto)), fits = opts.filter(([, c]) => !away(c)); // 이 방에 없는 메시지까지 정리한 기억은 추천 안 해요
-      const best = fits.length ? fits.slice().sort((x, y) => (y[1].turns || 0) - (x[1].turns || 0) || tOf(y[1]) - tOf(x[1]))[0][0] : '';
-      const label = c => c.src === 'g' ? '구글 백업' : c.src === 'full' ? '이 기기에서 정리한 기억' : c.src === 'seen' ? '이 기기 사본' : '이 기기 정리 기록';
-      const col = ([w, c]) => `<div class="dcol${w === best ? ' best' : ''}"><small>${label(c)}${w === best ? ' <em>⭐추천</em>' : ''}</small><b>1~${c.turns || '?'}턴</b>
-        <small>정리: ${esc([c.by, whenOf(c.at)].filter(Boolean).join(' · '))}</small>${c.src !== 'full' && c.savedAt ? `<small>사본 저장: ${esc([c.savedBy, whenOf(c.savedAt)].filter(Boolean).join(' · '))}</small>` : ''}
-        ${lastEvent(c.memory) ? `<p>마지막 사건: “${esc(lastEvent(c.memory))}”</p>` : ''}</div>`;
-      const other = best ? opts.find(([w]) => w !== best) : opts[0];
-      return `<div class="devask"><b>채팅에서 기억이 사라졌어요</b>
-      ${best ? '' : '<p class="warn">⚠ 이 기억들은 이 방에 없는 대화까지 정리한 거예요. 분기한 방이면 넣지 말고 설정 › 백업 › 되돌릴 곳 고르기에서 대화 끝이 같은 기억을 찾아 주세요</p>'}<div class="dcols">${opts.map(col).join('')}</div>
-      ${l.local?.cut ? '<p class="dsmall">⚠ 노트가 든 답이 지워졌어요. 지운 턴에서 생긴 일이 기억에 남아 있을 수 있어요(턴 수는 남은 대화에 맞췄어요). 정확히 하려면 넣은 뒤 "다른 방법으로 정리 › 처음부터"를 해 주세요.</p>' : l.local?.old ? '<p class="dsmall">지운 대화보다 앞에서 정리한 기억으로 되돌려요. 그 뒤 대화는 다음 정리 때 이어서 정리돼요.</p>' : ''}
-      ${best ? `<div class="devask-btns"><button class="btn pri" data-act="lostput" data-arg="${best}"${busyNow ? ' disabled' : ''}>1~${(best === 'g' ? l.g : l.local).turns || '?'}턴 기억 다시 넣기</button></div>` : ''}
-      <p class="dsmall">${other ? `<button class="linkbtn" data-act="lostput" data-arg="${other[0]}">1~${other[1].turns || '?'}턴 넣기</button> · ` : ''}<button class="linkbtn" data-act="lostskip">그냥 두기</button></p>
-      ${nav.gsOn ? '' : '<p class="dsmall">구글 드라이브 백업을 연결해 두면 다른 기기에서 지워져도 복구돼요(설정 › 백업)</p>'}</div>`;
-    }
     const a = nav.devAsk; if (!a || a.chatId !== chatIdFromPath()) return '';
     // 턴이 더 많은 쪽, 같으면 더 최근에 정리한 쪽을 추천
     const chatBest = a.notHere || (a.c.turns || 0) > (a.mine.turns || 0) || ((a.c.turns || 0) === (a.mine.turns || 0) && Date.parse(a.c.at || 0) >= Date.parse(a.mine.at || 0));
@@ -5419,19 +5400,25 @@
       <p>구글 백업에 지금 기억(1~${f.n.turns}턴)과 같은 정리본의 근거·감정선 전체가 있어요. 받아도 채팅 노트는 바뀌지 않고, 이 기기 화면에서 근거 버튼·감정선 단계가 보이게 돼요.</p>
       <div class="devask-btns"><button class="btn pri" data-act="fullget">받기</button><button class="btn" data-act="fullskip">괜찮아요</button></div></div>`;
   }
-  async function lostPut(which = 'local') {
-    const a = nav.lostAsk, l = a?.[which], chatId = chatIdFromPath(); if (!l || a.chatId !== chatId || busyNow) return;
-    busyNow = true; render();
+  let lostBusy = false;
+  async function lostPut(chatId, l) {
+    if (lostBusy || busyNow || !l?.memory) return; lostBusy = true;
     try {
-      const snap = await readSinceLastNote(chatId), carrier = pickCarrier(snap.all);
-      if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
-      await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(l.memory, l.upto, l.turns || 1, l.at || undefined, l.by || ''));
-      await saveFull(chatId, l.upto, l.memory, l.turns, l.at);
-      nav.lostAsk = null; pageToast(`1~${l.turns || '?'}턴 기억을 다시 넣었어요`);
-    } catch (e) { toast('다시 넣기 실패 · ' + e.message, 'err'); }
-    finally { busyNow = false; }
-    await refresh();
-    if (nav.gsOn) gsSave(true); // 구멍 2: 노트가 바뀌면 구글도 최신으로
+      for (let i = 0; i < 3; i++) {
+        try {
+          if (chatIdFromPath() !== chatId) return;
+          const snap = await readSinceLastNote(chatId); if (snap.note) return;
+          const ai = snap.all.filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)), carrier = [ai[ai.length - 3], ai[ai.length - 4], ai[ai.length - 2]][i] || pickCarrier(snap.all); if (!carrier) return;
+          const cur = msgText(carrier) ? carrier : await readMessage(chatId, msgId(carrier)), body = stripBlocks(msgText(cur)).trimEnd();
+          if (!body) throw new Error('붙일 답변 글을 못 읽었어요');
+          await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.turns || 1, l.at || undefined, l.by || ''));
+          await saveFull(chatId, l.upto, l.memory, l.turns, l.at);
+          if (nav.gsOn) gsSave(true);
+          setTimeout(() => refresh().catch(() => {}), 300);
+          return;
+        } catch (e) { if (i === 2) logErr('기억 다시 넣기', e.message || String(e)); else await new Promise(r => setTimeout(r, 1500 * (i + 1))); }
+      }
+    } finally { lostBusy = false; }
   }
   async function devChoose(restore) {
     const a = nav.devAsk, chatId = chatIdFromPath(); if (!a || a.chatId !== chatId || busyNow) return;
@@ -8766,7 +8753,8 @@
       const ws = (title.replace(/^\[?[^\]]*?\d\s*-\s*/, '').match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(w => w.length > 2 && /[가-힣]$/.test(w) ? w.slice(0, -1) : w).filter(w => w.length >= 3 || /^[0-9]/.test(w));
       if (ws.some(w => /^[0-9]/.test(w) ? new RegExp('(?<![0-9])' + w).test(said) : said.includes(w))) injSkip.delete(k); }
     const T = [Date.now()], lap = () => T.push(Date.now()), laps = () => T.slice(1).map((t, i) => t - T[i]).join('/') + 'ms';
-    const snap = await readSinceLastNote(chatId), n = snap.note; lap();
+    let snap = await readSinceLastNote(chatId), n = snap.note; lap();
+    if (!n && injectOn && !lostBusy) { await refresh().catch(() => {}); snap = await readSinceLastNote(chatId); n = snap.note; }
     if (!n || n.parked) return 'no-note';
     { const chat = snap.all.filter(isChat); if (kind === 'send' && msgRole(chat[chat.length - 1]) === 'user') return 'generating'; }
     let whole = await wholeOf(chatId, n);
@@ -8943,33 +8931,28 @@
             if (String(await getValue('fullSkip:' + chatId, '')) === tryKey) return;
             await saveFull(chatId, n.upto, g.memory, n.turns, n.at); render(); }); } // 묻지 않고 알아서 받아요(채팅은 안 건드림)
       }
-      // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남아 있는 것 중 가장 최신으로 다시 넣을지 묻습니다.
-      //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만. '그냥 두기'를 누른 같은 후보로는 다시 안 물어요.
-      if (!snap.note && injectOn) {
+      // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남은 기억 중 지금 대화에 맞는 것으로 바로 다시 넣어요.
+      //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만.
+      if (!snap.note && injectOn && !lostBusy) {
         const resetAt = Date.parse(String(await getValue('resetAt:' + chatId, '')) || '') || 0, tOf = c => Date.parse(c.at || c.savedAt || '') || 0;
         let seen = null; try { seen = JSON.parse(String(await getValue('seen:' + chatId, '')) || 'null'); } catch (_) {}
-        const h = histList[histList.length - 1], cands = [];
+        const cands = [];
         if (fullNote?.memory) cands.push({ src: 'full', memory: fullNote.memory, upto: fullNote.upto, turns: fullNote.turns, at: fullNote.at, by: DEVICE, savedAt: fullNote.at, savedBy: DEVICE });
         if (seen?.memory) cands.push({ src: 'seen', ...seen });
         for (const x of histList.slice(-10)) { const t = x.at ? new Date(x.at).toISOString() : ''; // 정리 기록: 정리 뒤 · 정리 전(되감기)
           if (x.after) cands.push({ src: 'hist', memory: x.after, upto: x.afterUpto, turns: x.to, at: t, by: DEVICE, savedAt: t, savedBy: DEVICE });
           if (x.before && x.beforeUpto) cands.push({ src: 'hist', memory: x.before, upto: x.beforeUpto, turns: x.from, at: t, by: DEVICE, savedAt: t, savedBy: DEVICE, old: true }); }
+        if (nav.gsOn) { const g = await gsPeek(chatId, resetAt); if (g) cands.push(g); }
         const chat = snap.all.filter(isChat), alive = new Set(snap.all.map(msgId));
         for (const c of cands) if (!c.turns) { const k = chat.findIndex(m => msgId(m) === c.upto); if (k >= 0) c.turns = chat.slice(0, k + 1).filter(m => msgRole(m) === 'user').length; }
         // 같은 정리본이면 근거까지 든 이 기기 정리본(full)을 먼저
-        const ok = cands.filter(c => tOf(c) > resetAt), by = (a, b) => (b.turns || 0) - (a.turns || 0) || tOf(b) - tOf(a) || (a.src === 'full' ? -1 : 1);
+        const ok = cands.filter(c => c.memory && tOf(c) > resetAt), by = (a, b) => (b.turns || 0) - (a.turns || 0) || tOf(b) - tOf(a) || (a.src === 'full' ? -1 : 1);
         const chatTurns = chat.filter(m => msgRole(m) === 'user').length, top = ok.slice().sort(by)[0] || null, fit = ok.filter(c => alive.has(c.upto)).sort(by)[0] || null;
         // 끝 메시지가 남아 있는 기억이 지금 대화와 10턴 안이면 그걸로 되돌려요(되감기). 아니면 정리한 걸 잃지 않게 가장 최신 기억을 넣고 턴 수만 남은 대화에 맞춰요.
-        let local = fit && (fit === top || chatTurns - (fit.turns || 0) <= 10) ? fit : top; const notHere = !!local && !alive.has(local.upto); // 이 방에 없는 메시지까지 정리한 기억
-        if (local && !alive.has(local.upto) && chat.length) local = { ...local, upto: msgId(chat[chat.length - 1]), turns: chatTurns, cut: true, notHere };
-        const key = local ? local.upto + '|' + local.at : 'g';
-        if (String(await getValue('lostSkip:' + chatId, '')) !== key && nav.lostAsk?.key !== key) {
-          nav.lostAsk = { key, chatId, local: local && notHere ? { ...local, notHere } : local, g: null, alive };
-          if (local) pageToast('채팅에서 기억이 사라졌어요 · 조아메모리를 열어 다시 넣어 주세요');
-          if (nav.gsOn) gsPeek(chatId, resetAt).then(g => { const a = nav.lostAsk; if (!a || a.chatId !== chatId || !g) return;
-            a.g = g; if (!a.local) pageToast('채팅에서 기억이 사라졌어요 · 구글 백업에서 다시 넣을 수 있어요'); render(); });
-        }
-      } else if (nav.lostAsk?.chatId === chatId) nav.lostAsk = null;
+        let local = fit && (fit === top || chatTurns - (fit.turns || 0) <= 10) ? fit : top;
+        if (local && !alive.has(local.upto) && chat.length) local = { ...local, upto: msgId(chat[chat.length - 1]), turns: chatTurns };
+        if (local) await lostPut(chatId, local);
+      }
       loadTurnMap(chatId, snap);
       etcCheck(chatId);
       if (String(await getValue('gsUrl', '')).trim() && !(await getValue('gsAsked:' + chatId, ''))) {
@@ -9936,10 +9919,6 @@
         nav.view = 'preview'; render(); out('main').scrollTop = 0; return;
       }
       case 'runsheet': {
-        if (nav.lostAsk && nav.lostAsk.chatId === chatIdFromPath() && (nav.lostAsk.local || nav.lostAsk.g)) {
-          nav.tab = 'home'; nav.view = null; render();
-          return toast('사라진 기억을 먼저 위 카드에서 다시 넣어 주세요. 새로 정리하려면 "그냥 두기"를 누른 뒤 정리하기를 눌러요.', 'info', 6000);
-        }
         const m = String(await getValue('model', DEFAULT_MODEL));
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
         nav.hasKey = !!String(await getValue(keyOf(m), '')).trim();
@@ -9987,10 +9966,8 @@
       case 'etcskip': return etcPull(false);
       case 'etcsync': await setValue('etcSync', el.checked ? 'on' : 'off'); nav.etcSyncOn = el.checked; toast(el.checked ? 'ETC도 기기끼리 맞춰요. 바뀌면 구글에 자동으로 올라가요.' : 'ETC는 기기마다 따로 둬요.', 'ok', 3000); if (el.checked) etcFirst(); return;
       case 'devkeep': return devChoose(false);
-      case 'lostput': return lostPut(arg || 'local');
       case 'fullget': { const f = nav.fullAsk; if (f && f.chatId === chatIdFromPath()) { await saveFull(f.chatId, f.n.upto, f.g.memory, f.n.turns, f.n.at); nav.fullAsk = null; toast('근거·감정선 전체를 받아 왔어요', 'ok', 2500); } return render(); }
       case 'fullskip': { const f = nav.fullAsk; if (f) await setValue('fullSkip:' + f.chatId, f.key); nav.fullAsk = null; return render(); }
-      case 'lostskip': { const l = nav.lostAsk; if (l) await setValue('lostSkip:' + l.chatId, l.key); nav.lostAsk = null; return render(); }
       case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
       case 'wropen': nav.wrOpen = !nav.wrOpen; return; // 접힘 상태만 기억(다시 그려도 그대로)
@@ -10326,7 +10303,8 @@
     for (const [y, z, im] of ln) { const l = blocks[blocks.length - 1];
       if (l && (y < l.y + l.h + 1 || !im && !l.im && y < l.y + l.h + gap)) l.h = Math.max(l.y + l.h, z) - l.y; else blocks.push({ y, h: z - y, im }); }
     if (!blocks.length) blocks.push({ y: 0, h: B.height });
-    return { w: B.width, h: B.height, x: B.left, me: capIsMe(b), items, blocks };
+    const cb = Math.max(0, ...items.slice(1).map(i => i.y + i.h)), H2 = cb ? Math.min(B.height, Math.ceil(cb + (parseFloat(cs.paddingBottom) || 16))) : B.height; items[0].h = H2;
+    return { w: B.width, h: H2, x: B.left, me: capIsMe(b), items, blocks, pb: parseFloat(cs.paddingBottom) || 16 };
   }
   function capRR(ctx, x, y, w, h, rad) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, rad.map(v => Math.min(v, w / 2, h / 2))); else ctx.rect(x, y, w, h); }
   function capDraw(ctx, it, ox, oy, imgs) {
@@ -10377,9 +10355,10 @@
     cut.sort((a, c) => a[0] - c[0]); const rg = []; for (const c of cut) { const l = rg[rg.length - 1]; if (l && c[0] <= l[1]) l[1] = Math.max(l[1], c[1]); else rg.push([...c]); }
     const map = y => { let d = 0; for (const [a, z] of rg) { if (y >= z) d += z - a; else if (y > a) return a - d; } return y - d; };
     const gone = y => rg.some(([a, z]) => y >= a && y < z), items = [];
-    for (const it of b.items) { if (it.t === 'box') { const y = map(it.y), h = map(it.y + it.h) - y; if (h > .5) items.push({ ...it, y, h }); continue; }
+    for (const it of b.items) { if (it.t === 'box') { if (it !== b.items[0] && gone(it.y + it.h / 2)) continue; const y = map(it.y), h = map(it.y + it.h) - y; if (h > .5) items.push({ ...it, y, h }); continue; }
       const c = it.y + it.h / 2; if (!gone(c)) items.push({ ...it, y: it.y + (map(c) - c) }); }
-    return { ...b, h: map(b.h), items, blocks: [] };
+    const cb = Math.max(0, ...items.slice(1).map(i => i.y + i.h)), h = cb ? Math.min(map(b.h), Math.ceil(cb + b.pb)) : map(b.h); if (items[0]) items[0].h = h;
+    return { ...b, h, items, blocks: [] };
   }
   async function capRender(job) { // job.top~job.bot(자르기)만 그려요 · 선명하게: 폰 화면 배율 그대로(2~3배) PNG · 아이폰 캔버스 한도(약 1,600만 화소) 넘으면 글줄 사이에서 나눠요
     //   따로(sep): 말풍선마다 한 장 — 자른 범위 안에 든 부분만, 위아래 여백 붙여서
@@ -10436,8 +10415,9 @@
     const edgeScroll = (getY, fn) => setInterval(() => { const sc = pv.querySelector('.sc'), r = sc.getBoundingClientRect(), y = getY(), d = y < r.top + 60 ? -1 : y > r.bottom - 60 ? 1 : 0; if (d) { sc.scrollTop += d * 14; fn(); } }, 16);
     const pkSet = (el, v) => { const [bi, i] = el.dataset.k.split(':').map(Number), s = picks.get(bi) || new Set(); v ? s.add(i) : s.delete(i); picks.set(bi, s); el.classList.toggle('on', v); };
     pv.addEventListener('pointerdown', e => { const pk = tab === 'pick' && e.target.closest('.pk'); if (!pk || busy) return; e.preventDefault();
-      const v = !pk.classList.contains('on'); pkSet(pk, v); let lx = e.clientX, ly = e.clientY;
-      const hit = () => { const o = document.elementFromPoint(lx, ly)?.closest?.('.pk'); if (o && pv.contains(o) && o.classList.contains('on') !== v) pkSet(o, v); };
+      const all = [...pv.querySelectorAll('.pk')], snap = all.map(x => x.classList.contains('on')), i0 = all.indexOf(pk), v = !snap[i0]; pkSet(pk, v); let lx = e.clientX, ly = e.clientY;
+      const hit = () => { const o = document.elementFromPoint(lx, ly)?.closest?.('.pk'), i1 = all.indexOf(o); if (i1 < 0) return; const a = Math.min(i0, i1), z = Math.max(i0, i1);
+        all.forEach((x, i) => { const w = i >= a && i <= z ? v : snap[i]; if (x.classList.contains('on') !== w) pkSet(x, w); }); };
       const mv = ev => { lx = ev.clientX; ly = ev.clientY; hit(); }, tm = edgeScroll(() => ly, hit);
       const up = () => { clearInterval(tm); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
       addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up); });
