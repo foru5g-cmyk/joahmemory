@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.3
+// @version      4.9.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1065,13 +1065,17 @@
     const others = pPeople(mem).map(p => p.name).filter(n => n && !(who && (n === who || has(who, n) || has(n, who))));
     return t => String(t).split(/\n+|(?<=[.!?。])\s+/).filter(l => P_SEX.test(l) && ((who && has(l, who)) || !others.some(n => has(l, n)))).join('\n');
   }
+  const P_PAST = /지난\s*(?:번|밤|주|날)|며칠\s*전|\d+\s*일\s*전|일주일\s*전|\d+\s*주\s*전|전날|그날\s*(?:밤\s*)?(?:이후|뒤|의)|떠올|기억|생각나|이후로|뒤로/;
   function pregKitRels(mem) { // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
-    const base = storyDay(mem), out = [], mine = pRelMine(mem);
+    const base = storyDay(mem), out = [], mine0 = pRelMine(mem);
+    const mine = t => mine0(t).split('\n').filter(l => l && !P_PAST.test(l)).join('\n'); // 지난 관계를 떠올린 줄은 그날 관계로 안 쳐요
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const t = mine([b.title, ...b.lines].join('\n')), d = P_DAY(b.title); if (d != null && t) out.push({ d, t }); }
     const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
-    for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m));
-      if (msgRole(m) === 'assistant') { const x = P_DAY2(t.slice(0, 400)); if (x != null) cur = x; else if (cur != null) cur += pSkip(t); } else if (cur != null) cur += pSkip(t);
-      const st = mine(t.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(x => x.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
+    for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null;
+      if (x != null) cur = x;
+      for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
+        if (x == null && cur != null) cur += pSkip(p);
+        const st = mine(p.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(y => y.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
@@ -1127,13 +1131,13 @@
     if (day == null) return `<div class="pg-cap">${kcap}</div><div class="pg-card"><p class="pg-s">이야기 날짜를 못 찾았어요 · AI 답 머리말에 날짜(예: 05월 07일)가 나오면 바로 돼요</p></div>`; // 숨기지 않고 왜 안 되는지 알려요
     if (!preg.seed) { preg.seed = pSeed(); pregSave(); }
     const { hit, testable, recent, k, last } = pregConceive(mem, day), tl = testable[testable.length - 1], rl = recent[recent.length - 1];
-    const rel = hit || tl || last, since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
+    const rel = hit || tl || recent[0] || last, since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
     const declared = !!(preg.unaware || preg.start != null); // 이야기·작가가 이미 임신으로 정함 → 주사위 말고 두 줄
     const res = declared && done !== 'pos' ? 'pos' : done || (!last ? 'neg' : hit ? 'pos' : tl ? 'neg' : 'early');
     const pill = r => r ? ` <span class="pg-odds" title="${esc(kitOdds(r.t)[1].join(' · '))}">🍼 ${Math.round(kitChance(r.t) * 100)}% · ${kitKind(r.t)}</span>` : '';
     const md = d => { const m = P_STR(d).match(/(\d{1,2})\.(\d{1,2})$/); return m ? `${+m[1]}/${+m[2]}` : P_STR(d); }; // 끝의 월.일만(1년차 11.20처럼 연도 없는 날짜도)
     const nowhy = r => kitOdds(r.t)[1].some(x => /피임함|사후피임약/.test(x)) ? '피임이 됐어요' : kitOdds(r.t)[1].includes('생리 중') ? '생리 중이었어요' : P_NOWHY[Math.floor(pR('nowhy' + r.d) * P_NOWHY.length)].replace(/\(.*\)/, '');
-    const why = !last ? '최근 6주 안에 관계 기록이 없어요' : res === 'early' ? `아직 일러요 · ${md(last.d)} 관계 ${day - last.d}일째` : (r => `${md(r.d)} 관계 · ${nowhy(r)}${pill(r)}${rl && rl.d !== r.d ? ` ·${md(rl.d)} 관계는 2주 뒤에` : ''}`)(tl || last); // 2주 지난 관계가 없으면(작가 설정 직후 등) 마지막 관계로
+    const why = !last ? '최근 6주 안에 관계 기록이 없어요' : res === 'early' ? `아직 일러요 · ${md((recent[0] || last).d)} 관계 ${day - (recent[0] || last).d}일째` : (r => `${md(r.d)} 관계 · ${nowhy(r)}${pill(r)}${rl && rl.d !== r.d ? ` ·${md(rl.d)} 관계는 2주 뒤에` : ''}`)(tl || last); // 2주 지난 관계가 없으면(작가 설정 직후 등) 마지막 관계로
     const force = last && preg.start == null ? `<button class="pg-link" data-act="pregforce">✍️ 작가 설정</button>` : '';
     if (done && done !== 'pos' && !declared) return `<div class="pg-card pg-kitdone"><b>${kcap.split(' ')[0]} 오늘 ${kname} · ${kw === 'modern' ? '한 줄' : kw === 'old' ? '태기 없음' : '구슬이 잠잠함'}</b><p class="pg-s">${why}${force ? ' · ' + force : ''}</p></div>`; // 긁은 뒤엔 작게(이야기 날짜가 바뀌면 다시)
     const stick = kw === 'modern' ? `<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t${res === 'pos' ? ' on' : ''}"></i></span><small>C T</small></div>`
@@ -2545,7 +2549,7 @@
   function maskPaint() { // 화면 글자에서 이름 찾기: 크랙 채팅 로그만 · '조아메모리 창도'를 켜면 창 안도(설정 칸은 빼고)
     if (!MASK_OK) return;
     const out = [];
-    if (mask.on && mask.names.length) {
+    if ((mask.on || mask.cap) && mask.names.length) {
       const re = new RegExp(mask.names.map(reEsc).join('|'), 'gi'); // 영어는 대소문자 안 가려요(Nana = nana = NANA)
       const ok = (n, inPanel) => { const p = n.parentElement; return !!p && !p.closest('script,style,textarea,input,noscript') && (inPanel ? !p.closest('[data-sec]') : !!p.closest('[data-message-id],[data-message-group-id],' + TH_AI)); }; // 채팅: 말풍선 안 글자만 · 창: 설정 칸([data-sec])은 빼요
       for (const [top, inPanel] of [[document.body, false], ...(mask.panel ? [[root, true]] : [])]) {
@@ -2560,8 +2564,8 @@
   const MASK_L = 'jm-mask-l';
   const bgOf = el => { for (; el; el = el.parentElement) { const b = getComputedStyle(el).backgroundColor; if (b && b !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(b)) return b; } return '#fff'; };
   function maskLay() {
-    if (!PEN_OV && !(mask.on && mask.mode === 'emoji')) { document.querySelectorAll('.' + MASK_L).forEach(l => l.remove()); return; }
-    const by = new Map(), lay = mask.on, emo = mask.mode === 'emoji';
+    if (!PEN_OV && !((mask.on || mask.cap) && mask.mode === 'emoji')) { document.querySelectorAll('.' + MASK_L).forEach(l => l.remove()); return; }
+    const by = new Map(), lay = mask.on || mask.cap, emo = mask.mode === 'emoji';
     if (lay) for (const r of mask.ranges) { const pe = r.startContainer.parentElement, box = pe?.closest(TH_AI + ',' + TH_ME) || pe?.closest('[data-message-id],[data-message-group-id]'); if (box) (by.get(box) || by.set(box, []).get(box)).push(r); }
     document.querySelectorAll('.' + MASK_L).forEach(l => { if (!by.has(l.parentElement)) l.remove(); });
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
@@ -2583,7 +2587,7 @@
       html.push(`<i style="left:${b.left}px;top:${b.top}px;width:${b.width}px;height:${b.height}px;font-size:${Math.round(b.height * 0.8)}px">${esc(mask.emoji)}</i>`); }
     maskEmo.innerHTML = html.join('');
   }
-  const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
+  const maskSoon = () => { if (!(mask.on || mask.cap) || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
   new MutationObserver(ms => { { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
     if (themeCss.textContent) thNv();
     if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
@@ -4098,6 +4102,7 @@
     /* 아래 버튼(저장·넣기 등)이 있는 화면에선 독을 숨겨요 */
     .screen:has([data-out="bottom"] > *) nav.top{display:none}
     .screen:has([data-out="bottom"] > *) main{padding-bottom:28px}
+    [data-out="bottom"]{min-height:0;max-height:60%;overflow-y:auto;overscroll-behavior:contain}
     @media(prefers-reduced-motion:reduce){nav.top button{transition:none}}
     /* ── 컴퓨터: 가운데에 넓은 창 ── */
     @media(min-width:900px){
@@ -8684,7 +8689,7 @@
       ? `<div class="actions" style="grid-template-columns:1fr 1fr">${String(nav.runMode).startsWith('chunk') ? `<button class="btn" data-act="extall"${busyNow ? ' disabled' : ''}>① 전부 받기</button>` : `<button class="btn" data-act="extget"${busyNow ? ' disabled' : ''}>① 요청 복사</button>`}
           <button class="btn pri" data-act="extpaste"${busyNow ? ' disabled' : ''}>② 답 붙여 넣기</button></div>
         ${nav.pasteBox ? '<div class="editwrap" style="margin-top:8px"><textarea data-out="pastebox" placeholder="AI가 준 답을 통째로 붙여 넣어요(■ 칸 제목부터 끝까지)" style="min-height:120px"></textarea><div class="actions one" style="margin-top:6px"><button class="btn pri" data-act="pastego">넣기</button></div></div>' : ''}
-        <div style="text-align:center;margin-top:8px${busyNow ? ';opacity:.4;pointer-events:none' : ''}">${String(nav.runMode).startsWith('chunk') ? '<button class="linkbtn" data-act="extget">한 묶음씩 복사</button> · ' : ''}<button class="linkbtn" data-act="extget" data-arg="file">요청 파일로 받기</button> · <label class="linkbtn">답 파일 불러오기<input type="file" accept=".txt,text/plain" data-out="extfile" hidden></label></div>`
+        <div style="text-align:center;margin-top:8px${busyNow ? ';opacity:.4;pointer-events:none' : ''}">${String(nav.runMode).startsWith('chunk') ? '<button class="linkbtn" data-act="extget">한 묶음씩 복사</button> · ' : ''}<button class="linkbtn" data-act="extget" data-arg="file">요청 파일로 받기</button> · <label class="linkbtn" for="jm-extfile">답 파일 불러오기</label></div>`
       : `<div class="actions one"><button class="btn pri" data-act="go"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리 시작'}</button></div>`;
     else bottom.innerHTML = '';
     // 폰: 위쪽 3칸(설정은 톱니). 컴퓨터: 왼쪽 세로 메뉴 4칸. 어느 쪽을 보일지는 CSS가 data-mode로 정합니다.
@@ -9564,11 +9569,6 @@
     if (e.target.dataset?.mask) return maskInput(e.target); // 편의 › 이름 가리기(이름 추가·다른 색·이모지)
     if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
-    if (e.target.dataset?.out === 'extfile') {
-      const file = e.target.files?.[0]; e.target.value = '';
-      if (file) await importResult(await file.text());
-      return;
-    }
     if (e.target.dataset?.out === 'modelpick') { pickModel(e.target.value); if (!e.target.value) ui('[data-set="model"]')?.focus(); }
     if (nav.tab === 'settings' && !nav.view && e.target.closest?.('[data-set],[data-out="cyclepick"],[data-out="limitpick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings(true, e.target).then(() => { if (e.target.dataset?.out === 'modelpick') render(); }); } // 모델을 바꾸면 접힌 줄 글자도
   });
@@ -9590,6 +9590,9 @@
       return true;
     }
   }
+  { // 답 파일 칸은 다시 그리지 않는 곳에 하나만: 폰에서 파일 고르는 사이 화면이 다시 그려지면 고른 파일이 버려진 칸으로 갔어요
+    const ef = Object.assign(document.createElement('input'), { type: 'file', id: 'jm-extfile', accept: '.txt,.md,text/plain,text/markdown', hidden: true }); root.appendChild(ef);
+    ef.addEventListener('change', async () => { const file = ef.files?.[0]; ef.value = ''; if (file) try { await importResult(await file.text()); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } }); }
   root.addEventListener('change', async e => { if (e.target.dataset?.out !== 'fximport') return; const file = e.target.files?.[0]; e.target.value = ''; if (file) fxPickOpen(file.name, await file.text()); });
   // 조아메모리 칸(글 칸·입력칸)에서 친 키는 뒤의 크랙 페이지로 안 보내요: 아이폰에서 줄바꿈(↵)을 누르면 크랙이 그 키를 받아 화면을 채팅 아래로 휙 끌어내렸어요
   for (const ev of ['keydown', 'keypress', 'keyup']) root.addEventListener(ev, e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) e.stopPropagation(); });
@@ -10236,6 +10239,7 @@
   function capPaint() { // 고른 말풍선 표시 + 아래 바
     document.querySelectorAll('.jm-cap-b').forEach(b => { if (!cap.on) { b.classList.remove('jm-cap-b', 'jm-cap-sel'); delete b.dataset.jmn; } });
     for (const b of cap.sel) if (!b.isConnected) cap.sel.delete(b);
+    if (mask.cap !== (cap.on && cap.mask)) { mask.cap = cap.on && cap.mask; maskPaint(); } // 캡처 중 🙈 이름은 화면에도 바로 보여요
     if (cap.ready) { capBar.__h = ''; capBar.innerHTML = `<button type="button" class="x" data-c="rx" aria-label="닫기">${CAP_IC.x}</button><span class="n">이미지가 준비됐어요</span><span class="sp"></span><button type="button" class="go" data-c="rsave">${CAP_IC.dl}저장</button>`; if (!capBar.isConnected) document.documentElement.appendChild(capBar); capBarPlace(); }
     if (!cap.on) { if (!cap.ready) capBar.remove(); capBtn.classList.remove('on'); document.documentElement.classList.remove('jm-cap'); return; }
     capBtn.classList.add('on'); document.documentElement.classList.add('jm-cap');
