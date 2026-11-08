@@ -4,7 +4,7 @@
 // @version      4.8.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -5028,7 +5028,7 @@
         if (!(cursor = next)) break;
       }
       etcQuiet = true;
-      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked']) await setValue(k + ':' + chatId, ''); }
+      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked', 'relkind']) await setValue(k + ':' + chatId, ''); relMemo = {}; relMemoChat = ''; }
       finally { etcQuiet = false; }
       const now = new Date().toISOString();
       await setValue('resetAt:' + chatId, now); await setValue('etcAt:' + chatId, now);
@@ -7808,7 +7808,12 @@
     if (/(?:^|\s)(?:형제|자매|남매|형|오빠|언니|누나|남동생|여동생|동생|쌍둥이)(?:\s|$)/.test(h)) return '형제';
     return '';
   };
-  const pairKind = (rel, a, b) => { if (!a || !b || a === b) return ''; for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = relKind(r.text); if (k) return k; } return ''; };
+  let relMemo = {}, relMemoChat = '', relMemoT = 0;
+  const pairKind = (rel, a, b) => { const k = pairKind0(rel, a, b), id = [a, b].sort().join('\u0000'), cid = chatIdFromPath(); if (!a || !b || a === b || !cid || cid !== relMemoChat) return k;
+    if (!k) return relMemo[id] || '';
+    if (relMemo[id] !== k) { relMemo[id] = k; clearTimeout(relMemoT); relMemoT = setTimeout(() => setValue('relkind:' + cid, JSON.stringify(relMemo)), 500); }
+    return k; };
+  const pairKind0 = (rel, a, b) => { if (!a || !b || a === b) return ''; for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = relKind(r.text); if (k)return k; } return ''; };
   const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${REL_PILL[k][0]};color:${REL_PILL[k][1]}${style ? ';' + style : ''}">${k}</span>` : '';
   // 얼굴 옆 표시: 지금 임신 중 🤰 · 산모수첩으로 아이를 낳은 엄마·아빠 👶
   const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) || relAll.parents?.has(name) ? '👶' : '';
@@ -8870,6 +8875,7 @@
       usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregAppSync(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
+      if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
       { const c = snap.note; // 다른 기기(폰)에서 고정 설정을 고쳤으면 채팅 노트 쪽이 최신 → 이 기기 전체 사본의 고정 설정도 그걸로
