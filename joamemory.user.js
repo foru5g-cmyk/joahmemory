@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.2
+// @version      4.9.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10154,6 +10154,8 @@
 
   // 크랙 입력창 찾기: textarea·글 입력 칸 둘레에서 버튼이 3개 이상 모인 상자를 찾고,
   // 그 안에서 가장 오른쪽(보내기) 버튼 바로 앞에 끼워 넣습니다.
+  const SEND_ICON = 'path[d^="M18.77 11.13"],path[d^="M18.38 12.88"],path[d^="M6 6h12v12H6"]'; // 크랙 보내기 ▶ · → · 멈춤 ■
+  const floatingIn = (el, stop) => { for (let n = el; n && n !== stop; n = n.parentElement) if (/^(absolute|fixed)$/.test(getComputedStyle(n).position)) return true; return false; };
   function findSendSpot() {
     const inputs = [...document.querySelectorAll('textarea, [contenteditable="true"], [role="textbox"]')]
       .filter(t => !host.contains(t) && t.offsetParent !== null && t.getBoundingClientRect().width > 120);
@@ -10161,9 +10163,10 @@
     if (!box0) return null;
     let box = box0.parentElement;
     for (let i = 0; i < 8 && box; i++, box = box.parentElement) {
-      const btns = [...box.querySelectorAll('button')].filter(b => b !== inlineBtn && b.offsetParent !== null && !host.contains(b));
+      // 입력창 위에 떠 있는 버튼(모바일 유틸 ↗·라디오존데 ↻·대시보드 등)은 버튼 줄이 아니라서 빼요
+      const btns = [...box.querySelectorAll('button')].filter(b => b !== inlineBtn && b.offsetParent !== null && !host.contains(b) && !floatingIn(b, box));
       if (btns.length < 3) continue;
-      const send = btns.reduce((best, b) => {
+      const send = btns.filter(b => b.querySelector(SEND_ICON)).pop() || btns.reduce((best, b) => {
         const r = b.getBoundingClientRect(), br = best.getBoundingClientRect();
         return r.right > br.right + 1 || (Math.abs(r.right - br.right) <= 1 && r.bottom > br.bottom) ? b : best;
       });
@@ -10181,7 +10184,8 @@
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
       const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
       let gap = 0; for (let n = inlineBtn.nextElementSibling; n && n !== before && gap < 3; n = n.nextElementSibling) gap++; // 다른 확장이 사이에 끼운 버튼 2개까지는 그대로 둬요(서로 자리 뺏기 안 하게)
-      if (!inlineBtn.isConnected || !(box.contains(inlineBtn) || box.parentElement?.contains(inlineBtn))) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; } } }
+      if (!inlineBtn.isConnected || !(box.contains(inlineBtn) || box.parentElement?.contains(inlineBtn))) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; }
+      } }
     ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
