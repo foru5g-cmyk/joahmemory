@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.8
+// @version      4.8.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2585,7 +2585,8 @@
   }
   const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
   new MutationObserver(ms => { { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
-    if (ms.every(m => maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
+    if (themeCss.textContent) thNv();
+    if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
   { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
   async function maskToggle() { await setValue('maskOn', mask.on ? 'off' : 'on'); await maskLoad();
@@ -2609,21 +2610,27 @@
   const thRgb = h => { h = String(h).replace('#', ''); if (h.length === 3) h = [...h].map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   const thMix = (a, b, t) => '#' + thRgb(a).map((x, i) => Math.round(x + (thRgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join(''); // a→b로 t만큼
   const thDark = h => { const [r, g, b] = thRgb(h); return (r * 299 + g * 587 + b * 114) / 1000 < 110; };
+  function thNv() { const a = document.querySelector(TH_AIN), on = new Set();
+    for (let e = a?.parentElement; e; e = e.parentElement) if (e.matches('.stick-to-bottom div.items-center.px-5')) on.add(e);
+    document.querySelectorAll('.jm-nv').forEach(e => { if (!on.has(e)) e.classList.remove('jm-nv'); });
+    on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv'); }); }
   async function themeLoad() {
     theme.on = String(await getValue('thOn', String(await getValue('thPen', 'off')) === 'on' || String(await getValue('thBub', '')) ? 'on' : 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요) · 스위치가 생기기 전에 형광펜·색을 골라 둔 사람은 켜진 채로
     theme.bub = /^#[0-9a-f]{6}$/i.test(String(await getValue('thBub', ''))) ? String(await getValue('thBub', '')) : '';
     theme.pen = String(await getValue('thPen', 'off')) === 'on'; theme.penc = String(await getValue('thPenC', '#FFE58A')) || '#FFE58A';
     try { const m = JSON.parse(String(await getValue('thMarks', '')) || 'null'); theme.marks = Array.isArray(m) ? m.filter(x => Array.isArray(x) && x[0] && x[1]) : TH_MARKS; } catch (_) { theme.marks = TH_MARKS; }
     const b = theme.on ? theme.bub : '', dark = b && thDark(b), p = /^#[0-9a-f]{6}$/i.test(theme.penc) ? theme.penc : '#FFE58A';
-    themeCss.textContent = !b ? '' : dark
+    let css = !b ? '' : dark
       ? `${TH_AI}{background:${b}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
 [data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}`
       : `${TH_AI}{background:${b}!important}${TH_AI} *:not(pre,pre *){color:#2E2C3A!important}${TH_AI} em:not(pre *),${TH_AI} em *:not(pre *){color:#6E6982!important}${TH_AI} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}`;
-    const NV = '.stick-to-bottom div.items-center.px-5:has(.break-all.rounded-none)', NM = ':not(.break-all.rounded-lg *)';
-    if (b) themeCss.textContent += dark
+    const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', NM = ':not(.break-all.rounded-lg *)';
+    thNv();
+    if (b) css += dark
       ? `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
       : `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
-    themeCss.textContent += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
+    css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
+    if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
     const dq = ([o, c]) => /^["“”]$/.test(o) && /^["“”]$/.test(c); // " “ ” 는 한 식구로: “…" 처럼 섞어 써도 칠해요
     const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”]{1,400}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^]){1,400}' + reEsc(c))];
@@ -2668,10 +2675,13 @@
       for (const r of rs) for (const q of r.getClientRects()) if (q.width >= 2) html.push(`<i style="left:${q.left - o.left}px;top:${q.top - o.top}px;width:${q.width}px;height:${q.height}px;background:rgb(${O.join(',')})"></i>`);
       const h = html.join(''); if (l.__h !== h) { l.__h = h; l.innerHTML = h; } }
   }
-  addEventListener('resize', () => PEN_OV && penSoon());
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = requestAnimationFrame(() => { theme.t = 0; penPaint(); }); };
-  addEventListener('scroll', () => penSoon(), { capture: true, passive: true }); // 위로 올려 옛 답을 불러오거나 크랙이 말풍선을 다시 그렸을 때도 다시 칠해요(한 번에 1~2ms)
-  async function themeSet(k, v, keep) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (!o) return; // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
+  let penLT = 0; const penLater = () => { if (!theme.re) return; clearTimeout(penLT); penLT = setTimeout(penSoon, 200); };
+  addEventListener('resize', () => PEN_OV && penLater());
+  addEventListener('scroll', penLater, { capture: true, passive: true }); // 스크롤이 멈춘 뒤 한 번만
+  let thQ = Promise.resolve();
+  const themeSet = (k, v, keep) => (thQ = thQ.then(() => themeSet0(k, v, keep)).catch(e => logErr('테마', e.message)));
+  async function themeSet0(k, v, keep) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (!o) return; // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
     if (!keep) { o.outerHTML = themeHtml(); return; }
     // 색 고르는 창(input color)이 열린 채면 그 칸은 그대로 둬요: 통째로 다시 그리면 칸이 사라져 슬라이더를 누르는 순간 창이 꺼졌어요(아이폰은 끄는 중에도 change가 와요)
     const t = document.createElement('div'); t.innerHTML = themeHtml(); const n = t.firstElementChild;
@@ -9543,9 +9553,11 @@
     if (on) { const pv = nav.view === 'preview' && draft; Object.assign(nav, fresh(), { bdRange: false, gsSheet: false, etcSheet: false }); if (pv) nav.view = 'preview'; quiet(); render(); if (!pv) refresh(); } // 닫힌 사이 끝난 정리 결과는 그대로
   }
 
+  let thColT = 0;
   root.addEventListener('change', async e => {
     if (e.target.dataset?.thm) return; // 테마 › 대사 기호 입력칸은 '추가'를 누를 때 읽어요
-    if (e.target.dataset?.th) return themeSet(e.target.dataset.th, e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value, e.target.type === 'color' ? e.target : null); // 편의 › 테마
+    if (e.target.dataset?.th && e.target.type === 'color') { const el = e.target; clearTimeout(thColT); thColT = setTimeout(() => themeSet(el.dataset.th, el.value, el), 250); return; }
+    if (e.target.dataset?.th) return themeSet(e.target.dataset.th, e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value, null); // 편의 › 테마
     if (e.target.dataset?.mask) return maskInput(e.target); // 편의 › 이름 가리기(이름 추가·다른 색·이모지)
     if (e.target.dataset?.out === 'chunkCustom') { const v = Math.round(Number(e.target.value)); if (v >= 5 && v <= 1000) { nav.chunkSize = String(v); await setValue('chunkSize', nav.chunkSize); render(); } else toast('5~1000 사이 숫자로 적어 주세요.', 'err', 2500); return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
