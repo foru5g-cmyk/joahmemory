@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.5
+// @version      4.8.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10191,7 +10191,7 @@
     + '#jm-cap-pv .sc{flex:1;min-height:0;overflow:auto;padding:16px 20px;display:flex}#jm-cap-pv .fr{margin:0 auto auto;background:#fff;border:1px solid #E6E1F0;border-radius:20px;padding:14px;box-shadow:0 1px 2px rgba(34,30,46,.04),0 8px 24px rgba(34,30,46,.05)}#jm-cap-pv img{display:block;height:auto}'
     + '#jm-cap-pv .wr{position:relative;width:fit-content;height:fit-content;touch-action:pan-y}#jm-cap-pv .dim{position:absolute;left:0;right:0;top:0;background:rgba(246,244,251,.8);pointer-events:none}'
     + '#jm-cap-pv .hd{position:absolute;left:0;right:0;height:0;touch-action:none;cursor:ns-resize}#jm-cap-pv .hd::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:#7B61D9}#jm-cap-pv .hd::after{content:"";position:absolute;left:0;right:0;top:-18px;height:36px}#jm-cap-pv .hd i{position:absolute;left:50%;top:-6px;width:40px;height:12px;margin-left:-20px;border-radius:6px;background:#7B61D9}'
-    + '#jm-cap-pv .pk{position:absolute;left:0;right:0;background:rgba(255,255,255,.78);cursor:pointer;touch-action:none}#jm-cap-pv .pk.on{background:none}'
+    + '#jm-cap-pv .pk{position:absolute;left:0;right:0;background:rgba(255,255,255,.78);cursor:pointer;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#jm-cap-pv .pk.on{background:none}'
     + '#jm-cap-pv .tp{margin:0;padding:0 20px 8px;color:#8C869C;font-size:12px;text-align:center}'
     + '#jm-cap-pv .ft{display:flex;gap:8px;padding:10px 20px calc(16px + env(safe-area-inset-bottom))}#jm-cap-pv .ft button{flex:1;text-align:center;padding:11px 0;border-radius:14px;font-size:14px;font-weight:700;border:1px solid #E6E1F0;background:#fff;color:#221E2E}#jm-cap-pv .ft .sv{flex:2;background:#7B61D9;border-color:#7B61D9;color:#fff}';
   document.documentElement.appendChild(capCss);
@@ -10434,13 +10434,18 @@
     // 고르기: 누르면 그 문단이 빠지거나 들어가고, 누른 채 쭉 그으면 지나간 문단이 다 같이 바뀌어요
     const edgeScroll = (getY, fn) => setInterval(() => { const sc = pv.querySelector('.sc'), r = sc.getBoundingClientRect(), y = getY(), d = y < r.top + 60 ? -1 : y > r.bottom - 60 ? 1 : 0; if (d) { sc.scrollTop += d * 14; fn(); } }, 16);
     const pkSet = (el, v) => { const [bi, i] = el.dataset.k.split(':').map(Number), s = picks.get(bi) || new Set(); v ? s.add(i) : s.delete(i); picks.set(bi, s); el.classList.toggle('on', v); };
-    pv.addEventListener('pointerdown', e => { const pk = tab === 'pick' && e.target.closest('.pk'); if (!pk || busy) return; e.preventDefault();
-      const all = [...pv.querySelectorAll('.pk')], snap = all.map(x => x.classList.contains('on')), i0 = all.indexOf(pk), v = !snap[i0]; pkSet(pk, v); let lx = e.clientX, ly = e.clientY;
+    pv.addEventListener('pointerdown', e => { const pk = tab === 'pick' && e.target.closest('.pk'); if (!pk || busy) return;
+      const touch = e.pointerType !== 'mouse'; if (!touch) e.preventDefault();
+      const all = [...pv.querySelectorAll('.pk')], snap = all.map(x => x.classList.contains('on')), i0 = all.indexOf(pk), v = !snap[i0]; let lx = e.clientX, ly = e.clientY, live = false, tm = 0, lp = 0;
       const hit = () => { const o = document.elementFromPoint(lx, ly)?.closest?.('.pk'), i1 = all.indexOf(o); if (i1 < 0) return; const a = Math.min(i0, i1), z = Math.max(i0, i1);
         all.forEach((x, i) => { const w = i >= a && i <= z ? v : snap[i]; if (x.classList.contains('on') !== w) pkSet(x, w); }); };
-      const mv = ev => { lx = ev.clientX; ly = ev.clientY; hit(); }, tm = edgeScroll(() => ly, hit);
-      const up = () => { clearInterval(tm); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
-      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up); });
+      const start = () => { live = true; pkSet(pk, v); if (touch) navigator.vibrate?.(10); tm = edgeScroll(() => ly, hit); };
+      const block = ev => { if (live) ev.preventDefault(); };
+      const end = () => { clearTimeout(lp); clearInterval(tm); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', end); removeEventListener('touchmove', block); };
+      const mv = ev => { if (!live) { if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 8) end(); return; } lx = ev.clientX; ly = ev.clientY; hit(); };
+      const up = () => { if (!live) pkSet(pk, v); end(); };
+      if (touch) lp = setTimeout(start, 350); else start();
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', end); addEventListener('touchmove', block, { passive: false }); });
     pv.addEventListener('pointerdown', e => { const h = e.target.closest('[data-h]')?.dataset.h; if (!h || tab !== 'crop') return; e.preventDefault();
       const wr = pv.querySelector('.wr'); let ly = e.clientY;
       const set = () => { const y = ly - wr.getBoundingClientRect().top;
