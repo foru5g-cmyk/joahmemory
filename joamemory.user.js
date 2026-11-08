@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.1
+// @version      4.9.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -4350,7 +4350,10 @@
     const x = skelOf(a), y = skelOf(b); if (x.length >= 2 && y.length >= 2) { const [s, l] = x.length <= y.length ? [x, y] : [y, x]; if (l === s || l.startsWith(s)) return true; }
     const tk = t => String(t).split(/\s+/).map(skelOf).filter(k => k.length >= 2); const ty = tk(b);
     return tk(a).some(k => ty.includes(k)); };
-  const sameName = (a, b) => !pairHas(NAME_PAIRS.diff, a, b) && (pairHas(NAME_PAIRS.same, a, b) || nameForms(a).some(x => nameForms(b).some(y => sameName1(x, y) || crossName(x, y))));
+  // 성 빼고 이름만(대런 ↔ 대런 하트): 한 단어 이름이 띄어 쓴 이름의 첫 단어와 똑같으면 같은 사람
+  const givenName = (a, b) => { a = String(a || '').trim().toLowerCase(); b = String(b || '').trim().toLowerCase(); const [s, l] = /\s/.test(a) ? [b, a] : [a, b];
+    return !!s && !/\s/.test(s) && /\s/.test(l) && l.split(/\s+/)[0] === s; };
+  const sameName = (a, b) => !pairHas(NAME_PAIRS.diff, a, b) && (pairHas(NAME_PAIRS.same, a, b) || nameForms(a).some(x => nameForms(b).some(y => sameName1(x, y) || crossName(x, y) || givenName(x, y))));
   // 물어볼 이름 쌍: 노트 인물 중 앞뒤로만 겹치고, 자동으로 같다고 보지도 않고, 아직 답하지 않은 것
   const askPairs = memory => { const ns = personsIn(splitSections(memory).find(x => x.key === '인물')?.body || '').map(p => p.name), out = [];
     for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) { const a = ns[i], b = ns[j];
@@ -4360,7 +4363,7 @@
   const cleanName = n => { const f = nameForms(n), k = f.find(x => /[가-힣]/.test(x)); return k && f.some(x => /^[A-Za-z]/.test(x)) ? k : n; };
   // 노트의 【이름】 목록에 맞춰 짧게 부른 이름을 정본 이름으로 바꿉니다. 딱 한 명에게만 맞을 때만.
   let CANON = [];
-  const canon = x => { x = String(x || '').trim(); if (!x || CANON.includes(x)) return x; const hit = CANON.filter(n => sameName(n, x) || (!pairHas(NAME_PAIRS.diff, n, x) && nameForms(n).some(a => nameForms(x).some(b => looseName(a, b))))); return hit.length === 1 ? hit[0] : x; };
+  const canon = (x, list = CANON) => { x = String(x || '').trim(); if (!x || list.includes(x)) return x; const hit = list.filter(n => sameName(n, x) || (!pairHas(NAME_PAIRS.diff, n, x) && nameForms(n).some(a => nameForms(x).some(b => looseName(a, b))))); return hit.length === 1 ? hit[0] : x; };
   function personsIn(body) {
     const list = [], foreign = []; let cur = null;
     for (const raw of String(body || '').split('\n')) {
@@ -4536,7 +4539,7 @@
       const m = l.match(/^(.+?)\s*(?:→|->|⇒)\s*(.+?)\s*[:：]\s*(.*)$/);
       if (!m) return [];
       const out = [];
-      for (const f of splitNames(m[1]).map(canon)) for (const t of splitNames(m[2]).map(canon)) if (f !== t) out.push({ from: f, to: t, text: m[3].trim() });
+      for (const f of splitNames(m[1]).map(x => canon(x))) for (const t of splitNames(m[2]).map(x => canon(x))) if (f !== t) out.push({ from: f, to: t, text: m[3].trim() });
       return out;
     });
   }
@@ -7109,14 +7112,14 @@
       if (hm && nav.hookEdit === ht) return '<div class="hke"><input data-hookin value="' + esc(rest) + '"><button data-act="hooksave" data-arg="' + esc(ht) + '">저장</button><button data-act="hookcancel">취소</button></div>';
       return '<p class="nl">' + (on ? ce('L' + j, b) : pillLine(b)) + (hm ? '<span class="hka"><button data-act="hookdone" data-arg="' + esc(ht) + '">끝남</button><button data-act="hookedit" data-arg="' + esc(ht) + '">고치기</button><button data-act="hookdel" data-arg="' + esc(ht) + '">지우기</button></span>' : '') + '</p>'; } // 서사 고리 줄: '태정→나 대감'이 있어도 관계 줄이 아니에요(고칠 때는 원래 글 그대로)
     if (REL_RE.test(l)) { const r = relParse(l);
-      return '<p class="nl"><i>→ ' + esc(r.to) + '</i>' + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
+      return '<p class="nl"><i>→ ' + (on ? '</i>' + ce('O' + j, r.to) + ' ' : esc(r.to) + '</i>') + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
         : (r.addr.length ? r.addr.map(x => '<span class="addr">「' + esc(x) + '」</span>').join(' ') + ' ' : '') + (r.reg ? '<span class="reg-tag">' + esc(r.reg) + '</span> ' : '') + esc(r.rel)) + '</p>'; }
     const i = labelCut(b);
     return i > 0 && i <= 12 ? '<p class="nl"><i>' + esc(b.slice(0, i).trim()) + '</i>' + ce('V' + j, b.slice(i + 1).trim()) + '</p>' : '<p class="nl">' + ce('L' + j, b) + '</p>';
   }
   // 고친 것들 → 노트(같은 항목은 아래 줄부터, 제목은 맨 끝에 바꿔 줄 번호가 안 밀리게)
   function edApply(mem, edits) {
-    const list = splitSections(mem), touched = new Set(), num = f => /^[LVARG]\d+$/.test(f) ? Number(f.slice(1)) : f === 'N' ? 1e9 : -1;
+    const list = splitSections(mem), touched = new Set(), num = f => /^[LVARGO]\d+$/.test(f) ? Number(f.slice(1)) : f === 'N' ? 1e9 : -1;
     edits.sort((x, y) => num(y.f) - num(x.f));
     for (const { sec, k, f, v } of edits) {
       const s0 = list.find(x => x.key === sec); if (!s0) continue;
@@ -7130,10 +7133,10 @@
       else if (!L[j] || N_PROOF.test(L[j])) continue;
       else if (kind === 'L') { if (v) L[j] = ind(L[j]) + '- ' + v; else { let c = 1; while (j + c < L.length && N_PROOF.test(L[j + c])) c++; L.splice(j, c); } }
       else if (kind === 'V') { const bl = bullet(L[j].trim()), i = labelCut(bl); if (!v) { let c = 1; while (j + c < L.length && N_PROOF.test(L[j + c])) c++; L.splice(j, c); } else L[j] = ind(L[j]) + '- ' + (i > 0 ? bl.slice(0, i).trim() + ': ' : '') + v; }
-      else if ('ARG'.includes(kind) && REL_RE.test(L[j])) { const r = relParse(L[j]);
+      else if ('ARGO'.includes(kind) && REL_RE.test(L[j])) { const r = relParse(L[j]), to = kind === 'O' && v ? v : r.to;
         const addr = kind === 'A' ? v.split(/[,，、]|」\s*「/).map(x => x.trim().replace(/^「|」$/g, '')).filter(Boolean) : r.addr, rel = kind === 'R' ? v : r.rel, reg = kind === 'G' ? v : r.reg;
         const sp = addr.map(x => '「' + x + '」').join('') + (reg ? (addr.length ? '·' : '') + reg : '');
-        L[j] = ind(L[j]) + '- ' + r.from + ' → ' + r.to + ': ' + [sp, rel].filter(Boolean).join(' · '); }
+        L[j] = ind(L[j]) + '- ' + r.from + ' → ' + to + ': ' + [sp, rel].filter(Boolean).join(' · '); }
       s0.body = (it ? [...b.head, ...b.items.flatMap(x => x.lines)] : L).join('\n').trim(); touched.add(sec);
     }
     return { memory: joinSections(list.filter(x => x.body.trim())), touched: [...touched] };
@@ -7855,7 +7858,7 @@
     return out;
   };
   // 노트로 찾은 아이가 있으면 수첩의 '첫째 딸'은 안 겹치게(노트 먼저)
-  const relAll = ppl => { const r0 = pairs('관계·감정선'), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
+  const relAll = ppl => { const nm = [...ppl.keys()], r0 = pairs('관계·감정선').map(r => ({ ...r, from: canon(r.from, nm), to: canon(r.to, nm) })).filter(r => r.from !== r.to), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
   const chipW = n => [...n].length * 12.5 + 44; // 관계 없는 사람 이름표 폭(얼굴 + 이름)
   function graphModel() {
     const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()]; // 관계 줄이 없는 인물도 빠지지 않게(아래에 따로 줄 세워요)
