@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.6
+// @version      4.8.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2500,7 +2500,7 @@
   const easeStyle = document.createElement('style');
   easeStyle.textContent = ''
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .stick-to-bottom .px-5.sm\:px-10{padding-left:8px!important;padding-right:8px!important}.jm-wide .stick-to-bottom .px-5.sm\:px-10 .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide .stick-to-bottom .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide .jm-rg{row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10.jm-col{padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10.jm-col .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
     + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로)
     + '#jm-mask-emo{position:fixed;inset:0;pointer-events:none;z-index:2147483647}#jm-mask-emo>i{position:fixed;font-style:normal;line-height:1;display:flex;align-items:center;justify-content:center}';
@@ -2574,7 +2574,7 @@
     maskEmo.innerHTML = html.join('');
   }
   const maskSoon = () => { if (!mask.on || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
-  new MutationObserver(ms => { const rg = document.querySelector('.max-w-\\[1660px\\]')?.parentElement; if (rg && !rg.classList.contains('jm-rg')) rg.classList.add('jm-rg');
+  new MutationObserver(ms => { { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
     if (ms.every(m => maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
   { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
