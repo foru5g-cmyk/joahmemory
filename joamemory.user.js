@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.7
+// @version      4.8.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -791,14 +791,14 @@
     const cs = previa || breechStay || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
     let crisis = pR('crisis') < era.crisis, weak = pR('weak') < era.weak, ndeath = pR('ndeath') < era.ndeath; // 출산 때 산모 위독 · 아기가 약함 · 아기를 잃음
     // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
-    const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.3 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
+    const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.2 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
     if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
     return { crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
     if (world === 'modern') return [
-      [6, '임신 확인 · 심장 소리', twin ? (p.hideTwin ? '심장 소리 확인 · 아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '심장 소리 확인 · 정상'],
+      [6, '임신 확인 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '잘 뛰고 있음 · 정상'],
       [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
       [16, '2차 기형아 검사', p.abn ? `${preg?.shown?.c12 >= 0 ? '추가 검사에서' : `기형아 검사 고위험(${p.chrom.split('(')[0]}) → 추가 검사에서`} ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? (preg?.shown?.c12 >= 0 ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상') : '2차 기형아 검사 정상'], // 12주 검진을 못 갔으면 '의심'을 들은 적이 없으니 그에 맞게 // 성별은 물어볼 때만(pregTick)
       [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
@@ -861,25 +861,25 @@
     const who = preg.who || '임신한 사람', me = !!preg.me, ck = world === 'modern' ? '검진' : '진찰', dad = preg.fatherCands?.length > 1 ? '' : preg.father || '';
     // 지금 일: 나왔거나(AI 답에 그 말) 3턴 지나면 끝
     let cur = preg.cur;
-    if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) { preg.log.push({ w: wk, t: cur.t.split(' — ')[0].replace(/\(NPC가[^)]*\)/, ''), at: turn - 1 }); preg.cur = cur = null; } // 나왔으면 적고 끝
+    if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) preg.cur = cur = null;
     else if (cur && turn > cur.until) preg.cur = cur = null; // 안 나오고 지나가면 안 적어요
     if (!cur) {
       const b = big.find(e => e.w <= wk && preg.fired[e.k] == null);
       let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
       // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
-      if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
+      if (false) {
         const recent = preg.recent || [], pool = P_SYM.filter(s => wk >= s[0] && wk <= s[1] && (p.sick || !/입덧/.test(s[2])) && (s[4] !== 'm' || world === 'modern') && !(me && P_INNER.test(s[2])) && !((preg.secret || preg.unaware) && P_KNOW.test(s[2])) && !(preg.unaware && /산모수첩|모르던 사람/.test(s[2])) && !recent.includes(s[2]));
-        const fresh = pool.filter(x => !(preg.seenSym || []).includes(x[2])), pick = fresh.length ? fresh : pool; // 이번 임신에 아직 안 나온 일부터
+        const at = preg.symAt || {}, fresh = pool.filter(x => !(preg.seenSym || []).includes(x[2])), pick = fresh.length ? fresh : pool.slice().sort((a, b) => (at[a[2]] || 0) - (at[b[2]] || 0)).slice(0, Math.max(1, Math.ceil(pool.length / 3))); // 이번 임신에 아직 안 나온 일부터 · 다 나왔으면 가장 오래전에 나온 것들 중에서
         if (pick.length) { let x = pR('symp' + turn) * pick.reduce((a, q) => a + 1 / (q[1] - q[0] + 1), 0), s = pick[pick.length - 1]; for (const q of pick) { if ((x -= 1 / (q[1] - q[0] + 1)) < 0) { s = q; break; } } // 오래 머무는 일은 덜, 잠깐 생기는 일은 더
-          ev = { k: 't' + turn, t: s[2], kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); preg.seenSym = [...new Set([...(preg.seenSym || []), s[2]])]; }
+          ev = { k: 't' + turn, t: s[2], kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); preg.seenSym = [...new Set([...(preg.seenSym || []), s[2]])]; preg.symAt = { ...at, [s[2]]: turn }; preg.symDay = day; preg.symW = { ...(preg.symW || {}), [wk]: (preg.symW?.[wk] || 0) + 1 }; }
       }
       preg.lastRoll = turn;
-      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 3 : 2) }; }
+      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 5 : 4) }; }
     }
     // 검진 결과: 병원 장면일 때만(리롤해도 같은 턴엔 다시 넣어요)
     const res = [];
     // 검진 결과는 한 번만 넣고, 그다음 답 지문에 나왔을 때만 수첩에 적어요(안 나왔으면 안 적음 · 다시 넣지 않음)
-    preg.ckWait = (preg.ckWait || []).filter(c => { if (turn <= c.from) return true; if (pCkHit(c.t, lastAi)) preg.log.push({ w: c.w, t: c.t, at: turn - 1, res: 1 }); return false; });
+    preg.ckWait = (preg.ckWait || []).filter(c => turn <= c.from);
     const heard = (w, t) => { if (!preg.ckWait.some(c => c.t === t)) preg.ckWait.push({ w, t, from: turn }); };
     if (atHosp && preg.unaware) { preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
     else if (atHosp) {
@@ -922,10 +922,10 @@
     if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
     const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아봄') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
     // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
-    const L = [`※ ■ 임신(주사위로 정한 사실 · 바꾸거나 미리 말하지 않음 · 지문에 주수·임신 정보를 설명하지 않음 · NPC가 유저를 대하는 마음·성격은 원래 관계대로(임신했다고 바뀌지 않음)${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''})`];
+    const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'}`);
+    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -933,14 +933,14 @@
         if (turn - preg.seen[tag] < 3) todo.push(tag[0] === 'n' ? `곧 ${ck}${preg.secret ? ` — ${P_DOC[world]}에서 본인에게만 알림` : ` — ${pNpc('곁의 NPC가 귀띔', dad)}`}` : `${ck}을 놓침${preg.secret ? ` — ${P_DOC[world]} 쪽에서 다시 오라고 연락` : ''}`);
       }
     }
-    if (cur && turn >= cur.from) { const sh = pNpc(pShort(cur.t), dad) + (cur.big ? '' : ' 등(시대에 맞게)'); todo.push(cur.soc ? sh : me && P_FEEL.test(cur.t) ? `${who}의 몸에 ${sh}` : `${who}에게 ${sh}${me ? '(NPC 눈에 보인 대로)' : ''}`); } // 가벼운 일은 예시로만 · 시대·장면에 맞게 AI가 골라 써요
+    if (cur && turn >= cur.from) { const sh = pNpc(pShort(cur.t), dad) + (cur.big ? '' : '(시대에 맞게)'); todo.push(cur.soc ? sh : me && P_FEEL.test(cur.t) ? `${who}의 몸에 ${sh}` : `${who}에게 ${sh}${me ? '(NPC 눈에 보인 대로)' : ''}`); } // 가벼운 일은 예시로만 · 시대·장면에 맞게 AI가 골라 써요
     if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
     // 이야기에서 아기가 태어나면 수첩엔 지문에 나온 것만 적어요(주사위로 정해 둔 탯줄·몸무게·고비 같은 건 지문에 없으면 안 적음)
     const lab = big.find(e => e.k === 'labor');
     if (lab && !bornNow && preg.shown.labor == null && ((preg.fired.labor != null && preg.fired.labor <= turn) || ((p.cs || preg.csSaid) && wk >= 37 && /수술실|수술\s*(?:하러|받으러|들어|준비|당일|시작)|입원|분만실/.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said)))) todo.push('아기가 태어나면(정해진 결과): ' + lab.res);
     if (bornNow && lab && preg.shown.labor == null) { preg.shown.labor = turn; const kept = pBornSaid(lab.res, lastAi + '\n' + said, pPeople(mem).map(x => x.name)); preg.log.push({ w: wk, t: '출산' + (kept.length ? ' · ' + kept.join(' · ') : ''), at: turn, res: 1 }); }
-    if (todo.length) L.push(`※ 임신 · 지금 일어나는 일: ${todo.join(' / ')}`);
+    if (todo.length) L.push(`※ 임신 · 지금 쓸 응답(마지막 유저 메시지에 대한 답)에 반드시 넣기: ${todo.join(' / ')} — 지금 장면 흐름 안에서 자연스럽게`);
     pregOut = L; pregSig = L.join('\n');
     pregSave();
   }
@@ -956,7 +956,8 @@
   }
   const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg));
   async function pregLoad(chatId) { pregChat = chatId; try { preg = JSON.parse(String(await getValue('preg:' + chatId, '') || 'null')); } catch (_) { preg = null; }
-    if (preg && preg.after != null && !preg.afterV2) { delete preg.after; delete preg.afterTurn; } } // 예전 '기록 지우기'가 남긴 날짜 막기는 버려요(진짜로 끝난 임신만 막아요)
+    if (preg && preg.after != null && !preg.afterV2) { delete preg.after; delete preg.afterTurn; }
+    if (preg?.log && !preg.logAi1) { const sym = new Set(P_SYM.map(s => s[2].split(' — ')[0].replace(/\(NPC가[^)]*\)/, ''))); preg.log = preg.log.filter(x => x.ai || x.res || !sym.has(x.t)); preg.logAi1 = true; } } // 예전 '기록 지우기'가 남긴 날짜 막기는 버려요(진짜로 끝난 임신만 막아요)
   // 노트에서 임신 찾기 → {who, me, start, w0, why} · 순서: 현재상태 '임신 N주' → 날짜로그 임신 확인 날(그날 = 5주) → 현재상태 '임신' → 아직 정리 안 된 최근 대화
   //   누군지: 현재상태 줄 앞 이름 → 그 사건·대화에 나온 유저 캐릭터 → 나온 여자 인물 → 유저 캐릭터
   function pregDetect(mem, chatTexts = [], after = null) {
@@ -1305,17 +1306,15 @@
       // 안내는 짧은 줄 여러 개로. 첫 줄 뒤 안내 줄은 "※ "로 시작해 읽을 때 본문에서 뺍니다(parseNote).
       ...[`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기`,
-        `※ 프로필 끝 '유저(PC)' = 사용자 캐릭터. 대사·행동·속마음 대신 안 씀`,
+        `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,
         `※ 이후 대화·OOC 정정 > 이 노트. 현재상태는 정리 시점 값`,
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
-        `※ 지금 장면에 필요한 것만. 지난 일·열린 고리 억지로 꺼내거나 끝내지 않음. 기록된 말·반응·물건 되풀이 안 함. 노트에 없는 과거는 지어내지 않음`,
-        `※ 지난 일은 서사에 자연스럽게 녹여 씀. 날짜·장소·경위를 기록 읽듯 나열하거나 읊지 않음`,
-        ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(되풀이 금지와 상관없음)`] : []),
+        `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`,
+        ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)`] : []),
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
-        `※ 답변 형식·길이는 평소대로. 노트 내용·형식 언급 안 함`,
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...pregOut, ...lines, 'MEMO_NOTE_END"'].map(l => '    ' + l),
+        ...lines, ...pregOut, 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
 
@@ -2019,6 +2018,14 @@
     return { ...it, lines: [it.lines[0], ...merged.flatMap(g => g.lines)] };
   }
   let proofsHidden = false; // 이번 답을 받은 정리에서 근거 줄을 뺐는지
+  function pregTake(text) {
+    const got = [], rest = String(text).split('\n').filter(l => { const m = l.match(/^\s*%%임신\s+([^|]*?)\s*\|\s*(.+)$/); if (!m) return true; got.push([m[1], m[2].trim()]); return false; }).join('\n');
+    if (got.length && preg && preg.start != null) {
+      preg.log = preg.log || [];
+      for (const [d, t] of got) { const dn = P_DAY(d), w = dn != null ? Math.max(0, Math.floor((dn - preg.start) / 7)) : (preg.wk || 0); if (!preg.log.some(x => x.t === t)) preg.log.push({ w, t, ai: 1 }); }
+      preg.log.sort((a, b) => (a.w || 0) - (b.w || 0)); pregSave(); }
+    return rest;
+  }
   async function summarize(prevMemory, freshMessages, fixed = '', edited = [], from = 1, delta = false, inputOverride = '', tail = '') { // inputOverride: 기억 다시 확인용 입력 · tail: 입력 끝에 붙이는 이번 작업 안내(형식 맞추기)
     const model = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     const cut = delta ? trimLogForSummary(prevMemory, freshMessages) : { memory: prevMemory, hidden: new Set() };
@@ -2027,9 +2034,12 @@
     proofsHidden = delta && !inputOverride && !tail && !fixHint; // 정정(OOC)이 있으면 옛 근거도 고쳐야 할 수 있어 그대로 보내요
     const input = inputOverride || buildInput(proofsHidden ? dropProofLines(cut.memory) : cut.memory, freshMessages, fixed, edited, from, prevMemory) + fixHint + (cut.hidden.size ? `\n\n[날짜로그 목차] '${LOG_SKIP}'이 붙은 사건 ${cut.hidden.size}개는 본문을 안 보냈을 뿐 그대로 있다. 그 사건은 출력하지 않는다(고치지도 지우지도 않음). 새 대화의 일이 그 사건과 같은 일이면 새 사건으로 만들지 않는다.` : '') + (inputOverride ? '' : tail), system = await buildSystem(delta, prevMemory);
     const think = inputOverride || tail ? 'low' : thinkLevel; // 🔍 다시 확인·형식 맞추기는 새로 판단할 게 적어서 늘 적게(빨라요)
-    const t0 = Date.now(), out = await askAny(model, system, input, false, think).catch(e => /thinking/i.test(e.message) ? askAny(model, system, input) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
+    const pregOn = !inputOverride && !tail && !!preg && pregChat === chatIdFromPath() && preg.start != null && !preg.ended && preg.on !== false;
+    const inputP = input + (pregOn ? `\n\n[임신 기록 — 노트와 따로] 새 대화 지문에서 ${preg.who || '유저 캐릭터'}의 임신과 관련해 실제로 일어난 일(몸의 변화·증상·검진과 결과·주변 인물이 알아챈 것·새로 알게 된 사실)만 골라, 답 맨 끝에 한 줄에 하나씩 "%%임신 날짜 | 있었던 일" 꼴로 적는다. 날짜는 그 일이 있던 이야기 속 날짜. 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '');
+    const t0 = Date.now(), out = await askAny(model, system, inputP, false, think).catch(e => /thinking/i.test(e.message) ? askAny(model, system, inputP) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
     summarize.last = { model, inTok: out.inTok, outTok: out.outTok, thinkTok: out.thinkTok || 0, cached: out.cached || 0, ms: Date.now() - t0 }; // cached: Gemini 자동 캐시 // ms: AI가 답하는 데 걸린 시간
     if (!out.text) throw new Error('AI가 빈 답을 보냈어요.');
+    out.text = pregTake(out.text);
     if (cut.hidden.size) console.info('[조아메모리] 정리 · 날짜로그 ' + cut.hidden.size + '개는 제목만 보냄(6만 자 넘어서)');
     const answer = dropSkipped(cleanOut(out.text), cut.hidden);
     const dropLogProof = t => { const list = splitSections(t), sec = list.find(x => x.key === '날짜로그'); if (!sec) return t; sec.body = dropProofLines(sec.body); return joinSections(list.filter(x => x.body.trim())); };
@@ -4412,10 +4422,10 @@
   const relPart = t => speechCut(t)[1] || t;
   // "「중위님」·반말, 「자기야」·존댓말 혼용" → [{addr:'중위님', reg:'반말'}, {addr:'자기야', reg:'존댓말 혼용'}]
   function speechChips(t) {
-    const out = [], extra = [];
+    const out = [], extra = [], seen = new Set();
     const REG = /(?:존댓말|반말)(?:\s*[·\/,，]?\s*(?:존댓말|반말))?(?:\s*혼용)?|혼용/;
     for (const seg of String(t).split(/\s*[,，]\s*(?=「)|\s+·\s+(?=「)/)) {
-      const addrs = [...seg.matchAll(/「([^」]*)」/g)].map(m => m[1].trim()).filter(a => !NO_ADDR.test(a));
+      const addrs = [...seg.matchAll(/「([^」]*)」/g)].map(m => m[1].trim()).filter(a => !NO_ADDR.test(a) && !seen.has(a) && seen.add(a));
       const reg = ((seg.match(REG) || [])[0] || '').replace(/\s*[·\/,，]\s*/g, '·').trim();
       const rest = seg.replace(/「[^」]*」/g, '').replace(REG, '').replace(/[·,，\s]+/g, ' ').trim();
       if (addrs.length || reg) out.push({ addr: addrs, reg }); if (rest && !/^\(?\s*속마음\s*[\/·,]\s*행동\s*\)?$/.test(rest)) extra.push(rest); // 감정선 끈 방에서 AI가 규칙 글자를 그대로 적은 '(속마음/행동)'은 빼요
