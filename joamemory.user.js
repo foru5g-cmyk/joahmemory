@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.8.0
+// @version      4.8.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2590,7 +2590,7 @@
   // 테마(설정 › 편의 › 테마): AI 말풍선 색 · 대사 형광펜 — 처음엔 다 꺼져 있고(크랙 그대로) 고르면 켜져요
   //   바꾸는 건 말풍선 색·글자색·형광펜뿐(화면 배경·위 메뉴·입력창은 크랙 그대로) · 글꼴·크기·정렬·말풍선 모양은 크랙 그대로 · 어두운 색을 고르면 안 보이는 글자만 밝게
   //   형광펜은 이름 가리기처럼 글자(DOM)를 안 건드리고 CSS Highlight로 칠해요 · 대사 = 기호(" " · “ ” · ❝ ❞ …) 사이 글자
-  const TH_AIN = '.break-all.rounded-none', TH_AI = '.rounded-\\[4px_20px_20px_20px\\]', TH_ME = '.rounded-\\[20px_20px_4px_20px\\]'; // ponytail: 크랙 말풍선 class로 찾아요 · 크랙이 class를 바꾸면 테마만 조용히 꺼져요(대화는 그대로)
+  const TH_AIN = '.break-all.rounded-none', TH_AI = ':is(.rounded-\\[4px_20px_20px_20px\\],.rounded-\\[0px_10px_10px_10px\\])', TH_ME = '.rounded-\\[20px_20px_4px_20px\\]'; // ponytail: 크랙 말풍선 class로 찾아요 · 크랙이 class를 바꾸면 테마만 조용히 꺼져요(대화는 그대로)
   const TH_BUBS = ['#F3EFFF', '#FFF0F5', '#ECF8F2', '#EDF4FD', '#FFF9E3', '#201F28'], TH_PENS = ['#FFE58A', '#FFC9DC', '#C8EEDC', '#CFE2FA', '#E0D6FF'];
   const TH_MARKS = [['"', '"'], ['“', '”'], ['❝', '❞'], ['「', '」'], ['『', '』']];
   const theme = { bub: '', pen: false, penc: '#FFE58A', marks: TH_MARKS, re: null, t: 0 };
