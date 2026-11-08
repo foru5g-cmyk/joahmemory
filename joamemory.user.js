@@ -4,7 +4,7 @@
 // @version      4.8.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -10320,7 +10320,7 @@
       for (let n; (n = tw.nextNode());) { const pe = n.parentElement; if (!pe || skip(pe) || !n.data.trim()) continue;
         const bx = boxOf(pe); if (bx) { if (!boxes.has(bx)) { boxes.add(bx); const q = bx.getBoundingClientRect(); ln.push([q.top - B.top, q.bottom - B.top, 1]); } continue; }
         rr.selectNodeContents(n); for (const q of rr.getClientRects()) if (q.width && q.height) ln.push([q.top - B.top, q.bottom - B.top, 0]); } }
-    for (const im of b.querySelectorAll('img')) { const q = im.getBoundingClientRect(); if (!skip(im) && q.height) ln.push([q.top - B.top, q.bottom - B.top, 1]); }
+    for (const im of b.querySelectorAll('img,hr')) { const q = im.getBoundingClientRect(); if (!skip(im) && q.height) ln.push([q.top - B.top, q.bottom - B.top, 1]); }
     ln.sort((a, c) => a[0] - c[0]);
     const lh = ln.filter(x => !x[2]).map(x => x[1] - x[0]).sort((a, c) => a - c), gap = (lh[lh.length >> 1] || 16) * .6;
     for (const [y, z, im] of ln) { const l = blocks[blocks.length - 1];
@@ -10416,7 +10416,7 @@
     const place = () => { const wr = pv.querySelector('.wr'); if (!wr || tab !== 'crop') return;
       wr.querySelector('.dim.t').style.height = crop.t + 'px'; const db = wr.querySelector('.dim.b'); db.style.top = crop.b + 'px'; db.style.height = Math.max(0, crop.h - crop.b) + 'px';
       wr.querySelector('.hd.t').style.top = crop.t + 'px'; wr.querySelector('.hd.b').style.top = crop.b + 'px'; };
-    const pickBoxes = k => base.placed.flatMap((b, bi) => b.blocks.map((q, i) => { const y = b.oy + q.y, z = y + q.h;
+    const pickBoxes = k => base.placed.flatMap((b, bi) => b.blocks.map((q, i) => { const p = Math.max(0, (18 / k - q.h) / 2), y = b.oy + q.y - p, z = b.oy + q.y + q.h + p;
       return `<i class="pk${picks.get(bi)?.has(i) ? ' on' : ''}" data-k="${bi}:${i}" style="top:${(y * k).toFixed(1)}px;height:${((z - y) * k).toFixed(1)}px"></i>`; })).join('');
     const paint = () => { urls.forEach(u => URL.revokeObjectURL(u)); urls = files.map(f => URL.createObjectURL(f));
       pv.innerHTML = `<div class="card"><div class="top"><div class="tt"><b>캡처 편집</b><span>${tab === 'crop' ? '보라 선을 끌어 위아래를 잘라요' : '빼고 싶은 문단을 누르면 지워져요 · 쭉 그으면 여러 개'}</span></div><button type="button" class="x" data-p="close" aria-label="닫기">✕</button></div>`
