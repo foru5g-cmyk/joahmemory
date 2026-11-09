@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.5
+// @version      4.9.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1538,6 +1538,8 @@
     }
     // 고친 줄 조각이 아닌데 AI가 '+ - 근거'처럼 붙인 '+ '는 떼요
     for (const it of items) if (!it.patch) it.lines = it.lines.map((l, k) => k ? l.replace(/^(\s*)\+\s+(?=\S)/, '$1') : l);
+    // AI가 '(고침)'을 제목 줄이 아닌 줄 끝에 붙였으면 떼요(노트에 '(고침)'만 남지 않게)
+    for (const it of items) it.lines = it.lines.filter((l, k) => !k || !/^\s*[-+]?\s*\(고침\)\s*$/.test(l)).map((l, k) => k ? l.replace(/\s*\(고침\)\s*$/, '') : l);
     return { head, items };
   }
   const shrunkOnly = (oldT, newT) => {
@@ -1649,6 +1651,10 @@
         let k = anchor >= 0 && relTo(out[anchor]) ? anchor : -1;
         if (k < 0) { const c = out.map((l, q) => { const to = relTo(l); return to && line.includes(to.split(/\s+/)[0]) ? q : -1; }).filter(q => q > 0); if (c.length === 1) k = c[0]; }
         if (k > 0) { let e = k + 1; while (e < out.length && /^\s*-\s*(?:전환|근거|번역)\s*[:：]/.test(out[e])) e++; out.splice(e, 0, line); anchor = -1; fresh = false; continue; } }
+      // 인물 블록의 한 줄짜리 칸(함께한 일·고민·계획·가족·사연·프로필)을 '+'로 또 보내면 두 줄이 되지 않게: 함께한 일은 기존 줄에 합치고, 나머지는 바꿔 끼워요
+      const lab = line.match(/^\s*-?\s*(함께한 일|고민|향후 계획|계획|가족|사연|프로필)\s*[:：]\s*(.*)$/), same = lab ? out.findIndex((l, q) => q > 0 && new RegExp(`^\\s*-?\\s*${lab[1]}\\s*[:：]`).test(l)) : -1;
+      if (same > 0) { const was = out[same].replace(/^[^:：]*[:：]\s*/, ''), add = lab[1] === '함께한 일' ? [...new Set([...was.split(/\s+·\s+/), ...lab[2].split(/\s+·\s+/)].map(x => x.trim()).filter(Boolean))].join(' · ') : lab[2];
+        out[same] = out[same].replace(/[:：].*$/, ': ' + add); anchor = same; fresh = true; continue; }
       let at = out.length; if (!proof) while (at > 1 && (PROOF_LINE.test(out[at - 1]) || (!/^\s*⤿/.test(line) && /^\s*⤿/.test(out[at - 1])))) at--;
       out.splice(at, 0, line); anchor = proof ? -1 : at; fresh = false;
     }
@@ -1696,6 +1702,8 @@
         if (packing && (it.del || (isPack(it) && i < 0))) continue;
         // 짧아진 사건: 새 글이 예전 글을 줄인 것뿐이면(두 글자 조각 70% 이상 겹침) 예전 글을 두고, 새 내용이 많으면 사실을 고친 것으로 보고 받아요.
         const freshWord = (oldT, newT) => (newT.match(/[가-힣A-Za-z]{2,}/g) || []).some(w => !oldT.includes(w.length > 2 && /[가-힣]$/.test(w) ? w.slice(0, -1) : w)); // 예전 글에 없던 낱말 = 고친 것
+        // 인물: AI가 【이름】 줄을 설명 없이 이름만 보냈으면 예전 설명을 둬요(설명이 통째로 지워지지 않게)
+        if (d.key === '인물' && i >= 0 && !it.del) { const hd = l => (String(l).match(/^\s*【[^】]*】\s*(.*)$/) || [])[1], nh = hd(it.lines[0]), oh = hd(o.items[i].lines[0]); if (nh != null && !nh.trim() && oh?.trim()) it = { ...it, lines: [o.items[i].lines[0], ...it.lines.slice(1)] }; }
         if (guard && i >= 0 && !it.del && it.lines.join('').length < o.items[i].lines.join('').length && shrunkOnly(o.items[i].lines.join(' '), it.lines.join(' ')) && !freshWord(o.items[i].lines.join(' '), it.lines.join(' '))) continue;
         if (it.del) { if (i >= 0) { const logKeep = proofsHidden && d.key === '날짜로그' && !n.items.some(isPack) && !mergedInto(it, n.items, o.items[i]); /* 평소 정리: AI가 사건을 지우려 해도 남겨요(모델마다 복불복이라) · 정정·(요약) 묶기·새 사건에 합친 것(mergedInto)은 지울 수 있어요 */ if (!logKeep && (delOk(it) || (d.key === '날짜로그' && n.items.some(isPack)))) { if (d.key === '날짜로그') packAt = packAt < 0 ? i : Math.min(packAt, i); o.items.splice(i, 1); } else delKept.push(it.key.replace(/\s*\(삭제\)\s*$/, '')); } }
         else if (i >= 0 && d.key === '인지·비밀') o.items[i] = mergeSecret(o.items[i], it); // 정정·형식 맞추기 때도 AI가 안 쓴 사람 줄은 그대로(줄이 사라지지 않게)
@@ -2993,7 +3001,7 @@
     .nc-b{padding:2px 12px 0;border-top:1px solid var(--rule)}
     .nl{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--ink2);word-break:keep-all;overflow-wrap:anywhere}.nl>i{font-style:normal;font-weight:700;color:var(--ink);margin-right:6px}
     .ne[contenteditable="true"]{outline:0;border-bottom:1.5px dashed #9D8CEB;background:#F6F3FE;border-radius:4px;padding:0 3px;color:var(--ink)}.ne[contenteditable="true"]:focus{background:#EDE8FD;border-bottom-style:solid}
-    .ne.nadd:empty::before{content:'+ 줄 추가 (라벨: 내용)';color:var(--pencil)}
+    .ne.nadd:empty::before{content:'+ 줄 추가 (라벨: 내용)';color:var(--pencil)}.ne.nadd[data-ph]:empty::before{content:attr(data-ph)}
     .n-tone{border:0;cursor:pointer;font:inherit}
     .nc-acts{display:flex;align-items:center;gap:6px;padding:10px 12px}.nc-acts .btn.sm{height:30px;padding:0 12px}
     .nc-inj.nc-out{background:#EDE8FD;color:#4B3F8A}.nh-dust{background:#F1F0F3;color:var(--graphite)}.nc-note{margin:0;padding:10px 12px;font-size:11.5px;color:var(--graphite)}
@@ -4246,7 +4254,6 @@
     .wd-ring.spin{animation:wd-spin 1s linear infinite}@keyframes wd-spin{to{transform:rotate(360deg)}}
     @media (prefers-reduced-motion:reduce){.wd-ring.spin{animation:wd-spin 3s linear infinite}}
     .wd-top .wd-auto{justify-content:flex-start;flex-direction:row-reverse;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--graphite);white-space:nowrap}
-    .wd-rc{display:flex;align-items:center;gap:4px}.wd-rc small{flex:1;font-size:12px;color:var(--ink2)}.wd-rc button{font-size:12px;padding:3px 8px;border-radius:99px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite)}.wd-rc button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);font-weight:700}
     .wd-acts{display:flex;gap:6px}.wd-acts .wd-now{flex:1;min-width:0;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-acts .wd-gear{flex:0 0 32px;height:32px;border-radius:11px}.nocall{display:inline-block;font-size:11.5px;font-weight:700;color:#8A6A12;background:#FFF1BF;border-radius:999px;padding:2px 9px;line-height:1.5;white-space:nowrap}.wd-gear{flex:0 0 36px;height:36px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);color:var(--graphite);display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s}.wd-gear[aria-expanded="true"]{background:var(--acc-soft);color:var(--acc-ink);border-color:transparent}.wd-gear:active{transform:scale(.94)}.wd-acts{position:relative}.wd-opt{position:absolute;right:0;top:calc(100% + 8px);z-index:8;display:flex;flex-direction:column;gap:12px;min-width:148px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:0 14px 34px -12px rgba(34,30,46,.35),0 2px 6px rgba(34,30,46,.06);animation:wd-opt .18s ease-out;transform-origin:top right}.wd-opt .inj-sw{margin:0;justify-content:space-between;flex-direction:row-reverse;white-space:nowrap;font-size:13.5px;font-weight:700;color:var(--ink2)}@keyframes wd-opt{from{opacity:0;transform:scale(.92) translateY(-4px)}}
     .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
     .screen.fx-open nav.top{display:none!important}
@@ -5047,7 +5054,7 @@
       <div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${busyNow || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><div class="wd-rc"><small>떠올리는 옛 기억</small>${[8, 12, 16].map(n => `<button data-act="injnum" data-arg="recall|${n}" aria-pressed="${(injSet.recall || 8) === n}">${n}개</button>`).join('')}</div><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -7212,7 +7219,7 @@
     let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
     const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
-      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
+      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + ' title="남은 (고침)·두 번 들어간 줄을 정리하고, 비어 있는 설명은 예전 정리 기록에서 되살려요">🧹 형식 바로잡기</button>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
     if (nav.ngrp === '주입') { // 칸마다 넣기/끄기 · 어떻게 들어가는지는 칸마다 정해져 있어요
       const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && ![FIXED, '현재상태', SHELF].includes(k) && has(k));
       return h + '<p class="nsum" style="margin-top:10px">칸마다 알아서 골라 넣어요 · 안 쓰는 칸만 끄세요 · 고정 설정·현재상태는 늘 들어가요</p><div class="ij-rows">'
@@ -7239,7 +7246,7 @@
         const top = pm ? '<p class="nl"><i>이름</i>' + ce('n', pm[1]) + '</p><p class="nl"><i>설명</i>' + ce('d', pm[2].replace(/^[·\-]\s*/, '')) + '</p>'
           : on ? '<p class="nl"><i>제목</i>' + (d ? ce('T', t) : ce('t', head.replace(/^▸\s*/, ''))) + '</p>' : '';
         return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + it.lines.map((l, j) => j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('')
-          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
+          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""' + (sec === '인물' ? ' data-ph="+ 관계 줄 추가 (예: → 상대 이름: 「호칭」·존댓말 · 지금 사이)"' : '') + '></span></p>' : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
       }).join('');
     }
     return h;
@@ -9708,6 +9715,17 @@
       case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; const list = splitSections(noteMemory()); let s0 = list.find(x => x.key === arg); if (!s0) { s0 = { key: arg, body: '' }; list.push(s0); }
         s0.body = [s0.body.trim(), ...tpl].filter(Boolean).join('\n'); const key = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1'));
         await nWriteMem(joinSections(list.filter(x => x.body.trim())), [arg], '추가했어요. 내용을 고쳐 저장해 주세요.'); nav.nopen = nav.nedit = key; return render(); }
+      case 'nfixp': { // 인물 블록 바로잡기(AI 안 씀): (고침) 찌꺼기는 itemBlocks가 읽으면서 떼요 · 한 줄짜리 칸이 두 번이면 하나로 · 빈 설명은 정리 기록에서 되살려요
+        const [sec, k] = arg.split('¦'), list = splitSections(noteMemory()), s0 = list.find(x => x.key === sec); if (!s0) return;
+        const bb = itemBlocks(s0.body), it = bb.items.find(x => itemKey(x.key) === k); if (!it) return;
+        const seen = new Map(), lines = []; for (const l of it.lines) { const m = l.match(/^\s*-?\s*(함께한 일|고민|향후 계획|계획|가족|사연|프로필)\s*[:：]\s*(.*)$/); if (!m) { lines.push(l); continue; }
+          if (!seen.has(m[1])) { seen.set(m[1], lines.length); lines.push(l); continue; } const q = seen.get(m[1]), was = lines[q].replace(/^[^:：]*[:：]\s*/, '');
+          lines[q] = lines[q].replace(/[:：].*$/, ': ' + (m[1] === '함께한 일' ? [...new Set([...was.split(/\s+·\s+/), ...m[2].split(/\s+·\s+/)].map(x => x.trim()).filter(Boolean))].join(' · ') : m[2])); }
+        const descOf = l => (String(l || '').match(/^\s*【[^】]*】\s*(.*)$/) || [])[1]?.trim() || '';
+        // 빈 설명: 최근 정리 기록부터 거슬러 가며 이 사람 설명이 있던 마지막 노트에서 가져와요(정리 기록은 방마다 최근 30번)
+        let back = false; if (!descOf(lines[0])) for (const h of (await historyOf(chatIdFromPath())).reverse()) { for (const mem of [h.after, h.before]) { const o = itemBlocks(splitSections(mem || '').find(x => x.key === '인물')?.body || '').items.find(x => sameName(itemKey(x.key), k)), d = descOf(o?.lines[0]); if (d) { lines[0] = lines[0].replace(/】.*$/, '】 ' + d); back = true; break; } } if (back) break; }
+        it.lines = lines; s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim();
+        return nWriteMem(joinSections(list.filter(x => x.body.trim())), [sec], back ? '바로잡았어요 · 설명은 예전 정리 기록에서 되살렸어요.' : '바로잡았어요.' + (descOf(lines[0]) ? '' : ' 설명은 정리 기록에 없어서 수정에서 직접 써 주세요.')); }
       case 'ndel': { if (!confirm('이 항목을 지울까요?')) return; const [sec, k] = arg.split('¦'), list = splitSections(noteMemory()), s0 = list.find(x => x.key === sec); if (!s0) return;
         const bb = itemBlocks(s0.body), i = bb.items.findIndex(x => itemKey(x.key) === k); if (i < 0) return; bb.items.splice(i, 1); s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim(); nav.nopen = null;
         return nWriteMem(joinSections(list.filter(x => x.body.trim())), [sec], '지웠어요.'); }
