@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.6
+// @version      4.9.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3001,7 +3001,7 @@
     .nc-b{padding:2px 12px 0;border-top:1px solid var(--rule)}
     .nl{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--ink2);word-break:keep-all;overflow-wrap:anywhere}.nl>i{font-style:normal;font-weight:700;color:var(--ink);margin-right:6px}
     .ne[contenteditable="true"]{outline:0;border-bottom:1.5px dashed #9D8CEB;background:#F6F3FE;border-radius:4px;padding:0 3px;color:var(--ink)}.ne[contenteditable="true"]:focus{background:#EDE8FD;border-bottom-style:solid}
-    .ne.nadd:empty::before{content:'+ 줄 추가 (라벨: 내용)';color:var(--pencil)}.ne.nadd[data-ph]:empty::before{content:attr(data-ph)}
+    .ne.nadd:empty::before{content:'+ 줄 추가 (라벨: 내용)';color:var(--pencil)}.ne.nadd{display:block;min-height:1.7em;min-width:100%;cursor:text}
     .n-tone{border:0;cursor:pointer;font:inherit}
     .nc-acts{display:flex;align-items:center;gap:6px;padding:10px 12px}.nc-acts .btn.sm{height:30px;padding:0 12px}
     .nc-inj.nc-out{background:#EDE8FD;color:#4B3F8A}.nh-dust{background:#F1F0F3;color:var(--graphite)}.nc-note{margin:0;padding:10px 12px;font-size:11.5px;color:var(--graphite)}
@@ -7178,14 +7178,23 @@
     return i > 0 && i <= 12 ? '<p class="nl"><i>' + esc(b.slice(0, i).trim()) + '</i>' + ce('V' + j, b.slice(i + 1).trim()) + '</p>' : '<p class="nl">' + ce('L' + j, b) + '</p>';
   }
   // 고친 것들 → 노트(같은 항목은 아래 줄부터, 제목은 맨 끝에 바꿔 줄 번호가 안 밀리게)
+  const REL_TPL = ' → 상대 이름: 「호칭」·존댓말 · 지금 사이';
   function edApply(mem, edits) {
     const list = splitSections(mem), touched = new Set(), num = f => /^[LVARGO]\d+$/.test(f) ? Number(f.slice(1)) : f === 'N' ? 1e9 : -1;
+    // '+ 관계 추가' 틀(그 사람 블록 줄 수보다 뒤 번호): 칸을 고친 틀만 차례로 관계 줄을 만들고, 그 칸들의 번호를 새 줄 번호로 바꿔요
+    for (const k of new Set(edits.filter(e => e.sec === '인물' && e.k && /^[ARGO]\d+$/.test(e.f)).map(e => e.k))) {
+      const s0 = list.find(x => x.key === '인물'), b = s0 && itemBlocks(s0.body), it = b?.items.find(x => itemKey(x.key) === k); if (!it) continue;
+      const mine = edits.filter(e => e.sec === '인물' && e.k === k && /^[ARGO]\d+$/.test(e.f) && num(e.f) >= it.lines.length), js = [...new Set(mine.map(e => num(e.f)))].sort((a, c) => a - c); if (!js.length) continue;
+      for (const j of js) { const es = mine.filter(e => num(e.f) === j); if (!es.some(e => e.v)) { es.forEach(e => { e.f = 'X'; }); continue; }
+        it.lines.push('- ' + k + REL_TPL); es.forEach(e => { e.f = e.f[0] + (it.lines.length - 1); }); }
+      s0.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); touched.add('인물');
+    }
     edits.sort((x, y) => num(y.f) - num(x.f));
     for (const { sec, k, f, v } of edits) {
       const s0 = list.find(x => x.key === sec); if (!s0) continue;
       const b = itemBlocks(s0.body), it = k ? b.items.find(x => itemKey(x.key) === k) : null; if (k && !it) continue;
       const L = it ? it.lines : s0.body.split('\n'), j = num(f), ind = l => (String(l).match(/^\s*/) || [''])[0], kind = f[0];
-      if (kind === 'N') { if (v) L.push('- ' + v); }
+      if (kind === 'N') { if (v) L.push('- ' + (sec === '인물' && k && /^(?:→|->)/.test(v) ? `${k} → ${v.replace(/^(?:→|->)\s*/, '')}` : v)); } // 인물 칸에 '→ 상대: …'만 쓰면 앞에 이 사람 이름을 붙여 관계 줄 모양으로
       else if (kind === 't') { if (v) L[0] = '▸ ' + v; }
       else if (kind === 'T') { if (v) { const m = L[0].match(/^(\s*▸\s*\[?[^\]\-]+?\s*-\s*)(.+?)(\]?\s*(?:\(요약\))?\s*)$/); L[0] = m ? m[1] + v + m[3] : '▸ ' + v; } }
       else if (kind === 'd') { const n = (L[0].match(/^\s*【(.+?)】/) || [])[1] || ''; L[0] = '【' + n + '】' + (v ? ' ' + v : ''); }
@@ -7219,7 +7228,7 @@
     let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
     const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
-      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + ' title="남은 (고침)·두 번 들어간 줄을 정리하고, 비어 있는 설명은 예전 정리 기록에서 되살려요">🧹 형식 바로잡기</button>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
+      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + '>🧹 형식 바로잡기</button><button class="nf-q" data-act="nfixhelp" aria-label="형식 바로잡기 설명" aria-expanded="' + !!nav.nfixHelp + '">?</button>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>' + (nav.nfixHelp && key.startsWith('인물¦') && nav.nedit !== key ? '<p class="nc-note">🧹 형식 바로잡기는 정리하다 사라진 설명을 <b>사라지기 전 정리 기록</b>에서 되돌려요. 남은 (고침)과 두 번 들어간 줄도 정리해요. 기록은 이 기기에 최근 30번만 남아서, 그보다 오래전에 사라졌거나 다른 기기에서 정리했으면 되돌릴 수 없어요 · 그땐 수정에서 직접 써 주세요.</p>' : '');
     if (nav.ngrp === '주입') { // 칸마다 넣기/끄기 · 어떻게 들어가는지는 칸마다 정해져 있어요
       const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && ![FIXED, '현재상태', SHELF].includes(k) && has(k));
       return h + '<p class="nsum" style="margin-top:10px">칸마다 알아서 골라 넣어요 · 안 쓰는 칸만 끄세요 · 고정 설정·현재상태는 늘 들어가요</p><div class="ij-rows">'
@@ -7245,8 +7254,8 @@
         if (!open) return '<div class="nc' + (off ? ' off' : '') + '">' + row + '</div>';
         const top = pm ? '<p class="nl"><i>이름</i>' + ce('n', pm[1]) + '</p><p class="nl"><i>설명</i>' + ce('d', pm[2].replace(/^[·\-]\s*/, '')) + '</p>'
           : on ? '<p class="nl"><i>제목</i>' + (d ? ce('T', t) : ce('t', head.replace(/^▸\s*/, ''))) + '</p>' : '';
-        return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + it.lines.map((l, j) => j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('')
-          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""' + (sec === '인물' ? ' data-ph="+ 관계 줄 추가 (예: → 상대 이름: 「호칭」·존댓말 · 지금 사이)"' : '') + '></span></p>' : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
+        return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + it.lines.map((l, j) => j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('') + (on && nav.nrel === key ? Array.from({ length: nav.nrelN || 1 }, (_, q) => nLine(key, '- ' + k + REL_TPL, it.lines.length + q, on)).join('') : '')
+          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' + (sec === '인물' ? '<p class="nl"><button class="btn sm" data-act="nrel" data-arg="' + esc(key) + '"' + dis + '>+ 관계 추가</button></p>' : '') : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
       }).join('');
     }
     return h;
@@ -9704,9 +9713,9 @@
       case 'ngrp': nav.ngrp = arg; nav.nopen = nav.nedit = null; return keepScroll(render);
       case 'nopen': if (nav.nedit || e.target.closest('.nc-inj')) return; nav.nopen = nav.nopen === arg ? null : arg; return keepScroll(render);
       case 'nedit': nav.nedit = arg; if (!arg.endsWith('¦')) nav.nopen = arg; return keepScroll(render);
-      case 'ncancel': nav.nedit = null; return keepScroll(render);
+      case 'ncancel': nav.nedit = nav.nrel = null; nav.nrelN = 0; return keepScroll(render);
       case 'ntone': { const nx = { '반말': '존댓말', '존댓말': '혼용', '혼용': '반말' }[String(el.dataset.reg || '').split(/[\s/·]/)[0]] || '반말'; el.dataset.reg = nx; el.textContent = nx; return; }
-      case 'nsave': { const card = root.querySelector('.nc.editing'); if (!card) return;
+      case 'nsave': { const card = root.querySelector('.nc.editing'); if (!card) return; nav.nrel = null; nav.nrelN = 0;
         const edits = [...card.querySelectorAll('[data-ed]')].filter(x => x.textContent.replace(/\s+/g, ' ').trim() !== String(x.dataset.orig || '').trim())
           .map(x => { const [sec, k, f] = x.dataset.ed.split('¦'); return { sec, k, f, v: x.textContent.replace(/\s+/g, ' ').trim() }; })
           .concat([...card.querySelectorAll('[data-tone]')].filter(x => x.dataset.reg !== x.dataset.reg0).map(x => { const [sec, k, f] = x.dataset.tone.split('¦'); return { sec, k, f, v: x.dataset.reg }; }));
@@ -9715,6 +9724,13 @@
       case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; const list = splitSections(noteMemory()); let s0 = list.find(x => x.key === arg); if (!s0) { s0 = { key: arg, body: '' }; list.push(s0); }
         s0.body = [s0.body.trim(), ...tpl].filter(Boolean).join('\n'); const key = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1'));
         await nWriteMem(joinSections(list.filter(x => x.body.trim())), [arg], '추가했어요. 내용을 고쳐 저장해 주세요.'); nav.nopen = nav.nedit = key; return render(); }
+      case 'nfixhelp': nav.nfixHelp = !nav.nfixHelp; return keepScroll(render);
+      case 'nrel': { // 인물 수정 중 '+ 관계 추가': 화면에만 관계 줄 틀을 하나씩 더 띄워요(저장할 때 한 번에 써요) · 다시 그려도 이미 고쳐 쓴 칸은 그대로
+        const keep = card => card ? [...card.querySelectorAll('[data-ed],[data-tone]')].map(x => [x.dataset.ed ? 'data-ed' : 'data-tone', x.dataset.ed || x.dataset.tone, x.textContent, x.dataset.reg]) : [];
+        const was = keep(root.querySelector('.nc.editing'));
+        nav.nrelN = nav.nrel === arg ? (nav.nrelN || 1) + 1 : 1; nav.nrel = arg; keepScroll(render);
+        const c2 = root.querySelector('.nc.editing'); if (c2) for (const [at, k, t, reg] of was) { const el = c2.querySelector(`[${at}="${CSS.escape(k)}"]`); if (!el) continue; el.textContent = t; if (reg != null) el.dataset.reg = reg; }
+        return; }
       case 'nfixp': { // 인물 블록 바로잡기(AI 안 씀): (고침) 찌꺼기는 itemBlocks가 읽으면서 떼요 · 한 줄짜리 칸이 두 번이면 하나로 · 빈 설명은 정리 기록에서 되살려요
         const [sec, k] = arg.split('¦'), list = splitSections(noteMemory()), s0 = list.find(x => x.key === sec); if (!s0) return;
         const bb = itemBlocks(s0.body), it = bb.items.find(x => itemKey(x.key) === k); if (!it) return;
@@ -9723,7 +9739,8 @@
           lines[q] = lines[q].replace(/[:：].*$/, ': ' + (m[1] === '함께한 일' ? [...new Set([...was.split(/\s+·\s+/), ...m[2].split(/\s+·\s+/)].map(x => x.trim()).filter(Boolean))].join(' · ') : m[2])); }
         const descOf = l => (String(l || '').match(/^\s*【[^】]*】\s*(.*)$/) || [])[1]?.trim() || '';
         // 빈 설명: 최근 정리 기록부터 거슬러 가며 이 사람 설명이 있던 마지막 노트에서 가져와요(정리 기록은 방마다 최근 30번)
-        let back = false; if (!descOf(lines[0])) for (const h of (await historyOf(chatIdFromPath())).reverse()) { for (const mem of [h.after, h.before]) { const o = itemBlocks(splitSections(mem || '').find(x => x.key === '인물')?.body || '').items.find(x => sameName(itemKey(x.key), k)), d = descOf(o?.lines[0]); if (d) { lines[0] = lines[0].replace(/】.*$/, '】 ' + d); back = true; break; } } if (back) break; }
+        let back = false; if (!descOf(lines[0])) for (const h of (await historyOf(chatIdFromPath())).reverse()) { for (const mem of [h.after, h.before]) { const pb = splitSections(mem || '').find(x => x.key === '인물')?.body || '', o = itemBlocks(pb).items.find(x => sameName(itemKey(x.key), k)),
+            d = descOf(o?.lines[0]) || (pb.split('\n').map(l => l.match(/^\s*-?\s*([^:：【】]{1,16}?)\s*[:：]\s*(.+)$/)).find(m => m && sameName(m[1].trim(), k))?.[2].trim() || ''); if (d) { lines[0] = lines[0].replace(/】.*$/, '】 ' + d); back = true; break; } } if (back) break; }
         it.lines = lines; s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim();
         return nWriteMem(joinSections(list.filter(x => x.body.trim())), [sec], back ? '바로잡았어요 · 설명은 예전 정리 기록에서 되살렸어요.' : '바로잡았어요.' + (descOf(lines[0]) ? '' : ' 설명은 정리 기록에 없어서 수정에서 직접 써 주세요.')); }
       case 'ndel': { if (!confirm('이 항목을 지울까요?')) return; const [sec, k] = arg.split('¦'), list = splitSections(noteMemory()), s0 = list.find(x => x.key === sec); if (!s0) return;
