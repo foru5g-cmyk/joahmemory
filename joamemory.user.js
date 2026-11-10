@@ -4,7 +4,7 @@
 // @version      5.0.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -824,7 +824,7 @@
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
     if (world === 'modern') return [
-      [6, '임신 확인 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '잘 뛰고 있음 · 정상'],
+      [6, '첫 초음파 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '잘 뛰고 있음 · 정상'],
       [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
       [16, '2차 기형아 검사', p.abn ? `${preg?.shown?.c12 >= 0 ? '추가 검사에서' : `기형아 검사 고위험(${p.chrom.split('(')[0]}) → 추가 검사에서`} ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? (preg?.shown?.c12 >= 0 ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상') : '2차 기형아 검사 정상'], // 12주 검진을 못 갔으면 '의심'을 들은 적이 없으니 그에 맞게 // 성별은 물어볼 때만(pregTick)
       [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.serious ? `${one}에게서 ${p.serious[1]}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
@@ -923,8 +923,8 @@
       const due = checks.filter(c => c[0] <= wk && c[0] >= wk - 4 && !(p.loss != null && preg.fired.loss != null && c[0] >= p.loss) && (preg.shown['c' + c[0]] == null || preg.shown['c' + c[0]] === turn)).slice(-1); // 이번에 받는 건 가장 최근 검진 하나(그 전 것은 안 받은 걸로)
       checks.filter(c => c[0] < (due[0]?.[0] ?? 0) && preg.shown['c' + c[0]] == null).forEach(skip);
       if (miss.length) { preg.miss = { turn, t: [...new Set(miss)] }; heard(wk, '지난 검진 소견: ' + preg.miss.t.join(' · ')); }
-      due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; if (i >= due.length - 2) heard(c[0], c[1] + ': ' + c[2]); } });
-      due.slice(-2).forEach(c => res.push(c[0] + '주 ' + c[1] + ': ' + c[2]));
+      due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; preg.ckW = { ...(preg.ckW || {}), ['c' + c[0]]: wk }; if (i >= due.length - 2) heard(wk, c[1] + ': ' + c[2]); } }); // 실제로 간 주수로 적어요
+      due.slice(-2).forEach(c => res.push((preg.ckW?.['c' + c[0]] ?? wk) + '주 ' + c[1] + ': ' + c[2]));
       if (preg.miss?.turn === turn) res.push('지난 검진 때 못 들은 것: ' + preg.miss.t.join(' · '));
       if (p.hideTwin && (preg.twinAt == null || preg.twinAt === turn) && due.some(c => c[0] >= 12)) { // 숨어 있던 쌍둥이가 밝혀짐(처음 초음파를 봤으면 '하나 더', 못 봤으면 그냥 둘)
         const t = Object.keys(preg.shown).some(k => /^c\d/.test(k) && +k.slice(1) < 12 && preg.shown[k] >= 0) ? '다시 보니 뒤에 숨어 있던 아기가 하나 더 — 쌍둥이였음' : '아기가 둘 — 쌍둥이';
@@ -1369,7 +1369,7 @@
     const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ' · 쌍둥이라 조금 더 높아요' : ''}</b></div>`) : '';
     const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
     const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
-    const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${c[0]}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
+    const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${preg.ckW?.['c' + c[0]] ?? (preg.log || []).find(x => x.res && x.at === shown['c' + c[0]])?.w ?? c[0]}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
     const scan = sec(world === 'modern' ? '🩻 초음파 기록' : world === 'old' ? '🩺 진맥 기록' : '🔮 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
