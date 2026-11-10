@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.1
+// @version      5.0.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2728,12 +2728,12 @@
       ? `${TH_AI}{background:${b}!important}${TH_AI} *{color:#DEDAE8!important}${TH_AI} em,${TH_AI} em *{color:#ADA8BC!important}${TH_AI} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${TH_AI} hr{border-color:#34313F!important;background:#34313F!important}
 [data-message-group-id] .memo-turn-badge{background:#2A2833!important;color:#A9A4BB!important}`
       : `${TH_AI}{background:${b}!important}${TH_AI} *:not(pre,pre *){color:#2E2C3A!important}${TH_AI} em:not(pre *),${TH_AI} em *:not(pre *){color:#6E6982!important}${TH_AI} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}`;
-    const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', NM = ':not(.break-all.rounded-lg *)';
+    const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', A = TH_AIN; // 소설형도 채팅형처럼: AI 글(.rounded-none) 안 글씨만 칠해요(칸 전체 *:not(… *)은 사파리에서 무거워요)
     thNv();
     if (b) css += dark
-      ? `${NV}>div{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
-      : `${NV}>div{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
-    if (b) { const EI = `${TH_AI} .rounded-lg:has(>div>.ProseMirror),${NV} .break-all .rounded-lg:has(>div>.ProseMirror)`; css += `${NV} .break-all.bg-surface_tertiary{background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
+      ? `${NV}>div{background:${b}!important}${A} *{color:#DEDAE8!important}${A} em,${A} em *{color:#ADA8BC!important}${A} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${A} hr{border-color:#34313F!important;background:#34313F!important}`
+      : `${NV}>div{background:${b}!important}${A} *:not(pre,pre *){color:#2E2C3A!important}${A} em:not(pre *),${A} em *:not(pre *){color:#6E6982!important}${A} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}`;
+    if (b) { const EI = `${TH_AI} .rounded-lg.transition-colors,${NV} .break-all .rounded-lg.transition-colors`; css += `${NV} .break-all.bg-surface_tertiary{background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
@@ -9035,7 +9035,7 @@
             const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = fixItems(b).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head))); // 끈 설정은 채팅엔 없으니 사본 것을 살려요
             const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED), body = offs.length ? a + '\n' + fixJoin(offs) : a; if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); } } }
       { const c = snap.note; // 다른 기기(폰)에서 유저(PC) 표시를 바꿨으면 이 기기 전체 사본도 같은 사람으로
-        if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto) { const u = pPeople(c.memory).find(p => p.me)?.name, f = pPeople(fullNote.memory).find(p => p.me)?.name;
+        if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto && refresh.pcKey !== (refresh.pcKey = chatId + c.upto + c.memory.length)) { const u = pPeople(c.memory).find(p => p.me)?.name, f = pPeople(fullNote.memory).find(p => p.me)?.name;
           if (u && u !== f) { const m = markUser(fullNote.memory, u, true); if (m) await saveFull(chatId, fullNote.upto, m, fullNote.turns, fullNote.at); } } }
       { const c = snap.note; // 분기한 방: 방 번호는 새것이지만 채팅 노트의 정리 시각은 그대로 → 이 기기의 다른 방에서 같은 정리본 전체를 찾아 이어 붙여요
         if (c?.sel && !c.parked && c.at && !(fullNote && fullNote.upto === c.upto)) { try {
