@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      4.9.9
+// @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -292,7 +292,7 @@
       if (sec !== '인물') return l;
       // 프로필 줄: 채팅엔 동물 이모지·성별·유저(PC) 표시만. '거친 선임' 같은 한마디 꼬리표는 화면에만(AI가 그 딱지대로만 연기하지 않게).
       const pf = l.match(/^(\s*-?\s*프로필\s*[:：]\s*)(.*)$/);
-      if (pf) { const keep = pf[2].split(/\s*·\s*/).filter(x => x && (/^(여|남)$/.test(x) || /유저|PC|사용자/i.test(x) || !/[가-힣A-Za-z0-9]/.test(x))); return pf[1] + keep.join(' · '); }
+      if (pf) { const keep = pf[2].split(/\s*·\s*/).filter(x => x && (/^(여|남)$/.test(x) || USER_MARK.test(x) || !/[가-힣A-Za-z0-9]/.test(x))); return pf[1] + keep.join(' · '); }
       // "함께한 일"에서 날짜로그에 아직 그대로 있는 사건은 빼고 넣습니다(같은 제목 두 번 X). (요약)으로 묶여 사라진 사건만 남아요. 화면엔 그대로.
       const ws = l.match(/^(\s*-?\s*함께한 일\s*[:：]\s*)(.+)$/);
       //   같은 날짜에 이 인물이 나오는 사건이 날짜로그에 있으면 그 사건이 같은 일이라 봅니다(AI가 제목을 다른 말로 줄여 써도 걸러지게).
@@ -993,7 +993,7 @@
     const fresh = after == null || day > after + 14; // 끝난 지 2주 안엔 현재상태·대화의 옛 흔적으로 다시 시작하지 않아요
     const secs = splitSections(mem), body = k => secs.find(x => x.key === k)?.body || '';
     const NEG = /음성|한\s*줄|임신\s*(?:가능성|걱정|아님|아닌|안\s*됨|하지\s*않)|피임|불임|임신시키|임신할/;
-    const ppl = body('인물').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
+    const ppl = body('인물').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: pf.replace(/^[^:：]*[:：]/, '').split(/\s*·\s*/).some(x => USER_MARK.test(x.trim())), female: /·\s*여\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
     const pick = () => ppl.find(p => p.me)?.name || '유저 캐릭터'; // 임신은 유저 캐릭터(페르소나)만 — 엄마·다른 여자 인물로 잡히지 않게
     const isMe = who => !!ppl.find(p => p.me && (p.name.includes(who) || who.includes(p.name)));
     const labelOf = l => (l.match(/^\s*[-•]?\s*([^:：—·()]{1,20}?)\s*[:：]/) || [])[1]?.trim() || '', someoneElse = l => { const w = labelOf(l); return !!w && !isMe(w) && ppl.some(p => !p.me && (p.name.includes(w) || w.includes(p.name))); }; // 줄 앞 이름이 다른 인물(NPC)이면 그 사람 임신이에요 → 유저로 잡지 않아요
@@ -1084,13 +1084,14 @@
   // 🧪 임테기 긁기: 기다리는 동안 모드 탭에서 직접 긁어 봐요 · 결과는 이야기 속 날짜마다 하나(같은 날 다시 긁어도 같음)
   //   임신 여부는 마지막 관계 날에 한 번만 굴려요(피임 안 함 30% · 피임 5%) → 며칠에 긁든 같고, 새 관계가 있으면 다시 · 관계 후 10일 전엔 임신이어도 한 줄(너무 일러요)
   //   두 줄이면 관계한 날 + 2주 = 4주 식으로 임신 기록 시작 + 다음 2턴 동안 채팅에 '임테기 두 줄'을 넣어요(유저가 직접 긁은 거라 장면에 써도 돼요)
-  const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: /유저\s*\(PC\)/.test(pf), female: /·\s*여\s*(?:·|$)/.test(pf), male: /·\s*남\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
+  const pPeople = mem => (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1).map(b => { const pf = (b.match(/프로필\s*[:：][^\n]*/) || [''])[0]; return { name: b.split('】')[0].trim(), me: pf.replace(/^[^:：]*[:：]/, '').split(/\s*·\s*/).some(x => USER_MARK.test(x.trim())), female: /·\s*여\s*(?:·|$)/.test(pf), male: /·\s*남\s*(?:·|$)/.test(pf) }; }).filter(p => p.name);
   // 인물 칸 프로필 줄의 유저(PC) 표시를 name 한 사람에게만 켜거나 끕니다(유저는 한 명뿐 · 다른 사람 표시는 빼요). 못 찾으면 null
+  const USER_MARK = /^(유저|사용자|user|pc|유저\s*[(（]\s*pc\s*[)）])$/i; // 프로필 줄의 유저 표시(인물 카드와 같은 기준)
   const markUser = (mem, name, on) => { const list = splitSections(mem), s = list.find(x => x.key === '인물'); if (!s) return null;
-    const U = /^(유저|사용자|user|pc|유저\s*[(（]\s*pc\s*[)）])$/i, L = s.body.split('\n'); let who = '', head = -1, has = false;
-    for (let i = 0; i < L.length; i++) { const h = L[i].trim().replace(/^[-•]\s+/, '').match(/^【(.+?)】/); if (h) { who = h[1].trim(); if (sameName(who, name)) head = i; continue; }
+    const U = USER_MARK, L = s.body.split('\n'); let who = '', head = -1, has = false;
+    for (let i = 0; i < L.length; i++) { const h = L[i].trim().replace(/^[-•]\s+/, '').match(/^【(.+?)】/); if (h) { who = h[1].trim(); if (who === name) head = i; continue; }
       const pf = L[i].match(/^(\s*-?\s*프로필\s*[:：]\s*)(.*)$/); if (!pf) continue;
-      const parts = pf[2].split(/\s*·\s*/).filter(x => x && !U.test(x.trim())); if (on && sameName(who, name)) { parts.push('유저(PC)'); has = true; }
+      const parts = pf[2].split(/\s*·\s*/).filter(x => x && !U.test(x.trim())); if (on && who === name) { parts.push('유저(PC)'); has = true; }
       L[i] = pf[1] + parts.join(' · '); }
     if (on && !has) { if (head < 0) return null; L.splice(head + 1, 0, '- 프로필: 유저(PC)'); }
     s.body = L.join('\n'); return joinSections(list); };
@@ -1693,7 +1694,7 @@
         if (k > 0) { let e = k + 1; while (e < out.length && /^\s*-\s*(?:전환|근거|번역)\s*[:：]/.test(out[e])) e++; out.splice(e, 0, line); anchor = -1; fresh = false; continue; } }
       // 인물 블록의 한 줄짜리 칸(함께한 일·고민·계획·가족·사연·프로필)을 '+'로 또 보내면 두 줄이 되지 않게: 함께한 일은 기존 줄에 합치고, 나머지는 바꿔 끼워요
       // "A → B:" 관계 줄도 같은 A → B가 이미 있으면 새 줄을 붙이지 않고 그 자리에서 바꿔요(관계·호칭 두 줄 방지)
-      const rl = line.match(/^\s*-?\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]/), rk = rl && !/^(전환|근거|번역)$/.test(rl[1]) ? out.findIndex((l, q) => { const m = q > 0 && l.match(/^\s*-?\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]/); return m && sameName(m[1], rl[1]) && sameName(m[2], rl[2]); }) : -1;
+      const rl = line.match(/^\s*-?\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]/), rk = rl && !/[:：]/.test(rl[1]) && [...rl[1]].length <= 24 ? out.findIndex((l, q) => { const m = q > 0 && l.match(/^\s*-?\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]/); return m && sameName(m[1], rl[1]) && sameName(m[2], rl[2]); }) : -1;
       if (rk > 0) { out[rk] = line; anchor = rk; fresh = true; continue; }
       const lab = line.match(/^\s*-?\s*(함께한 일|고민|향후 계획|계획|가족|사연|프로필)\s*[:：]\s*(.*)$/), same = lab ? out.findIndex((l, q) => q > 0 && new RegExp(`^\\s*-?\\s*${lab[1]}\\s*[:：]`).test(l)) : -1;
       if (same > 0) { const was = out[same].replace(/^[^:：]*[:：]\s*/, ''), add = lab[1] === '함께한 일' ? [...new Set([...was.split(/\s+·\s+/), ...lab[2].split(/\s+·\s+/)].map(x => x.trim()).filter(Boolean))].join(' · ') : lab[2];
@@ -3337,7 +3338,7 @@
     @media(max-width:480px){.phero{gap:10px;padding:12px}.phero .av{width:44px;height:44px;font-size:20px}}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
     .phero em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--graphite);margin-left:8px}
-    .pcchk{font-family:inherit;font-weight:700;font-size:11px;line-height:1;padding:4px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--mist);color:var(--pencil);cursor:pointer;transition:background .15s,color .15s,border-color .15s}.pcchk[aria-pressed="true"]{border-color:transparent;background:var(--acc,#7B61D9);color:#fff;box-shadow:0 2px 6px rgba(123,97,217,.28)}.pg-hw.pcw{margin-left:8px;vertical-align:2px}.pcw .pcchk{margin-left:0}.phero .pcw .pg-hb p{font-size:12px;line-height:1.55;color:var(--graphite)}.phero .pcw .pg-hb b{font-size:12.5px} /* 인물 카드: 유저(PC) 표시 칩 */
+    .pcchk{font-family:inherit;font-weight:700;font-size:11px;line-height:1;padding:4px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--mist);color:var(--pencil);cursor:pointer;transition:background .15s,color .15s,border-color .15s}.pcchk[aria-pressed="true"]{border-color:transparent;background:#FFF4C2;color:#8A6D00}.pg-hw.pcw{float:right;margin:2px 7px 4px 8px}.phero .pcw .pg-hb p{margin:0;font-size:12px;line-height:1.55;color:var(--graphite)}.phero .pcw .pg-hb b{font-size:12.5px} /* 인물 카드: 유저(PC) 표시 칩 */
     .phero p{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2);word-break:keep-all}
 .phero .pchips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px}
 .phero .pchips span{padding:3px 9px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px;line-height:1.45}
@@ -4495,7 +4496,7 @@
       const pf = l.match(/^프로필\s*[:：]\s*(.*)$/);
       if (pf) {
         for (const part of pf[1].split(/\s*·\s*/).filter(Boolean)) {
-          if (/^(유저|사용자|user|pc|유저\s*[(（]\s*pc\s*[)）])$/i.test(part)) cur.isUser = true;
+          if (USER_MARK.test(part)) cur.isUser = true;
           else if (!cur.emoji && /\p{Extended_Pictographic}/u.test(part) && part.length <= 8) cur.emoji = part.trim();
           else if (!cur.gender && /^(여|남|여성|남성|여자|남자)$/.test(part)) cur.gender = part[0];
           else cur.tag = cur.tag ? cur.tag + ' · ' + part : part;
@@ -4518,7 +4519,7 @@
       // 남이 이 사람을 부르는 줄("가브리엘 → 데이지:")이 이 블록에 있으면 설명에 섞지 말고 말하는 사람 쪽 관계로 옮겨요
       if (!r && r0 && r0[1] && r0[1].length <= 24) { foreign.push({ from: r0[1].trim(), to: r0[2], text: r0[3].trim() }); cur.last = null; continue; }
       if (r) {
-        const tg = r[2].match(/\s*〔([^〔〕]{1,10})〕\s*$/), rel = { to: canon(r[1]), text: (tg ? r[2].slice(0, tg.index) : r[2]).trim(), quote: '', kind: tg ? tg[1] : '' }; // 〔연인〕 = 정리 AI가 확실하다고 붙인 사이(화면엔 알약으로만)
+        const tg = r[2].match(/\s*〔([^〔〕]{1,10})〕/), rel = { to: canon(r[1]), text: (tg ? r[2].replace(tg[0], '') : r[2]).trim(), quote: '', kind: tg ? tg[1] : '' }; // 〔연인〕 = 정리 AI가 확실하다고 붙인 사이(화면엔 알약으로만)
         // 같은 상대 줄이 또 있으면(정리 AI가 고치지 않고 새로 붙인 줄) 뒤 줄로 바꿔 끼워요: 관계·호칭이 두 번 뜨지 않게 · 전환 줄은 그대로
         const dup = cur.rels.find(x => x.to === rel.to); if (dup) { Object.assign(dup, { text: rel.text, quote: '', kind: rel.kind }); cur.rels.push(cur.rels.splice(cur.rels.indexOf(dup), 1)[0]); cur.last = [dup]; continue; }
         cur.rels.push(rel); cur.last = [rel]; continue;
@@ -4531,7 +4532,7 @@
         else cur.desc += (cur.desc ? ' · ' : '') + bullet(part);
       }
     }
-    for (const f of foreign) { const p = list.find(x => sameName(x.name, f.from)), rel = { to: canon(f.to), text: f.text, quote: '' };
+    for (const f of foreign) { const p = list.find(x => sameName(x.name, f.from)), tg = f.text.match(/\s*〔([^〔〕]{1,10})〕/), rel = { to: canon(f.to), text: (tg ? f.text.replace(tg[0], '') : f.text).trim(), quote: '', kind: tg ? tg[1] : '' };
       if (p && !p.rels.some(x => x.to === rel.to)) p.rels.push(rel); }
     return list;
   }
@@ -5342,7 +5343,7 @@
     const personDesc = new Map(arr(d.references).filter(x => x?.type === 'other' && personOf(x?.title)).map(x => [personOf(x.title), safe(x.content).replace(/\s*\n+\s*/g, ' ').replace(/[.。]\s*$/, '')]));
     const names = [...new Set([...arr(d.people).map(p => s(p?.name)), ...arr(d.speech).map(x => s(x?.speaker)), ...arr(d.relationships).map(x => s(x?.speaker))].filter(Boolean))];
     const people = names.map(nm => { const p = arr(d.people).find(x => s(x?.name) === nm) || {}, out = [`【${nm}】${[toPerson.get(nm), personDesc.get(nm), arr(p.aliases).length && '별명: ' + p.aliases.join(', ')].filter(Boolean).map(t => ' ' + t).join(' ·')}`]; // 【이름】 정체(현재상태 직업·소속 첫 줄) · 설명(자료) · 별명
-      if (p.isPlayer) out.push('- 프로필: 유저');
+      if (p.isPlayer) out.push('- 프로필: 유저(PC)');
       const tos = [...new Set([...arr(d.speech).filter(x => s(x?.speaker) === nm).map(x => s(x.target)), ...arr(d.relationships).filter(x => s(x?.speaker) === nm).map(x => s(x.target))].filter(Boolean))];
       for (const to of tos) { const sp = arr(d.speech).find(x => s(x?.speaker) === nm && s(x.target) === to) || {}, r = arr(d.relationships).find(x => s(x?.speaker) === nm && s(x.target) === to) || {};
         const addr = s(sp.address).split(/\s*[,，]\s*/).filter((a, i, all) => a && all.indexOf(a) === i).map(a => '「' + a + '」').join(''), reg = REG[s(sp.register)] || '';
@@ -7937,12 +7938,14 @@
   // 관계 알약: 관계 줄 맨 앞 구절만 보고 몇 가지로만 붙여요('연인 직전'·'친구의 딸'·'연인인 척' 같은 덴 안 붙게) · 화면에만(AI한테 넣는 글은 그대로)
   let relPillOn = true;
   const REL_PILL = { '연인': ['#FFD6E4', '#C2416B'], '약혼': ['#FFE7C7', '#B05F00'], '부부': ['#E3DCFF', '#5B3FC4'], '자녀': ['#FFF0B3', '#8A6D00'], '형제': ['#DFF3E6', '#2F8A4A'], '전 연인': ['#ECECF2', '#6B6880'] };
+  const relTagged = () => persons().some(p => p.rels.some(r => r.kind)); // 노트 어디든 〔〕가 있으면 정리 AI 표시만 믿어요
   const REL_PILL0 = ['#ECE7FC', '#4B3F8A']; // 정리 AI가 붙인 다른 관계(이혼·주종 등)
   const relKind = text => {
     const h = String(text || '').split(/\s*[·,;/(（]\s*|\s+[—–-]\s+/)[0].trim();
     if (!h || /직전|척|행세|위장|계약|짝사랑|썸|같은|처럼|후보|뻔|아닌|아님/.test(h)) return '';
     if (/^(?:남편|아내|부인|와이프|배우자|약혼자|애인|남친|여친|엄마|아빠|어머니|아버지|딸|아들|형|오빠|언니|누나|동생)\s+(?!사이)[가-힣]/.test(h)) return ''; // '아내 친구'·'남편 동료'
     if (/[가-힣A-Za-z]의\s/.test(h)) return ''; // '친구의 딸'·'네이선의 약혼녀'처럼 다른 사람 이야기
+    if (/[가-힣A-Za-z](?:와|과|랑|이랑|하고)\s*(?:연인|애인|사귀|교제|결혼|약혼|부부|헤어|이혼)/.test(h)) return ''; // '단테와 연인이 된 후'처럼 다른 사람과의 관계 이야기
     if (/(?:^|\s)(?:전|옛|예전)\s*(?:연인|애인|남친|여친|남자\s*친구|여자\s*친구|남편|아내|부인|약혼)|헤어진|이혼|파혼(?!\s*(?:위기|하려|할|고민|얘기|이야기))/.test(h)) return '전 연인';
     if (/결혼\s*(?:을\s*)?약속|결혼\s*예정/.test(h)) return '약혼';
     if (/(?<![가-힣])(?:부부|남편|아내|배우자|신혼|기혼)|결혼한/.test(h)) return '부부'; // 앞에 글자가 붙으면 다른 말('쏟아내'의 '아내')
@@ -7958,9 +7961,9 @@
       if (relMemo[id]) { delete relMemo[id]; clearTimeout(relMemoT); relMemoT = setTimeout(() => setValue('relkind:' + cid, JSON.stringify(relMemo)), 500); } return ''; }
     if (relMemo[id] !== k) { relMemo[id] = k; clearTimeout(relMemoT); relMemoT = setTimeout(() => setValue('relkind:' + cid, JSON.stringify(relMemo)), 500); }
     return k; };
-  const pairKind0 = (rel, a, b) => { if (!a || !b || a === b) return ''; const tagged = rel.some(r => r.kind); // 정리 AI가 〔사이〕를 붙인 노트면 그것만 믿어요(단어 짐작 안 함)
+  const pairKind0 = (rel, a, b) => { if (!a || !b || a === b) return ''; const tagged = relTagged(); // 정리 AI가 〔사이〕를 붙인 노트면 그것만 믿어요(단어 짐작 안 함)
     for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = r.kind || (tagged && r.text !== '아기' ? '' : relKind(r.text)); if (k)return k; } return ''; };
-  const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${(REL_PILL[k] || REL_PILL0)[0]};color:${(REL_PILL[k] || REL_PILL0)[1]}${style ? ';' + style : ''}">${k}</span>` : '';
+  const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${(REL_PILL[k] || REL_PILL0)[0]};color:${(REL_PILL[k] || REL_PILL0)[1]}${style ? ';' + style : ''}">${esc(k)}</span>` : '';
   // 얼굴 옆 표시: 지금 임신 중 🤰 · 산모수첩으로 아이를 낳은 엄마·아빠 👶
   const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) || relAll.parents?.has(name) ? '👶' : '';
   const avB = name => { const b = kidBadge(name); return b ? `<span class="avb-w">${avatar(name)}<i class="avb">${b}</i></span>` : avatar(name); };
@@ -8099,7 +8102,7 @@
       const bend = 28, cx = mx + nx * bend, cy = my + ny * bend;
       const lx = mx + nx * (bend / 2 + 12), ly = my + ny * (bend / 2 + 12) - (list.length - 1) * 8 + 4;
       const k0 = relPillOn && !(sel && on) ? pairKind(list, x, y) : '', kid = k0 === '자녀' && (g.kids.has(x) ? x : g.kids.has(y) ? y : ''), fk = kid && g.kids.get(kid).join('\u0000'), k = fk && kidPill.has(fk) ? '' : (fk && kidPill.add(fk), k0), px = (a.x + 2 * cx + b.x) / 4, py = (a.y + 2 * cy + b.y) / 4, pw = [...k].length * 12 + 20;
-      const pill = k ? `<g class="gp" transform="translate(${px},${py})"><rect x="${-pw / 2}" y="-11" width="${pw}" height="22" rx="11" fill="${(REL_PILL[k] || REL_PILL0)[0]}" stroke="#fff" stroke-width="2"/><text y="4.5" text-anchor="middle" fill="${(REL_PILL[k] || REL_PILL0)[1]}">${k}</text></g>` : '';
+      const pill = k ? `<g class="gp" transform="translate(${px},${py})"><rect x="${-pw / 2}" y="-11" width="${pw}" height="22" rx="11" fill="${(REL_PILL[k] || REL_PILL0)[0]}" stroke="#fff" stroke-width="2"/><text y="4.5" text-anchor="middle" fill="${(REL_PILL[k] || REL_PILL0)[1]}">${esc(k)}</text></g>` : '';
       const spans = sel && on ? list.map((r, i) => `<tspan x="${lx}" dy="${i ? 17 : 0}"><tspan class="who">${esc(r.from)}</tspan> ${esc(cut(r.text, 16))}</tspan>`).join('') : '';
       const tip = (p, q) => q.y - p.y > Math.abs(q.x - p.x) ? { x: p.x, y: p.y + (p.ring === 0 ? 32 : 26) + 33 } : p, a1 = tip(a, b), b1 = tip(b, a), bd = Math.min(bend, Math.hypot(b1.x - a1.x, b1.y - a1.y) / 3); // 아래쪽 사람으로 가는 선은 이름표 밑에서 시작(이름표를 지나가지 않게)
       return `<g class="ge${on ? '' : ' dim'}${sel && on ? ' on' : ''}${!sel && !g.core.has(x) && !g.core.has(y) ? ' faint' : ''}"><path d="M${a1.x},${a1.y} Q${(a1.x + b1.x) / 2 + nx * bd},${(a1.y + b1.y) / 2 + ny * bd} ${b1.x},${b1.y}"/>
@@ -8360,7 +8363,7 @@
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
     const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
     const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName), 'float:right;margin:2px 0 4px 8px');
-    return `<div class="phero">${avB(name)}<div style="min-width:0;flex:1">${heroPill}<b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}</em>` : ''}<span class="pg-hw pcw"><button class="pcchk" data-act="pcset" data-arg="${esc(name)}" aria-pressed="${!!pr.isUser}">유저</button><details class="pg-hq"><summary class="nf-q" aria-label="유저 설명">?</summary><div class="pg-hb"><b>내 캐릭터 표시</b><p>켜면 임테기·임신이 이 사람 기준</p></div></details></span>${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
+    return `<div class="phero">${avB(name)}<div style="min-width:0;flex:1">${pr.isUser || !meName ? `<span class="pg-hw pcw"><button class="pcchk" data-act="pcset" data-arg="${esc(name)}" aria-pressed="${!!pr.isUser}">유저</button><details class="pg-hq"${nav.pcHelp ? ' open' : ''}><summary class="nf-q" data-act="pchelp" aria-label="유저 설명">?</summary><div class="pg-hb"><b>내 캐릭터 표시</b><p>켜면 임테기·임신이 이 사람 기준</p></div></details></span>` : ''}${heroPill}<b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
       // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
       const nz = s => String(s).replace(/[(（][^)）]*[)）]/g, '').replace(/[\s·,]/g, ''), tags = String(pr.tag || '').split(/\s*·\s*/).map(nz).filter(t => t.length >= 3);
       const ps = d.split(/\s+·\s+/).filter(x => x && !tags.some(t => nz(x).includes(t) || (nz(x).length >= 3 && t.includes(nz(x))))), sh = ps.filter(x => x.length <= 16), lg = ps.filter(x => x.length > 16);
@@ -8860,7 +8863,7 @@
     if (e.target.tagName === 'TEXTAREA') { if (nav.fxEdit) nav.fxEdit.text = e.target.value; const c = root.querySelector('.fx-cnt'); if (c) c.textContent = e.target.value.length.toLocaleString() + '자'; }
     else if (e.target.dataset?.out === 'fxtitle' && nav.fxEdit) nav.fxEdit.title = e.target.value; });
   root.addEventListener('change', e => { if (e.target?.id === 'pg-world' && preg?.start != null) { preg.world = e.target.value; pregSave(); render(); } });
-  root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq')) root.querySelectorAll('.pg-hq[open]').forEach(d => { d.open = false; }); }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
+  root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq')) root.querySelectorAll('.pg-hq[open]').forEach(d => { d.open = false; }); if (!e.target.closest?.('.pg-hq')) nav.pcHelp = false; }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
   let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
   async function autoSum() {
@@ -9951,16 +9954,18 @@
         render(); out('main').scrollTop = 0; return; }
       case 'mem': nav.mem = arg; nav.grp = ''; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; render(); out('main').scrollTop = 0; return;
       case 'ppl': nav.ppl = arg; render(); out('main').scrollTop = 0; return;
+      case 'pchelp': e.preventDefault(); nav.pcHelp = !nav.pcHelp; return keepScroll(render);
       case 'pcset': { // 유저(PC) 표시 켜고 끄기: 인물 칸 프로필 줄 글을 직접 고쳐요 · 웹 모드(이 기기엔 일부만)여도 채팅 노트에 써 두면 정리한 기기가 다음에 열 때 따라가요
         const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId || !n || busyNow || !arg) return;
         const partOnly = n.sel && !(fullNote && fullNote.upto === n.upto), on = !PROF.get(arg)?.isUser, mem = markUser(noteMemory(), arg, on);
         if (!mem) return toast('인물 칸에서 이 사람을 못 찾았어요.', 'err');
-        busyNow = true; render();
+        for (const [k, v] of PROF) v.isUser = on && k === arg; keepScroll(render); // 칩은 누르자마자 바꾸고 저장은 뒤에서
+        busyNow = true;
         try { if (n.parked) await park(chatId, mem, n.upto, n.turns, n.at);
           else { const msg = await readMessage(chatId, n.carrierId); await writeMessage(chatId, n.carrierId, stripBlocks(msgText(msg)).trimEnd() + buildBlock(mem, n.upto, n.turns, n.at || undefined, n.by || '', partOnly)); }
           if (!partOnly) await saveFull(chatId, n.upto, mem, n.turns, n.at);
-          toast(on ? `${josa(arg, '을', '를')} 유저(PC)로 표시했어요.` : '유저(PC) 표시를 뺐어요.', 'ok', 2500); await refresh();
-        } catch (e) { toast('저장 실패 · ' + e.message, 'err'); } finally { busyNow = false; keepScroll(render); }
+          await refresh();
+        } catch (e) { toast('저장 실패 · ' + e.message, 'err'); await refresh(); } finally { busyNow = false; keepScroll(render); }
         return; }
       case 'thread': nav.thread = arg; return keepScroll(render);
       case 'graph': nav.view = 'graph'; nav.gsel = null; render(); return;
