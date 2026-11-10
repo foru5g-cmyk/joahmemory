@@ -4,7 +4,7 @@
 // @version      5.0.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2988,10 +2988,6 @@
     /* 형광펜: 글자 아래 절반만 칠합니다 */
     .hl{background:linear-gradient(transparent 52%,#FFE58A 52%);padding:0 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 
-    .fab{position:fixed;right:12px;bottom:200px;z-index:2147483000;height:40px;padding:0 16px;border-radius:20px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);
-      display:none;align-items:center;gap:6px;font-size:13px;font-weight:700}
-    .fab svg{display:none}
-    .fab.show{display:flex}.fab.due{background:#E6E0FA;border-color:#9D8CEB;color:#4B3F8A}
     .under{position:fixed;left:0;right:0;top:-100vh;bottom:-100vh;background:var(--paper);z-index:2147483000;display:none}
     :host(.open) .under{display:block}
     .screen{position:fixed;top:0;left:0;right:0;height:100vh;height:100dvh;z-index:2147483001;background:var(--paper);color:var(--ink);
@@ -4307,7 +4303,6 @@
     .screen.fx-open nav.top{display:none!important}
     .bk-info{margin:12px 2px 0}.bk-info summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--graphite);list-style:none}.bk-info summary::-webkit-details-marker{display:none}.bk-info summary::after{content:' ›'}.bk-info[open] summary::after{content:' ⌄'}.bk-info p{margin:8px 0 0;font-size:12.5px;line-height:1.6}.bk-tx .wd-dot.on{box-shadow:none}.bk-tx b .nf-q{display:inline-grid;width:18px;height:18px;margin-left:6px;padding:0;font-size:11px;vertical-align:1px;cursor:pointer}.bk-tx b .nf-q[aria-expanded="true"]{background:var(--acc);border-color:transparent;color:#fff}.bk-tx .bk-help{margin-top:4px;white-space:normal;overflow:visible;line-height:1.5;color:var(--ink2)}.bk-help b{display:inline;font-size:inherit}
   </style>
-  <button class="fab" data-act="toggle" aria-label="조아메모리 열기">${icon('mark', 'currentColor', 16)}<span data-out="fab">기억</span></button>
   <div class="under" data-act="close" aria-hidden="true"></div>
   <div class="screen" role="dialog" aria-label="조아메모리">
     <header data-out="header"></header>
@@ -8738,7 +8733,6 @@
     } catch (_) {}
     const n = snapshot?.note, turns = freshTurns();
     const label = snapshot ? `${Math.min(turns, cycle)}/${cycle}` : '기억', due = !!snapshot && turns >= cycle;
-    out('fab').textContent = label; ui('.fab').classList.toggle('due', due);
     paintInlineButton(label, due);
 
     // 머리
@@ -10273,7 +10267,7 @@
 
   // ══════════════════════════════════════════════════════════════
   // 14. 채팅 입력창 버튼 줄에 "기억" 버튼 넣기
-  //   입력창 근처에서 버튼이 여러 개 모인 줄을 찾아 붙이고, 못 찾으면 떠 있는 버튼을 씁니다.
+  //   입력창 근처에서 버튼이 여러 개 모인 줄을 찾아 붙여요. 못 찾으면 안 띄워요.
   // ══════════════════════════════════════════════════════════════
   // 보내기 버튼 바로 왼쪽에 들어가는 둥근 버튼: 링이 차오르고 가운데 숫자는 다음 정리까지 남은 턴.
   const inlineBtn = document.createElement('button');
@@ -10349,14 +10343,13 @@
   }
   // 하트는 입력창 줄에 이미 붙어 있으면 안 옮겨요(다른 확장이 보내기 앞자리를 잡아도 서로 1초마다 자리 뺏기 안 하게)
   function placeInlineButton() {
-    if (!chatIdFromPath()) { inlineBtn.remove(); ui('.fab').classList.remove('show'); return; }
+    if (!chatIdFromPath()) { inlineBtn.remove(); return; }
     { const anchor = findSendSpot(); if (anchor?.parentElement) { // 자리: 보내기 버튼 바로 앞 · 이미 붙어 있어도 자리가 다르면 옮겨요
       const kids = [...anchor.children].filter(k => k !== inlineBtn && (k.matches?.('button') || k.querySelector?.('button'))), last = kids[kids.length - 1]; // 오른쪽 묶음이면 그 안 보내기 바로 앞
       const [box, before] = !anchor.matches('button') && kids.length >= 2 && last ? [anchor, last] : [anchor.parentElement, anchor];
       let gap = 0; for (let n = inlineBtn.nextElementSibling; n && n !== before && gap < 3; n = n.nextElementSibling) gap++; // 다른 확장이 사이에 끼운 버튼 2개까지는 그대로 둬요(서로 자리 뺏기 안 하게)
       if (!inlineBtn.isConnected || !(box.contains(inlineBtn) || box.parentElement?.contains(inlineBtn))) { box.insertBefore(inlineBtn, before); inlineBtn.style.margin = '0 4px 0 auto'; }
       } }
-    ui('.fab').classList.toggle('show', !inlineBtn.isConnected);
   }
   let placeTimer = null;
   new MutationObserver(() => {
