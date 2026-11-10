@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2717,9 +2717,7 @@
   function thNv() { const a = document.querySelector(TH_AIN), on = new Set();
     for (let e = a?.parentElement; e; e = e.parentElement) if (e.matches('.stick-to-bottom div.items-center.px-5')) on.add(e);
     document.querySelectorAll('.jm-nv').forEach(e => { if (!on.has(e)) e.classList.remove('jm-nv'); });
-    on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv');
-      const bot = Math.max(...[...e.querySelectorAll('[data-message-id],[data-message-group-id]')].map(m => m.getBoundingClientRect().bottom)), cut = isFinite(bot) ? Math.max(0, Math.round(e.getBoundingClientRect().bottom - bot)) + 'px' : '0px'; // 소설형 칠은 맨 아래 글까지만(그 아래 입력창 자리는 안 칠해요) · 크랙은 글을 거꾸로 쌓아서 제일 아래 있는 글로 재요
-      if (e.style.getPropertyValue('--jm-nvcut') !== cut) e.style.setProperty('--jm-nvcut', cut); }); }
+    on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv'); }); }
   async function themeLoad() {
     theme.on = String(await getValue('thOn', String(await getValue('thPen', 'off')) === 'on' || String(await getValue('thBub', '')) ? 'on' : 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요) · 스위치가 생기기 전에 형광펜·색을 골라 둔 사람은 켜진 채로
     theme.bub = /^#[0-9a-f]{6}$/i.test(String(await getValue('thBub', ''))) ? String(await getValue('thBub', '')) : '';
@@ -2733,9 +2731,9 @@
     const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', NM = ':not(.break-all.rounded-lg *)';
     thNv();
     if (b) css += dark
-      ? `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
-      : `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
-    if (b) { const EI = `${TH_AI} .rounded-lg:has(.ProseMirror),${NV} .break-all .rounded-lg:has(.ProseMirror)`; css += `${NV} .break-all:has(.ProseMirror){background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
+      ? `${NV}>div{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
+      : `${NV}>div{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
+    if (b) { const EI = `${TH_AI} .rounded-lg:has(>div>.ProseMirror),${NV} .break-all .rounded-lg:has(>div>.ProseMirror)`; css += `${NV} .break-all.bg-surface_tertiary{background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
@@ -7943,7 +7941,7 @@
   // 관계 알약: 관계 줄 맨 앞 구절만 보고 몇 가지로만 붙여요('연인 직전'·'친구의 딸'·'연인인 척' 같은 덴 안 붙게) · 화면에만(AI한테 넣는 글은 그대로)
   let relPillOn = true;
   const REL_PILL = { '연인': ['#FFD6E4', '#C2416B'], '약혼': ['#FFE7C7', '#B05F00'], '부부': ['#E3DCFF', '#5B3FC4'], '자녀': ['#FFF0B3', '#8A6D00'], '형제': ['#DFF3E6', '#2F8A4A'], '전 연인': ['#ECECF2', '#6B6880'] };
-  const relTagged = () => persons().some(p => p.rels.some(r => r.kind)); // 노트 어디든 〔〕가 있으면 정리 AI 표시만 믿어요
+  const relTagged = () => { const k = bodyOf('인물'); if (relTagged.k !== k) { relTagged.k = k; relTagged.v = persons().some(p => p.rels.some(r => r.kind)); } return relTagged.v; }; // 노트 어디든 〔〕가 있으면 정리 AI 표시만 믿어요
   const REL_PILL0 = ['#ECE7FC', '#4B3F8A']; // 정리 AI가 붙인 다른 관계(이혼·주종 등)
   const relKind = text => {
     const h = String(text || '').split(/\s*[·,;/(（]\s*|\s+[—–-]\s+/)[0].trim();
