@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.3
+// @version      5.0.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1237,7 +1237,7 @@
     const mem = noteMemory() || '', rel = pregKitRel(mem), day = pregDay(mem, snapshot); if (!rel || day == null) return;
     const w = pregWhoDefault(mem), tests = { ...(preg?.tests || {}) }; delete tests[day]; // 오늘 긁은 한 줄은 지우고 다시 긁을 수 있게
     preg = { ...(preg || {}), on: true, tests, forceRel: rel.d, unaware: true, who: w.name || '임신한 사람', me: w.me, start: rel.d - 14, w0: Math.max(2, Math.floor((day - rel.d + 14) / 7)), why: `작가 설정 · ${P_STR(rel.d)} 관계로 임신(본인은 아직 모름)`, seed: preg?.seed || (pSeed()), at: Date.now() };
-    pregChat = pregChat || chatIdFromPath(); await pregSave(); render();
+    pregChat = pregChat || chatIdFromPath(); await pregSave(); render(); if (nav.gsOn) gsSave(true);
   }
   function setupKit(main) {
     const box = main.querySelector('.pg-kit'), cv = box?.querySelector('canvas'); if (!cv || cv.dataset.on) return; cv.dataset.on = '1';
@@ -1309,16 +1309,16 @@
   }
   async function pregKitDone(day, res, rel) { // rel: 임신된 관계 날(이유는 kitHow로)
     if (!preg) return;
-    const kw = pWorld(noteMemory() || ''), yes = { old: '태기가 잡혔어요! 🎉', fantasy: '수정구슬이 빛나요! 🎉' }[kw] || '두 줄! 🎉', knew = { old: '진맥으로 태기를 확인함', fantasy: '수정구슬로 임신을 알게 됨' }[kw] || '임테기 두 줄로 임신을 알게 됨';
+    const kw = pWorld(noteMemory() || ''), knew = { old: '진맥으로 태기를 확인함', fantasy: '수정구슬로 임신을 알게 됨' }[kw] || '임테기 두 줄로 임신을 알게 됨';
     if (preg.unaware) { // 작가가 정해 둔 임신: 임테기로 본인이 알게 돼요
       preg.tests = { ...(preg.tests || {}), [day]: res };
-      if (res === 'pos') { preg.unaware = false; preg.kit = 1; preg.kitAt = null; preg.secret = confirm(yes + '\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림)'); preg.log = [...(preg.log || []), { w: Math.floor((day - preg.start) / 7), t: knew, at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
-      await pregSave(); render(); return;
+      if (res === 'pos') { preg.kit = 1; preg.kitAt = null; preg.kitAsk = { w: Math.floor((day - preg.start) / 7), t: knew }; } // 누가 아는지는 수첩 맨 위 카드에서 골라요(고르기 전엔 아무도 모름)
+      await pregSave(); render(); if (nav.gsOn) gsSave(true); return; // 임테기 결과는 바로 드라이브에도
     }
     if (preg.start != null) return;
     preg.tests = { ...(preg.tests || {}), [day]: res };
-    if (res === 'pos') { const w = pregWhoDefault(noteMemory() || ''); Object.assign(preg, { secret: confirm(yes + '\n다른 사람들한테는 비밀로 할까요?\n(확인 = 비밀 · 취소 = 바로 알림 · 나중에 모드 탭에서 바꿀 수 있어요)'), on: true, who: w.name || '임신한 사람', me: w.me, start: rel - 14, w0: Math.max(3, Math.floor((day - rel + 14) / 7)), why: `${{ old: '진맥으로 태기 확인(직접 짚음)', fantasy: '수정구슬로 확인(직접 봄)' }[kw] || '임테기 두 줄(직접 긁음)'} · ${P_STR(rel)} 관계 기준으로 셌어요`, kit: 1, at: Date.now() }); }
-    await pregSave(); render();
+    if (res === 'pos') { const w = pregWhoDefault(noteMemory() || ''); Object.assign(preg, { unaware: true, kitAsk: { w: Math.max(3, Math.floor((day - rel + 14) / 7)), t: knew }, on: true, who: w.name || '임신한 사람', me: w.me, start: rel - 14, w0: Math.max(3, Math.floor((day - rel + 14) / 7)), why: `${{ old: '진맥으로 태기 확인(직접 짚음)', fantasy: '수정구슬로 확인(직접 봄)' }[kw] || '임테기 두 줄(직접 긁음)'} · ${P_STR(rel)} 관계 기준으로 셌어요`, kit: 1, at: Date.now() }); }
+    await pregSave(); render(); if (nav.gsOn) gsSave(true);
   }
   // 🎲 모드 탭(설정 왼쪽) · 목록: 🍼 임신 카드(켜기·임테기) / 임신 중이면 '📔 산모수첩 열기' → 수첩(연보라 · 우리 포인트 색)
   //   수첩: 표지(이름·주수·진행 줄·칩) → 🗓 이번 주(늘 숨김) → 👶 아기 → 🤰 엄마 몸 → 🩻 초음파 기록 → 📖 지나온 일 → 지난 기록 → 버튼
@@ -1353,7 +1353,7 @@
     const anyShown = Object.keys(shown).some(k => /^c\d/.test(k) && shown[k] >= 0) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">${world === 'old' ? '태중 일지' : '산모수첩'}</span>${who}<small>${world === 'old' ? '해산 예정' : '예정일'} ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>${world === 'modern' ? 'D-' + dday : dday + '일 남음'}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
-      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="비밀 바꾸기">${preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.fatherCands?.length > 1 ? `<span>👨 아빠 ? · ${preg.fatherCands.map(esc).join(', ')} 중 한 명</span>` : preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
+      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="누가 아는지 바꾸기">${preg.unaware ? '🙈 모름' : preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.fatherCands?.length > 1 ? `<span>👨 아빠 ? · ${preg.fatherCands.map(esc).join(', ')} 중 한 명</span>` : preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(String(preg.why || '').replace('임테기 두 줄(직접 긁음)', { old: '진맥으로 태기 확인(직접 짚음)', fantasy: '수정구슬로 확인(직접 봄)' }[world] || '임테기 두 줄(직접 긁음)'))} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p></div>`;
     const cur = preg.cur && turn >= preg.cur.from;
     const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
@@ -1369,7 +1369,8 @@
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
     const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="devimg" data-arg="preg">📸 수첩 캡처</button>${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
-    return `<div class="pg pg-book">${P_TEST}${cover}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>${devImgSheet()}`;
+    const kitAsk = preg.kitAsk ? `<div class="pg-card"><b>${world === 'modern' ? '두 줄이에요!' : '태기가 있어요!'} 누가 알아요?</b><p class="pg-s" style="margin:4px 0 0">나중에 표지 칩으로 바꿀 수 있어요</p><div class="pg-btns"><button class="btn ghost" data-act="kitwho" data-arg="me">🤫 비밀(본인만)</button><button class="btn ghost" data-act="kitwho" data-arg="all">📢 알리기</button><button class="btn ghost" data-act="kitwho" data-arg="none">🙈 본인도 모름</button></div></div>` : '';
+    return `<div class="pg pg-book">${P_TEST}${cover}${kitAsk}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>${devImgSheet()}`;
   }
   // 앱 방식: 보낼 때 끼어들지 않으니까, 화면을 다시 읽을 때(답이 온 뒤·사파리로 들어올 때) 임신 줄이 바뀌었으면 노트 든 답변(전전)에 한 번 고쳐 써요 · 정리 안 해도 · AI 안 불러서 0원
   async function pregAppSync(chatId) {
@@ -9047,6 +9048,11 @@
           else if (g?.memory) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
           if (!(fullNote && fullNote.upto === c.upto) && c.at && chatIdFromPath() === chatId) await gsBranch(chatId, c); } } // 이 방 백업이 없으면 분기 전 방 백업에서
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); } // 사본이 망가졌으면 채팅 전체본으로
+      if (!gsTried.has('preg|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('preg|' + chatId); // 임신 기록: 다른 기기가 더 진행했으면(임테기·지나온 일이 더 많으면) 드라이브에서 받아요 · 방마다 한 번
+        gsFetch(chatId).then(async d => { let r = null; try { r = JSON.parse(d?.store?.preg || 'null'); } catch (_) {}
+          const sc = x => x ? Object.keys(x.tests || {}).length + (x.log || []).length + (x.history || []).length * 10 + (x.start != null ? 1 : 0) : -1;
+          if (!r || chatIdFromPath() !== chatId || pregChat !== chatId || sc(r) <= sc(preg)) return;
+          await setValue('preg:' + chatId, JSON.stringify(r)); await pregLoad(chatId); pageToast('다른 기기 임신 기록을 받아 왔어요'); render(); }); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
       try { injSet = { secs: {}, recent: 5, recall: 8, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 5, recall: 8 }; }
       injSet.recent = 8; injSet.recall = 8; // 최근 사건·떠올릴 기억은 8개로 고정(예전에 고른 값은 안 봐요)
@@ -10003,7 +10009,7 @@
         for (const x of preg.log || []) if (/^성별을 알게 됨/.test(x.t)) x.t = '성별을 알게 됨: ' + preg.sexFix.map(v => v === '남' ? '아들' : '딸').join('·'); // 지나온 일 기록도 같이
         await pregSave(); return keepScroll(render); }
       case 'pregworld': { if (!preg) return; const order = ['auto', 'modern', 'old', 'fantasy']; preg.world = order[(order.indexOf(preg.world || 'auto') + 1) % order.length]; await pregSave(); return keepScroll(render); }
-      case 'pregsecret': if (!preg?.start) return; preg.secret = !preg.secret; await pregSave(); toast(preg.secret ? '비밀로 바꿨어요. NPC들은 모르는 걸로 해요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render);
+      case 'pregsecret': if (!preg?.start) return; if (preg.unaware) Object.assign(preg, { unaware: false, secret: true }); else if (preg.secret) preg.secret = false; else Object.assign(preg, { unaware: true, secret: false }); await pregSave(); toast(preg.unaware ? '모름으로 바꿨어요. 본인도 NPC도 아직 몰라요.' : preg.secret ? '비밀로 바꿨어요. 본인만 알아요.' : '알림으로 바꿨어요. 이제 NPC들도 알아요.', 'ok', 2500); return keepScroll(render); // 🤫 비밀 → 📢 알림 → 🙈 모름
       case 'pgbook': nav.pgBook = !nav.pgBook; render(); out('main').scrollTop = 0; return;
       case 'pgfix': nav.pgFix = !nav.pgFix; return keepScroll(render);
       case 'relfix': { const [k, f] = String(arg).split('|'), mem = noteMemory() || '', r = pregRelRows(mem).find(x => x.k === k); if (!r || !preg) return;
@@ -10017,6 +10023,9 @@
         const sw = t => String(t || '').replace(/아들|딸(?!꾹|기)|남아|여아/g, m => ({ 아들: '딸', 딸: '아들', 남아: '여아', 여아: '남아' })[m]);
         b.line = sw(b.line); for (const x of b.log || []) x.t = sw(x.t); await pregSave(); return keepScroll(render); }
       case 'preghdel': { if (!preg?.history) return; const i = Number(arg); if (!confirm('이 지난 기록을 지울까요?')) return; preg.history.splice(i, 1); await pregSave(); return keepScroll(render); }
+      case 'kitwho': { const a = preg?.kitAsk; if (!a) return; delete preg.kitAsk;
+        if (arg === 'none') Object.assign(preg, { unaware: true, secret: false }); else { Object.assign(preg, { unaware: false, secret: arg === 'me' }); preg.log = [...(preg.log || []), { w: a.w, t: a.t, at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
+        await pregSave(); if (nav.gsOn) gsSave(true); return keepScroll(render); }
       case 'pregend': if (preg?.start == null) return; nav.pgEnd = !nav.pgEnd; return keepScroll(render);
       case 'pregendk': if (preg?.start == null) return; nav.pgEnd = false; pregArchive(arg, pregDay(noteMemory() || '', snapshot), ''); return keepScroll(render);
       case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, peek: preg?.peek, books: preg?.books || [], history: preg?.history || [], after: preg?.after, reroll: (preg?.reroll || 0) + 1 }; await pregSave(); return keepScroll(render);
