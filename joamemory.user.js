@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.5
+// @version      5.0.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -904,6 +904,7 @@
       }
       preg.lastRoll = turn;
       if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 5 : 4) }; }
+      if (ev?.k === 'loss') { const L = big.find(e => e.k === 'loss'); preg.endNext = { kind: L?.end || '유산', dayN: day, why: L?.why || '', turn: turn + 6 }; } // 출혈 뒤엔 병원에 안 가도 유산이 진행돼서 끝나요
     }
     // 검진 결과: 병원 장면일 때만(리롤해도 같은 턴엔 다시 넣어요)
     const res = [];
@@ -964,6 +965,7 @@
     }
     if (p.serious && world === 'modern' && wk >= 24 && !(preg.shown.c21 > 0) && !preg.unaware && !atHosp) { if (preg.serCall == null) preg.serCall = turn; if (turn - preg.serCall < 3) todo.push(`${P_DOC[world]}에서 ${who}에게 연락: 정밀초음파를 아직 안 받았다며 꼭 와서 보자고 함${preg.secret ? '(본인에게만)' : ''}`); }
     if (cur && turn >= cur.from) { const sh = pNpc(pShort(cur.t), dad) + (cur.big ? '' : '(시대에 맞게)'); todo.push(cur.soc ? sh : me && P_FEEL.test(cur.t) ? `${who}의 몸에 ${sh}` : `${who}에게 ${sh}${me ? '(NPC 눈에 보인 대로)' : ''}`); } // 가벼운 일은 예시로만 · 시대·장면에 맞게 AI가 골라 써요
+    if (preg.fired.loss != null && preg.endNext && turn > preg.fired.loss && cur?.k !== 'loss') todo.push(`${who}의 몸에서 ${preg.endNext.kind}이 계속 진행됨${preg.unaware ? '(본인은 임신을 모름)' : ''} · 증상이 이어지고 심해짐`); // 출혈 뒤 끝날 때까지 턴마다 빈틈없이
     if (preg.kit) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
     // 이야기에서 아기가 태어나면 수첩엔 지문에 나온 것만 적어요(주사위로 정해 둔 탯줄·몸무게·고비 같은 건 지문에 없으면 안 적음)
