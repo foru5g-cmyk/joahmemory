@@ -4,7 +4,7 @@
 // @version      5.0.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -913,7 +913,7 @@
     preg.ckWait = (preg.ckWait || []).filter(c => turn <= c.from);
     const heard = (w, t) => { if (!preg.ckWait.some(c => c.t === t)) preg.ckWait.push({ w, t, from: turn }); };
     if (atHosp && preg.unaware) { preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
-    else if (atHosp) {
+    if (atHosp) { // 처음 알게 된 병원에서도 그 자리에서 검진(초음파)까지 받아요
       for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - e.w <= 4)) { // 출혈·태동 줄어듦 같은 일의 결과는 4주 안에 병원에 갔을 때만(검진과 같은 규칙 · 유산·사산은 늘)
         if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; if (e.end) preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); else heard(wk, e.res); } // 유산·사산은 바로 끝나서 바로 적어요
         res.push(e.res); if (e.end) preg.endNext = { kind: e.end, dayN: day, why: e.why || '', turn };
@@ -1369,7 +1369,7 @@
     const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ' · 쌍둥이라 조금 더 높아요' : ''}</b></div>`) : '';
     const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
     const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
-    const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${preg.ckW?.['c' + c[0]] ?? (preg.log || []).find(x => x.res && x.at === shown['c' + c[0]])?.w ?? c[0]}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
+    const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${preg.ckW?.['c' + c[0]] ?? Math.max(c[0], ...(preg.log || []).filter(x => /알게 됨/.test(x.t) && x.w != null).map(x => x.w).slice(0, 1))}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
     const scan = sec(world === 'modern' ? '🩻 초음파 기록' : world === 'old' ? '🩺 진맥 기록' : '🔮 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
