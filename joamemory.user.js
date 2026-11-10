@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         조아메모리ෆ
-// @namespace    memo-note.v2
+// @namespace    joahmemory
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
