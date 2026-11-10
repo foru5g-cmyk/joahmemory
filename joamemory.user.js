@@ -4,7 +4,7 @@
 // @version      5.0.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -1369,8 +1369,9 @@
     const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
     const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="devimg" data-arg="preg">📸 수첩 캡처</button>${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
-    const kitAsk = preg.kitAsk ? `<div class="pg-card"><b>${world === 'modern' ? '두 줄이에요!' : '태기가 있어요!'} 누가 알아요?</b><p class="pg-s" style="margin:4px 0 0">나중에 표지 칩으로 바꿀 수 있어요</p><div class="pg-btns"><button class="btn ghost" data-act="kitwho" data-arg="me">🤫 비밀(본인만)</button><button class="btn ghost" data-act="kitwho" data-arg="all">📢 알리기</button><button class="btn ghost" data-act="kitwho" data-arg="none">🙈 본인도 모름</button></div></div>` : '';
-    return `<div class="pg pg-book">${P_TEST}${cover}${kitAsk}${preg.unaware ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}</div>${devImgSheet()}`;
+    const posDay = Object.keys(preg.tests || {}).find(d => preg.tests[d] === 'pos'), kitView = preg.kit && posDay ? `<details style="margin:2px 4px 0;font-size:12px;color:var(--graphite)"><summary style="cursor:pointer">임테기 보기</summary><div class="pg-kit">${world === 'modern' ? '<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t on"></i></span><small>C T</small></div>' : `<div class="pg-stick"><b style="font-size:14px">${world === 'old' ? '🌿 희맥이 잡혀요 · 태기가 있어요' : '🔮 구슬이 분홍빛으로 빛나요'}</b></div>`}</div><p class="pg-s" style="text-align:center;margin:4px 0 0">${esc(P_STR(+posDay))}</p></details>` : ''; // 이번 임신을 확인한 결과만(다시 긁기 없음)
+    const kitAsk = preg.kitAsk ? `<div class="pg-card"><b>${world === 'modern' ? '두 줄이에요!' : '태기가 있어요!'} 누가 알아요?</b><div class="pg-btns"><button class="btn ghost" data-act="kitwho" data-arg="me">🤫 비밀(본인만)</button><button class="btn ghost" data-act="kitwho" data-arg="all">📢 알리기</button><button class="btn ghost" data-act="kitwho" data-arg="none">🙈 본인도 모름</button></div></div>` : '';
+    return `<div class="pg pg-book">${P_TEST}${cover}${kitAsk}${preg.unaware && !preg.kit ? pregKitHtml(mem, true) : ''}${week}${baby}${mom}${scan}${log}${foot}${kitView}</div>${devImgSheet()}`;
   }
   // 앱 방식: 보낼 때 끼어들지 않으니까, 화면을 다시 읽을 때(답이 온 뒤·사파리로 들어올 때) 임신 줄이 바뀌었으면 노트 든 답변(전전)에 한 번 고쳐 써요 · 정리 안 해도 · AI 안 불러서 0원
   async function pregAppSync(chatId) {
