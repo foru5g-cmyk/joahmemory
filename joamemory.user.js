@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.0
+// @version      5.0.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -7941,7 +7941,6 @@
   // 관계 알약: 관계 줄 맨 앞 구절만 보고 몇 가지로만 붙여요('연인 직전'·'친구의 딸'·'연인인 척' 같은 덴 안 붙게) · 화면에만(AI한테 넣는 글은 그대로)
   let relPillOn = true;
   const REL_PILL = { '연인': ['#FFD6E4', '#C2416B'], '약혼': ['#FFE7C7', '#B05F00'], '부부': ['#E3DCFF', '#5B3FC4'], '자녀': ['#FFF0B3', '#8A6D00'], '형제': ['#DFF3E6', '#2F8A4A'], '전 연인': ['#ECECF2', '#6B6880'] };
-  const relTagged = () => { const k = bodyOf('인물'); if (relTagged.k !== k) { relTagged.k = k; relTagged.v = persons().some(p => p.rels.some(r => r.kind)); } return relTagged.v; }; // 노트 어디든 〔〕가 있으면 정리 AI 표시만 믿어요
   const REL_PILL0 = ['#ECE7FC', '#4B3F8A']; // 정리 AI가 붙인 다른 관계(이혼·주종 등)
   const relKind = text => {
     const h = String(text || '').split(/\s*[·,;/(（]\s*|\s+[—–-]\s+/)[0].trim();
@@ -7964,7 +7963,7 @@
       if (relMemo[id]) { delete relMemo[id]; clearTimeout(relMemoT); relMemoT = setTimeout(() => setValue('relkind:' + cid, JSON.stringify(relMemo)), 500); } return ''; }
     if (relMemo[id] !== k) { relMemo[id] = k; clearTimeout(relMemoT); relMemoT = setTimeout(() => setValue('relkind:' + cid, JSON.stringify(relMemo)), 500); }
     return k; };
-  const pairKind0 = (rel, a, b) => { if (!a || !b || a === b) return ''; const tagged = relTagged(); // 정리 AI가 〔사이〕를 붙인 노트면 그것만 믿어요(단어 짐작 안 함)
+  const pairKind0 = (rel, a, b) => { if (!a || !b || a === b) return ''; const tagged = !!relAll.tagged; // 정리 AI가 〔사이〕를 붙인 노트면 그것만 믿어요(단어 짐작 안 함)
     for (const r of rel) if ((r.from === a && r.to === b) || (r.from === b && r.to === a)) { const k = r.kind || (tagged && r.text !== '아기' ? '' : relKind(r.text)); if (k)return k; } return ''; };
   const relPill = (k, style = '') => k && relPillOn ? `<span class="rpill" style="background:${(REL_PILL[k] || REL_PILL0)[0]};color:${(REL_PILL[k] || REL_PILL0)[1]}${style ? ';' + style : ''}">${esc(k)}</span>` : '';
   // 얼굴 옆 표시: 지금 임신 중 🤰 · 산모수첩으로 아이를 낳은 엄마·아빠 👶
@@ -7987,7 +7986,7 @@
     return out;
   };
   // 노트로 찾은 아이가 있으면 수첩의 '첫째 딸'은 안 겹치게(노트 먼저)
-  const relAll = ppl => { const nm = [...ppl.keys()], r0 = pairs('관계·감정선').map(r => ({ ...r, from: canon(r.from, nm), to: canon(r.to, nm) })).filter(r => r.from !== r.to), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
+  const relAll = ppl => { const nm = [...ppl.keys()], r0 = pairs('관계·감정선').map(r => ({ ...r, from: canon(r.from, nm), to: canon(r.to, nm) })).filter(r => r.from !== r.to), _t = (relAll.tagged = r0.some(r => r.kind)), r1 = [...r0, ...noteKids(r0, ppl)], all = [...r1, ...pregKids(r1, ppl)]; relAll.parents = new Set(all.slice(r0.length).filter(r => r.text === '아기').map(r => r.from)); return all; };
   const chipW = n => [...n].length * 12.5 + 44; // 관계 없는 사람 이름표 폭(얼굴 + 이름)
   function graphModel() {
     const ppl = people(), rel = relAll(ppl), names = [...ppl.keys()]; // 관계 줄이 없는 인물도 빠지지 않게(아래에 따로 줄 세워요)
