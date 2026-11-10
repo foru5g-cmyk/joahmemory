@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.2
+// @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2687,7 +2687,7 @@
     maskEmo.innerHTML = html.join('');
   }
   const maskSoon = () => { if (!(mask.on || mask.cap) || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
-  new MutationObserver(ms => { if (!chatIdFromPath()) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
+  new MutationObserver(ms => { if (!chatIdFromPath() && document.documentElement.classList.contains('jm-hidehead')) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
     { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
     if (themeCss.textContent) thNv();
     if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
