@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2637,9 +2637,9 @@
     mask.raw = raw; mask.names = [...new Set(raw.flatMap(n => [n, nameNick(n)]).filter(x => [...x].length >= 2))].sort((a, b) => b.length - a.length); // '주나나' → '나나'도 · 긴 이름부터
     mask.mode = String(await getValue('maskMode', 'box')); mask.color = String(await getValue('maskColor', '#1F1D27')); mask.emoji = String(await getValue('maskEmoji', '💜')).trim() || '💜';
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
-    maskCss.textContent = maskCss2.textContent = mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
+    maskCss.textContent = maskCss2.textContent = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute}' + (mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
       : mask.mode === 'emoji' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:none}'
-      : `::highlight(jm-mask){color:${c};-webkit-text-fill-color:${c};background-color:${c};text-shadow:none}`;
+      : `::highlight(jm-mask){color:${c};-webkit-text-fill-color:${c};background-color:${c};text-shadow:none}`); // 가림 상자 모양도 조아메모리 창(그림자 칸) 안에 같이 넣어요
     if (!maskCss2.isConnected) { root.appendChild(maskCss2); root.addEventListener('scroll', maskEmoSoon, { capture: true, passive: true }); } // 조아메모리 창 안 스크롤도 따라가요 // 조아메모리 화면(그림자 칸) 안에도 같은 칠
     inlineBtn.classList.toggle('jm-masked', mask.on);
     maskPaint();
@@ -2662,10 +2662,10 @@
   const MASK_L = 'jm-mask-l';
   const bgOf = el => { for (; el; el = el.parentElement) { const b = getComputedStyle(el).backgroundColor; if (b && b !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(b)) return b; } return '#fff'; };
   function maskLay() {
-    if (!PEN_OV && !((mask.on || mask.cap) && mask.mode === 'emoji')) { document.querySelectorAll('.' + MASK_L).forEach(l => l.remove()); return; }
+    if (!PEN_OV && !((mask.on || mask.cap) && mask.mode === 'emoji')) { [...document.querySelectorAll('.' + MASK_L), ...root.querySelectorAll('.' + MASK_L)].forEach(l => l.remove()); return; }
     const by = new Map(), lay = mask.on || mask.cap, emo = mask.mode === 'emoji';
-    if (lay) for (const r of mask.ranges) { const pe = r.startContainer.parentElement, box = pe?.closest(TH_AI + ',' + TH_ME) || pe?.closest('[data-message-id],[data-message-group-id]'); if (box) (by.get(box) || by.set(box, []).get(box)).push(r); }
-    document.querySelectorAll('.' + MASK_L).forEach(l => { if (!by.has(l.parentElement)) l.remove(); });
+    if (lay) for (const r of mask.ranges) { const pe = r.startContainer.parentElement, box = pe?.closest(TH_AI + ',' + TH_ME) || pe?.closest('[data-message-id],[data-message-group-id]') || (root.contains(pe) ? pe.closest('p,li,div,section,summary,h5,td') : null); if (box) (by.get(box) || by.set(box, []).get(box)).push(r); }
+    [...document.querySelectorAll('.' + MASK_L), ...root.querySelectorAll('.' + MASK_L)].forEach(l => { if (!by.has(l.parentElement)) l.remove(); });
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
     const st = mask.mode === 'blur' ? 'background:rgba(40,36,60,.18);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)' : `background:${c}`;
     for (const [box, rs] of by) {
@@ -3338,7 +3338,7 @@
     @media(max-width:480px){.phero{gap:10px;padding:12px}.phero .av{width:44px;height:44px;font-size:20px}}
     .phero b{font-size:20px;font-weight:800;color:var(--ink)}
     .phero em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--graphite);margin-left:8px}
-    .pcchk{font-family:inherit;font-weight:700;font-size:11px;line-height:1;padding:4px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--mist);color:var(--pencil);cursor:pointer;transition:background .15s,color .15s,border-color .15s}.pcchk[aria-pressed="true"]{border-color:transparent;background:#FFF4C2;color:#8A6D00}.pg-hw.pcw{float:right;margin:2px 7px 4px 8px}.phero .pcw .pg-hb p{margin:0;font-size:12px;line-height:1.55;color:var(--graphite)}.phero .pcw .pg-hb b{font-size:12.5px} /* 인물 카드: 유저(PC) 표시 칩 */
+    .pcchk{font-family:inherit;font-weight:700;font-size:11px;line-height:1;padding:4px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--mist);color:var(--pencil);cursor:pointer;transition:background .15s,color .15s,border-color .15s}.pcchk[aria-pressed="true"]{border-color:transparent;background:var(--acc,#7B61D9);color:#fff;box-shadow:0 2px 6px rgba(123,97,217,.28)}.pg-hw.pcw{float:right;margin:2px 7px 4px 8px}.phero .pcw .pg-hb p{margin:0;font-size:12px;line-height:1.55;color:var(--graphite)}.phero .pcw .pg-hb b{font-size:12.5px} /* 인물 카드: 유저(PC) 표시 칩 */
     .phero p{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2);word-break:keep-all}
 .phero .pchips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px}
 .phero .pchips span{padding:3px 9px;border-radius:999px;background:var(--chip,#F1F0F7);font-size:12.5px;line-height:1.45}
@@ -10367,7 +10367,7 @@
   //   화면을 찍지 않고, 브라우저가 이미 줄을 나눠 놓은 글자 자리(Range)를 읽어 캔버스에 글자마다 다시 그려요
   //   → 화면 밖까지 긴 말풍선도 통째로 · 이름 가리기·형광펜·테마 색 그대로 · 아이폰은 공유 창(이미지 저장) · 갤럭시·PC는 바로 다운로드
   // ══════════════════════════════════════════════════════════════
-  const CAP_BUB = TH_AI + ',' + TH_ME;
+  const CAP_MEN = ':is([data-message-id],[data-message-group-id]) .break-all.rounded-lg', CAP_BUB = TH_AI + ',' + TH_ME + ',' + TH_AIN + ',' + CAP_MEN; // 소설형: AI 글(.rounded-none)·내 글(.rounded-lg)도 버블 하나로 · 배경이 투명이라 흰 바탕으로 찍혀요
   let capShow = true; getValue('capShow', 'on').then(v => { capShow = String(v) !== 'off'; placeCapBtn(); });
   const cap = { on: false, sel: new Set(), mask: false, busy: false, ready: null, sep: false }; // sep: 여러 개 고르면 '따로'(말풍선마다 한 장) · 아니면 세로로 한 장 // ready: 다 만들었는데 브라우저가 막아 한 번 더 눌러야 할 때의 파일들
   const capBtn = document.createElement('button'); capBtn.type = 'button'; capBtn.id = 'jm-cap-btn'; capBtn.setAttribute('aria-label', '말풍선 캡처'); capBtn.title = '말풍선 캡처';
@@ -10399,7 +10399,7 @@
     + '#jm-cap-pv .ft{display:flex;gap:8px;padding:10px 20px calc(16px + env(safe-area-inset-bottom))}#jm-cap-pv .ft button{flex:1;text-align:center;padding:11px 0;border-radius:14px;font-size:14px;font-weight:700;border:1px solid #E6E1F0;background:#fff;color:#221E2E}#jm-cap-pv .ft .sv{flex:2;background:#7B61D9;border-color:#7B61D9;color:#fff}';
   document.documentElement.appendChild(capCss);
   const capAll = () => [...document.querySelectorAll(CAP_BUB)].filter(b => b.getBoundingClientRect().height > 0).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); // 화면 위→아래 순서(크랙은 목록을 거꾸로 쌓아요)
-  const capIsMe = b => b.matches(TH_ME);
+  const capIsMe = b => b.matches(TH_ME + ',' + CAP_MEN);
   const capList = () => capAll().filter(b => cap.sel.has(b));
   function capPaint() { // 고른 말풍선 표시 + 아래 바
     document.querySelectorAll('.jm-cap-b').forEach(b => { if (!cap.on) { b.classList.remove('jm-cap-b', 'jm-cap-sel'); delete b.dataset.jmn; } });
