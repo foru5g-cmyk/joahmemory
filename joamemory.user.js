@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2621,7 +2621,7 @@
   getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 편의 › 폰에서 위 메뉴 숨기기
   { let ty = null; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
     addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
-    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
+    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
     addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 96 && !e.target.closest?.('a,input,textarea')) h.classList.remove('jm-hidehead'); }, true); } // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
   // 캡처할 때 이름 가리기: 글자(DOM)는 안 건드리고 브라우저 강조(CSS Highlight)로만 칠해요 → 크랙이 답을 이어 써도 안 깨져요
   //   모자이크 = 글자 투명 + 번진 그림자 · 박스 = 글자색·배경을 같은 색으로 · 이모지 = 글자 투명 + 그 자리 위에 이모지 띄우기
@@ -2686,7 +2686,8 @@
     maskEmo.innerHTML = html.join('');
   }
   const maskSoon = () => { if (!(mask.on || mask.cap) || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
-  new MutationObserver(ms => { { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
+  new MutationObserver(ms => { if (!chatIdFromPath()) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
+    { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
     if (themeCss.textContent) thNv();
     if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
@@ -2715,7 +2716,9 @@
   function thNv() { const a = document.querySelector(TH_AIN), on = new Set();
     for (let e = a?.parentElement; e; e = e.parentElement) if (e.matches('.stick-to-bottom div.items-center.px-5')) on.add(e);
     document.querySelectorAll('.jm-nv').forEach(e => { if (!on.has(e)) e.classList.remove('jm-nv'); });
-    on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv'); }); }
+    on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv');
+      const bot = Math.max(...[...e.querySelectorAll('[data-message-id],[data-message-group-id]')].map(m => m.getBoundingClientRect().bottom)), cut = isFinite(bot) ? Math.max(0, Math.round(e.getBoundingClientRect().bottom - bot)) + 'px' : '0px'; // 소설형 칠은 맨 아래 글까지만(그 아래 입력창 자리는 안 칠해요) · 크랙은 글을 거꾸로 쌓아서 제일 아래 있는 글로 재요
+      if (e.style.getPropertyValue('--jm-nvcut') !== cut) e.style.setProperty('--jm-nvcut', cut); }); }
   async function themeLoad() {
     theme.on = String(await getValue('thOn', String(await getValue('thPen', 'off')) === 'on' || String(await getValue('thBub', '')) ? 'on' : 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요) · 스위치가 생기기 전에 형광펜·색을 골라 둔 사람은 켜진 채로
     theme.bub = /^#[0-9a-f]{6}$/i.test(String(await getValue('thBub', ''))) ? String(await getValue('thBub', '')) : '';
@@ -2729,9 +2732,9 @@
     const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', NM = ':not(.break-all.rounded-lg *)';
     thNv();
     if (b) css += dark
-      ? `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
-      : `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
-    if (b) { const IW = 'html:has(.jm-nv) .pointer-events-auto.bg-bg_screen:has(.ProseMirror)'; css += `${IW}{background:${b}!important}` + (dark ? `${IW} .rounded-lg.border:has(.ProseMirror){background:#2B2937!important;border-color:#393646!important}${IW} .ProseMirror,${IW} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 소설형: 아래 입력창 띠도 같은 색(안 칠하면 흰 띠가 남아요)
+      ? `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
+      : `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
+    if (b) { const ED = `${TH_AI}:has(.ProseMirror),${NV} .break-all:has(.ProseMirror)`; css += dark ? `${ED}{background:#2B2937!important;box-shadow:0 0 0 1.5px #7B61D9!important}${NV} .break-all:has(.ProseMirror) .ProseMirror,${NV} .break-all:has(.ProseMirror) .ProseMirror *{color:#DEDAE8!important}` : `${ED}{background:#FFFFFF!important;box-shadow:0 0 0 1.5px #7B61D9!important}`; } // 수정 중인 글: 테마 색이 덮어도 보라 테두리로 티 나게(채팅형·소설형)
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
