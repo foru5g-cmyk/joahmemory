@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2619,9 +2619,10 @@
   document.documentElement.appendChild(easeStyle);
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
   getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 편의 › 폰에서 위 메뉴 숨기기
-  { let ty = null; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
-    addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
-    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
+  { let ty = null, t0 = null, moved = false; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
+    addEventListener('touchstart', e => { ty = t0 = e.touches[0]?.clientY ?? null; moved = false; }, { passive: true });
+    addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (t0 != null && y != null && Math.abs(y - t0) > 10) moved = true; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
+    addEventListener('touchend', e => { const t = e.changedTouches[0], h = document.documentElement; if (!moved && t && t.clientY < 96 && h.classList.contains('jm-hidehead') && !e.target.closest?.('a,input,textarea')) h.classList.remove('jm-hidehead'); }, { passive: true }); // 아이폰: 빈 곳을 누르면 click이 안 올 때가 있어서 손 뗄 때도 봐요
     addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 96 && !e.target.closest?.('a,input,textarea')) h.classList.remove('jm-hidehead'); }, true); } // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
   // 캡처할 때 이름 가리기: 글자(DOM)는 안 건드리고 브라우저 강조(CSS Highlight)로만 칠해요 → 크랙이 답을 이어 써도 안 깨져요
   //   모자이크 = 글자 투명 + 번진 그림자 · 박스 = 글자색·배경을 같은 색으로 · 이모지 = 글자 투명 + 그 자리 위에 이모지 띄우기
@@ -2734,7 +2735,7 @@
     if (b) css += dark
       ? `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
       : `${NV}>div{background:linear-gradient(${b},${b}) top/100% calc(100% - var(--jm-nvcut,0px)) no-repeat!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
-    if (b) { const ED = `${TH_AI}:has(.ProseMirror),${NV} .break-all:has(.ProseMirror)`; css += dark ? `${ED}{background:#2B2937!important;box-shadow:0 0 0 1.5px #7B61D9!important}${NV} .break-all:has(.ProseMirror) .ProseMirror,${NV} .break-all:has(.ProseMirror) .ProseMirror *{color:#DEDAE8!important}` : `${ED}{background:#FFFFFF!important;box-shadow:0 0 0 1.5px #7B61D9!important}`; } // 수정 중인 글: 테마 색이 덮어도 보라 테두리로 티 나게(채팅형·소설형)
+    if (b) { const EI = `${TH_AI} .rounded-lg:has(.ProseMirror),${NV} .break-all .rounded-lg:has(.ProseMirror)`; css += `${NV} .break-all:has(.ProseMirror){background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
