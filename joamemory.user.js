@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.4
+// @version      5.0.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -951,10 +951,10 @@
     if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
     const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 16 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : ' · 주변 인물은 배 크기에 맞게 알아봄') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
     // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
-    const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름: 증상은 생기지만 NPC는 다른 이유로 여김, 임신이라 확정하지 않음` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
+    const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름 · 증상만 생김` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = []; // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who}(유저 캐릭터 · 임신한 사람은 이 사람뿐, NPC는 임신하지 않음) ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
+    L.push(`※ 임신 지금: ${who}${me ? '(유저 캐릭터)' : ''} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -1406,7 +1406,7 @@
         ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)`] : []),
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...lines, ...pregOut, 'MEMO_NOTE_END"'].map(l => '    ' + l),
+        ...(k => k < 0 ? [...lines, ...pregOut] : [...lines.slice(0, k), ...pregOut, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l))), 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
 
@@ -2125,7 +2125,7 @@
   }
   let proofsHidden = false; // 이번 답을 받은 정리에서 근거 줄을 뺐는지
   function pregTake(text) {
-    const got = [], rest = String(text).split('\n').filter(l => { const m = l.match(/^\s*%%임신\s+([^|]*?)\s*\|\s*(.+)$/); if (!m) return true; got.push([m[1], m[2].trim()]); return false; }).join('\n');
+    const got = [], rest = String(text).split('\n').filter(l => { const m = l.match(/^\s*%%\s*(?:임신\s+)?([^|]*?)\s*\|\s*(.+)$/); if (!m) return true; got.push([m[1], m[2].trim()]); return false; }).join('\n');
     if (got.length && preg && preg.start != null) {
       preg.log = preg.log || [];
       for (const [d, t] of got) { const dn = P_DAY(d), w = dn != null ? Math.max(0, Math.floor((dn - preg.start) / 7)) : (preg.wk || 0); if (!preg.log.some(x => x.t === t)) preg.log.push({ w, t, ai: 1 }); }
