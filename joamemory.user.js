@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.0
+// @version      5.0.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2731,8 +2731,8 @@
     const NV = '.stick-to-bottom div.items-center.px-5.jm-nv.jm-nv', A = TH_AIN; // 소설형도 채팅형처럼: AI 글(.rounded-none) 안 글씨만 칠해요(칸 전체 *:not(… *)은 사파리에서 무거워요)
     thNv();
     if (b) css += dark
-      ? `${NV}>div{background:${b}!important}${A} *{color:#DEDAE8!important}${A} em,${A} em *{color:#ADA8BC!important}${A} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${A} hr{border-color:#34313F!important;background:#34313F!important}`
-      : `${NV}>div{background:${b}!important}${A} *:not(pre,pre *){color:#2E2C3A!important}${A} em:not(pre *),${A} em *:not(pre *){color:#6E6982!important}${A} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}`;
+      ? `${NV}>div{background:${b}!important;padding-inline:12px}${A} *{color:#DEDAE8!important}${A} em,${A} em *{color:#ADA8BC!important}${A} :not(pre)>code{background:#2B2937!important;color:#F2B880!important;border:1px solid #393646}${A} hr{border-color:#34313F!important;background:#34313F!important}`
+      : `${NV}>div{background:${b}!important;padding-inline:12px}${A} *:not(pre,pre *){color:#2E2C3A!important}${A} em:not(pre *),${A} em *:not(pre *){color:#6E6982!important}${A} :not(pre)>code{background:#ECE8F5!important;color:#A0522D!important}`;
     if (b) { const EI = `${TH_AI} .rounded-lg.transition-colors,${NV} .break-all .rounded-lg.transition-colors`; css += `${NV} .break-all.bg-surface_tertiary{background:${b}!important}${EI}{background:${thMix(b, '#ffffff', dark ? 0.1 : 0.6)}!important}` + (dark ? `${EI} .ProseMirror,${EI} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 수정 중: 안쪽 입력칸만 말풍선 색보다 살짝 밝게(색마다 자동) · 안 하면 어두운 테마에서 입력칸이 안 보여요
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
