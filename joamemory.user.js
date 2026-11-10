@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2622,7 +2622,7 @@
   { let ty = null; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
     addEventListener('touchstart', e => { ty = e.touches[0]?.clientY ?? null; }, { passive: true });
     addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (ty == null || y == null || Math.abs(y - ty) < 30) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
-    addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 56 && !e.target.closest?.('button,a,input,textarea,[role="button"]')) h.classList.remove('jm-hidehead'); }, true); }
+    addEventListener('click', e => { const h = document.documentElement; if (h.classList.contains('jm-hidehead') && e.clientY < 96 && !e.target.closest?.('a,input,textarea')) h.classList.remove('jm-hidehead'); }, true); } // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
   // 캡처할 때 이름 가리기: 글자(DOM)는 안 건드리고 브라우저 강조(CSS Highlight)로만 칠해요 → 크랙이 답을 이어 써도 안 깨져요
   //   모자이크 = 글자 투명 + 번진 그림자 · 박스 = 글자색·배경을 같은 색으로 · 이모지 = 글자 투명 + 그 자리 위에 이모지 띄우기
   //   켜고 끄기: 하트 꾹(0.5초) · 설정 › 편의 · 한 번 켜면 끌 때까지 그대로(방 옮겨도 · 새로 고침해도)
