@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.2
+// @version      5.0.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5450,7 +5450,7 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId) { await saveFull(chatId, c.upto, d.memory, c.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, d.memory, c.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
   async function gsSave(quiet = false) {
@@ -9038,7 +9038,7 @@
           const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []);
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId) { await saveFull(chatId, c.upto, o.memory, c.turns || o.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, o.memory, c.turns || o.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && !gsTried.has(chatId + '|' + c.upto) && String(await getValue('gsUrl', '')).trim()) {
