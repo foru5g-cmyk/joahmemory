@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.0.9
+// @version      5.1.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -319,7 +319,7 @@
   //   전체 기억은 이 기기(full:)에 두고, 채팅에는 지금 장면에 필요한 것만 INJ_MAX자 안으로 골라 넣어요(노트가 커져도 채팅 쪽은 안 늘어요).
   //   늘 넣음: 고정 설정·현재상태·직전 장면·열린 서사 고리·최근 사건 INJ_RECENT개·줄거리. 인물은 최근 대화에 나온 사람만 전부, 나머지는 이름·프로필 줄만.
   //   옛 사건·물건·장소·비밀·호칭은 최근 대화에 나온 이름·낱말과 제미나이 의미 검색 점수(injCtx.sim)로 골라요(가장 맞는 INJ_RECALL개까지). WRMC처럼 남는 자리는 채우지 않아요. 전체가 INJ_MAX 안이면 전부 넣어요.
-  const INJ_MAX = 50000, INJ_RECENT = 5, INJ_RECALL = 8, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
+  const INJ_MAX = 50000, INJ_BOTH = 70000, INJ_RECENT = 5, INJ_RECALL = 8, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
   // ponytail: 뜻 검색만으로 떠올리는 기준 = 평균보다 코사인이 이만큼 높을 때 · 실제 노트로 맞춘 값이 아니라 어림값(엉뚱한 게 나오면 올리고, 놓치면 내려요)
   const INJ_SEM_GAP = 0.08;
   const INJ_STOP = new Set(['다시', '그냥', '정말', '오늘', '지금', '처음', '같이', '함께', '서로', '모두', '다음', '이번', '그날', '하루', '잠깐', '계속', '결국', '처음으', '마지막',
@@ -355,7 +355,7 @@
   let aiPickCache = { k: '', v: null }, injGemKey = false; // injGemKey: Gemini 키가 있는지(주입 탭 'AI로 한 번 더 고르기' 기본값 표시용)
   const INJ_SEM = ['날짜로그', '소지품', '장소·조직', '인지·비밀', '이정표', '세계관', '호칭·말투', '관계·감정선'];
   const INJ_ON = ['직전 장면', '서사 고리', '줄거리', '소지품']; // 늘 넣는 칸(서사 고리는 열린 고리만 늘 · 닫힌 고리는 나올 때만) · 나머지는 나올 때만 · 유저는 칸마다 끄기만 골라요
-  let injSet = { secs: {}, recent: 8, recall: 8 }; const secMode = k => injSet.secs[k] === 'off' ? 'off' : INJ_ON.includes(k) ? 'on' : 'auto'; // 예전에 고른 '항상/나올 때만'은 안 봐요
+  let injSet = { secs: {}, recent: 8, recall: 12 }; const secMode = k => injSet.secs[k] === 'off' ? 'off' : INJ_ON.includes(k) ? 'on' : 'auto'; // 예전에 고른 '항상/나올 때만'은 안 봐요
   let injSaidHits = new Set(); // 보낸 말이 직접 꺼낸 항목(드문 낱말·날짜)
   let injPicking = false, injCtx = { text: '', sim: {} }, lastInj = null, sceneOn = false, injPins = new Set(), injSkip = new Map(); // injPins: 📌 늘 넣는 사건(방마다 저장) · injSkip: ✕ 이번 장면에서 뺀 기억(유저가 그 일을 다시 직접 말하면 돌아와요) // sceneOn: 웹 모드(설정) // injCtx.text: 최근 대화 · sim: 항목 키 → 의미 점수(0~1, 가장 비슷한 게 1)
   function secItems(sec) { // 칸의 항목: ▸·【】이 있으면 그것, 없으면 서사 고리는 고리 하나씩 · 그 밖은 '- ' 줄 하나씩(이어지는 줄 포함). key = ':' 앞 제목(서사 고리는 마지막 '·' 뒤)
@@ -470,15 +470,15 @@
       for (const p of [...pool].sort((a, b) => (b.v - simOf(b) * 3) - (a.v - simOf(a) * 3))) { if (out.size >= INJ_AI_POOL) break; out.set(p.key, p); } // 낱말·인물로 맞는 것
       return [...out.values()]; }
     // 중요한 것부터 자리에 맞는 만큼. 칸 제목 줄("■ 칸")도 세요.
-    const pick = new Map(), secCost = new Set(), hwN = new Map(); let used = 0, recallN = 0;
+    const pick = new Map(), secCost = new Set(), hwN = new Map(), both = (snapshot?.all || []).filter(m => msgRole(m) === 'assistant').length >= 3, cap = both ? (INJ_BOTH - units.filter(u => u.sec === FIXED).reduce((a, u) => a + u.text.length, 0)) : INJ_MAX; let used = 0, recallN = 0;
     for (const u of [...units].sort((a, b) => b.pri - a.pri)) {
       if (!u.text.trim()) continue;
       const id = u.sec + '|' + u.i, prev = pick.get(id), cost = u.text.length + 1 - (prev ? prev.text.length + 1 : 0) + (secCost.has(u.sec) ? 0 : u.sec.length + 3);
       if (prev && !u.full) continue;
       if (u.rc && recallN >= injSet.recall) continue; // 떠올리기는 점수 높은 것부터 INJ_RECALL개까지
       if (u.rc && !injCtx.ai && u.hw?.length && u.hw.every(w => (hwN.get(w) || 0) >= 2)) continue; // 한 낱말('토치')로는 2개까지만 · AI 재검토가 있으면 그 점수대로
-      if (used + cost > INJ_MAX * 0.97) continue;
-      pick.set(id, u); secCost.add(u.sec); used += cost; if (u.rc) { recallN++; for (const w of u.hw || []) hwN.set(w, (hwN.get(w) || 0) + 1); }
+      const free = both && u.sec === FIXED; if (!free && used + cost > cap * 0.97) continue;
+      pick.set(id, u); secCost.add(u.sec); if (!free) used += cost; if (u.rc) { recallN++; for (const w of u.hw || []) hwN.set(w, (hwN.get(w) || 0) + 1); }
     }
     const out = [];
     for (const sec of secs) {
@@ -689,7 +689,7 @@
   // 출산 기록: 주사위로 정해 둔 출산 결과(birthLine) 조각 중 그 장면 지문에 나온 것만 남겨요
   const P_BORN_KEEP = [[/제왕절개/, /제왕\s*절개|수술/], [/자연분만|해산/, /자연\s*분만|힘을\s*주|해산|낳았|태어났/], [/난산/, /난산|오래\s*걸|힘겹/], [/탯줄/, /탯줄/],
     [/위독|피를/, /출혈|수혈|위독|피를\s*많이/], [/고비|약함/, /고비|위태|약하|약해/], [/집중치료실/, /집중\s*치료|인큐베이터|NICU|신생아실/], [/세상을 떠남/, /숨을\s*거|세상을\s*떠|숨지|잃었/], [/건강함/, /건강/]];
-  const P_CK_OK = /정상|이상 없음|자리 좋음|잘 크고|머리가 아래로|상태 좋음|자궁문이|예정일 근처|돌아옴|수술 날짜|힘차게|자리를 잘|확실함/;
+  const P_CK_OK = /얼굴이 보임|정상|이상 없음|자리 좋음|잘 크고|머리가 아래로|상태 좋음|자궁문이|예정일 근처|돌아옴|수술 날짜|힘차게|자리를 잘|확실함/;
   // 검진 결과가 지문에 나왔는지: 결과의 낱말(검진·결과 같은 흔한 말 빼고) 하나라도 그다음 AI 답에 있으면
   const P_CK_STOP = /^(검진|검사|결과|정기|막달|아기|아이|하나|있음|보임|조금|살짝|여전|주수|이상|며칠|권함|권하|지켜|지켜보|보기|보기로|다시|자주|이야|이야기|나옴|본인|정함|무리|누워|많이|대부분|의사|설명|담담|높게|나옴|확인|처음)$/;
   const pCkHit = (t, text) => (String(t).match(/[가-힣A-Za-z]{2,}/g) || []).map(w => w.length > 2 ? w.slice(0, -1) : w).filter(w => !P_CK_STOP.test(w)).some(w => String(text).includes(w));
@@ -802,13 +802,14 @@
     let struct = !abn && pR('struct') < 0.08 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.1;
     let serious = !abn && !struct && pR('ser') < 0.06 ? P_SERIOUS[Math.floor(pR('serT') * P_SERIOUS.length)] : null; // 구조 이상(약 3.5%) · 뇌 작은 물혹(맥락총낭종, 대부분 사라짐)
     let gdm = pR('gdm') < (n > 1 ? 0.18 : 0.13), pe = pR('pe') < (n > 1 ? 0.14 : 0.08), peW = 30 + Math.floor(pR('peW') * 7);
-    let fgr = pR('fgr') < (n > 1 ? 0.18 : 0.1), oligo = pR('oligo') < 0.06, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.25, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
+    let fgr = pR('fgr') < (n > 1 ? 0.18 : 0.1), oligo = pR('oligo') < 0.06, poly = !oligo && pR('poly') < (gdm ? 0.06 : 0.02), cord = pR('cord') < 0.15, macro = !fgr && n === 1 && pR('macro') < (gdm ? 0.15 : 0.08);
     const quiet = pR('quiet') < 0.2, quietW = 28 + Math.floor(pR('quietW') * 10); // 태동이 뜸한 날(검사하면 대부분 괜찮음)
     let breech = pR('br') < 0.3, breechStay = breech && pR('brs') < 0.25, threat = pR('thr') < (n > 1 ? 0.25 : 0.14), thrW = 28 + Math.floor(pR('thrW') * 6);
     const sick = pR('sick') < 0.25 ? 0 : pR('sick2') < 0.8 ? 1 : 2; // 입덧 없음·보통·심함
     const spot = pR('spot') < 0.28, spotW = 5 + Math.floor(pR('spotW') * 6); // 초기 출혈(대부분 괜찮음)
-    const pre = pR('pre') < (n > 1 ? 0.5 : 0.1), x = pR('lw');
-    let labor = n > 1 ? (pre ? 32 + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? 32 + Math.floor(x * 5) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
+    const v2 = preg.planV === 2, pre = pR('pre') < (n > 1 ? 0.5 : v2 ? 0.15 : 0.1), x = pR('lw'), pw = v2 ? pR('preW') : 1; // v2: 20주 전에 시작한 임신만(진행 중인 임신은 출산 주가 안 바뀌게)
+    let labor = n > 1 ? (pre ? (pw < 0.2 ? 28 : 32) + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? (pw < 0.06 ? 24 + Math.floor(x * 4) : pw < 0.25 ? 28 + Math.floor(x * 4) : 32 + Math.floor(x * 5)) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
+    const rib = v2 && pR('rib') < 0.04, ribW = 30 + Math.floor(pR('ribW') * 8), rapid = v2 && n === 1 && pR('rapid') < 0.05, sexFlip = v2 && n === 1 && pR('sexflip') < 0.03;
     if (pe && peW + 1 < labor && pR('pe2') < 0.5) labor = Math.max(peW + 1, 34); // 임신중독증이면 일찍 낳기도 해요
     if (fgr && labor > 37 && pR('fgr2') < 0.5) labor = 37; // 성장 지연이면 일찍 낳기도
     if (serious?.[5] && labor > serious[5]) labor = serious[5];
@@ -819,7 +820,8 @@
     // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
     const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.2 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
     if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; serious = serious && keep('ser') ? serious : null; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
-    return { crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, serious, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, sick, spot, spotW, labor, loss, cs };
+    const thrFail = v2 && threat && !pre && pR('thrF') < 0.25; if (thrFail && thrW + 1 < labor) labor = thrW + 1; // 조산 기미를 못 멈추고 그다음 주에 출산
+    return { crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, serious, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, thrFail, rib, ribW, rapid: rapid && !cs, sexFlip, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
@@ -829,6 +831,7 @@
       [16, '2차 기형아 검사', p.abn ? `${preg?.shown?.c12 >= 0 ? '추가 검사에서' : `기형아 검사 고위험(${p.chrom.split('(')[0]}) → 추가 검사에서`} ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? (preg?.shown?.c12 >= 0 ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상') : '2차 기형아 검사 정상'], // 12주 검진을 못 갔으면 '의심'을 들은 적이 없으니 그에 맞게 // 성별은 물어볼 때만(pregTick)
       [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.serious ? `${one}에게서 ${p.serious[1]}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
       [26, '임신성 당뇨 검사', p.gdm ? '임신성 당뇨 판정 → 식단 관리·혈당 재기' : '당뇨 검사 정상'],
+      ...(preg?.planV === 2 ? [[28, '입체 초음파', (twin ? '두 아이 ' : '') + '얼굴이 보임 · 누구 닮았는지는 장면에 맞게']] : []), // 머리색 같은 건 초음파로 안 보여서 출산 때 닮은 곳은 안 씀
       [30, '정기 검진', J([p.breech ? (twin ? '한 아이가 거꾸로(역아)' : '역아(아기가 거꾸로)') + ' → 아직 돌 수 있음' : '아기 자리 좋음', p.fgr ? `${one}가 주수보다 작음(성장 지연) → 2주마다 크기 보기` : '', p.oligo ? '양수가 적음 → 물 많이 마시고 자주 보기' : p.poly ? '양수가 많음 → 자주 보기' : '', p.lowP ? (p.previa ? '태반이 자궁 입구를 덮음(전치태반) → 제왕절개 예정' : '태반이 올라가서 괜찮아짐') : '', p.cpc ? '뇌 물혹이 사라짐' : '', p.serious ? '큰 병원 추적: ' + p.serious[2] : '', p.minor ? '전에 본 신장 소견 좋아짐' : ''])],
       [34, '정기 검진', p.pe && p.peW <= 34 ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기 권함' : J([p.serious ? `${p.serious[0]} 때문에 큰 병원에서 낳을 준비 · 신생아 집중치료실 자리 확인` : '', p.fgr ? `${one}가 여전히 작음 → 일찍 낳는 것도 이야기함` : '', p.macro ? '아기가 주수보다 큼' : '']) || A + ' 잘 크고 있음'],
       [36, '막달 검진', J([p.breech ? (p.breechStay ? '여전히 역아 → 제왕절개 날짜 잡기' : '역아였던 아기가 돌아옴') : A + ' 머리가 아래로 내려옴', p.cord ? '탯줄이 목에 한 번 감겨 있음 · 대부분 괜찮아서 지켜보기' : '', p.macro ? '아기가 커서(추정 3.8kg 넘음) 분만 방법 이야기가 나옴' : ''])],
@@ -849,10 +852,10 @@
     return `${P_LOOK[a]}은 ${who('a')}, ${P_LOOK[b]}은 ${who('b')} 닮음`.replace(/([가-힣])은 /g, (m, c) => ((c.charCodeAt(0) - 0xac00) % 28 ? c + '은 ' : c + '는 ')); };
   function birthLine(p, world) { return birthLine0(p, world) + (preg.father ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? (i ? '둘째: ' : '첫째: ') : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
   function birthLine0(p, world) {
-    const base = (p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
+    const base = (p.labor < 32 ? 0.5 + (p.labor - 24) * 0.14 : p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
     const extra = [p.struct ? '태어나 보니 ' + p.struct.split(' — ')[0] : '', p.abn ? josa(p.chrom.split('(')[0].trim(), '으로', '로') + ' 태어남' : '', p.serious ? p.serious[3] : '', p.cord ? '탯줄이 감겨 있었지만 무사함' : ''].filter(Boolean).join(' · ');
-    if (world !== 'modern') return (p.breechStay ? '난산 끝에 해산' : '무사히 해산') + ' · ' + p.sex.map(s => s === '남' ? '아들' : '딸').join(', ') + (p.labor < 35 || p.fgr ? ' · 몸이 작고 약함' : p.serious ? '' : ' · 건강함') + (p.struct ? ' · ' + p.struct.split('(')[0] : '') + (p.serious ? ' · ' + p.serious[4] : '');
-    return (p.cs || preg?.csSaid ? '제왕절개로 출산' : '자연분만으로 출산') + ' · ' + p.sex.map((s, i) => s + '아 ' + Math.max(1.2, base + pR('kg' + i) * (p.n > 1 ? 0.4 : 0.8)).toFixed(1) + 'kg').join(', ') + (p.labor < 35 ? ' · 일찍 나와 신생아 집중치료실에서 지켜봄' : extra ? '' : ' · 건강함') + (extra ? ' · ' + extra : '');
+    if (world !== 'modern') return (p.rapid ? '갑작스레 해산' : p.breechStay ? '난산 끝에 해산' : '무사히 해산') + ' · ' + p.sex.map(s => s === '남' ? '아들' : '딸').join(', ') + (p.labor < 32 ? ' · 너무 일찍 나와 아주 작고 약함' : p.labor < 35 || p.fgr ? ' · 몸이 작고 약함' : p.serious ? '' : ' · 건강함') + (p.struct ? ' · ' + p.struct.split('(')[0] : '') + (p.serious ? ' · ' + p.serious[4] : '');
+    return (p.cs || preg?.csSaid ? '제왕절개로 출산' : p.rapid ? '급속 분만으로 출산(병원에 가기 전에 나옴)' : '자연분만으로 출산') + ' · ' + p.sex.map((s, i) => s + '아 ' + Math.max(p.labor < 32 ? 0.5 : 1.2, base + pR('kg' + i) * (p.n > 1 ? 0.4 : 0.8)).toFixed(1) + 'kg').join(', ') + (p.labor < 28 ? ` · ${p.labor}주에 아주 일찍 나와 신생아 집중치료실에 2~3달 입원` : p.labor < 32 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 4~8주 입원` : p.labor < 35 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 1~3주 입원` : extra ? '' : ' · 건강함') + (extra ? ' · ' + extra : '');
   }
   function pregBig(p, world) { // 큰일: 그 주가 되면 바로 '지금 일'로 · 결과는 병원에서
     const out = [], until = p.loss ?? 99;
@@ -864,11 +867,12 @@
     if (p.spot && p.spotW < until && p.spotW !== p.loss) out.push({ k: 'spot', w: p.spotW, t: '속옷에 피가 살짝 비침', kw: /피가|출혈|비침|비쳤|피 ?얼룩/, res: world === 'modern' ? '초음파상 아기는 괜찮음 · 초기에 흔한 출혈이라 며칠 무리하지 말라고 함' : '태는 무사함 · 며칠 누워 지내라 함' });
     const sg = p.serious && P_SER_SIGN[p.serious[0]]; if (sg && (world === 'modern' || !sg[3]) && sg[0] >= (preg.w0 || 0) && sg[0] < Math.min(p.labor, until)) out.push({ k: 'ser', w: sg[0], t: sg[1], kw: sg[2] });
     if (p.quiet && p.quietW < Math.min(p.labor, until)) out.push({ k: 'quiet', w: p.quietW, t: '아기가 하루 종일 평소보다 조용함(태동이 뜸함)', kw: /태동이 ?(없|뜸|안|약|줄)|안 움직|움직이지/, res: world === 'modern' ? '태동 검사(NST) 결과 아기는 괜찮음 · 잠을 오래 잔 듯' : '배를 짚어 보더니 아기는 무사하다 함' });
-    if (p.threat && p.thrW < Math.min(p.labor, until)) out.push({ k: 'thr', w: p.thrW, t: '배가 규칙적으로 뭉치며 아파 옴(조산 기미)', kw: /뭉치|뭉쳤|진통|규칙적/, res: world === 'modern' ? '조산 기미 → 수축 억제제를 맞고 며칠 입원하길 권함' : '해산이 이를 수 있으니 누워서 몸조리하라 함' });
+    if (p.threat && p.thrW < Math.min(p.labor, until)) out.push({ k: 'thr', w: p.thrW, t: '배가 규칙적으로 뭉치며 아파 옴(조산 기미)', kw: /뭉치|뭉쳤|진통|규칙적/, res: p.thrFail ? (world === 'modern' ? '조산 기미 → 수축 억제제를 맞았지만 잘 멈추지 않음 · 입원해서 지켜보기' : '해산 기운이 멈추지 않아 곧 낳을 수 있다 함') : world === 'modern' ? '조산 기미 → 수축 억제제를 맞고 며칠 입원하길 권함' : '해산이 이를 수 있으니 누워서 몸조리하라 함' });
+    if (p.rib && p.ribW >= (preg.w0 || 0) && p.ribW < Math.min(p.labor, until)) out.push({ k: 'rib', w: p.ribW, t: '태동이 세서 갈비뼈 쪽이 결리고 숨 쉴 때 아픔', kw: /갈비|옆구리|결리|숨\s*쉴/, res: world === 'modern' ? '갈비뼈에 금이 감 · 아기 발차기 때문 · 출산하면 저절로 붙는다며 무리하지 말라 함' : '갈빗대가 상했다며 아기 발길질 탓이라 함 · 해산하면 낫는다 함' });
     if (p.pe && p.peW < Math.min(p.labor, until)) out.push({ k: 'pe', w: p.peW, t: '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음', kw: /두통|머리가 (깨질|지끈|아)|눈앞이|번쩍|부어|부종/, res: world === 'modern' ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기' : '몸에 독기가 올랐다며 절대 안정하라 함' });
     const SEEN = '주변 누구든 알아챔(아무도 없으면 옷·거울로 드러남)';
     for (const [w, t] of [[14, '배가 살짝 티 나기 시작함'], [24, '누가 봐도 임신한 배가 됨'], [32, '배가 많이 불러 걸음걸이까지 달라짐']]) if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k: 'b' + w, w, t: t + ' — ' + SEEN, kw: /배가 (불러|나와|볼록|불룩|커|제법)|불룩|볼록|임산부|배를 (보|내려다|쓰다듬)|단추가|옷이 (작|끼|안)/ });
-    if (p.labor < until) out.push({ k: 'labor', w: p.labor, t: '진통이 시작됨(' + (pR('wb') < 0.3 ? '양수가 터짐' : '배가 규칙적으로 아파 옴') + ')', kw: /양수|진통|분만|출산이/, res: birthLine(p, world), end: '출산' });
+    if (p.labor < until) out.push({ k: 'labor', w: p.labor, t: p.rapid ? '진통이 너무 빠르게 몰아침 — 병원에 가기 전에 아기가 나옴' : '진통이 시작됨(' + (early => pR('wb') < (early ? 0.6 : 0.3) ? (early ? '진통 없이 양수부터 터짐' : '양수가 터짐') : '배가 규칙적으로 아파 옴')(p.labor < 37 && preg.planV === 2) + ')', kw: /양수|진통|분만|출산이/, res: birthLine(p, world), end: '출산' });
     return out;
   }
   // 보낼 때마다: 지금 상태를 보고 채팅에 넣을 줄(pregOut)을 만들고, 걸린 일·공개한 결과를 저장해요.
@@ -878,7 +882,7 @@
     const day = pregDay(mem, snap); if (day == null) return;
     pregSync(day, snap);
     const turn = (snap?.note?.turns || 0) + (snap?.fresh || []).filter(m => msgRole(m) === 'user').length;
-    const world = pWorld(mem); preg.era = world; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
+    const world = pWorld(mem); preg.era = world; if (preg.planV == null && preg.start != null) preg.planV = (day - preg.start) / 7 < 20 ? 2 : 1; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
     if (wk < 0) return;
     const chat = (snap?.all || []).filter(isChat), lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
     const atHosp = P_HOSP[world].test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said);
@@ -935,6 +939,8 @@
         if (P_SEXQ.test(said + ' ' + lastAi)) { // 성별 얘기가 나왔을 때만 줘요(미리 주면 AI가 먼저 꺼내요)
           if (wk < 16) res.push('성별은 아직 안 보임(16주부터)'); else { res.push(`성별: ${sexTxt}`); preg.sexAt = turn; } }
       }
+      if (world === 'modern' && p.sexFlip && !preg.sexFlipped && preg.shown.sex != null && preg.shown.sex < turn && wk >= 20 && preg.sexFix?.length === 1) {
+        preg.sexFlipped = turn; preg.sexFix = [preg.sexFix[0] === '남' ? '여' : '남']; const t = '다시 보니 성별이 반대 — ' + (preg.sexFix[0] === '남' ? '딸이 아니라 아들' : '아들이 아니라 딸'); res.push(t); heard(wk, t); }
     }
     // AI 답(또는 유저 말)에 성별이 나오면 들은 걸로 · 수첩에 적어요
     if (preg.shown.sex == null && preg.sexAt != null && turn > preg.sexAt && P_SEXQ.test(lastAi)) {
@@ -988,7 +994,7 @@
     preg = { on: kind !== '출산', world: preg.world, peek: preg.peek, books: [...(preg.books || []), book], history: [...(preg.history || []), line], after: endDay ?? preg.after, afterV2: true, afterTurn: (snapshot?.note?.turns || 0) + freshTurns() };
     pregOut = []; pregSig = ''; pregSave();
   }
-  const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg));
+  const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg && Object.assign(preg, { saved: Date.now() }))); // saved: 기기끼리 더 최근 걸 고르는 기준
   async function pregLoad(chatId) { pregChat = chatId; try { preg = JSON.parse(String(await getValue('preg:' + chatId, '') || 'null')); } catch (_) { preg = null; }
     if (preg && preg.after != null && !preg.afterV2) { delete preg.after; delete preg.afterTurn; }
     if (preg?.log && !preg.logAi1) { const sym = new Set(P_SYM.map(s => s[2].split(' — ')[0].replace(/\(NPC가[^)]*\)/, ''))); preg.log = preg.log.filter(x => x.ai || x.res || !sym.has(x.t)); preg.logAi1 = true; } } // 예전 '기록 지우기'가 남긴 날짜 막기는 버려요(진짜로 끝난 임신만 막아요)
@@ -1864,7 +1870,7 @@
       // 뒷부분이 든 답변이 지워졌으면(되감기 등) 이 기기 전체본으로 메워요. 전체본도 없으면 partial: 반쪽 노트를 옮겨 쓰지 않게(moveNote).
       else if (note.more) {
         let f = null; try { f = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {}
-        note = f?.upto === note.upto && f.memory ? { ...note, memory: stripProof(f.memory) } : { ...note, partial: true };
+        note = f?.upto === note.upto && f.memory ? { ...note, memory: stripProof(f.memory), moreLost: true } : { ...note, partial: true };
       }
     }
     const all = liveLine(sortOld(newestFirst));
@@ -2147,7 +2153,7 @@
     const think = inputOverride || tail ? 'low' : thinkLevel; // 🔍 다시 확인·형식 맞추기는 새로 판단할 게 적어서 늘 적게(빨라요)
     const pregOn = !inputOverride && !tail && !!preg && pregChat === chatIdFromPath() && preg.start != null && !preg.ended && preg.on !== false;
     const inputP = input + (pregOn ? `\n\n[임신 기록 — 노트와 따로] 새 대화 지문에서 ${preg.who || '유저 캐릭터'}의 임신과 관련해 실제로 일어난 일(몸의 변화·증상·검진과 결과·주변 인물이 알아챈 것·새로 알게 된 사실)만 골라, 답 맨 끝에 한 줄에 하나씩 "%%임신 날짜 | 있었던 일" 꼴로 적는다. 날짜는 그 일이 있던 이야기 속 날짜. 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '');
-    const t0 = Date.now(), out = await askAny(model, system, inputP, false, think).catch(e => /thinking/i.test(e.message) ? askAny(model, system, inputP) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
+    const t0 = Date.now(), out = await askAny(model, system, inputP, false, think).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, inputP) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
     summarize.last = { model, inTok: out.inTok, outTok: out.outTok, thinkTok: out.thinkTok || 0, cached: out.cached || 0, ms: Date.now() - t0 }; // cached: Gemini 자동 캐시 // ms: AI가 답하는 데 걸린 시간
     if (!out.text) throw new Error('AI가 빈 답을 보냈어요.');
     out.text = pregTake(out.text);
@@ -2233,7 +2239,7 @@
   }
   // Claude Messages API. 확장 프로그램 요청이라 SDK 대신 HTTP로 직접 부릅니다.
   //   Fable·Opus 5 계열은 안전 거절이 나면 서버가 알아서 다른 모델로 넘기도록(fallbacks) 켜 둡니다.
-  async function askClaude(model, system, input) {
+  async function askClaude(model, system, input, json = false, think = '') {
     const key = String(await getValue('claudeKey', '')).trim();
     if (!key) throw new Error('설정에서 Claude API 키를 먼저 넣어 주세요.');
     const fallback = /^claude-(fable|opus-5)/.test(model);
@@ -2242,7 +2248,7 @@
       timeout: 600000, onProgress: raw => updateProg(raw),
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true',
                  ...(fallback ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}) },
-      body: { model, max_tokens: 64000, stream: true, system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}) } });
+      body: { model, max_tokens: 64000, stream: true, system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}), ...(think && model !== 'claude-haiku-4-5' ? { output_config: { effort: think } } : {}) } }); // effort: 설정 › AI 생각(안 보내면 Sonnet 5.5는 high라 느려요)
     let text = '', stop = '', inTok = 0, outTok = 0;
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
@@ -4311,6 +4317,12 @@
     .fx-sheet{align-items:center;padding:16px}.fx-sheet-in{width:min(420px,100%);max-height:min(560px,80%);border-radius:18px;padding:16px;box-shadow:0 18px 48px -12px rgba(34,30,46,.35);animation:fx-pop .18s ease-out}@keyframes fx-pop{from{opacity:0;transform:scale(.95)}}
     .screen.fx-open nav.top{display:none!important}
     .bk-info{margin:12px 2px 0}.bk-info summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--graphite);list-style:none}.bk-info summary::-webkit-details-marker{display:none}.bk-info summary::after{content:' ›'}.bk-info[open] summary::after{content:' ⌄'}.bk-info p{margin:8px 0 0;font-size:12.5px;line-height:1.6}.bk-tx .wd-dot.on{box-shadow:none}.bk-tx b .nf-q{display:inline-grid;width:18px;height:18px;margin-left:6px;padding:0;font-size:11px;vertical-align:1px;cursor:pointer}.bk-tx b .nf-q[aria-expanded="true"]{background:var(--acc);border-color:transparent;color:#fff}.bk-tx .bk-help{margin-top:4px;white-space:normal;overflow:visible;line-height:1.5;color:var(--ink2)}.bk-help b{display:inline;font-size:inherit}
+    .nf-q{width:16px;height:16px;font-size:10px}.bk-tx b .nf-q{width:16px;height:16px;font-size:10px;margin:0}
+    .pg-hq.qi{position:relative;right:auto;top:auto;display:inline-block;vertical-align:1px;margin-left:6px}
+    .pg-hq.qi>.pg-hb{left:-9px;right:auto;top:24px;display:block;font-weight:400;white-space:normal;text-align:left}.pg-hq.qi>.pg-hb::before{left:12px;right:auto}.pg-hq.qi>.pg-hb>span{display:block}
+    .qw{margin-left:0}.bk-list:has(.pg-hq[open]),.nc:has(.pg-hq[open]){overflow:visible}
+    .nf-help{position:relative}.nf-help>.nf-more{position:absolute;right:-6px;top:calc(100% + 8px);z-index:5;width:min(300px,calc(100vw - 48px));margin:0;border:1px solid var(--rule);font-size:12px;line-height:1.55;box-shadow:0 6px 18px rgba(30,20,60,.08)}
+    .nf-help>.nf-more::before{content:'';position:absolute;right:9px;top:-6px;width:10px;height:10px;background:var(--mist);border-left:1px solid var(--rule);border-top:1px solid var(--rule);transform:rotate(45deg)}
   </style>
   <div class="under" data-act="close" aria-hidden="true"></div>
   <div class="screen" role="dialog" aria-label="조아메모리">
@@ -5005,7 +5017,7 @@
       <div class="bk-list">
         <div class="bk-it"><span class="bk-ic">💾</span><span class="bk-tx"><b>보관하기</b><small>이 방 기억을 그대로 저장</small></span><span class="bk-act"><button class="btn" data-act="backup"${dis}>파일</button>${nav.gsOn ? `<button class="btn pri" data-act="gsave"${dis}>드라이브</button>` : ''}</span></div>
         <div class="bk-it"><span class="bk-ic">⏪</span><span class="bk-tx"><b>되돌리기</b><small>${hl.length ? `정리가 꼬였을 때 · 자동 백업 ${hl.length}개 · 마지막 ${when}` : '정리가 꼬였을 때 · 자동 백업이 아직 없어요'}</small></span><span class="bk-act"><button class="btn" data-act="changes">목록</button></span></div>
-        <div class="bk-it"><span class="bk-ic">📦</span><span class="bk-tx"><b>다른 방으로 이어가기<button class="nf-q" data-act="carryhelp" aria-expanded="${!!nav.carryHelp}" aria-label="설명 보기">?</button></b><small>단체방 → 갠방처럼 서사 들고 이어서</small>${nav.carryHelp ? '<small class="bk-help">마지막으로 정리한 데까지만 가져가요. 정리 뒤에 나눈 대화는 빠지니까 원래 방에서 꼭 <b>정리하기</b>를 먼저 하고 가져오세요.</small>' : ''}</span><span class="bk-act"><button class="btn${nav.carry ? '' : ' pri'}" data-act="carry">${nav.carry ? '닫기' : '가져오기'}</button></span></div>
+        <div class="bk-it"><span class="bk-ic">📦</span><span class="bk-tx"><b>다른 방으로 이어가기<details class="pg-hq qi"><summary class="nf-q" aria-label="설명 보기">?</summary><span class="pg-hb"><b>다른 방으로 이어가기</b><span>마지막으로 정리한 데까지만 가져가요. 정리 뒤에 나눈 대화는 빠지니까 원래 방에서 꼭 정리하기를 먼저 하고 가져오세요.</span></span></details></b><small>단체방 → 갠방처럼 서사 들고 이어서</small></span><span class="bk-act"><button class="btn${nav.carry ? '' : ' pri'}" data-act="carry">${nav.carry ? '닫기' : '가져오기'}</button></span></div>
       </div>
       ${nav.carry ? `<div class="bk-carry"><small>어디서 가져올까요? · 고르면 미리보기 뒤 이 방에 넣어요(원래 방 기억은 그대로)</small><div class="bk-act">${nav.gsOn ? `<button class="btn pri" data-act="gslist"${dis}>드라이브 목록</button>` : '<button class="btn" data-act="gsopen">드라이브 연결</button>'}<label class="btn">파일 고르기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>` : ''}
       ${nav.gsList ? `<div class="nf-pick"><small>드라이브 백업 · 다른 방 것도 이 방으로 가져올 수 있어요</small>${nav.gsList.length ? nav.gsList.map(x => `<button class="nf-pi" data-act="gsfrom" data-arg="${esc(x.chat)}"><b>${esc(x.title)}${x.here ? ' · 이 방' : ''}</b><small>${esc(x.when)}</small></button>`).join('') : '<small>드라이브에 백업이 없어요</small>'}</div>` : ''}
@@ -7287,7 +7299,7 @@
     let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
     const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
-      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + '>🧹 형식 바로잡기</button><button class="nf-q" data-act="nfixhelp" aria-label="형식 바로잡기 설명" aria-expanded="' + !!nav.nfixHelp + '">?</button>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>' + (nav.nfixHelp && key.startsWith('인물¦') && nav.nedit !== key ? '<p class="nc-note">🧹 형식 바로잡기는 정리하다 사라진 설명을 <b>사라지기 전 정리 기록</b>에서 되돌려요. 남은 (고침)과 두 번 들어간 줄도 정리해요. 기록은 이 기기에 최근 30번만 남아서, 그보다 오래전에 사라졌거나 다른 기기에서 정리했으면 되돌릴 수 없어요 · 그땐 수정에서 직접 써 주세요.</p>' : '');
+      : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<span class="pg-hw qw"><button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + '>🧹 형식 바로잡기</button><details class="pg-hq"><summary class="nf-q" aria-label="형식 바로잡기 설명">?</summary><div class="pg-hb"><b>형식 바로잡기</b><p>정리하다 사라진 설명을 사라지기 전 정리 기록에서 되돌려요. 남은 (고침)과 두 번 들어간 줄도 정리해요. 기록은 이 기기에 최근 30번만 남아서, 그보다 오래전에 사라졌거나 다른 기기에서 정리했으면 되돌릴 수 없어요 · 그땐 수정에서 직접 써 주세요.</p></div></details></span>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
     if (nav.ngrp === '주입') { // 칸마다 넣기/끄기 · 어떻게 들어가는지는 칸마다 정해져 있어요
       const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && ![FIXED, '현재상태', SHELF].includes(k) && has(k));
       return h + '<p class="nsum" style="margin-top:10px">칸마다 알아서 골라 넣어요 · 안 쓰는 칸만 끄세요 · 고정 설정·현재상태는 늘 들어가요</p><div class="ij-rows">'
@@ -8200,12 +8212,12 @@
     const story = stripBlocks(raw).trim(), block = (raw.match(V3_RE) || raw.match(V2_RE) || raw.match(V1_RE) || [''])[0].trim();
     const readable = block.split('\n').map(l => { const m = l.match(LINE_RE); return m ? unsafe(m[1]) : l; }).join('\n')
       .replace(/^\[\/\/\]: # "/, '').replace(/"$/, '').replace(/^(?: {4}|\t)/gm, '');
-    const behind = behindOf(snapshot);
+    const behind = behindOf(snapshot), more = snapshot.all.map(parseMore).find(x => x && x.of === n.carrierId);
     return `<div class="injbox"><div class="k">들어간 자리</div>
-        <div style="font-size:15px;line-height:1.6"><b>최신 메시지에서 ${behind ?? '?'}개 전 AI 답변</b> 끝에 숨겨져 있어요.<br>
+        <div style="font-size:15px;line-height:1.6"><b>${spotOf(snapshot) || (behind ?? '?') + '개 전 답변'}</b> 끝에 숨겨져 있어요.<br>
         <span class="muted">크랙이 최근 대화를 AI에게 보낼 때 이 노트도 같이 들어가요. 화면에는 안 보여요.</span></div></div>
       <div class="injbox"><div class="k">붙어 있는 답변의 끝부분</div><div class="tail">${esc(story.slice(-160)) || '(본문 없음)'}</div></div>
-      <div class="injbox"><div class="k">AI가 읽는 노트 · ${fmt(stripProof(noteMemory()).length)}자 <small class="muted">(안내 머리말 포함 ${fmt(block.length)}자)</small></div><pre class="noteview">${esc(readable)}</pre></div>
+      <div class="injbox"><div class="k">AI가 읽는 노트 · ${fmt(stripProof(noteMemory()).length)}자 <small class="muted">(안내 머리말 포함 ${fmt(block.length + (more ? more.memory.length : 0))}자)</small></div><pre class="noteview">${esc(readable)}</pre></div>${more ? `<div class="injbox"><div class="k">그다음 답변에 이어진 뒷부분 · ${fmt(more.memory.length)}자</div><pre class="noteview">${esc(more.memory)}</pre></div>` : ''}
       <div class="injbox"><div class="k">턴 번호 확인</div>
         <div style="font-size:14px;line-height:1.6">노트는 <b>1~${n.turns}턴</b>까지예요. 채팅 말풍선 위 숫자가 실제 턴과 다르면, 노트가 끝나는 턴을 맞춰 주세요.</div>
         <div class="fixrow"><input type="number" inputmode="numeric" min="1" data-out="fixTurns" value="${n.turns}" aria-label="노트가 끝나는 턴"><span>턴까지</span>
@@ -8656,7 +8668,7 @@
         ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('앱 ID', `<input type="text" data-set="firebaseAppId" autocomplete="off" spellcheck="false" placeholder="1:…:web:… · [채우기]가 넣어 줘요">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}<!-- 앱 ID: App Check용 · 숨겨 두면 옛 값이 남아도 안 보여서 보이게 -->
         ${row('App Check 디버그 토큰', `<span class="keybox"><input type="password" data-set="firebaseDebugToken" autocomplete="off" spellcheck="false" placeholder="콘솔 › App Check › 디버그 토큰 관리"><button type="button" data-act="peek">보기</button><button type="button" data-act="fbtest">확인</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
-        ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase"${['gemini', 'vertex', 'firebase'].includes(prov) ? '' : ' hidden'}`)}
+        ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase claude"${['gemini', 'vertex', 'firebase', 'claude'].includes(prov) ? '' : ' hidden'}`)}
         ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요). App Check: ① 웹 앱은 하나만 ② [채우기]에 그 앱의 firebaseConfig ③ App Check › 그 앱 ⋮ › 디버그 토큰 관리에서 만든 토큰(저장까지) ④ [확인]으로 점검.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
         </details>
         ${tidyToolsHtml()}${nav.etcSheet ? etcSheetHtml() : ''}
@@ -8675,7 +8687,7 @@
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
         ${row('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
-        <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${snapshot && behindOf(snapshot) ? `${behindOf(snapshot)}개 전 답변` : '직전 답변'}</span></button>
+        <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${spotOf(snapshot) || '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
         <button data-act="errlog"><b>오류 기록</b><span class="v">${errHere().length ? `${errHere().length}개` : '없음'}</span></button>
         </div>`)
@@ -8837,6 +8849,7 @@
   // ══════════════════════════════════════════════════════════════
   // 13. 동작
   // ══════════════════════════════════════════════════════════════
+  const spotOf = snap => { const n = snap?.note, ai = (snap?.all || []).filter(m => msgRole(m) === 'assistant'), i = n ? ai.findIndex(m => msgId(m) === n.carrierId) : -1; if (i < 0) return ''; const k = ai.length - 1 - i; return (k === 0 ? '맨 아래' : k === 1 ? '전' : k === 2 ? '전전' : k + '개 위') + ' AI 답변' + (n.more ? ' + 뒷부분은 그다음 답변' : ''); };
   const behindOf = snap => { const n = snap?.note; if (!n) return null; const chat = snap.all.filter(isChat), i = chat.findIndex(m => msgId(m) === n.carrierId); return i >= 0 ? chat.length - 1 - i : null; };
   // 노트가 뒤로 밀리면 최신 답변으로 다시 붙입니다. AI 호출이 없어서 비용이 들지 않아요.
   let ownUpto = ''; // 이 기기에서 방금 넣은 노트의 정리 지점(다른 기기 알림에서 뺌)
@@ -8868,7 +8881,7 @@
     if (e.target.tagName === 'TEXTAREA') { if (nav.fxEdit) nav.fxEdit.text = e.target.value; const c = root.querySelector('.fx-cnt'); if (c) c.textContent = e.target.value.length.toLocaleString() + '자'; }
     else if (e.target.dataset?.out === 'fxtitle' && nav.fxEdit) nav.fxEdit.title = e.target.value; });
   root.addEventListener('change', e => { if (e.target?.id === 'pg-world' && preg?.start != null) { preg.world = e.target.value; pregSave(); render(); } });
-  root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq')) root.querySelectorAll('.pg-hq[open]').forEach(d => { d.open = false; }); if (!e.target.closest?.('.pg-hq')) nav.pcHelp = false; }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
+  root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq,.nf-help')) root.querySelectorAll('.pg-hq[open],.nf-help[open]').forEach(d => { d.open = false; }); if (!e.target.closest?.('.pg-hq')) nav.pcHelp = false; }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
   let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
   async function autoSum() {
@@ -8924,7 +8937,7 @@
     if (whole) pregTick(snap, whole, kind === 'send' ? said : ''); const pregNew = pregSig !== (preg?.sig ?? '');
     if (!whole) return 'no-full'; // 고른 일부만 있고 전체본이 없는 기기는 다시 고를 수 없어요(지금 든 것 그대로)
     // 답이 온 뒤 미리 골라 넣어 둔 기억이 그대로 쓸 만하면 기다리지 않고 바로 보내요 · 보낸 말이 아직 안 넣은 옛일을 꺼냈을 때만 새로 골라요
-    if (!pregNew && kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
+    if (!pregNew && !n.moreLost && kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
       const keep = injCtx, before = new Set(lastInj?.keys || []); injCtx = { ...keep, said: String(said) }; injSaidHits = new Set();
       try { selectInjection(whole); } catch (_) {}
       const fresh = [...injSaidHits].filter(k => !before.has(k)); injCtx = keep;
@@ -8939,7 +8952,7 @@
     if (!carrier) return 'no-carrier';
     // 같은 자리에 같은 내용이면 저장하지 않고 바로 보내요(5만 자 노트는 두 답변에 나뉘어 있어 글 전체 대신 고른 내용으로 비교)
     const picked = selectInjection(whole);
-    if (!pregNew && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
+    if (!pregNew && !n.moreLost && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
     const cur = msgId(carrier) === n.carrierId && !msgText(carrier) ? await readMessage(chatId, msgId(carrier)) : carrier; // 목록에 글이 있으면 다시 안 읽어요
     const next = stripBlocks(msgText(cur)).trimEnd() + buildBlock(whole, n.upto, n.turns, n.at || undefined, n.by || '');
     if (next === msgText(cur)) return 'same';
@@ -9054,14 +9067,13 @@
           else if (g?.memory) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
           if (!(fullNote && fullNote.upto === c.upto) && c.at && chatIdFromPath() === chatId) await gsBranch(chatId, c); } } // 이 방 백업이 없으면 분기 전 방 백업에서
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); } // 사본이 망가졌으면 채팅 전체본으로
-      if (!gsTried.has('preg|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('preg|' + chatId); // 임신 기록: 다른 기기가 더 진행했으면(임테기·지나온 일이 더 많으면) 드라이브에서 받아요 · 방마다 한 번
+      if (!gsTried.has('preg|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('preg|' + chatId); // 임신 기록: 다른 기기에서 더 나중에 저장했으면 드라이브에서 받아요 · 방마다 한 번
         gsFetch(chatId).then(async d => { let r = null; try { r = JSON.parse(d?.store?.preg || 'null'); } catch (_) {}
-          const sc = x => x ? Object.keys(x.tests || {}).length + (x.log || []).length + (x.history || []).length * 10 + (x.start != null ? 1 : 0) : -1;
-          if (!r || chatIdFromPath() !== chatId || pregChat !== chatId || sc(r) <= sc(preg)) return;
+          if (!r || chatIdFromPath() !== chatId || pregChat !== chatId || (preg && !((r.saved || 0) > (preg.saved || 0)))) return; // 저장 시각이 늦은 쪽만(개수로 견주면 출산 뒤 짧아진 기록을 덮어요)
           await setValue('preg:' + chatId, JSON.stringify(r)); await pregLoad(chatId); pageToast('다른 기기 임신 기록을 받아 왔어요'); render(); }); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
       try { injSet = { secs: {}, recent: 5, recall: 8, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 5, recall: 8 }; }
-      injSet.recent = 8; injSet.recall = 8; // 최근 사건·떠올릴 기억은 8개로 고정(예전에 고른 값은 안 봐요)
+      injSet.recent = 8; injSet.recall = 12; // 최근 사건 8개·떠올릴 기억 12개로 고정(예전에 고른 값은 안 봐요)
       try { injPins = new Set(JSON.parse(String(await getValue('pins:' + chatId, '[]')) || '[]')); } catch (_) { injPins = new Set(); }
       try { if (snap.note) selectInjection(noteMemory()); else lastInj = null; } catch (_) {}
       try { lastSeenMap = JSON.parse(String(await getValue('lastseen:' + chatId, '') || '{}')) || {}; } catch (_) { lastSeenMap = {}; }
@@ -9427,7 +9439,7 @@
       // 순서를 정해진 칸 순서로 맞춥니다
       parsed.sort((a, b) => (SECTIONS.findIndex(s => s.key === a.key) + 99) % 99 - (SECTIONS.findIndex(s => s.key === b.key) + 99) % 99);
       draft = {
-        sections: parsed, uptoId, turns, pinMove, mode, ...(opts.back ? { back: opts.back } : {}), reviewDiff: reviewIn ? reviewDiffOf(prev, memory, reviewIn.allowed, reviewIn.delta) : null,
+        sections: parsed, uptoId, turns, pinMove, mode, chat: chatId, // chat: 정리한 방(자동 정리 중에 다른 방으로 옮겨도 그 방에만 넣어요) ...(opts.back ? { back: opts.back } : {}), reviewDiff: reviewIn ? reviewDiffOf(prev, memory, reviewIn.allowed, reviewIn.delta) : null,
         // 인물마다 마지막으로 나온 턴(이 기기에만 저장 · 인물 화면 알약). 새 대화에 이름·별명이 나오면 이번 정리 끝 턴으로
         lastSeen: (() => { const prevSeen = lastSeenMap, fresh = msgs.map(m => stripBlocks(msgText(m))).join('\n');
           return { ...stale.seen, ...Object.fromEntries(namesIn(memory).map(nm => [nm, personAlias(nm).some(a => [...a].length >= 2 && fresh.includes(a)) ? turns : (prevSeen[nm] || 0)])) }; })(),
@@ -9512,6 +9524,7 @@
   async function apply() {
     const chatId = chatIdFromPath();
     if (!chatId || !draft || busyNow) return;
+    if (draft.chat && draft.chat !== chatId) { logErr('정리', '다른 방에서 만든 정리라 넣지 않음 · ' + draft.chat, chatId); toast('정리하던 방이 아니라서 넣지 않았어요 · 그 방에서 다시 정리해 주세요', 'err', 4000); draft = null; nav.view = null; render(); return; }
     const memory = joinSections(draft.sections), cleanOld = !!ui('[data-opt="clean"]')?.checked;
     busyNow = true; render(); toast('채팅에 넣는 중…'); let nextStep = false;
     const t0 = Date.now(), laps = [], lap = w => { const s = w + ' ' + ((Date.now() - t0) / 1000).toFixed(1) + '초'; laps.push(s); console.info('[조아메모리] 넣기 · ' + s); };
@@ -9794,7 +9807,6 @@
       case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; const list = splitSections(noteMemory()); let s0 = list.find(x => x.key === arg); if (!s0) { s0 = { key: arg, body: '' }; list.push(s0); }
         s0.body = [s0.body.trim(), ...tpl].filter(Boolean).join('\n'); const key = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1'));
         await nWriteMem(joinSections(list.filter(x => x.body.trim())), [arg], '추가했어요. 내용을 고쳐 저장해 주세요.'); nav.nopen = nav.nedit = key; return render(); }
-      case 'nfixhelp': nav.nfixHelp = !nav.nfixHelp; return keepScroll(render);
       case 'nrel': { // 인물 수정 중 '+ 관계 추가': 화면에만 관계 줄 틀을 하나씩 더 띄워요(저장할 때 한 번에 써요) · 다시 그려도 이미 고쳐 쓴 칸은 그대로
         const keep = card => card ? [...card.querySelectorAll('[data-ed],[data-tone]')].map(x => [x.dataset.ed ? 'data-ed' : 'data-tone', x.dataset.ed || x.dataset.tone, x.textContent, x.dataset.reg]) : [];
         const was = keep(root.querySelector('.nc.editing'));
@@ -10191,7 +10203,6 @@
       case 'gsclose': nav.gsSheet = false; return render();
       case 'gskeep': return gsKeep();
       case 'etcopen': nav.etcSheet = true; return render();
-      case 'carryhelp': nav.carryHelp = !nav.carryHelp; return keepScroll(render);
       case 'carry': nav.carry = !nav.carry; if (!nav.carry) nav.gsList = null; return render();
       case 'etcclose': nav.etcSheet = false; return render();
       case 'etcwipe': return etcWipe(arg);
@@ -10403,7 +10414,7 @@
     + '@media(min-width:900px){#jm-cap-pv{background:rgba(34,30,46,.28);align-items:center;justify-content:center}#jm-cap-pv .card{flex:none;width:min(760px,92vw);height:92vh;border-radius:28px;overflow:hidden;box-shadow:0 30px 80px rgba(31,29,36,.22)}}'
     + '#jm-cap-pv button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent}'
     + '#jm-cap-pv .top{background:#fff;display:flex;align-items:flex-start;gap:8px;padding:calc(22px + env(safe-area-inset-top)) 16px 12px 24px}#jm-cap-pv .top .tt{flex:1;min-width:0}#jm-cap-pv .top b{display:block;font-size:22px;font-weight:700;letter-spacing:-.4px}#jm-cap-pv .top span{display:block;font-size:12px;color:#8C869C;margin-top:2px}#jm-cap-pv .top .x{width:34px;height:34px;display:grid;place-items:center;font-size:20px;color:#565068}'
-    + '#jm-cap-pv nav{background:#fff;display:flex;gap:6px;padding:2px 24px 14px;border-bottom:1px solid #E6E1F0}#jm-cap-pv nav button{padding:6px 13px;border-radius:999px;font-size:13px;font-weight:600;color:#565068;background:#F1EEF8}#jm-cap-pv nav button[aria-pressed="true"]{background:#221E2E;color:#fff}#jm-cap-pv nav{flex-wrap:wrap;row-gap:4px}#jm-cap-pv nav .pa{position:relative}#jm-cap-pv .hp{position:absolute;right:0;top:calc(100% + 6px);width:190px;padding:8px 10px;border-radius:10px;background:#221E2E;color:#fff;font-size:12px;line-height:1.45;z-index:3;box-shadow:0 6px 18px rgba(34,30,46,.18)}#jm-cap-pv nav .pa{margin-left:auto;display:flex;align-items:center;gap:2px}#jm-cap-pv nav .pa button{background:none;padding:6px 6px;font-size:12px;color:#7B61D9}#jm-cap-pv nav .pa .ph{width:20px;height:20px;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid #E6E1F0;color:#8C869C;font-size:11px}'
+    + '#jm-cap-pv nav{background:#fff;display:flex;gap:6px;padding:2px 24px 14px;border-bottom:1px solid #E6E1F0}#jm-cap-pv nav button{padding:6px 13px;border-radius:999px;font-size:13px;font-weight:600;color:#565068;background:#F1EEF8}#jm-cap-pv nav button[aria-pressed="true"]{background:#221E2E;color:#fff}#jm-cap-pv nav{flex-wrap:wrap;row-gap:4px}#jm-cap-pv nav .pa{position:relative}#jm-cap-pv .hp{position:absolute;right:-6px;top:calc(100% + 8px);width:210px;padding:10px 12px;border-radius:14px;background:#F4F3F6;border:1px solid #E6E1F0;color:#8C869C;font-size:12px;line-height:1.55;z-index:3;box-shadow:0 6px 18px rgba(30,20,60,.08)}#jm-cap-pv .hp::before{content:"";position:absolute;right:9px;top:-6px;width:10px;height:10px;background:#F4F3F6;border-left:1px solid #E6E1F0;border-top:1px solid #E6E1F0;transform:rotate(45deg)}#jm-cap-pv nav .pa{margin-left:auto;display:flex;align-items:center;gap:2px}#jm-cap-pv nav .pa button{background:none;padding:6px 6px;font-size:12px;color:#7B61D9}#jm-cap-pv nav .pa .ph{width:16px;height:16px;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid #E6E1F0;background:#F4F3F6;color:#8C869C;font-size:10px;font-weight:800}'
     + '#jm-cap-pv .sc{flex:1;min-height:0;overflow:auto;padding:16px 20px;display:flex}#jm-cap-pv .fr{margin:0 auto auto;background:#fff;border:1px solid #E6E1F0;border-radius:20px;padding:14px;box-shadow:0 1px 2px rgba(34,30,46,.04),0 8px 24px rgba(34,30,46,.05)}#jm-cap-pv img{display:block;height:auto}'
     + '#jm-cap-pv .wr{position:relative;width:fit-content;height:fit-content;touch-action:pan-y}#jm-cap-pv .dim{position:absolute;left:0;right:0;top:0;background:rgba(246,244,251,.8);pointer-events:none}'
     + '#jm-cap-pv .hd{position:absolute;left:0;right:0;height:0;touch-action:none;cursor:ns-resize}#jm-cap-pv .hd::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:#7B61D9}#jm-cap-pv .hd::after{content:"";position:absolute;left:0;right:0;top:-18px;height:36px}#jm-cap-pv .hd i{position:absolute;left:50%;top:-6px;width:40px;height:12px;margin-left:-20px;border-radius:6px;background:#7B61D9}'
