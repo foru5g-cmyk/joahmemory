@@ -4,7 +4,7 @@
 // @version      5.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -2731,6 +2731,7 @@
     if (b) css += dark
       ? `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#DEDAE8!important}${NV} em${NM},${NV} em *${NM}{color:#ADA8BC!important}${NV} :not(pre)>code${NM}{background:#2B2937!important;color:#F2B880!important}${NV} hr{border-color:#34313F!important;background:#34313F!important}`
       : `${NV}{background:${b}!important}${NV} *:not(pre,pre *,svg *)${NM}{color:#2E2C3A!important}${NV} em:not(pre *)${NM},${NV} em *:not(pre *)${NM}{color:#6E6982!important}${NV} :not(pre)>code${NM}{background:#ECE8F5!important;color:#A0522D!important}`;
+    if (b) { const IW = 'html:has(.jm-nv) .pointer-events-auto.bg-bg_screen:has(.ProseMirror)'; css += `${IW}{background:${b}!important}` + (dark ? `${IW} .rounded-lg.border:has(.ProseMirror){background:#2B2937!important;border-color:#393646!important}${IW} .ProseMirror,${IW} .ProseMirror *{color:#DEDAE8!important}` : ''); } // 소설형: 아래 입력창 띠도 같은 색(안 칠하면 흰 띠가 남아요)
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     // 대사 안 줄바꿈도 이어서 봐요(원문엔 줄바꿈이 있어도 화면엔 한 문장) · 문단(p)마다 따로 찾아서 다른 문단까지 넘어가진 않아요
@@ -10367,7 +10368,7 @@
   //   화면을 찍지 않고, 브라우저가 이미 줄을 나눠 놓은 글자 자리(Range)를 읽어 캔버스에 글자마다 다시 그려요
   //   → 화면 밖까지 긴 말풍선도 통째로 · 이름 가리기·형광펜·테마 색 그대로 · 아이폰은 공유 창(이미지 저장) · 갤럭시·PC는 바로 다운로드
   // ══════════════════════════════════════════════════════════════
-  const CAP_MEN = ':is([data-message-id],[data-message-group-id]) .break-all.rounded-lg', CAP_BUB = TH_AI + ',' + TH_ME + ',' + TH_AIN + ',' + CAP_MEN; // 소설형: AI 글(.rounded-none)·내 글(.rounded-lg)도 버블 하나로 · 배경이 투명이라 흰 바탕으로 찍혀요
+  const CAP_MEN = ':is([data-message-id],[data-message-group-id]) .break-all.rounded-lg', CAP_BUB = TH_AI + ',' + TH_ME + ',' + TH_AIN + '>.wrtn-markdown,' + CAP_MEN; // 소설형: AI 글(.rounded-none 안 본문만 · 아래 🔄 줄은 빼요)·내 글(.rounded-lg)도 버블 하나로 · 배경이 투명하면 화면 바탕색으로 찍혀요
   let capShow = true; getValue('capShow', 'on').then(v => { capShow = String(v) !== 'off'; placeCapBtn(); });
   const cap = { on: false, sel: new Set(), mask: false, busy: false, ready: null, sep: false }; // sep: 여러 개 고르면 '따로'(말풍선마다 한 장) · 아니면 세로로 한 장 // ready: 다 만들었는데 브라우저가 막아 한 번 더 눌러야 할 때의 파일들
   const capBtn = document.createElement('button'); capBtn.type = 'button'; capBtn.id = 'jm-cap-btn'; capBtn.setAttribute('aria-label', '말풍선 캡처'); capBtn.title = '말풍선 캡처';
@@ -10483,7 +10484,7 @@
   function capBubble(b, names) { // 말풍선 하나 → 그릴 것 목록(말풍선 기준 좌표)
     const B = b.getBoundingClientRect(), cs = getComputedStyle(b), items = [];
     const rel = q => ({ x: q.left - B.left, y: q.top - B.top, w: q.width, h: q.height });
-    items.push({ t: 'box', ...rel(B), c: capClear(cs.backgroundColor) ? '#ffffff' : cs.backgroundColor, rad: capRad(cs) });
+    items.push({ t: 'box', ...rel(B), c: capClear(cs.backgroundColor) ? bgOf(b) : cs.backgroundColor, rad: capRad(cs) });
     const skip = el => el.closest('.jm-mask-l,.jm-pen-l,.memo-note-hidden,.memo-turn-badge,#memo-note-inline,#jm-cap-btn,button');
     for (const el of b.querySelectorAll('*')) { if (skip(el)) continue; const q = el.getBoundingClientRect(); if (!q.width || !q.height) continue; const s = getComputedStyle(el);
       if (el.tagName === 'IMG') { items.push({ t: 'img', ...rel(q), src: el.currentSrc || el.src, fit: s.objectFit, rad: capRad(s) }); continue; }
