@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.3
+// @version      5.1.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -319,7 +319,8 @@
   //   전체 기억은 이 기기(full:)에 두고, 채팅에는 지금 장면에 필요한 것만 INJ_MAX자 안으로 골라 넣어요(노트가 커져도 채팅 쪽은 안 늘어요).
   //   늘 넣음: 고정 설정·현재상태·직전 장면·열린 서사 고리·최근 사건 INJ_RECENT개·줄거리. 인물은 최근 대화에 나온 사람만 전부, 나머지는 이름·프로필 줄만.
   //   옛 사건·물건·장소·비밀·호칭은 최근 대화에 나온 이름·낱말과 제미나이 의미 검색 점수(injCtx.sim)로 골라요(가장 맞는 INJ_RECALL개까지). WRMC처럼 남는 자리는 채우지 않아요. 전체가 INJ_MAX 안이면 전부 넣어요.
-  const INJ_MAX = 50000, INJ_BOTH = 70000, INJ_RECENT = 5, INJ_RECALL = 8, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
+  // INJ_MAX: AI 답이 하나뿐인 새 방은 한 칸(약 5만 자)에 답 글+안내까지 들어가야 해서 4.5만
+  const INJ_MAX = 45000, INJ_BOTH = 70000, INJ_RECENT = 5, INJ_RECALL = 8, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
   // ponytail: 뜻 검색만으로 떠올리는 기준 = 평균보다 코사인이 이만큼 높을 때 · 실제 노트로 맞춘 값이 아니라 어림값(엉뚱한 게 나오면 올리고, 놓치면 내려요)
   const INJ_SEM_GAP = 0.08;
   const INJ_STOP = new Set(['다시', '그냥', '정말', '오늘', '지금', '처음', '같이', '함께', '서로', '모두', '다음', '이번', '그날', '하루', '잠깐', '계속', '결국', '처음으', '마지막',
@@ -5574,6 +5575,8 @@
           const ai = snap.all.filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)), carrier = [ai[ai.length - 3], ai[ai.length - 4], ai[ai.length - 2]][i] || pickCarrier(snap.all); if (!carrier) return;
           const cur = msgText(carrier) ? carrier : await readMessage(chatId, msgId(carrier)), body = stripBlocks(msgText(cur)).trimEnd();
           if (!body) throw new Error('붙일 답변 글을 못 읽었어요');
+          // 앱 방식은 노트 전체를 넣어서, 웹 모드로 키운 큰 기억(5만 자 넘음)은 채팅 두 칸에 안 들어가요 → 이 방을 웹 모드로
+          if (!sceneOn && stripProof(l.memory).length > 50000) { await applyScene(true, chatId, true); pageToast('웹 모드에서 키운 큰 기억이라 이 방도 웹 모드로 켰어요'); }
           await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.turns || 1, l.at || undefined, l.by || ''));
           await saveFull(chatId, l.upto, l.memory, l.turns, l.at);
           if (nav.gsOn) gsSave(true);
