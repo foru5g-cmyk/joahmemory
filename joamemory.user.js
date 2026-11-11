@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.2
+// @version      5.1.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -9893,7 +9893,8 @@
         if (!edits.length) { nav.nedit = nav.nnew = null; return keepScroll(render); }
         const r = edApply(nBase(), edits); return nWriteMem(r.memory, r.touched, '저장했어요.'); }
       case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; nav.nnew = arg; nav.nraw = arg === '날짜로그'; nav.nedTxt = null; // 화면에만 틀을 띄우고 저장할 때 한 번에 써요
-        nav.nopen = nav.nedit = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1')); if (nav.nshow && !nav.nshow.open.includes(arg)) nav.nshow.open.push(arg); return keepScroll(render); }
+        nav.nopen = nav.nedit = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1')); if (nav.nshow && !nav.nshow.open.includes(arg)) nav.nshow.open.push(arg); render();
+        { const c = root.querySelector('.nc.editing'); if (c) { c.scrollIntoView({ block: 'center' }); c.querySelector('[data-nta],[contenteditable]')?.focus({ preventScroll: true }); } } return; } // 새 칸은 맨 아래에 생겨서 거기로 데려가요
       case 'nrel': { // 인물 수정 중 '+ 관계 추가': 화면에만 관계 줄 틀을 하나씩 더 띄워요(저장할 때 한 번에 써요) · 다시 그려도 이미 고쳐 쓴 칸은 그대로
         { const ta = root.querySelector('.nc.editing [data-nta]');
           if (ta) { ta.value = ta.value.replace(/\s*$/, '') + '\n' + ((ta.value.match(/^【(.+?)】/) || [])[1] || arg.split('¦')[1]) + REL_TPL; nav.nedTxt = { k: ta.dataset.nta, v: ta.value }; ta.style.height = ta.scrollHeight + 2 + 'px'; ta.focus(); return; } }
