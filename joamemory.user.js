@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.1
+// @version      5.1.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -952,7 +952,7 @@
     // 이야기에서 제왕절개로 정하면 그대로(막달 검진·출산 기록이 자연분만으로 어긋나지 않게)
     if (!preg.csSaid && /제왕\s*절개|수술\s*날짜/.test(lastAi + '\n' + said) && !/제왕\s*절개\S*\s*(?:안|않|말고|필요\s*없)/.test(lastAi + '\n' + said)) preg.csSaid = 1;
     const bornAi = chat.filter(m => msgRole(m) === 'assistant').slice(-3).map(m => stripBlocks(msgText(m))).filter(t => !/꿈|악몽|상상|회상|떠올|기억\s*속|\bdream/i.test(t)).join('\n'); // 최근 AI 답 3개(수첩이 늦게 따라와도 잡게) · 꿈·회상이 나오는 답은 빼요
-    const kgs = [...String(big.find(e => e.k === 'labor')?.res || '').matchAll(/(\d+\.\d)kg/g)].map(m => m[1]), kgSaid = preg.fired?.labor != null && kgs.length > 0 && kgs.every(k => new RegExp(k.replace('.', '\\.') + '\\s*(?:kg|킬로)').test(bornAi)); // 진통 때 넘겨준 몸무게가 답에 나오면 태어난 것(쌍둥이는 둘 다)
+    const kgs = [...String(big.find(e => e.k === 'labor')?.res || '').matchAll(/(\d+\.\d)kg/g)].map(m => m[1]), kgSaid = preg.fired?.labor != null && kgs.length > 0 && kgs.every(k => new RegExp('(?<![0-9.])' + k.replace('.', '\\.') + '\\s*(?:kg|킬로)').test(bornAi)); // 진통 때 넘겨준 몸무게가 답에 나오면 태어난 것(쌍둥이는 둘 다)
     const bornNow = !preg.endNext && wk >= 20 && (kgSaid || (p.n === 1 && P_BORN.test(bornAi + '\n' + said))) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said); if (bornNow) preg.endNext = { kind: '출산', dayN: day, why: '', turn, born: 1 }; // 리롤하면 아직 안 끝난 걸로(새로 보낼 때 끝내요)
     if (preg.endNext && (preg.endNext.turn < turn || (preg.endNext.born && said && !bornNow))) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
@@ -3060,8 +3060,13 @@
     .nc.off .nc-t{opacity:.45}
     .nc-b{padding:2px 12px 0;border-top:1px solid var(--rule)}
     .nl{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--ink2);word-break:keep-all;overflow-wrap:anywhere}.nl>i{font-style:normal;font-weight:700;color:var(--ink);margin-right:6px}
-    .ne[contenteditable="true"]{outline:0;border-bottom:1.5px dashed #9D8CEB;background:#F6F3FE;border-radius:4px;padding:0 3px;color:var(--ink)}.ne[contenteditable="true"]:focus{background:#EDE8FD;border-bottom-style:solid}
-    .ne.nadd:empty::before{content:'+ 줄 추가 (라벨: 내용)';color:var(--pencil)}.ne.nadd{display:block;min-height:1.7em;min-width:100%;cursor:text}
+    .ne[contenteditable]{outline:0;border-bottom:1.5px dashed #9D8CEB;background:#F6F3FE;border-radius:4px;padding:0 3px;color:var(--ink)}.ne[contenteditable]:focus{background:#EDE8FD;border-bottom-style:solid}
+    .ne[data-ph][contenteditable]{display:inline-block;min-width:90px}.ne[data-ph]:empty::before{content:attr(data-ph);color:var(--pencil)}
+    .nc.editing .nl:not(.nrow)>i{display:block;margin-bottom:3px;font-size:12px;color:var(--graphite)}.nc.editing .nl:not(.nrow) .ne[contenteditable]{display:block;min-height:1.6em;padding:8px 10px;font-size:15px;line-height:1.55;border:1px solid #CFC6F2;border-radius:8px}.nc.editing .ne.nadd{min-height:4.6em}
+    .evp{display:flex;flex-direction:column;gap:6px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);margin-bottom:6px;padding:10px 12px}.evp>small{font-size:12px;color:var(--graphite)}
+    .evp-b{display:flex;gap:6px;padding-top:4px}
+    .nta{display:block;box-sizing:border-box;width:100%;margin:10px 0 0;border:1.5px solid #9D8CEB;background:#F6F3FE;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;line-height:1.7;color:var(--ink);resize:vertical;outline:0;max-height:60vh;overflow-y:auto}
+    .ne.nadd:empty::before{content:'+ 줄 추가 · 엔터로 여러 줄';color:var(--pencil)}.ne.nadd{white-space:pre-wrap;display:block;min-height:1.7em;min-width:100%;cursor:text}
     .n-tone{border:0;cursor:pointer;font:inherit}
     .nc-acts{display:flex;align-items:center;gap:6px;padding:10px 12px}.nc-acts .btn.sm{height:30px;padding:0 12px}
     .nc-inj.nc-out{background:#EDE8FD;color:#4B3F8A}.nh-dust{background:#F1F0F3;color:var(--graphite)}.nc-note{margin:0;padding:10px 12px;font-size:11.5px;color:var(--graphite)}
@@ -4302,7 +4307,7 @@
     .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2px}.fx-pg-h b{font-size:16px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;justify-self:start;cursor:pointer;padding:6px 4px;font-size:15px;color:var(--ink2)}.fx-pg-ok{all:unset;justify-self:end;cursor:pointer;padding:6px 4px;font-size:15px;font-weight:800;color:var(--acc)}.fx-pg-ok:disabled{opacity:.4}
     .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:15.5px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
     .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"⌄";position:absolute;right:0;top:50%;transform:translateY(-62%);font-size:13px;color:var(--graphite);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:none;color:var(--graphite);font:inherit;font-size:13.5px;padding:4px 16px 4px 4px;cursor:pointer;outline:none}
-    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
+    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
     .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fx-acts2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.fx-libh{display:block;font-size:13px;margin:6px 2px 8px}.fx-lib label{flex:1;min-width:0}.fx-lib .fx-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fx-lib .fx-lt b{display:flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-lib .fx-lt small{font-size:11.5px;color:var(--graphite)}.fx-lib .fx-n{font-style:normal;font-size:11px;color:var(--graphite);opacity:.7;flex:0 0 auto}
     .fx-sheet ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -5498,7 +5503,7 @@
       const sum = x => x ? `1~${x.turns || 0}턴 · ${x.at ? new Date(x.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름'}${x.by ? ' · ' + x.by : ''}${x.reset ? ' (초기화)' : ''}` : '';
       const usable = x => x && x.app === 'memo-note' && x.chat === chatId && !x.reset && (x.memory || Object.keys(x.store || {}).some(k => x.store[k]));
       const two = usable(pv) && usable(d); // 백업이 둘이면 첫 창에서 '최신'을 고른 게 곧 불러오기 확인이에요(같은 걸 두 번 안 물어요)
-      if (usable(pv) && (!usable(d) || !confirm(`구글 드라이브에 이 방 백업이 두 개 있어요.\n\n· 최신: ${sum(d)}\n· 이전: ${sum(pv)}\n\n[확인] 최신으로 진행\n[취소] 이전 백업 보기`))) {
+      if (usable(pv) && (!usable(d) || (!auto && !confirm(`구글 드라이브에 이 방 백업이 두 개 있어요.\n\n· 최신: ${sum(d)}\n· 이전: ${sum(pv)}\n\n[확인] 최신으로 진행\n[취소] 이전 백업 보기`)))) {
         if (!confirm(`이전 백업을 불러올까요?\n\n· ${sum(pv)}\n\n노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
         return importBackupText(r.prev, false); // 이전 백업은 ETC를 바꾸기 전에 한 번 더 물어요(잘못 눌렀을 때 바로 덮어쓰지 않게)
       }
@@ -5646,7 +5651,7 @@
     let differs = false; for (const k of ETC_SYNC_KEYS) if ((d.store[k] || '') !== String(await getValue(k + ':' + chatId, '') || '')) { differs = true; break; }
     if (!differs) { await setValue('etcAt:' + chatId, d.at); return; }
     if (nav.etcAsk?.chatId === chatId && nav.etcAsk.at === d.at) return; // 같은 걸로 이미 카드가 떠 있으면 다시 안 알림
-    nav.etcAsk = { chatId, at: d.at, by: d.by || '', store: d.store }; pageToast('다른 기기 ETC(커뮤·폰 등)가 더 최신이에요 · 조아메모리에서 받을 수 있어요'); render();
+    nav.etcAsk = { chatId, at: d.at, by: d.by || '', store: d.store }; etcPull(true, true); // 맞추기를 켠 사람은 묻지 않고 최신으로
   }
   async function etcMineLoad(chatId) { const m = {}; for (const k of ETC_SYNC_KEYS) m[k] = !!(await getValue(k + ':' + chatId, '')); nav.etcMine = m; }
   async function etcFirst() {
@@ -5670,13 +5675,13 @@
       <p>${esc([e.by, whenOf(e.at)].filter(Boolean).join(' · '))}에 올린 것 · ${esc(has)}</p>
       <div class="devask-btns"><button class="btn pri" data-act="etcpull"${busyNow ? ' disabled' : ''}>받아서 이 기기에 맞추기</button><button class="btn" data-act="etcskip">이 기기 것 유지</button></div></div>`;
   }
-  async function etcPull(take) {
+  async function etcPull(take, quiet) {
     const e = nav.etcAsk, chatId = chatIdFromPath(); if (!e || e.chatId !== chatId) return;
     if (!take) { await setValue('etcSkip:' + chatId, e.at); nav.etcAsk = null; if (e.first) { await setValue('etcAt:' + chatId, new Date().toISOString()); gsSave(true); toast('이 기기 ETC로 맞췄어요(구글에 올렸어요)', 'ok', 3000); } return render(); }
     etcQuiet = true;
     try { for (const k of ETC_SYNC_KEYS) await setValue(k + ':' + chatId, e.store[k] || ''); await setValue('etcAt:' + chatId, e.at); }
     finally { etcQuiet = false; }
-    nav.etcAsk = null; toast('다른 기기 ETC를 받아 왔어요', 'ok', 3000); await refresh();
+    nav.etcAsk = null; if (!quiet) toast('다른 기기 ETC를 받아 왔어요', 'ok', 3000); await refresh();
   }
   async function gsKeep() {
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
@@ -7236,7 +7241,7 @@
   //   오른쪽 '넣음/뺌' 알약: 끄면 채팅 노트에서만 빠지고 여기엔 그대로
   const N_GROUPS = [['인물', ['인물', '인지·비밀']], ['타임라인', ['줄거리', '이정표', '날짜로그', '서사 고리', '세계관']], ['상태', ['현재상태', '소지품', SHELF, '장소·조직']], [FIXED, [FIXED]]];
   const N_PROOF = /^\s*-?\s*(?:근거|번역)\s*[:：]/; // 근거·번역 줄만 숨겨요([닫힘] 고리는 보여요)
-  const N_NEW = { '인물': ['【새 인물】', '- 프로필: '], '날짜로그': ['▸ [날짜-새 사건]', '- 원인 → 행동 → 결과'], '이정표': ['▸ [날짜-새 이정표]', '- 전 → 후: '], '소지품': ['▸ 새 물건 (가진 사람)', '- 상태: '], '장소·조직': ['▸ 새 장소 (장소)', '- 위치·특징: '] };
+  const N_NEW = { '인물': ['【새 인물】', '- 프로필: '], '날짜로그': ['▸ [날짜-새 사건]', '- 장소 · 이름, 이름', '- 원인 → 행동 → 결과'], '이정표': ['▸ [날짜-새 이정표]', '- 전 → 후: '], '소지품': ['▸ 새 물건 (가진 사람)', '- 상태: '], '장소·조직': ['▸ 새 장소 (장소)', '- 위치·특징: '] };
   const nSplitTitle = t => { const x = String(t).replace(/^\[|\]$/g, ''), i = x.indexOf('-'); return i > 0 && i <= 24 && /\d/.test(x.slice(0, i)) ? [x.slice(0, i).trim(), x.slice(i + 1).trim()] : ['', String(t)]; };
   // 펼친 줄 하나: 보기 모양 그대로, 수정 중이면 글자 부분만 그 자리에서 고칠 수 있게
   function nLine(spec, l, j, on) {
@@ -7246,13 +7251,14 @@
       if (hm && nav.hookEdit === ht) return '<div class="hke"><input data-hookin value="' + esc(rest) + '"><button data-act="hooksave" data-arg="' + esc(ht) + '">저장</button><button data-act="hookcancel">취소</button></div>';
       return '<p class="nl">' + (on ? ce('L' + j, b) : pillLine(b)) + (hm ? '<span class="hka"><button data-act="hookdone" data-arg="' + esc(ht) + '">끝남</button><button data-act="hookedit" data-arg="' + esc(ht) + '">고치기</button><button data-act="hookdel" data-arg="' + esc(ht) + '">지우기</button></span>' : '') + '</p>'; } // 서사 고리 줄: '태정→나 대감'이 있어도 관계 줄이 아니에요(고칠 때는 원래 글 그대로)
     if (REL_RE.test(l)) { const r = relParse(l);
-      return '<p class="nl"><i>→ ' + (on ? '</i>' + ce('O' + j, r.to) + ' ' : esc(r.to) + '</i>') + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
+      return '<p class="nl nrow"><i>→ ' + (on ? '</i>' + ce('O' + j, r.to) + ' ' : esc(r.to) + '</i>') + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
         : (r.addr.length ? r.addr.map(x => '<span class="addr">「' + esc(x) + '」</span>').join(' ') + ' ' : '') + (r.reg ? '<span class="reg-tag">' + esc(r.reg) + '</span> ' : '') + esc(r.rel)) + '</p>'; }
     const i = labelCut(b);
     return i > 0 && i <= 12 ? '<p class="nl"><i>' + esc(b.slice(0, i).trim()) + '</i>' + ce('V' + j, b.slice(i + 1).trim()) + '</p>' : '<p class="nl">' + ce('L' + j, b) + '</p>';
   }
   // 고친 것들 → 노트(같은 항목은 아래 줄부터, 제목은 맨 끝에 바꿔 줄 번호가 안 밀리게)
-  const REL_TPL = ' → 상대 이름: 「호칭」·존댓말 · 지금 사이';
+  const nB = t => /^[⤿ㄴ↳]/.test(t) ? t.replace(/^[ㄴ↳]/, '⤿') : '- ' + t; // 곁 사람 줄(⤿)은 '- ' 없이
+  const REL_TPL =' → 상대 이름: 「호칭」·존댓말 · 지금 사이';
   function edApply(mem, edits) {
     const list = splitSections(mem), touched = new Set(), num = f => /^[LVARGO]\d+$/.test(f) ? Number(f.slice(1)) : f === 'N' ? 1e9 : -1;
     // '+ 관계 추가' 틀(그 사람 블록 줄 수보다 뒤 번호): 칸을 고친 틀만 차례로 관계 줄을 만들고, 그 칸들의 번호를 새 줄 번호로 바꿔요
@@ -7263,30 +7269,80 @@
         it.lines.push('- ' + k + REL_TPL); es.forEach(e => { e.f = e.f[0] + (it.lines.length - 1); }); }
       s0.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); touched.add('인물');
     }
-    edits.sort((x, y) => num(y.f) - num(x.f));
+    edits.sort((x, y) => num(y.f) - num(x.f)); const ren = new Map(), pw = new Set();
     for (const { sec, k, f, v } of edits) {
       const s0 = list.find(x => x.key === sec); if (!s0) continue;
-      const b = itemBlocks(s0.body), it = k ? b.items.find(x => itemKey(x.key) === k) : null; if (k && !it) continue;
+      const b = itemBlocks(s0.body), kk = ren.get(sec + '¦' + k) || k, it = k ? b.items.find(x => itemKey(x.key) === kk) : null; if (k && !it) continue;
       const L = it ? it.lines : s0.body.split('\n'), j = num(f), ind = l => (String(l).match(/^\s*/) || [''])[0], kind = f[0];
-      if (kind === 'N') { if (v) L.push('- ' + (sec === '인물' && k && /^(?:→|->)/.test(v) ? `${k} → ${v.replace(/^(?:→|->)\s*/, '')}` : v)); } // 인물 칸에 '→ 상대: …'만 쓰면 앞에 이 사람 이름을 붙여 관계 줄 모양으로
+      if (kind === 'N') { for (const one of v.split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean)) L.push(nB(sec === '인물' && k && /^→/.test(one) ? `${k} → ${one.replace(/^→\s*/, '')}` : bullet(one))); }
+      else if (kind === 'P' || kind === 'W') { if (!it || pw.has(sec + '¦' + k)) continue; pw.add(sec + '¦' + k); // 위치·사람 칸은 한 줄로 합쳐 써요
+        const get = c => edits.find(e => e.sec === sec && e.k === k && e.f === c)?.v, m = evMetaAt(L), place = get('P') ?? m.place, who = (get('W') ?? m.who.join(', ')).split(/\s*[,，]\s*/).map(x => x.trim()).filter(Boolean).join(', ');
+        const line = place || who ? '- ' + [place, who].filter((x, i) => x || i === 0).join(' · ') : '';
+        if (m.j > 0) { if (line) L[m.j] = line; else L.splice(m.j, 1); } else if (line) L.splice(1, 0, line); }
+      else if (kind === 'D') { if (v) L[0] = L[0].replace(/^(\s*▸\s*\[?)[^\]\-]+?(\s*-\s*)/, (_, a, c) => a + v.replace(/-/g, '.') + c); } // 날짜 안의 '-'는 제목과 가르는 표시라 '.'로 // 인물 칸에 '→ 상대: …'만 쓰면 앞에 이 사람 이름을 붙여 관계 줄 모양으로
       else if (kind === 't') { if (v) L[0] = '▸ ' + v; }
       else if (kind === 'T') { if (v) { const m = L[0].match(/^(\s*▸\s*\[?[^\]\-]+?\s*-\s*)(.+?)(\]?\s*(?:\(요약\))?\s*)$/); L[0] = m ? m[1] + v + m[3] : '▸ ' + v; } }
       else if (kind === 'd') { const n = (L[0].match(/^\s*【(.+?)】/) || [])[1] || ''; L[0] = '【' + n + '】' + (v ? ' ' + v : ''); }
       else if (kind === 'n') { if (v) L[0] = L[0].replace(/^(\s*【).+?(】)/, '$1' + v + '$2'); }
       else if (!L[j] || N_PROOF.test(L[j])) continue;
-      else if (kind === 'L') { if (v) L[j] = ind(L[j]) + '- ' + v; else { let c = 1; while (j + c < L.length && N_PROOF.test(L[j + c])) c++; L.splice(j, c); } }
+      else if (kind === 'L') { if (v) L[j] = ind(L[j]) + nB(v); else { let c = 1; while (j + c < L.length && N_PROOF.test(L[j + c])) c++; L.splice(j, c); } }
       else if (kind === 'V') { const bl = bullet(L[j].trim()), i = labelCut(bl); if (!v) { let c = 1; while (j + c < L.length && N_PROOF.test(L[j + c])) c++; L.splice(j, c); } else L[j] = ind(L[j]) + '- ' + (i > 0 ? bl.slice(0, i).trim() + ': ' : '') + v; }
       else if ('ARGO'.includes(kind) && REL_RE.test(L[j])) { const r = relParse(L[j]), to = kind === 'O' && v ? v : r.to;
         const addr = kind === 'A' ? v.split(/[,，、]|」\s*「/).map(x => x.trim().replace(/^「|」$/g, '')).filter(Boolean) : r.addr, rel = kind === 'R' ? v : r.rel, reg = kind === 'G' ? v : r.reg;
         const sp = addr.map(x => '「' + x + '」').join('') + (reg ? (addr.length ? '·' : '') + reg : '');
         L[j] = ind(L[j]) + '- ' + r.from + ' → ' + to + ': ' + [sp, rel].filter(Boolean).join(' · '); }
       s0.body = (it ? [...b.head, ...b.items.flatMap(x => x.lines)] : L).join('\n').trim(); touched.add(sec);
+      if (it) { const nk = itemKey(itemBlocks(s0.body).items[b.items.indexOf(it)]?.key || ''); if (nk && nk !== kk) ren.set(sec + '¦' + k, nk); } // 날짜·제목·이름을 바꿔 항목 이름이 달라져도 같은 항목의 나머지 고침이 이어지게
     }
     return { memory: joinSections(list.filter(x => x.body.trim())), touched: [...touched] };
   }
+  // 수정 글상자: 항목 하나(또는 줄로만 된 칸)를 통째로 · 첫 줄 = 제목, 줄 앞 '- '는 저장할 때 붙여요
+  // 사건의 '장소 · 이름, 이름' 줄(첫 내용 줄일 때만): { j: 줄 번호(없으면 -1), place, who }
+  function evMetaAt(lines) {
+    const j = lines.findIndex((l, i) => i && l.trim() && !N_PROOF.test(l)), b = j > 0 ? bullet(lines[j]) : '', m = b.match(/^([^·→.!?。]{1,40})\s·\s([^·→.!?。:：]{1,40})$/);
+    const mt = !b ? null : b === '장소 · 이름, 이름' ? { place: '', who: [] } : metaOf(b) || (m && !/[다요함음됨]$/.test(b) ? { place: m[1].trim(), who: m[2].split(/\s*[,，]\s*/).filter(Boolean) } : null);
+    return mt ? { j, place: mt.place, who: mt.who } : { j: -1, place: '', who: [] };
+  }
+  // 붙여 넣은 글 → 사건 형식: '▸'나 '[날짜-제목]'으로 시작하는 줄이 제목, 그런 줄이 없으면 첫 줄이 제목 · 📍👥 줄은 '장소 · 이름' 줄로
+  function evPasteBody(text) {
+    const ls = String(text).replace(N_ARROW, '→').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean), isHead = l => /^▸/.test(l) || /^\[[^\]]*\d[^\]]*-[^\]]+\]/.test(l);
+    if (ls.length && !ls.some(isHead)) ls[0] = '▸ ' + ls[0];
+    return ls.map(l => isHead(l) ? '▸ ' + l.replace(/^▸\s*/, '') : /^📍/.test(l) ? '- ' + l.replace(/^📍\s*/, '').replace(/\s*👥\s*/, ' · ') : /^👥/.test(l) ? '-  · ' + l.replace(/^👥\s*/, '') : nB(bullet(l))).join('\n');
+  }
+  const evPickHtml = () => '<div class="evp"><small>사건 글을 붙여 넣으면 형식에 맞춰 넣어요 · 첫 줄이 제목</small><textarea class="nta" data-evpaste rows="6" spellcheck="false">' + esc(nav.evPick.v || '') + '</textarea>'
+    + '<div class="evp-b"><button class="btn sm pri" data-act="evpaste"' + (busyNow ? ' disabled' : '') + '>넣기</button><button class="btn sm" data-act="evclose">닫기</button></div></div>';
+  async function evPaste(text) {
+    const items = itemBlocks(evPasteBody(text)).items; if (!items.length) return toast('붙여 넣은 글이 비었어요', 'info', 2500);
+    const list = splitSections(noteMemory()); let s0 = list.find(x => x.key === '날짜로그'); if (!s0) { s0 = { key: '날짜로그', body: '' }; list.push(s0); }
+    const b = itemBlocks(s0.body), have = new Set(b.items.map(x => itemKey(x.key))), headOf = x => x.lines[0].trim().replace(/^▸\s*/, '');
+    const lastD = b.items.length ? nSplitTitle(headOf(b.items[b.items.length - 1]))[0] : ''; let put = 0;
+    for (const it of items) { const [d, t] = nSplitTitle(headOf(it));
+      if (!d && lastD) it.lines[0] = '▸ [' + lastD + '-' + t.replace(/^\[|\]$/g, '') + ']'; // 날짜 없이 붙여 넣은 사건은 이 방의 지금 날짜로
+      const key = itemKey(itemBlocks(it.lines[0]).items[0]?.key || ''); if (!key || have.has(key)) continue; have.add(key); b.items.push({ key, lines: it.lines }); put++; }
+    if (!put) return toast('이미 이 방에 있는 사건이에요', 'info', 3000);
+    s0.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); nav.evPick = null;
+    return nWriteMem(joinSections(list.filter(x => x.body.trim())), ['날짜로그'], '사건 ' + put + '개를 넣었어요');
+  }
+  const N_ARROW = /(?:-{1,2}|=|ㅡ|—)>/g; // 자판으로 친 화살표
+  const nTa = (key, lines) => '<textarea class="nta" data-nta="' + esc(key) + '" spellcheck="false" rows="' + Math.min(24, lines.reduce((n, l) => n + Math.ceil(([...l].length || 1) / 24), 0) + 2) + '">' + esc(nav.nedTxt?.k === key ? nav.nedTxt.v : lines.join('\n')) + '</textarea><p class="nl"><button class="btn sm" data-act="ncopy">전체 복사</button> <button class="btn sm" data-act="narrow">→ 넣기</button></p>';
+  function taApply(mem, sec, k, text) {
+    const list = splitSections(mem), s0 = list.find(x => x.key === sec); if (!s0) return null;
+    const b = itemBlocks(s0.body), it = k ? b.items.find(x => itemKey(x.key) === k) : null; if (k && !it) return null;
+    const old = it ? it.lines : s0.body.split('\n'), pool = []; // 안 고친 줄은 원래 줄 그대로(들여쓰기·딸린 근거 줄까지) 다시 써요
+    for (let j = it ? 1 : 0; j < old.length; j++) { if (!old[j].trim() || N_PROOF.test(old[j])) continue; const g = [old[j]], t = bullet(old[j]); while (j + 1 < old.length && N_PROOF.test(old[j + 1])) g.push(old[++j]); pool.push({ t, g }); }
+    const ls = String(text).replace(N_ARROW, '→').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean), out = []; if (!ls.length) return null;
+    if (it) { const o = old[0].trim(), nm = (o.match(/^【(.+?)】/) || [])[1];
+      if (!nm) out.push('▸ ' + ls.shift().replace(/^▸\s*/, '')); else if (/^【.+?】/.test(ls[0])) out.push(ls.shift()); else out.push(o); }
+    const who = it && (old[0].match(/【(.+?)】/) || [])[1];
+    for (const x of ls) { const t = bullet(x), i = pool.findIndex(p => p.t === t);
+      out.push(...(i >= 0 ? pool.splice(i, 1)[0].g : [nB(sec === '인물' && who && /^→/.test(t) ? who + ' → ' + t.replace(/^→\s*/, '') : t)])); }
+    s0.body = (it ? [...b.head, ...b.items.flatMap(x => x === it ? out : x.lines)] : out).join('\n').trim();
+    return joinSections(list.filter(x => x.body.trim()));
+  }
+  const nBase = () => { const m = noteMemory(), sec = nav.nnew; if (!sec) return m; const list = splitSections(m); let s0 = list.find(x => x.key === sec); if (!s0) { s0 = { key: sec, body: '' }; list.push(s0); } s0.body = [s0.body.trim(), ...N_NEW[sec]].filter(Boolean).join('\n'); return joinSections(list); }; // 새로 추가 중이면 틀을 넣은 노트
   async function nWriteMem(memory, secs, msg) {
     const cid = chatIdFromPath(); if (!cid || !snapshot?.note || busyNow) return;
-    busyNow = true; render();
+    nav.nedTxt = nav.nnew = null; busyNow = true; render();
     try { await rewriteNote(cid, memory);
       const ed = await editedKeys(cid); for (const k of secs) if (!ed.includes(k)) ed.push(k); await setValue('edited:' + cid, JSON.stringify(ed));
       nav.nedit = null; toast(msg, 'ok', 2000); await refresh(); if (nav.gsOn) gsSave(true); }
@@ -7301,7 +7357,7 @@
     const now = stripProof(noteMemory()).length, dis = busyNow ? ' disabled' : '';
     let h = '<p class="nsum">채팅에 들어가는 노트 <b>' + fmt(now) + '</b> / ' + limTxt() + (NO_INJ.size ? ' · ' + NO_INJ.size + '개 뺌' : '') + '</p>'
       + '<div class="seg nseg">' + groups.map(([g]) => '<button data-act="ngrp" data-arg="' + esc(g) + '" aria-pressed="' + (g === nav.ngrp) + '">' + esc(g === FIXED ? '고정 설정' : g) + '</button>').join('') + '</div>';
-    const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>'
+    const acts = (key, del) => '<div class="nc-acts">' + (nav.nedit === key ? '<button class="btn sm pri" data-act="nsave"' + dis + '>저장</button><button class="btn sm" data-act="ncancel">취소</button>' + (key.startsWith(SHELF + '¦') ? '' : '<button class="nc-del" data-act="nraw">' + (nav.nraw ? '칸으로 고치기' : '통째로 고치기') + '</button>')
       : '<button class="btn sm" data-act="nedit" data-arg="' + esc(key) + '"' + dis + '>수정</button>' + (key.startsWith('인물¦') ? '<span class="pg-hw qw"><button class="btn sm" data-act="nfixp" data-arg="' + esc(key) + '"' + dis + '>🧹 형식 바로잡기</button><details class="pg-hq"><summary class="nf-q" aria-label="형식 바로잡기 설명">?</summary><div class="pg-hb"><b>형식 바로잡기</b><p>정리하다 사라진 설명을 사라지기 전 정리 기록에서 되돌려요. 남은 (고침)과 두 번 들어간 줄도 정리해요. 기록은 이 기기에 최근 30번만 남아서, 그보다 오래전에 사라졌거나 다른 기기에서 정리했으면 되돌릴 수 없어요 · 그땐 수정에서 직접 써 주세요.</p></div></details></span>' : '') + (del ? '<button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button>' : '')) + '</div>';
     if (nav.ngrp === '주입') { // 칸마다 넣기/끄기 · 어떻게 들어가는지는 칸마다 정해져 있어요
       const keys = SECTIONS.map(x => x.key).filter(k => !VIEW_ONLY.includes(k) && ![FIXED, '현재상태', SHELF].includes(k) && has(k));
@@ -7310,13 +7366,14 @@
           + [['in', '넣기'], ['off', '끄기']].map(([v, l]) => '<button data-act="injsec" data-arg="' + esc(k) + '|' + v + '" aria-pressed="' + ((secMode(k) === 'off') === (v === 'off')) + '"' + dis + '>' + l + '</button>').join('') + '</div></div>').join('') + '</div>'; }
     const secsIn = N_GROUPS.find(([g]) => g === nav.ngrp)[1].filter(has); if (!nav.nshow || nav.nshow.g !== nav.ngrp) nav.nshow = { g: nav.ngrp, open: [secsIn[0]] };
     for (const sec of secsIn) {
-      const body = bodyOf(sec), its = itemBlocks(body).items, shown = nav.nshow.open.includes(sec) || String(nav.nedit || '').startsWith(sec + '¦');
-      h += '<h5 class="nh' + (shown ? ' on' : '') + (sec === SHELF ? ' nh-dust' : '') + '" data-act="nfold" data-arg="' + esc(sec) + '"><em>›</em>' + (sec === SHELF ? '🕸️ ' : '') + (sec === '서사 고리' ? '🪢 아직 끝나지 않은 일 · 끝난 일' : esc(secInfo(sec).short)) + (its.length ? '<small>' + its.length + '</small>' : '') + (N_NEW[sec] ? '<button class="nh-add" data-act="nadd" data-arg="' + esc(sec) + '"' + dis + '>+ 추가</button>' : '') + (sec === '서사 고리' && nav.hookUndo?.cid === chatIdFromPath() ? '<button class="nh-add" data-act="hookundo">되돌리기</button>' : '') + '</h5>';
+      const body = bodyOf(sec) + (nav.nnew === sec ? '\n' + N_NEW[sec].join('\n') : ''), its = itemBlocks(body).items, shown = nav.nshow.open.includes(sec) || String(nav.nedit || '').startsWith(sec + '¦');
+      h += '<h5 class="nh' + (shown ? ' on' : '') + (sec === SHELF ? ' nh-dust' : '') + '" data-act="nfold" data-arg="' + esc(sec) + '"><em>›</em>' + (sec === SHELF ? '🕸️ ' : '') + (sec === '서사 고리' ? '🪢 아직 끝나지 않은 일 · 끝난 일' : esc(secInfo(sec).short)) + (its.length ? '<small>' + its.length + '</small>' : '') + (sec === '날짜로그' ? '<button class="nh-add" data-act="evfrom"' + dis + '>붙여넣기</button>' : '') + (N_NEW[sec] ? '<button class="nh-add"' + (sec === '날짜로그' ? ' style="margin-left:12px"' : '') + ' data-act="nadd" data-arg="' + esc(sec) + '"' + dis + '>+ 추가</button>' : '') + (sec === '서사 고리' && nav.hookUndo?.cid === chatIdFromPath() ? '<button class="nh-add" data-act="hookundo">되돌리기</button>' : '') + '</h5>';
+      if (sec === '날짜로그' && nav.evPick) h += evPickHtml();
       if (!shown) continue;
       if (!its.length) { // 줄로만 된 칸: 카드 하나에 줄들
         const key = sec + '¦', on = nav.nedit === key, ls = body.split('\n');
-        h += '<div class="nc open' + (on ? ' editing' : '') + '"><div class="nc-b">' + ls.map((l, j) => l.trim() && !N_PROOF.test(l) && !isNone(l) ? nLine(key, l, j, on) : '').join('')
-          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' : '') + '</div>' + acts(key, false) + '</div>';
+        h += '<div class="nc open' + (on ? ' editing' : '') + '"><div class="nc-b">' + (on && nav.nraw ? nTa(key, ls.filter(l => l.trim() && !N_PROOF.test(l) && !isNone(l)).map(bullet)) : ls.map((l, j) => l.trim() && !N_PROOF.test(l) && !isNone(l) ? nLine(key, l, j, on) : '').join('')
+          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="plaintext-only" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' : '')) + '</div>' + acts(key, false) + '</div>';
         continue; }
       h += its.map(it => { const k = itemKey(it.key), key = sec + '¦' + k, open = nav.nopen === key || nav.nedit === key, on = nav.nedit === key, off = NO_INJ.has(sec + '|' + k);
         const head = it.lines[0].trim(), pm = head.match(/^【(.*?)】\s*(.*)$/), [d, t] = pm ? ['', pm[1]] : nSplitTitle(head.replace(/^▸\s*/, ''));
@@ -7327,9 +7384,14 @@
             : '<button class="nc-inj' + (off ? ' off' : '') + '" data-act="ninj" data-arg="' + esc(sec + '|' + k) + '" title="채팅에 넣기"' + dis + '>' + (off ? '뺌' : '넣음') + '</button></div>');
         if (!open) return '<div class="nc' + (off ? ' off' : '') + '">' + row + '</div>';
         const top = pm ? '<p class="nl"><i>이름</i>' + ce('n', pm[1]) + '</p><p class="nl"><i>설명</i>' + ce('d', pm[2].replace(/^[·\-]\s*/, '')) + '</p>'
-          : on ? '<p class="nl"><i>제목</i>' + (d ? ce('T', t) : ce('t', head.replace(/^▸\s*/, ''))) + '</p>' : '';
-        return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + it.lines.map((l, j) => j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('') + (on && nav.nrel === key ? Array.from({ length: nav.nrelN || 1 }, (_, q) => nLine(key, '- ' + k + REL_TPL, it.lines.length + q, on)).join('') : '')
-          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="true" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' + (sec === '인물' ? '<p class="nl"><button class="btn sm" data-act="nrel" data-arg="' + esc(key) + '"' + dis + '>+ 관계 추가</button></p>' : '') : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
+          : on ? (d ? '<p class="nl"><i>날짜</i>' + ce('D', d) + '</p>' : '') + '<p class="nl"><i>제목</i>' + (d ? ce('T', t) : ce('t', head.replace(/^▸\s*/, ''))) + '</p>' : '';
+        const ev = on && sec === '날짜로그' ? evMetaAt(it.lines) : null, ph = (f, v, p) => ce(f, v).replace('<span class="ne"', '<span class="ne" data-ph="' + p + '"'); // 사건 수정: 위치·사람을 칸으로 따로
+        const evTop = ev ? '<p class="nl"><i>위치</i>' + ph('P', ev.place, '어디서') + '</p><p class="nl"><i>같이 있던 사람</i>' + ph('W', ev.who.join(', '), '이름, 이름') + '</p><p class="nl"><i>있었던 일</i></p>' : '';
+        if (on && nav.nraw && sec !== SHELF) return '<div class="nc open editing' + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + nTa(key, [pm ? head : head.replace(/^▸\s*/, ''), ...it.lines.slice(1).map((l, j) => [l, j + 1]).filter(([l]) => l.trim() && !N_PROOF.test(l)).map(([l, j]) => { const m = sec === '날짜로그' ? evMetaAt(it.lines) : null; // 사건의 장소·사람 줄은 화면에서 보던 📍👥 모양으로
+            return m && m.j === j ? '📍 ' + (m.place || '장소') + ' 👥 ' + (m.who.join(', ') || '이름, 이름') : bullet(l); })])
+          + (sec === '인물' ? '<p class="nl"><button class="btn sm" data-act="nrel" data-arg="' + esc(key) + '"' + dis + '>+ 관계 추가</button></p>' : '') + '</div>' + acts(key, true) + '</div>';
+        return '<div class="nc open' + (on ? ' editing' : '') + (off ? ' off' : '') + '">' + row + '<div class="nc-b">' + top + evTop + it.lines.map((l, j) => j && j !== ev?.j && l.trim() && !N_PROOF.test(l) ? nLine(key, l, j, on) : '').join('') + (on && nav.nrel === key ? Array.from({ length: nav.nrelN || 1 }, (_, q) => nLine(key, '- ' + k + REL_TPL, it.lines.length + q, on)).join('') : '')
+          + (on ? '<p class="nl"><span class="ne nadd" contenteditable="plaintext-only" spellcheck="false" data-ed="' + esc(key + '¦N') + '" data-orig=""></span></p>' + (sec === '날짜로그' ? '<p class="nl"><button class="btn sm" data-act="nside">⤿ 곁에 있던 사람이 한 일</button></p>' : '') + (sec === '인물' ? '<p class="nl"><button class="btn sm" data-act="nrel" data-arg="' + esc(key) + '"' + dis + '>+ 관계 추가</button></p>' : '') : '') + '</div>' + (sec === SHELF ? '<div class="nc-acts"><button class="nc-del" data-act="ndel" data-arg="' + esc(key) + '">지우기</button></div><p class="nc-note">채팅엔 안 들어가요 · 오른쪽 꺼내기를 누르면 소지품으로 돌아가요</p>' : acts(key, true)) + '</div>';
       }).join('');
     }
     return h;
@@ -9011,7 +9073,7 @@
   let thinkLevel = 'low'; // 정리할 때 AI가 생각하는 양(설정) · Gemini 3 이상 · 기본 낮음(생각도 출력값이라 돈이 들어서)
   let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
-  let sceneGen = 0, loadingAt = 0; const gsTried = new Set(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
+  let sceneGen = 0, loadingAt = 0; const gsTried = new Set(), gsRe = new Map(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
   const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
   async function refresh() {
     const gen0 = sceneGen;
@@ -9069,10 +9131,13 @@
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && !gsTried.has(chatId + '|' + c.upto) && String(await getValue('gsUrl', '')).trim()) {
-          gsTried.add(chatId + '|' + c.upto); const g = await gsPeek(chatId);
-          if (g?.memory && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, g.memory, g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요'); }
-          else if (g?.memory) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
-          if (!(fullNote && fullNote.upto === c.upto) && c.at && chatIdFromPath() === chatId) await gsBranch(chatId, c); } } // 이 방 백업이 없으면 분기 전 방 백업에서
+          const k = chatId + '|' + c.upto, nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
+          let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at }; } catch (e) { why = e.message || String(e); }
+          if (g && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, g.memory, g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요'); }
+          else if (g) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
+          else if (!nth) logErr('연동', '구글 드라이브에서 전체 기억을 못 받음 · ' + (why || '백업에 기억이 비어 있어요'));
+          if (!(fullNote && fullNote.upto === c.upto) && c.at && chatIdFromPath() === chatId && !nth) await gsBranch(chatId, c); // 이 방 백업이 없으면 분기 전 방 백업에서
+          if (!(fullNote && fullNote.upto === c.upto) && nth < 3) setTimeout(() => gsTried.delete(k), 60000); } } // 정리한 기기가 아직 올리는 중일 수 있어 1분 뒤 다시(3번까지)
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); } // 사본이 망가졌으면 채팅 전체본으로
       if (!gsTried.has('preg|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('preg|' + chatId); // 임신 기록: 다른 기기에서 더 나중에 저장했으면 드라이브에서 받아요 · 방마다 한 번
         gsFetch(chatId).then(async d => { let r = null; try { r = JSON.parse(d?.store?.preg || 'null'); } catch (_) {}
@@ -9750,12 +9815,17 @@
   { // 답 파일 칸은 다시 그리지 않는 곳에 하나만: 폰에서 파일 고르는 사이 화면이 다시 그려지면 고른 파일이 버려진 칸으로 갔어요
     const ef = Object.assign(document.createElement('input'), { type: 'file', id: 'jm-extfile', accept: '.txt,.md,text/plain,text/markdown', hidden: true }); root.appendChild(ef);
     ef.addEventListener('change', async () => { const file = ef.files?.[0]; ef.value = ''; if (file) try { await importResult(await file.text()); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } }); }
+  root.addEventListener('input', e => { if (e.target.dataset?.evpaste !== undefined && nav.evPick) nav.evPick.v = e.target.value; });
   root.addEventListener('change', async e => { if (e.target.dataset?.out !== 'fximport') return; const file = e.target.files?.[0]; e.target.value = ''; if (file) fxPickOpen(file.name, await file.text()); });
   // 조아메모리 칸(글 칸·입력칸)에서 친 키는 뒤의 크랙 페이지로 안 보내요: 아이폰에서 줄바꿈(↵)을 누르면 크랙이 그 키를 받아 화면을 채팅 아래로 휙 끌어내렸어요
   for (const ev of ['keydown', 'keypress', 'keyup']) root.addEventListener(ev, e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) e.stopPropagation(); });
   root.addEventListener('keydown', e => { const el = e.target; if (!el?.dataset?.ed || !el.isContentEditable) return; e.stopPropagation();
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const all = [...root.querySelectorAll('.nc.editing [contenteditable="true"]')], i = all.indexOf(el); (all[i + 1] || el).focus(); }
+    if (e.key === 'Enter' && el.classList.contains('nadd')) return; // 줄 추가 칸은 엔터로 여러 줄
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const all = [...root.querySelectorAll('.nc.editing [contenteditable]')], i = all.indexOf(el); (all[i + 1] || el).focus(); }
     else if (e.key === 'Escape') { e.preventDefault(); nav.nedit = null; render(); } }, true);
+  root.addEventListener('input', e => { const el = e.target; if (!el.dataset?.nta) return;
+    if (!e.isComposing && el.value.search(N_ARROW) >= 0) { const a = el.value.slice(0, el.selectionStart).replace(N_ARROW, '→'); el.value = a + el.value.slice(el.selectionStart).replace(N_ARROW, '→'); el.setSelectionRange(a.length, a.length); }
+    nav.nedTxt = { k: el.dataset.nta, v: el.value }; if (el.scrollHeight > el.clientHeight) el.style.height = el.scrollHeight + 2 + 'px'; }); // 다시 그려져도 쓰던 글이 남게 · 글이 늘면 칸도 같이
   root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; }); // ChatGPT 로그인 주소: 다시 그려져도 남게
   root.addEventListener('input', e => {
     if (e.target.dataset?.out !== 'psearch') return;
@@ -9800,21 +9870,33 @@
       case 'close': return openSheet(false);
       case 'notes': nav.view = 'notes'; nav.key = null; if (arg) nav.ngrp = N_GROUPS.find(([, ks]) => ks.includes(arg))?.[0] || nav.ngrp; nav.nopen = nav.nedit = null; render(); out('main').scrollTop = 0; return;
       case 'nfold': { if (e.target.closest('.nh-add')) return; const o = nav.nshow?.open || []; nav.nshow = { g: nav.ngrp, open: o.includes(arg) ? o.filter(x => x !== arg) : [...o, arg] }; return keepScroll(render); }
-      case 'ngrp': nav.ngrp = arg; nav.nopen = nav.nedit = null; return keepScroll(render);
+      case 'ngrp': nav.ngrp = arg; nav.nopen = nav.nedit = nav.nnew = null; return keepScroll(render);
       case 'nopen': if (nav.nedit || e.target.closest('.nc-inj')) return; nav.nopen = nav.nopen === arg ? null : arg; return keepScroll(render);
-      case 'nedit': nav.nedit = arg; if (!arg.endsWith('¦')) nav.nopen = arg; return keepScroll(render);
-      case 'ncancel': nav.nedit = nav.nrel = null; nav.nrelN = 0; return keepScroll(render);
+      case 'nraw': nav.nraw = !nav.nraw; nav.nedTxt = null; return keepScroll(render);
+      case 'ncopy': { const ta = root.querySelector('.nc.editing [data-nta]'); if (!ta) return; try { await navigator.clipboard.writeText(ta.value); toast('복사했어요', 'ok', 1500); } catch (_) { ta.focus(); ta.select(); toast('글을 전부 골라 뒀어요 · 복사를 눌러 주세요', 'info', 3000); } return; }
+      case 'nedit': nav.nedit = arg; nav.nedTxt = null; nav.nraw = arg.startsWith('날짜로그¦'); if (!arg.endsWith('¦')) nav.nopen = arg; return keepScroll(render);
+      case 'evfrom': nav.evPick = nav.evPick ? null : { v: '' }; return keepScroll(render);
+      case 'evpaste': return evPaste(root.querySelector('[data-evpaste]')?.value || '');
+      case 'evclose': nav.evPick = null; return keepScroll(render);
+      case 'nside': { const s = root.querySelector('.nc.editing .nadd'); if (!s) return; s.textContent = (s.textContent.trim() ? s.textContent.replace(/\s*$/, '') + '\n' : '') + '⤿ 이름: 한 일'; s.focus(); return; }
+      case 'narrow': { const ta = root.querySelector('.nc.editing [data-nta]'); if (!ta) return; const p = ta.selectionStart ?? ta.value.length; ta.value = ta.value.slice(0, p) + ' → ' + ta.value.slice(ta.selectionEnd ?? p); nav.nedTxt = { k: ta.dataset.nta, v: ta.value }; ta.focus(); ta.setSelectionRange(p + 3, p + 3); return; }
+      case 'ncancel': nav.nedit = nav.nrel = nav.nedTxt = nav.nnew = null; nav.nrelN = 0; return keepScroll(render);
       case 'ntone': { const nx = { '반말': '존댓말', '존댓말': '혼용', '혼용': '반말' }[String(el.dataset.reg || '').split(/[\s/·]/)[0]] || '반말'; el.dataset.reg = nx; el.textContent = nx; return; }
       case 'nsave': { const card = root.querySelector('.nc.editing'); if (!card) return; nav.nrel = null; nav.nrelN = 0;
+        const ta = card.querySelector('[data-nta]');
+        if (ta) { const [sec, k] = ta.dataset.nta.split('¦'), txt = sec !== '날짜로그' ? ta.value : ta.value.split('\n').map(l => { const t = l.trim(); return /^📍/.test(t) ? t.replace(/^📍\s*/, '').replace(/\s*👥\s*/, ' · ') : /^👥/.test(t) ? ' · ' + t.replace(/^👥\s*/, '') : l; }).join('\n'), m = taApply(nBase(), sec, k, txt);
+          if (!m) return toast('내용이 비었어요 · 통째로 없애려면 지우기를 눌러 주세요', 'info', 3000);
+          return nWriteMem(m, [sec], '저장했어요.'); }
         const edits = [...card.querySelectorAll('[data-ed]')].filter(x => x.textContent.replace(/\s+/g, ' ').trim() !== String(x.dataset.orig || '').trim())
-          .map(x => { const [sec, k, f] = x.dataset.ed.split('¦'); return { sec, k, f, v: x.textContent.replace(/\s+/g, ' ').trim() }; })
+          .map(x => { const [sec, k, f] = x.dataset.ed.split('¦'), t = x.textContent.replace(N_ARROW, '→'); return { sec, k, f, v: f === 'N' ? t.trim() : t.replace(/\s+/g, ' ').trim() }; })
           .concat([...card.querySelectorAll('[data-tone]')].filter(x => x.dataset.reg !== x.dataset.reg0).map(x => { const [sec, k, f] = x.dataset.tone.split('¦'); return { sec, k, f, v: x.dataset.reg }; }));
-        if (!edits.length) { nav.nedit = null; return keepScroll(render); }
-        const r = edApply(noteMemory(), edits); return nWriteMem(r.memory, r.touched, '저장했어요.'); }
-      case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; const list = splitSections(noteMemory()); let s0 = list.find(x => x.key === arg); if (!s0) { s0 = { key: arg, body: '' }; list.push(s0); }
-        s0.body = [s0.body.trim(), ...tpl].filter(Boolean).join('\n'); const key = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1'));
-        await nWriteMem(joinSections(list.filter(x => x.body.trim())), [arg], '추가했어요. 내용을 고쳐 저장해 주세요.'); nav.nopen = nav.nedit = key; return render(); }
+        if (!edits.length) { nav.nedit = nav.nnew = null; return keepScroll(render); }
+        const r = edApply(nBase(), edits); return nWriteMem(r.memory, r.touched, '저장했어요.'); }
+      case 'nadd': { const tpl = N_NEW[arg]; if (!tpl) return; nav.nnew = arg; nav.nraw = arg === '날짜로그'; nav.nedTxt = null; // 화면에만 틀을 띄우고 저장할 때 한 번에 써요
+        nav.nopen = nav.nedit = arg + '¦' + itemKey(tpl[0].replace(/^▸\s*/, '').replace(/^【(.*?)】.*$/, '$1')); if (nav.nshow && !nav.nshow.open.includes(arg)) nav.nshow.open.push(arg); return keepScroll(render); }
       case 'nrel': { // 인물 수정 중 '+ 관계 추가': 화면에만 관계 줄 틀을 하나씩 더 띄워요(저장할 때 한 번에 써요) · 다시 그려도 이미 고쳐 쓴 칸은 그대로
+        { const ta = root.querySelector('.nc.editing [data-nta]');
+          if (ta) { ta.value = ta.value.replace(/\s*$/, '') + '\n' + ((ta.value.match(/^【(.+?)】/) || [])[1] || arg.split('¦')[1]) + REL_TPL; nav.nedTxt = { k: ta.dataset.nta, v: ta.value }; ta.style.height = ta.scrollHeight + 2 + 'px'; ta.focus(); return; } }
         const keep = card => card ? [...card.querySelectorAll('[data-ed],[data-tone]')].map(x => [x.dataset.ed ? 'data-ed' : 'data-tone', x.dataset.ed || x.dataset.tone, x.textContent, x.dataset.reg]) : [];
         const was = keep(root.querySelector('.nc.editing'));
         nav.nrelN = nav.nrel === arg ? (nav.nrelN || 1) + 1 : 1; nav.nrel = arg; keepScroll(render);
