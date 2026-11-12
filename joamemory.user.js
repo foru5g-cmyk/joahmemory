@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.5
+// @version      5.1.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1411,7 +1411,7 @@
       `[//]: # "MEMO_NOTE v3 upto=${uptoId} turns=${turns} at=${at}${sel ? ' sel=1' : ''}${sceneOn ? ' web=1' : ''}${by ? ` by=${String(by).replace(/[\s"]/g, '_')}` : ''}`,
       // 안내는 짧은 줄 여러 개로. 첫 줄 뒤 안내 줄은 "※ "로 시작해 읽을 때 본문에서 뺍니다(parseNote).
       ...[`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
-        `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기`,
+        `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,
         `※ 이후 대화·OOC 정정 > 이 노트. 현재상태는 정리 시점 값`,
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
@@ -1685,8 +1685,9 @@
   //   옛 줄은 앞부분(띄어쓰기 무시)이 맞는 줄이 딱 하나일 때만 고쳐요(못 찾으면 그 줄만 건너뜀 · miss). 예전 항목에 이미 있는 줄은 다시 안 더해요.
   //   제목 줄은 안 바꿔요(【이름】은 이름이 같을 때만). 바꾼 줄 바로 다음 '+ 근거'는 그 줄의 옛 근거를 갈아 끼워요.
   let patchMiss = [];
-  function applyPatch(old, ops, noProof = false) {
-    const out = old.slice(), miss = [], flat = t => String(t).replace(/^\s*(?:[-•]\s+)?/, '').replace(/\s+/g, '');
+  // endKeep(현재상태 ▸ 몸 상태): ✕로 뺄 줄을 지우지 않고 끝에 (끝남)을 붙여 남겨요 → 나중에 "그때 다쳤었지"로 쓸 수 있게
+  function applyPatch(old, ops, noProof = false, endKeep = false) {
+    const out = endKeep ? old.map(l => l.replace(/^(\s*-\s*)[✕×]\s*(.+?)\s*$/, (_, a, t) => a + t + (/\(끝남\)$/.test(t) ? '' : ' (끝남)'))) : old.slice(), miss = [], flat = t => String(t).replace(/^\s*(?:[-•]\s+)?/, '').replace(/\s+/g, ''); // 예전에 '- ✕ …' 글자로 박힌 줄도 (끝남)으로
     const body = out.slice(1).filter(l => l.trim()), dash = body.length > 0 && body.filter(l => /^\s*-\s/.test(l)).length * 2 >= body.length;
     const find = p => { const q = flat(p); if ([...q].length < 4) return -1; for (const hit of [l => flat(l).startsWith(q), l => flat(l).includes(q)]) { const c = out.map((l, k) => hit(l) ? k : -1).filter(k => k >= 0); if (c.length) return c.length === 1 ? c[0] : -1; } return -1; };
     const shape = (t, like) => { t = String(t).trim(); const lead = like == null ? (dash ? '- ' : '') : (like.match(/^\s*-\s/) || [''])[0]; return lead && !/^[-•ㄴ⤿·]/.test(t) ? lead + t : (like ? like.match(/^\s*/)[0] : '') + t; };
@@ -1694,11 +1695,12 @@
     let anchor = -1, fresh = false;
     for (const raw of ops) {
       if (!raw.trim()) continue;
-      const m = raw.match(/^\s*(\+|~|✕|×)\s?(.*)$/), op = m ? m[1] : '+', arg = (m ? m[2] : raw).trim();
+      const m = raw.match(/^\s*(?:-\s*)?(\+|~|✕|×)\s?(.*)$/), op = m ? m[1] : '+', arg = (m ? m[2] : raw).trim(); // AI가 앞에 '- '를 붙여 보내도 명령으로
       if (op === '~') { const [a, b] = arg.split(/\s*(?:⇒|=>)\s*/); const k = b == null ? -1 : find(a);
         if (k < 0 || (k === 0 && !(/^【/.test(out[0].trim()) && (b.match(/^【(.+?)】/) || [])[1] === (out[0].match(/【(.+?)】/) || [])[1]))) { miss.push(arg); anchor = -1; continue; }
         out[k] = shape(b, out[k]); anchor = k; fresh = true; continue; }
       if (op === '✕' || op === '×') { const k = find(arg); if (k <= 0) { miss.push(arg); continue; }
+        if (endKeep) { if (!/\(끝남\)\s*$/.test(out[k])) out[k] = out[k].replace(/\s*$/, ' (끝남)'); anchor = -1; continue; }
         const groups = out.filter((l, q) => PROOF_LINE.test(l) && !PROOF_LINE.test(out[q - 1] || '')).length; // 근거가 줄마다 붙은 항목(인지)이면 그 줄의 근거도 같이 빼고, 항목 끝 근거 하나뿐이면 남겨요
         out.splice(k, 1 + (groups > 1 ? proofsAfter(k) : 0)); anchor = -1; continue; }
       const line = shape(arg), proof = PROOF_LINE.test(line);
@@ -1720,6 +1722,7 @@
       let at = out.length; if (!proof) while (at > 1 && (PROOF_LINE.test(out[at - 1]) || (!/^\s*⤿/.test(line) && /^\s*⤿/.test(out[at - 1])))) at--;
       out.splice(at, 0, line); anchor = proof ? -1 : at; fresh = false;
     }
+    if (endKeep) { const ends = out.map((l, k) => /\(끝남\)\s*$/.test(l) ? k : -1).filter(k => k > 0); for (const k of ends.slice(0, -6).reverse()) out.splice(k, 1); } // ponytail: 끝난 몸은 최근 6줄만 · 더 오래 남길 거면 인물 칸으로 옮기기
     return { lines: out, miss };
   }
   function mergeNote(base, delta, noGuard = false) { // noGuard: 기억 다시 확인(틀린 줄을 빼서 짧아지는 게 맞음)
@@ -1746,7 +1749,7 @@
           || (['소지품', '장소·조직'].includes(d.key) && nameOf(x.key) && nameOf(x.key) === nameOf(it.key)));
         if (it.patch) { // 고친 줄만 온 항목: 예전 항목에 끼워 넣어 온전한 항목으로 만든 뒤 아래 흐름을 그대로 타요
           if (i < 0) { patchMiss.push(it.key); continue; }
-          const p = applyPatch(o.items[i].lines, it.lines.slice(1), d.key === '날짜로그' && proofsHidden);
+          const p = applyPatch(o.items[i].lines, it.lines.slice(1), d.key === '날짜로그' && proofsHidden, d.key === '현재상태' && /몸/.test(o.items[i].key));
           if (p.miss.length) patchMiss.push(`${it.key}: ${p.miss.length}줄`);
           it = { key: o.items[i].key, del: false, lines: p.lines };
         }
@@ -3889,7 +3892,7 @@
     .fold-ul li{padding:2px 0;font-size:14.5px;line-height:1.7;color:var(--ink2);overflow-wrap:anywhere}.fold-ul li b{color:var(--ink)}
     @media (prefers-reduced-motion:reduce){.fold>summary::after{transition:none}}
     .nrow{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline;margin-top:10px}
-    .nk{font-size:12.5px;font-weight:700;color:var(--nf);white-space:nowrap}
+    .nk{font-size:12.5px;font-weight:700;color:var(--nf);white-space:nowrap}.npast{opacity:.5}
     .nv{font-size:14px;line-height:1.6;color:var(--ink2);min-width:0}.nv .wear{margin-top:0}
     .nv .wear span{background:var(--nb);color:var(--ink)}
     .nrules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
@@ -7842,8 +7845,8 @@
     const rules = pick(/제약|약속|조건/).flatMap(b => b.lines).filter(l => !/^(근거|번역)\s*[:：]/.test(l));
     const rest = bl.filter(b => !/시점|장소|기준|몸|제약|약속|조건|옷차림|복장|의상|소지품/.test(b.title || ''));
     // 사람마다: "이름: 내용" 줄을 모아 한 카드로
-    const byName = new Map(), add = (nm, k, v) => { nm = canon(nm); if (!byName.has(nm)) byName.set(nm, {}); const o = byName.get(nm); o[k] = k === 'body' && o[k] ? o[k].replace(/[.。]?\s*$/, '. ') + v : v; }; // 몸 줄이 한 사람에 여러 줄이면 이어 붙여요(마지막 줄만 남지 않게)
-    for (const l of bodyRows) { const i = labelCut(l); if (i > 0) add(l.slice(0, i), 'body', l.slice(i + 1).trim()); }
+    const byName = new Map(), add = (nm, k, v) => { nm = canon(nm); if (!byName.has(nm)) byName.set(nm, {}); const o = byName.get(nm); o[k] = (k === 'body' || k === 'past') && o[k] ? o[k].replace(/[.。]?\s*$/, '. ') + v : v; }; // 몸 줄이 한 사람에 여러 줄이면 이어 붙여요(마지막 줄만 남지 않게)
+    for (const l0 of bodyRows) { const end = /^[✕×]|\(끝남\)\s*$/.test(l0), l = l0.replace(/^[✕×]\s*/, '').replace(/\s*\(끝남\)\s*$/, ''), i = labelCut(l); if (i > 0) add(l.slice(0, i), end ? 'past' : 'body', l.slice(i + 1).trim()); } // 끝난 몸은 '지난' 줄로 따로
     for (const w of outfits()) add(w.name, 'wear', w);
     const order = [...people().keys()], names = [...byName.keys()].sort((a, b) => (order.indexOf(a) + 999) % 999 - (order.indexOf(b) + 999) % 999);
     const sceneRows = (() => {
@@ -7863,6 +7866,7 @@
     const cards = names.map(nm => { const x = byName.get(nm), [bg, fg] = avColor(nm);
       return `<section class="ncard" style="--nb:${bg};--nf:${fg}"><button class="ncard-h" data-act="person" data-arg="${esc(nm)}">${avatar(nm)}<span class="ncard-t"><b>${esc(nm)}</b>${PROF.get(nm)?.tag ? `<small>${esc(PROF.get(nm).tag)}</small>` : ''}</span></button>
         ${x.body ? `<div class="nrow"><span class="nk">🩹 몸</span><span class="nv">${bitsOf(x.body).map(bitHtml).join('')}</span></div>` : ''}
+        ${x.past ? `<div class="nrow npast"><span class="nk">지난</span><span class="nv">${bitsOf(x.past).map(bitHtml).join('')}</span></div>` : ''}
         ${x.wear ? `<div class="nrow"><span class="nk">👗 옷</span><span class="nv">${wearHtml(x.wear.text)}${quoteHtml(x.wear.quote, x.wear.tr)}</span></div>` : ''}</section>`; }).join('');
     const ruleKind = l => { const m = l.match(/^(약속|제약|조건|금지|기한|합의|규칙)\s*[:：]\s*(.+)$/); if (m) return [m[1], m[2]];
       return [/금지|못 ?함|안 ?됨|불가|하지 못/.test(l) ? '금지' : /약속|기로 ?함|합의/.test(l) ? '약속' : /까지|전까지/.test(l) ? '기한' : '조건', l]; }; // 종류 말이 없는 줄도 알약 하나는 달아요(이 칸은 약속·금지·조건뿐이라 나머지는 조건)
@@ -8061,8 +8065,8 @@
   const relPillSw = () => `<button class="gtg${relPillOn ? ' on' : ''}" data-act="relpill" aria-pressed="${relPillOn}">알약 ${relPillOn ? '켬' : '끔'}</button>`;
   // 관계 줄이 없는 아기·자녀도 부모와 이어요: ① 설명에 '나나와 단테의 딸'처럼 부모 이름 + 딸·아들·아기 ② 가족 줄에 '엄마 나나'(아이 쪽) 또는 '딸 하린'(부모 쪽)
   const reEsc = n => String(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // '나나와 단테의 딸'·'단테의 아들' 꼴: 부모 이름(+와·과·랑 다른 이름) 뒤에 바로 '의 딸·아들·아기'
-  const kidOf = (d, m) => new RegExp(`${reEsc(m)}(?:\\s*(?:와|과|랑|하고)\\s*[^\\s·,]{1,12})?의\\s*(?:친|외동|막내|첫째|둘째)?\\s*(?:딸|아들|아기|자녀|자식)`).test(String(d || ''));
+  // '나나와 단테의 딸'·'단테의 아들'·'주결과 나나의 첫 핏줄' 꼴: 부모 이름(+와·과·랑 다른 이름) 뒤에 바로 '의 딸·아들·아기·핏줄·공주…'
+  const kidOf = (d, m) => new RegExp(`${reEsc(m)}(?:\\s*(?:와|과|랑|하고)\\s*[^\\s·,]{1,12})?의\\s*(?:친|외동|막내|첫째|둘째|셋째|첫)?\\s*(?:딸|아들|아기|자녀|자식|핏줄|혈육|소생|공주|옹주|왕자|대군|원자|세자)`).test(String(d || ''));
   const noteKids = (rel, ppl) => {
     const out = [], names = [...ppl.keys()], fam = n => String(PROF.get(n)?.family || ''), re = (w, n) => new RegExp(`(?:${w})\\s*[:：]?\\s*${reEsc(n)}`);
     for (const n of names) {
