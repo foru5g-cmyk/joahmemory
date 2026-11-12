@@ -1057,8 +1057,9 @@
       if (tell && day != null) return pregGate(tell, () => { const said = pregWeeksSaid(tell), rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? day - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)), ws = pregWhoDefault(mem); if (w > 42) return false; preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
         Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 · 관계 미상이라 지금을 5주로 셌어요', seed: preg.seed || (pSeed()), at: Date.now() }); return true; }); }
     // 임테기를 안 긁어도: 10일 넘게 지난 관계에 임테기와 같은 주사위(pregConceive)가 맞으면 몰래 임신(본인 모름 · pregForce와 같은 상태) → 증상이 생기고 병원·임테기에서 알게 돼요
-    { const day = pregDay(mem, snap); if (day != null) { if (!preg.seed) { preg.seed = pSeed(); pregSave(); } const { hit } = pregConceive(mem, day), w0 = hit ? Math.max(2, Math.floor((day - hit.d + 14) / 7)) : 99;
-      if (hit && w0 <= 42) { const w = pregWhoDefault(mem); Object.assign(preg, { on: true, unaware: true, forceRel: hit.d, who: w.name || '임신한 사람', me: w.me, start: hit.d - 14, w0, why: `${P_STR(hit.d)} 관계로 임신(주사위 · 본인은 아직 모름)`, at: Date.now() }); pregSave(); return true; } } }
+    { const day = pregDay(mem, snap); if (day != null) { if (!preg.seed) { preg.seed = pSeed(); pregSave(); } const { hit } = pregConceive(mem, day), w0 = hit?.sure ? Math.max(2, Math.floor((day - hit.d + 14) / 7)) : 99;
+      if (hit?.sure && w0 <= 42) { const w = pregWhoDefault(mem); // sure: AI·정리 AI·✏️ 고치기로 확인된 내 관계만(낱말로만 잡힌 건 남의 관계·옛 관계일 수 있어서)
+        Object.assign(preg, { on: true, unaware: true, forceRel: hit.d, who: w.name || '임신한 사람', me: w.me, start: hit.d - 14, w0, why: `${P_STR(hit.d)} 관계로 임신(주사위 · 본인은 아직 모름)`, at: Date.now() }); pregSave(); return true; } } }
     // 노트·대화에서 찾기는 스위치가 꺼져 있어도 해요(유저 캐릭터만 잡으니까) · 찾으면 켜져요
     const d = pregDetect(mem, (snap?.fresh || []).filter(isChat).slice(-12).map(m => stripBlocks(msgText(m))).reverse(), preg.after ?? null); if (!d || d.w0 > 42) return false; // 42주 넘게 나오면 예전 임신 얘기를 잘못 읽은 것(111주 같은 일)
     return pregGate(d.src || d.why, () => { const { src, ...dd } = d; Object.assign(preg, dd, { on: true, seed: preg.seed || (pSeed()), at: Date.now() }); return true; });
@@ -1161,12 +1162,12 @@
     const mine = t => mine0(t).split('\n').filter(l => l && !P_PAST.test(l)).join('\n'); // 지난 관계를 떠올린 줄은 그날 관계로 안 쳐요
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const src = [b.title, ...b.lines].join('\n'), d = P_DAY(b.title); if (d == null) continue;
       const fx = preg?.relFix?.[pKey(src)], ai = pregHasKey && P_SEX.test(src) ? preg?.relAi?.[pKey(src)] : null;
-      if (fx) { if (fx.mine) out.push({ d: fx.d ?? d, t: relAiText({ ...(ai || {}), ...fx }, src) }); continue; } // 유저가 고친 게 먼저(✏️ 관계 기록 고치기)
-      if (ai) { if (ai.mine) out.push({ d, t: relAiText(ai, src) }); if (ai.mine && ai.in == null && preg && !pregRelAsk.failed?.has(pKey(src))) todo.push({ k: pKey(src), src }); continue; } // 질내 횟수가 없는 예전 답은 한 번 더 물어요
+      if (fx) { if (fx.mine) out.push({ d: fx.d ?? d, t: relAiText({ ...(ai || {}), ...fx }, src), sure: 1 }); continue; } // 유저가 고친 게 먼저(✏️ 관계 기록 고치기)
+      if (ai) { if (ai.mine) out.push({ d, t: relAiText(ai, src), sure: 1 }); if (ai.mine && ai.in == null && preg && !pregRelAsk.failed?.has(pKey(src))) todo.push({ k: pKey(src), src }); continue; } // 질내 횟수가 없는 예전 답은 한 번 더 물어요
       if (pregHasKey && P_SEX.test(src) && preg && !pregRelAsk.failed?.has(pKey(src))) todo.push({ k: pKey(src), src });
       const t = mine(src); if (t) out.push({ d, t }); }
     if (todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name);
-    for (const r of preg?.rels || []) if (!out.some(y => y.d === r.d)) out.push({ ...r }); // 정리 AI가 따로 적어 준 관계
+    for (const r of preg?.rels || []) { const o = out.find(y => y.d === r.d); if (o) o.sure = 1; else out.push({ ...r, sure: 1 }); } // 정리 AI가 따로 적어 준 관계
     if (preg?.rels?.length) out.sort((a, b) => a.d - b.d);
     const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
     for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null;
