@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.4
+// @version      5.1.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2642,6 +2642,11 @@
     addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (t0 != null && y != null && Math.abs(y - t0) > 10) moved = true; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
     addEventListener('touchend', e => { const t = e.changedTouches[0], h = document.documentElement; if (!moved && t && t.clientY < 96 && (h.classList.contains('jm-hidehead') || scrollY > 0) && !e.target.closest?.('a,input,textarea')) { h.classList.remove('jm-hidehead'); scrollTo(0, 0); } }, { passive: true }); // 아이폰: 빈 곳을 누르면 click이 안 올 때가 있어서 손 뗄 때도 봐요
     addEventListener('click', e => { const h = document.documentElement; if ((h.classList.contains('jm-hidehead') || scrollY > 0) && e.clientY < 96 && !e.target.closest?.('a,input,textarea')) { h.classList.remove('jm-hidehead'); scrollTo(0, 0); } }, true); } // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
+  // 크랙 수정창은 긴 답(8천 자 넘음)의 뒷부분만 보여 줘요 → 노트 머리줄 없이 끝줄만 보이면 앞 답 글·노트 앞부분이 잘린 것이라, 그대로 저장하면 지워져서 막아요
+  addEventListener('click', e => { const b = e.target.closest?.('button'); if (!b || b.textContent.trim() !== '수정 완료') return;
+    let box = b; while (box && !box.querySelector?.('[contenteditable="true"]')) box = box.parentElement;
+    const t = box?.querySelector('[contenteditable="true"]')?.innerText || '';
+    if (/MEMO_NOTE(_MORE)?_END"/.test(t) && !/\[\/\/\]: # "MEMO_NOTE/.test(t)) { e.preventDefault(); e.stopImmediatePropagation(); pageToast('이 답은 너무 길어서 크랙 수정창에 뒷부분만 보여요 · 저장하면 답 글과 기억이 지워져서 막았어요. 취소를 눌러 주세요'); } }, true);
   // 캡처할 때 이름 가리기: 글자(DOM)는 안 건드리고 브라우저 강조(CSS Highlight)로만 칠해요 → 크랙이 답을 이어 써도 안 깨져요
   //   모자이크 = 글자 투명 + 번진 그림자 · 박스 = 글자색·배경을 같은 색으로 · 이모지 = 글자 투명 + 그 자리 위에 이모지 띄우기
   //   켜고 끄기: 하트 꾹(0.5초) · 설정 › 편의 · 한 번 켜면 끌 때까지 그대로(방 옮겨도 · 새로 고침해도)
