@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.1.8
+// @version      5.1.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -631,7 +631,7 @@
     [12, 40, '배에 가스가 차고 트림·방귀가 잦아짐', /가스|트림|방귀/],
     [16, 40, '치질이 생겨 앉을 때 아픔', /치질|항문|엉덩이가 (아|따)/],
     [20, 40, '엉덩이에서 다리로 찌릿한 통증(좌골신경통)', /좌골|엉덩이|다리가 저/],
-    [20, 40, '밤에 다리가 근질근질해 가만히 못 있음', /근질|다리를 (뒤척|움직)/],
+    [20, 40, '밤마다 다리가 근질근질함', /근질|다리를 (뒤척|움직)/],
     [24, 40, '눈이 뻑뻑하고 렌즈가 안 맞음', /눈이 (뻑|건조|침침)|렌즈/],
     [32, 40, '아래가 묵직하게 눌리는 느낌이 듦', /묵직|눌리|빠질 것/],
     [20, 40, '배 옆이 찌릿함', /배 옆.{0,6}(찌릿|당|땅)|옆구리.{0,6}(찌릿|당|땅)|인대/],
@@ -661,7 +661,7 @@
     [26, 40, '배가 단단하게 뭉쳤다 풀림(가진통)', /뭉치|뭉쳤|가진통|배가 단단/],
     [26, 40, '배 때문에 자세가 불편해 잠을 설침', /잠을 설|뒤척|못 자|잠이 안/],
     [28, 40, '배에 튼살이 보이기 시작함', /튼살/],
-    [24, 40, '배·허벅지가 자꾸 가려워 긁게 됨(임신 소양증)', /가려|간지럽|긁/],
+    [24, 40, '배·허벅지가 자꾸 가려움(임신 소양증)', /가려|간지럽|긁/],
     [28, 40, '숨이 차서 계단 몇 개에도 헉헉댐', /숨이 차|헉헉|숨차|숨을 몰아/],
     [30, 40, '아기가 딸꾹질하는 게 배 너머로 느껴짐', /딸꾹/],
     [32, 40, '손목이 저리고 손이 부어 물건을 놓침', /손목이 (저|시|아)|손이 저|저림|떨어뜨/],
@@ -699,7 +699,7 @@
   const P_SYN = t => String(t || '').replace(/잉태|회임|수태/g, '임신'); // '잉태됐다'·'회임하셨사옵니다' 같은 옛말도 임신으로 읽어요
   const P_UNAWARE = /모르고|모름|몰라|모른다|모르는|눈치\s*(?:못|채지|를\s*못)/; // 본인은 모름
   const P_INNER = /역겨워짐|눈물이 터짐|화장실을 너무 자주|미치도록 당김|생생한 꿈|하필 화장실|자리를 박차고|약속·일정을 망칠/; // 유저 캐릭터의 행동·감정·욕구가 필요한 일(유저 몫이라 뺌)
-  const P_FEEL = /쇠 맛|두통이 잦음|가스가 차고|치질이|좌골신경통|다리가 근질|눈이 뻑뻑|아래가 묵직|침이 자꾸|화끈거림|^변비|찌릿함|소변이 찔끔|갈비뼈 쪽을|생리 예정일|속이 쓰리고|처음으로 태동|딸꾹질하는|손목이 저리고|콕콕 쑤시고|쥐가 남|피가 비치고|피가 살짝|뭉치며 아파|뭉쳤다 풀림|태동이 유난히|아기가 그쪽을 참|두통이 심하고|진통이 시작|어지러워 휘청|하루 종일 평소보다 조용/; // 몸에 생기는 감각: 짧게 쓰고 멈춤 // 본인만 느끼거나 본인 행동이 필요한 일
+  const P_FEEL = /쇠 맛|먹은 게 다 올라오|으슬으슬|머리가 핑|내려앉는 느낌|선홍색 피|미칠 듯 가려|자꾸 가려움|두통이 잦음|가스가 차고|치질이|좌골신경통|다리가 근질|눈이 뻑뻑|아래가 묵직|침이 자꾸|화끈거림|^변비|찌릿함|소변이 찔끔|갈비뼈 쪽을|생리 예정일|속이 쓰리고|처음으로 태동|딸꾹질하는|손목이 저리고|콕콕 쑤시고|쥐가 남|피가 비치고|피가 살짝|뭉치며 아파|뭉쳤다 풀림|태동이 유난히|아기가 그쪽을 참|두통이 심하고|진통이 시작|어지러워 휘청|하루 종일 평소보다 조용/; // 몸에 생기는 감각: 짧게 쓰고 멈춤 // 본인만 느끼거나 본인 행동이 필요한 일
   const P_BORN = /(?:첫째|둘째|셋째|넷째|막내)(?:를|을)?\s*(?:출산|낳)(?!\s*(?:예정|을|할|하면|하게|하기|으면|기|게|지))|(?:아기|아이|애기|쌍둥이|딸|아들)[가이은는]?\s*(?:태어났|태어나\s*있|세상에\s*나왔)|출산(?:했|을\s*마쳤|이\s*끝났)|분만(?:했|을\s*마쳤|이\s*끝났)|응애|무사히\s*낳|아기를\s*낳았|낳았다|첫\s*울음|(?:갓|방금|막)\s*태어난|태어난\s*(?:아기|아이|애기|딸|아들|쌍둥이)[가이은는를을의]|(?:아기|아이|애기)[가이의]?\s*(?:첫\s*)?울음(?:을|이)\s*터|탯줄을\s*(?:자르|잘랐)|\bgave birth\b|\b(?:baby|son|daughter|twins)\s+(?:is|was|were)\s+born\b/i; // 이야기에서 아기가 태어남
   // AI에게 줄 땐 짧은 말로만(완성된 문장을 주면 그대로 베껴서 매번 똑같아요) · 긴 글은 수첩·거름망용
   const P_SHORT = { '특정 냄새에 갑자기 입덧이 올라옴': '냄새 입덧', '아랫배가 콕콕 쑤시고 땅김': '아랫배가 콕콕 땅김', '갑자기 코피가 남(임신으로 혈관이 예민해져서)': '코피', '참을 수 없이 졸려서 아무 데서나 꾸벅꾸벅 졺': '쏟아지는 졸음', '몸이 미열처럼 따끈함(초기 임신 체온 상승)': '미열', '입안에서 쇠 맛이 계속 돎': '입안의 쇠 맛', '안색이 창백하고 쉽게 지쳐 보임': '창백함·쉽게 지침', '좋아하던 냄새에 속이 메슥거려 안색이 변함': '냄새에 메슥거림', '가슴이 붓고 예민해져 닿으면 저도 모르게 움찔함': '가슴이 붓고 예민함', '자꾸 하품이 나고 말하다가 멍해짐': '잦은 하품·멍해짐', '생리 예정일이 지났는데 소식이 없음': '생리가 늦음', '속옷에 피가 살짝 비치다 금방 멈춤': '살짝 비친 피', '좋아하던 음식이 갑자기 역겨워짐': '좋아하던 음식이 역겨움', '감정이 널뛰어서 사소한 일(광고·노래·말 한마디)에 눈물이 터짐': '감정 기복·눈물', '갑자기 어지러워 휘청함': '어지러움', '화장실을 너무 자주 가게 됨': '잦은 화장실', '양치하다 잇몸에서 피가 남': '잇몸 출혈', '한밤중에 특정 음식이 미치도록 당김': '한밤의 음식 당김', '이상하게 생생한 꿈을 꿈': '생생한 꿈', '밤에 다리에 쥐가 남': '다리 쥐', '얼굴에 기미가 올라오거나 피부가 뒤집어짐': '피부 변화', '속이 쓰리고 신물이 올라옴': '속쓰림', '처음으로 태동이 느껴짐(뽀글뽀글, 꿈틀)': '첫 태동', '태동이 유난히 세게 참 · 하필 조용한 순간에': '센 태동', '배에 손을 대거나 목소리가 들리면 아기가 그쪽을 참': '손·목소리에 반응하는 태동', '발목과 손이 붓기 시작함': '부종', '배꼽이 튀어나옴': '튀어나온 배꼽', '허리와 골반(치골)이 아파 걷기 불편함': '허리·골반 통증', '배가 단단하게 뭉쳤다 풀림(가진통)': '가진통', '배 때문에 자세가 불편해 잠을 설침': '불편한 잠자리', '배에 튼살이 보이기 시작함': '튼살', '숨이 차서 계단 몇 개에도 헉헉댐': '숨참', '아기가 딸꾹질하는 게 배 너머로 느껴짐': '아기 딸꾹질', '손목이 저리고 손이 부어 물건을 놓침': '손목 저림', '중요한 순간(대화·약속·일하는 중)에 하필 화장실이 급해짐': '급한 화장실', '사람 많은 곳에서 냄새에 입덧이 올라와 자리를 박차고 나감': '사람 많은 곳에서 입덧', '갑자기 몸이 무거워 약속·일정을 망칠 위기': '무거운 몸·일정 차질', '곁의 NPC가 밤에 배에 대고 몰래 말을 걸거나 노래를 불러 줌': 'NPC가 배에 말을 걺', '아직 임신을 모르던 사람이 임신 흔적을 보고 알게 됨': '누군가 임신을 알게 됨', '곁의 NPC와 사소한 일로 다툼 — 호르몬 탓에 평소보다 날카로움': 'NPC와 다툼', '곁의 NPC가 과보호 모드': 'NPC의 과보호', '곁의 NPC가 한밤중 야식 심부름을 다녀옴(구하기 어려운 음식)': 'NPC의 야식 심부름', '곁의 NPC가 태명 이야기를 꺼냄': '태명 이야기', '곁의 NPC가 몰래 아기 물건(옷·신발·인형)을 사 옴': 'NPC가 아기 물건을 사 옴', '모르는 사람(가게 주인·이웃 할머니)이 배를 보고 참견하거나 축하하며 덤을 줌': '낯선 사람의 참견·축하', '처음 보는 사람이 허락 없이 배를 만지려 함': '낯선 사람의 손길', '배 모양을 보고 누군가 아들이다·딸이다 장담함': '성별 장담', '주변 사람이 임신을 눈치챔 — 소문이 돎': '주변의 눈치·소문', '가족(부모·형제)에게서 연락이 옴 — 임신 이야기가 나옴': '가족 연락', '전에 입던 옷이 안 맞음': '안 맞는 옷', '누가 자리를 양보함': '자리 양보', '조심할 것을 듣고 곁의 NPC가 호들갑을 떪': 'NPC의 호들갑', '곁의 NPC가 아기 맞을 준비를 하자고 함': '아기 맞을 준비', '출산 준비를 미리 하자는 이야기가 나옴': '출산 준비', '태몽 이야기가 나옴(본인 아닌 가족·NPC가 꾼 꿈)': '태몽', '갑자기 피가 비치고 아랫배가 심하게 아픔': '출혈과 복통', '속옷에 피가 살짝 비침': '살짝 비친 피', '아기가 하루 종일 평소보다 조용함(태동이 뜸함)': '뜸한 태동', '배가 규칙적으로 뭉치며 아파 옴(조산 기미)': '조산 기미', '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음': '심한 두통·부종', '배가 살짝 티 나기 시작함': '배가 티 나기 시작함', '누가 봐도 임신한 배가 됨': '누가 봐도 임신한 배', '배가 많이 불러 걸음걸이까지 달라짐': '만삭에 가까운 배', '진통이 시작됨(양수가 터짐)': '양수 터짐', '진통이 시작됨(배가 규칙적으로 아파 옴)': '진통 시작' };
@@ -735,8 +735,9 @@
     [28, '꿈꾸는 잠(렘수면)을 잠 · 빛 쪽으로 고개를 돌림 · 발로 뻥뻥 참'], [30, '체온 조절 연습 · 손가락 빨기가 능숙 · 태동이 세고 잦음'], [32, '머리를 아래로 돌리기 시작 · 손톱이 다 자람 · 움직임이 묵직해짐'],
     [34, '폐가 거의 다 자람 · 살이 올라 통통 · 공간이 좁아 밀어 대듯 움직임'], [36, '아래로 내려옴 · 몸을 굴리듯 묵직하게 움직임'], [38, '다 자람 · 언제 나와도 괜찮음 · 공간이 좁아 꿈틀대는 정도'],
   ];
+  const P_CNT = ['', '하나', '둘', '셋'], P_MULT = ['', '', '쌍둥이', '세쌍둥이'], P_ORD = ['첫째', '둘째', '셋째'];
   const pBelly = (wk, twin) => (wk < 13 ? '아직 티 안 남' : wk < 16 ? '아랫배가 살짝 단단해짐' : wk < 20 ? '배가 조금씩 나옴(옷 입으면 잘 모름)' : wk < 24 ? '배가 눈에 띄게 나옴' : wk < 28 ? '누가 봐도 임신한 배' : wk < 32 ? '배가 많이 불러 앞이 잘 안 보임' : wk < 36 ? '배가 가득 차 숨이 차고 걸음이 뒤뚱' : '배가 아래로 처짐(아기가 내려옴)')
-    + (twin && wk >= 16 ? ' · 쌍둥이라 더 큼' : '') + (wk >= 20 ? ` · 자궁 높이 약 ${Math.min(40, wk) + (twin ? 4 : 0)}cm` : '');
+    + (twin && wk >= 16 ? ` · ${twin > 2 ? '세쌍둥이' : '쌍둥이'}라 더 큼` : '') + (wk >= 20 ? ` · 자궁 높이 약 ${Math.min(40, wk) + (twin ? 4 : 0)}cm` : '');
   const pDev = wk => (P_DEV.filter(d => d[0] <= wk).pop() || [0, ''])[1];
   const P_NUM = { 한: 1, 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6, 일곱: 7, 몇: 2 };
   function pSkip(t) {
@@ -812,8 +813,8 @@
   const P_ERA = { modern: { loss: 1, still: 1, crisis: 0.01, weak: 0.02, ndeath: 0.003 }, old: { loss: 1.3, still: 5, crisis: 0.06, weak: 0.1, ndeath: 0.05 }, fantasy: { loss: 1, still: 2, crisis: 0.03, weak: 0.05, ndeath: 0.02 } };
   function pregPlan() { // seed로 정해지는 이번 임신의 운명(늘 같은 결과) · 시대(preg.era)마다 위험이 달라요
     const era = P_ERA[preg.era] || P_ERA.modern;
-    const n = preg.babies || (pR('twin') < 0.04 ? 2 : 1);
-    const hideTwin = n > 1 && !preg.babies && (preg.w0 || 0) < 12 && pR('hideTw') < 0.35; // 쌍둥이인데 처음 초음파엔 하나로 보였다가 12주 넘어 밝혀짐
+    const n = preg.babies || (preg.lossV === 2 && pR('trip') < 0.003 ? 3 : pR('twin') < 0.04 ? 2 : 1); // 세쌍둥이(0.3%)는 새로 시작한 임신만(진행 중인 임신이 바뀌지 않게)
+    const hideTwin = n === 2 && !preg.babies && (preg.w0 || 0) < 12 && pR('hideTw') < 0.35; // 쌍둥이인데 처음 초음파엔 하나로 보였다가 12주 넘어 밝혀짐
     const sex = preg.sexFix?.length === n ? preg.sexFix : Array.from({ length: n }, (_, i) => pR('sex' + i) < 0.5 ? '남' : '여'); // 한 번 알게 된 성별은 고정(주사위가 바뀌어도 안 바뀜)
     let abn = pR('abn') < 0.015, chrom = pickW(P_CHROM, pR('chrom')), fp = !abn && pR('fp') < 0.18, minor = pR('minor') < 0.15, lowP = pR('plac') < 0.15, previa = lowP && pR('placfix') < 0.1;
     let struct = !abn && pR('struct') < 0.08 ? P_STRUCT[Math.floor(pR('structT') * P_STRUCT.length)] : '', cpc = pR('cpc') < 0.1;
@@ -825,30 +826,32 @@
     const sick = pR('sick') < 0.25 ? 0 : pR('sick2') < 0.8 ? 1 : 2; // 입덧 없음·보통·심함
     const spot = pR('spot') < 0.28, spotW = 5 + Math.floor(pR('spotW') * 6); // 초기 출혈(대부분 괜찮음)
     const v2 = preg.planV === 2, pre = pR('pre') < (n > 1 ? 0.5 : v2 ? 0.15 : 0.1), x = pR('lw'), pw = v2 ? pR('preW') : 1; // v2: 20주 전에 시작한 임신만(진행 중인 임신은 출산 주가 안 바뀌게)
-    let labor = n > 1 ? (pre ? (pw < 0.2 ? 28 : 32) + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? (pw < 0.06 ? 24 + Math.floor(x * 4) : pw < 0.25 ? 28 + Math.floor(x * 4) : 32 + Math.floor(x * 5)) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
+    let labor = n > 2 ? 30 + Math.floor(x * 4) : n > 1 ? (pre ? (pw < 0.2 ? 28 : 32) + Math.floor(x * 4) : 36 + Math.floor(x * 2)) : pre ? (pw < 0.06 ? 24 + Math.floor(x * 4) : pw < 0.25 ? 28 + Math.floor(x * 4) : 32 + Math.floor(x * 5)) : x < 0.1 ? 37 : x < 0.3 ? 38 : x < 0.6 ? 39 : x < 0.9 ? 40 : 41;
     const rib = v2 && pR('rib') < 0.04, ribW = 30 + Math.floor(pR('ribW') * 8), rapid = v2 && n === 1 && pR('rapid') < 0.05, sexFlip = v2 && n === 1 && pR('sexflip') < 0.03;
     if (pe && peW + 1 < labor && pR('pe2') < 0.5) labor = Math.max(peW + 1, 34); // 임신중독증이면 일찍 낳기도 해요
     if (fgr && labor > 37 && pR('fgr2') < 0.5) labor = 37; // 성장 지연이면 일찍 낳기도
     if (serious?.[5] && labor > serious[5]) labor = serious[5];
     let loss = null; // 초기 유산(5~12주 합쳐 약 15%) · 중기 유산 · 사산
-    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.027 * era.loss : k <= 20 ? 0.0015 * era.loss : 0.0003 * era.still) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
-    const cs = previa || breechStay || (serious?.[6] && pR('cs5') < 0.6) || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
+    const lv = preg.lossV === 2 ? 3 : 1; // lossV 2: 5주 전에 시작한 임신만 중기 유산·사산 3배(롤플용 · 진행 중인 임신은 결과가 안 바뀌게 그대로)
+    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.027 * era.loss : k <= 20 ? 0.0015 * era.loss * lv : 0.0003 * era.still * lv) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
+    const cs = n > 2 || previa || breechStay || (serious?.[6] && pR('cs5') < 0.6) || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
     let crisis = pR('crisis') < era.crisis, weak = pR('weak') < era.weak, ndeath = pR('ndeath') < era.ndeath; // 출산 때 산모 위독 · 아기가 약함 · 아기를 잃음
     // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
     const prevHard = /^(유산|사산)/.test(String((preg.history || []).slice(-1)[0] || '')), rm = (pR('smooth') < 0.2 ? 0.3 : 1) * (prevHard ? 0.6 : 1), keep = nm => rm >= 1 || pR('keep' + nm) < rm;
     if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; serious = serious && keep('ser') ? serious : null; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
     const thrFail = v2 && threat && !pre && pR('thrF') < 0.25; if (thrFail && thrW + 1 < labor) labor = thrW + 1; // 조산 기미를 못 멈추고 그다음 주에 출산
-    return { crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, serious, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, thrFail, rib, ribW, rapid: rapid && !cs, sexFlip, sick, spot, spotW, labor, loss, cs };
+    const genes = Array.from({ length: n }, (_, b) => (preg.genes || []).filter((g, i) => pR('gene' + b + '-' + i) < g.p)); // 핏줄: 아기마다 따로(쌍둥이가 하나는 수인, 하나는 사람일 수도)
+    return { genes, crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, serious, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, thrFail, rib, ribW, rapid: rapid && !cs, sexFlip, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
-    const twin = p.n > 1, A = twin ? '아기 둘' : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
+    const twin = p.n > 1, A = twin ? '아기 ' + P_CNT[p.n] : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
     if (world === 'modern') return [
-      [6, '첫 초음파 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : '아기집에서 심장 소리가 둘 — 쌍둥이') : '잘 뛰고 있음 · 정상'],
+      [6, '첫 초음파 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : `아기집에서 심장 소리가 ${P_CNT[p.n]} — ${P_MULT[p.n]}`) : '잘 뛰고 있음 · 정상'],
       [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
       [16, '2차 기형아 검사', p.abn ? `${preg?.shown?.c12 >= 0 ? '추가 검사에서' : `기형아 검사 고위험(${p.chrom.split('(')[0]}) → 추가 검사에서`} ${p.chrom} 확인 → 의사가 선택지(계속 지켜보기·중단)를 담담히 설명` : p.fp ? (preg?.shown?.c12 >= 0 ? '추가 검사 결과 정상(고위험은 잘못 나온 것)' : '2차 기형아 검사 정상') : '2차 기형아 검사 정상'], // 12주 검진을 못 갔으면 '의심'을 들은 적이 없으니 그에 맞게 // 성별은 물어볼 때만(pregTick)
       [21, '정밀초음파', J([p.struct ? `${one}에게서 ${p.struct}` : '', p.serious ? `${one}에게서 ${p.serious[1]}` : '', p.cpc ? `${one} 뇌에 작은 물혹(맥락총낭종) — 대부분 저절로 사라짐 · 30주에 다시` : '', p.minor ? `${one} 신장이 살짝 늘어나 보임 → 추적 관찰(대부분 저절로 좋아짐)` : '', p.lowP ? '태반이 조금 낮게 붙어 있음 → 30주에 다시 보기로' : '']) || A + ' 다 이상 없음'],
       [26, '임신성 당뇨 검사', p.gdm ? '임신성 당뇨 판정 → 식단 관리·혈당 재기' : '당뇨 검사 정상'],
-      ...(preg?.planV === 2 ? [[28, '입체 초음파', (twin ? '두 아이 ' : '') + '얼굴이 보임 · 누구 닮았는지는 장면에 맞게']] : []), // 머리색 같은 건 초음파로 안 보여서 출산 때 닮은 곳은 안 씀
+      ...(preg?.planV === 2 ? [[28, '입체 초음파', (twin ? (p.n > 2 ? '세 아이 ' : '두 아이 ') : '') + '얼굴이 보임 · 누구 닮았는지는 장면에 맞게']] : []), // 머리색 같은 건 초음파로 안 보여서 출산 때 닮은 곳은 안 씀
       [30, '정기 검진', J([p.breech ? (twin ? '한 아이가 거꾸로(역아)' : '역아(아기가 거꾸로)') + ' → 아직 돌 수 있음' : '아기 자리 좋음', p.fgr ? `${one}가 주수보다 작음(성장 지연) → 2주마다 크기 보기` : '', p.oligo ? '양수가 적음 → 물 많이 마시고 자주 보기' : p.poly ? '양수가 많음 → 자주 보기' : '', p.lowP ? (p.previa ? '태반이 자궁 입구를 덮음(전치태반) → 제왕절개 예정' : '태반이 올라가서 괜찮아짐') : '', p.cpc ? '뇌 물혹이 사라짐' : '', p.serious ? '큰 병원 추적: ' + p.serious[2] : '', p.minor ? '전에 본 신장 소견 좋아짐' : ''])],
       [34, '정기 검진', p.pe && p.peW <= 34 ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기 권함' : J([p.serious ? `${p.serious[0]} 때문에 큰 병원에서 낳을 준비 · 신생아 집중치료실 자리 확인` : '', p.fgr ? `${one}가 여전히 작음 → 일찍 낳는 것도 이야기함` : '', p.macro ? '아기가 주수보다 큼' : '']) || A + ' 잘 크고 있음'],
       [36, '막달 검진', J([p.breech ? (p.breechStay ? '여전히 역아 → 제왕절개 날짜 잡기' : '역아였던 아기가 돌아옴') : A + ' 머리가 아래로 내려옴', p.cord ? '탯줄이 목에 한 번 감겨 있음 · 대부분 괜찮아서 지켜보기' : '', p.macro ? '아기가 커서(추정 3.8kg 넘음) 분만 방법 이야기가 나옴' : ''])],
@@ -856,7 +859,7 @@
     ];
     const dr = world === 'fantasy' ? '치유사' : '산파';
     return [
-      [8, world === 'fantasy' ? '치유사 진찰(태기 확인)' : '진맥(태기 확인)', '태기가 확실함' + (twin ? ' · 기운이 둘로 잡힘 — 쌍태' : '')],
+      [8, world === 'fantasy' ? '치유사 진찰(태기 확인)' : '진맥(태기 확인)', '태기가 확실함' + (twin ? ` · 기운이 ${p.n > 2 ? '셋으로' : '둘로'} 잡힘 — ${p.n > 2 ? '세쌍태' : '쌍태'}` : '')],
       [16, world === 'fantasy' ? '치유사 진찰' : '진맥', '태가 자리를 잘 잡음' + (p.sick === 2 ? ' · 입덧으로 기력이 쇠해 보약을 권함' : '')],
       [24, dr + ' 진찰', p.fgr ? '배가 주수보다 작다며 잘 먹으라 함' : p.poly ? '배가 유난히 크다며 물이 많은 것 같다 함' : '배 속에서 ' + A + '가 힘차게 놂'],
       [32, dr + ' 진찰', p.breech ? '태 자리가 거꾸로 앉음 → 아직 돌 수 있음' : '태 자리 좋음'],
@@ -867,9 +870,10 @@
   const P_LOOK = ['눈', '코', '입매', '머리카락', '피부', '웃는 얼굴', '귀', '눈썹'];
   const babyLook = (p, i) => { const a = Math.floor(pR('look' + i) * P_LOOK.length), b = (a + 1 + Math.floor(pR('look2' + i) * (P_LOOK.length - 1))) % P_LOOK.length, who = k => pR('lp' + i + k) < 0.5 ? '엄마' : '아빠';
     return `${P_LOOK[a]}은 ${who('a')}, ${P_LOOK[b]}은 ${who('b')} 닮음`.replace(/([가-힣])은 /g, (m, c) => ((c.charCodeAt(0) - 0xac00) % 28 ? c + '은 ' : c + '는 ')); };
-  function birthLine(p, world) { return birthLine0(p, world) + (preg.father ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? (i ? '둘째: ' : '첫째: ') : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
+  function birthLine(p, world) { return birthLine0(p, world) + (preg.genes?.length ? ' · 핏줄: ' + p.genes.map((gs, i) => (p.n > 1 ? P_ORD[i] + ' ' : '') + [gs.length ? '받음 ' + gs.map(g => `${g.t}(${g.from} 쪽)`).join(', ') : '', (m => m.length ? '안 받음 ' + m.map(g => `${g.t}(${g.from} 쪽)`).join(', ') : '')(preg.genes.filter(g => !gs.includes(g)))].filter(Boolean).join(' · ')).join(' / ') : '') + // 안 받은 것도 적어요(안 적으면 AI가 알아서 귀·꼬리를 붙일 수 있어서)
+ (preg.father ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? P_ORD[i] + ': ' : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
   function birthLine0(p, world) {
-    const base = (p.labor < 32 ? 0.5 + (p.labor - 24) * 0.14 : p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
+    const base = (p.labor < 32 ? 0.5 + (p.labor - 24) * 0.14 : p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 2 ? 1.8 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
     const extra = [p.struct ? '태어나 보니 ' + p.struct.split(' — ')[0] : '', p.abn ? josa(p.chrom.split('(')[0].trim(), '으로', '로') + ' 태어남' : '', p.serious ? p.serious[3] : '', p.cord ? '탯줄이 감겨 있었지만 무사함' : ''].filter(Boolean).join(' · ');
     if (world !== 'modern') return (p.rapid ? '갑작스레 해산' : p.breechStay ? '난산 끝에 해산' : '무사히 해산') + ' · ' + p.sex.map(s => s === '남' ? '아들' : '딸').join(', ') + (p.labor < 32 ? ' · 너무 일찍 나와 아주 작고 약함' : p.labor < 35 || p.fgr ? ' · 몸이 작고 약함' : p.serious ? '' : ' · 건강함') + (p.struct ? ' · ' + p.struct.split('(')[0] : '') + (p.serious ? ' · ' + p.serious[4] : '');
     return (p.cs || preg?.csSaid ? '제왕절개로 출산' : p.rapid ? '급속 분만으로 출산(병원에 가기 전에 나옴)' : '자연분만으로 출산') + ' · ' + p.sex.map((s, i) => s + '아 ' + Math.max(p.labor < 32 ? 0.5 : 1.2, base + pR('kg' + i) * (p.n > 1 ? 0.4 : 0.8)).toFixed(1) + 'kg').join(', ') + (p.labor < 28 ? ` · ${p.labor}주에 아주 일찍 나와 신생아 집중치료실에 2~3달 입원` : p.labor < 32 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 4~8주 입원` : p.labor < 35 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 1~3주 입원` : extra ? '' : ' · 건강함') + (extra ? ' · ' + extra : '');
@@ -887,6 +891,15 @@
     if (p.threat && p.thrW < Math.min(p.labor, until)) out.push({ k: 'thr', w: p.thrW, t: '배가 규칙적으로 뭉치며 아파 옴(조산 기미)', kw: /뭉치|뭉쳤|진통|규칙적/, res: p.thrFail ? (world === 'modern' ? '조산 기미 → 수축 억제제를 맞았지만 잘 멈추지 않음 · 입원해서 지켜보기' : '해산 기운이 멈추지 않아 곧 낳을 수 있다 함') : world === 'modern' ? '조산 기미 → 수축 억제제를 맞고 며칠 입원하길 권함' : '해산이 이를 수 있으니 누워서 몸조리하라 함' });
     if (p.rib && p.ribW >= (preg.w0 || 0) && p.ribW < Math.min(p.labor, until)) out.push({ k: 'rib', w: p.ribW, t: '태동이 세서 갈비뼈 쪽이 결리고 숨 쉴 때 아픔', kw: /갈비|옆구리|결리|숨\s*쉴/, res: world === 'modern' ? '갈비뼈에 금이 감 · 아기 발차기 때문 · 출산하면 저절로 붙는다며 무리하지 말라 함' : '갈빗대가 상했다며 아기 발길질 탓이라 함 · 해산하면 낫는다 함' });
     if (p.pe && p.peW < Math.min(p.labor, until)) out.push({ k: 'pe', w: p.peW, t: '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음', kw: /두통|머리가 (깨질|지끈|아)|눈앞이|번쩍|부어|부종/, res: world === 'modern' ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기' : '몸에 독기가 올랐다며 절대 안정하라 함' });
+    // 중간 사건(아기는 무사 · 긴장만): 새 주사위 키라 진행 중인 임신의 다른 결과는 안 바뀌어요
+    const M = world === 'modern', mid = (k, pc, lo, hi, t, kw, res) => { if (pR(k) >= pc) return; const w = lo + Math.floor(pR(k + 'W') * (hi - lo + 1)); if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k, w, t, kw, res, late: 3 }); };
+    if (p.sick === 2) mid('hg', 0.35, 7, 12, '입덧이 너무 심해져 먹은 게 다 올라오고 기운이 쭉 빠짐', /물도|못 (먹|넘기)|토하|게워|기운이/, M ? '탈수가 와서 수액을 맞음(임신오조) · 하루 이틀 입원' : '기력이 쇠했다며 미음과 탕약을 권함');
+    mid('fever', 0.12, 8, 34, '갑자기 열이 오르고 온몸이 으슬으슬 쑤심', /열이|으슬|오한|몸살|기침/, M ? '독감 · 임산부도 먹을 수 있는 약을 받음 · 열이 내리면 아기는 괜찮음' : '고뿔 · 열을 내리는 순한 탕약을 받음');
+    mid('fall', 0.1, 16, 34, '붐비는 곳에서 누가 세게 부딪혀 와 몸이 휘청함', /부딪|밀치|치이|휘청|넘어/, M ? '초음파상 아기 심장 잘 뜀 · 혹시 몰라 하루 지켜보자고 함' : '배 속 아기가 무사하다 함 · 며칠 누워 지내라 함');
+    mid('anemia', 0.15, 20, 34, '눈앞이 갑자기 깜깜해지며 머리가 핑 돎', /깜깜|어지러|쓰러|휘청|주저앉/, M ? '빈혈 수치가 낮음 → 철분제를 늘림' : '피가 모자라다며 보혈 탕약을 지어 줌');
+    mid('cervix', 0.08, 20, 28, '아랫배가 묵직하게 내려앉는 느낌이 며칠째 이어짐', /묵직|내려앉|빠질 것|아랫배/, M ? '자궁경부가 짧아짐 → 당분간 누워 지내기 · 질정을 씀' : '태가 아래로 처졌다며 절대 안정하라 함');
+    mid('bleed2', 0.05, 20, 34, '갑자기 속옷에 선홍색 피가 비침', /피가|출혈|하혈|비침|비쳤/, M ? '태반 가장자리에서 조금 출혈 · 며칠 입원해 지켜봄 · 아기는 괜찮음' : '태는 무사하나 피가 비쳤으니 열흘은 누워 지내라 함');
+    mid('itch', 0.03, 28, 37, '손바닥·발바닥이 밤마다 미칠 듯 가려움', /가려|간지럽|긁/, M ? '피검사에서 임신성 담즙정체 → 약을 먹고 37주쯤 일찍 낳기로 이야기함' : '속에 열이 차서 그렇다며 서늘한 탕약을 줌');
     const SEEN = '주변 누구든 알아챔(아무도 없으면 옷·거울로 드러남)';
     for (const [w, t] of [[14, '배가 살짝 티 나기 시작함'], [24, '누가 봐도 임신한 배가 됨'], [32, '배가 많이 불러 걸음걸이까지 달라짐']]) if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k: 'b' + w, w, t: t + ' — ' + SEEN, kw: /배가 (불러|나와|볼록|불룩|커|제법)|불룩|볼록|임산부|배를 (보|내려다|쓰다듬)|단추가|옷이 (작|끼|안)/ });
     if (p.labor < until) out.push({ k: 'labor', w: p.labor, t: p.rapid ? '진통이 너무 빠르게 몰아침 — 병원에 가기 전에 아기가 나옴' : '진통이 시작됨(' + (early => pR('wb') < (early ? 0.6 : 0.3) ? (early ? '진통 없이 양수부터 터짐' : '양수가 터짐') : '배가 규칙적으로 아파 옴')(p.labor < 37 && preg.planV === 2) + ')', kw: /양수|진통|분만|출산이/, res: birthLine(p, world), end: '출산' });
@@ -899,7 +912,8 @@
     const day = pregDay(mem, snap); if (day == null) return;
     pregSync(day, snap);
     const turn = (snap?.note?.turns || 0) + (snap?.fresh || []).filter(m => msgRole(m) === 'user').length;
-    const world = pWorld(mem); preg.era = world; if (preg.planV == null && preg.start != null) preg.planV = (day - preg.start) / 7 < 20 ? 2 : 1; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
+    if (preg.genes == null) pregGeneAsk(mem);
+    const world = pWorld(mem); preg.era = world; if (preg.lossV == null && preg.start != null) preg.lossV = (day - preg.start) / 7 < 5 ? 2 : 1; if (preg.planV == null && preg.start != null) preg.planV = (day - preg.start) / 7 < 20 ? 2 : 1; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
     if (wk < 0) return;
     const chat = (snap?.all || []).filter(isChat), lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
     const atHosp = P_HOSP[world].test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said);
@@ -915,7 +929,7 @@
     if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) preg.cur = cur = null;
     else if (cur && turn > cur.until) preg.cur = cur = cur.big !== undefined && !cur.re ? { ...cur, re: 1, from: turn + 3, until: turn + 8 } : null;
     if (!cur) {
-      const b = big.find(e => e.w <= wk && preg.fired[e.k] == null);
+      const b = big.find(e => e.w <= wk && preg.fired[e.k] == null && !(e.late && wk - e.w > e.late)); // late: 시간을 건너뛰어 3주 넘게 지난 중간 사건은 건너뛰어요(밀린 일이 줄줄이 나오지 않게)
       let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
       // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
       if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
@@ -973,7 +987,7 @@
     const bornNow = !preg.endNext && wk >= 20 && (kgSaid || (p.n === 1 && P_BORN.test(bornAi + '\n' + said))) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said); if (bornNow) preg.endNext = { kind: '출산', dayN: day, why: '', turn, born: 1 }; // 리롤하면 아직 안 끝난 걸로(새로 보낼 때 끝내요)
     if (preg.endNext && (preg.endNext.turn < turn || (preg.endNext.born && said && !bornNow))) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
-    const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
+    const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null) ? p.n : 0;
     const sexKnown = preg.shown.sex != null; // 물어봐서 들었을 때만
     if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
     const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 14 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : preg.unaware ? ' · 배 변화가 겉으로 보임' : ' · 주변 인물은 배 크기에 맞게 알아봄') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
@@ -981,7 +995,7 @@
     const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름 · 증상만 생김` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = [], soft = []; // soft: 가벼운 일은 장면에 맞을 때만(억지로 끼우지 않게) // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
-    L.push(`※ 임신 지금: ${who}${me ? '(유저 캐릭터)' : ''} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? '쌍둥이' : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
+    L.push(`※ 임신 지금: ${who}${me ? '(유저 캐릭터)' : ''} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? P_MULT[p.n] : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
     if (next) {
       const cd = preg.start + next[0] * 7, tag = day < cd + 7 ? 'n' + next[0] : 'm' + next[0];
       if (!preg.unaware && !atHosp && day >= cd - 3 && day < cd + 21) {
@@ -1146,6 +1160,20 @@
   const P_REL_PROMPT = '롤플레이 날짜로그 사건마다 [유저 캐릭터] 본인이 그 사건에서 실제로 성관계를 했는지 판단한다. 다른 인물끼리 한 관계, 남의 관계를 알게 되거나 목격한 것, 떠올리거나 말로 꺼낸 지난 관계, 하려다 멈춘 것은 false. 했으면 상대 이름(사건에 쓰인 이름 그대로)·피임·횟수·그중 질내사정 횟수를 원문대로. JSON 하나만: {"rels":[{"i":번호,"mine":true,"with":"상대 이름","prot":"콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름","times":1,"in":0}]}';
   const P_REL_TXT = { 콘돔: '콘돔을 끼고', '콘돔 찢어짐': '콘돔이 찢어짐', 피임약: '피임약을 먹음', 사후피임약: '사후피임약', 질외사정: '질외 사정', 질내사정: '피임 없이 질내 사정', '피임 안 함': '피임 없이' };
   const relAiText = (r, src) => [`${r.with || ''}와 관계`, P_REL_TXT[r.prot] || '', r.times > 1 ? `여러 번(${r.times}번)` : '', r.in > 0 ? `질내 ${r.in}번` : '', (src.match(/배란일|배란기|가임기|생리\s*중|생리하는\s*날|생리\s*기간|안전한\s*날|안전일/) || [''])[0]].filter(Boolean).join(' · ');
+  // 핏줄: 엄마·아빠 인물 설정에서 아기에게 이어질 종족(수인·엘프·혼혈)·혈통 특징을 AI가 임신마다 한 번 뽑아 둬요 → 출산 때 아기마다 그 확률로 굴려요
+  const P_GENE_PROMPT = '두 사람(엄마·아빠)의 인물 설정을 읽고, 아기에게 핏줄로 이어질 수 있는 타고난 특징만 고른다: 종족(수인·엘프·뱀파이어·혼혈 등)과 그 종족의 귀·꼬리·눈 같은 특징, 혈통으로 이어지는 능력·체질, 집안 대대로 이어지는 외모(머리색·눈색). 나중에 생긴 것과 성격은 고르지 않는다. 두 사람이 다른 종족이면 아기가 어느 쪽 종족을 받는지를 특징 하나로 적는다. p는 그 세계관에서 아기에게 이어질 확률(설정에 없으면 상식대로). JSON 하나만: {"genes":[{"from":"엄마|아빠","t":"짧은 특징","p":0.5}]} · 없으면 {"genes":[]}';
+  async function pregGeneAsk(mem) {
+    if (pregGeneAsk.busy || pregGeneAsk.failed || !pregHasKey || !preg || preg.genes) return; pregGeneAsk.busy = true; const cid = pregChat;
+    try {
+      const ppl = (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').slice(1), prof = n => n ? ppl.find(b => sameName(b.split('】')[0].trim(), n)) : null;
+      const mom = prof(preg.who), dad = preg.fatherCands?.length > 1 ? null : prof(preg.father);
+      if (!mom && !dad) { preg.genes = []; pregSave(); return; }
+      const r = parseJsonLoose(await askModel(P_GENE_PROMPT, [mom && '[엄마] 【' + mom.slice(0, 1500), dad && '[아빠] 【' + dad.slice(0, 1500)].filter(Boolean).join('\n\n'), '🍼핏줄 확인', true));
+      if (!preg || pregChat !== cid || preg.genes) return;
+      preg.genes = (Array.isArray(r?.genes) ? r.genes : []).filter(g => g?.t).slice(0, 6).map(g => ({ from: /아빠/.test(g.from) ? '아빠' : '엄마', t: String(g.t).slice(0, 40), p: Math.max(0, Math.min(1, Number(g.p) || 0)) }));
+      pregSave(); if (isOpen()) render();
+    } catch (e) { logErr('핏줄 확인', e.message); pregGeneAsk.failed = true; } finally { pregGeneAsk.busy = false; } // 실패하면 이번 접속 동안 다시 안 물어요
+  }
   async function pregRelAsk(todo, who) {
     if (pregRelAsk.busy || !pregMode || !pregHasKey || !preg) return; pregRelAsk.busy = true; const cid = pregChat;
     try {
@@ -1391,7 +1419,7 @@
     const anyShown = Object.keys(shown).some(k => /^c\d/.test(k) && shown[k] >= 0) || (preg.w0 || 0) > 8, sexKnown = shown.sex != null, twin = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null);
     const cover = `<div class="pg-cover"><div class="pg-ct" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><span class="pg-label">${world === 'old' ? '태중 일지' : '산모수첩'}</span>${who}<small>${world === 'old' ? '해산 예정' : '예정일'} ${P_STR(preg.start + 280)}${preg.me ? ' · 유저 캐릭터' : ''}</small></div>${sw}</div>
       ${wk != null ? `<div class="pg-big"><b>${wk}주 ${dd}일</b><span>${world === 'modern' ? 'D-' + dday : dday + '일 남음'}</span></div><div class="pg-bar"><i style="width:${Math.max(2, Math.min(100, age / 280 * 100)).toFixed(1)}%"></i></div><div class="pg-tri">${['초기', '중기', '후기'].map((t, k) => `<span${k === stage ? ' class="pg-now"' : ''}>${t}${k === stage ? ' · 지금' : ''}</span>`).join('')}</div>` : ''}
-      <div class="pg-chips"><span>${anyShown ? (twin ? '👶👶 쌍둥이' : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="누가 아는지 바꾸기">${preg.unaware ? '🙈 모름' : preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.fatherCands?.length > 1 ? `<span>👨 아빠 ? · ${preg.fatherCands.map(esc).join(', ')} 중 한 명</span>` : preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
+      <div class="pg-chips"><span>${anyShown ? (twin ? '👶'.repeat(p.n) + ' ' + P_MULT[p.n] : '👶 한 명') : '👶 ' + ck + ' 전'}</span><span${sexKnown ? ' data-act="pregsex" role="button" title="눌러서 성별 바꾸기" style="cursor:pointer"' : ''}>${sexKnown ? '🎀 ' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') : world === 'modern' ? '🎀 물어보면 알려줘요' : '🎀 태어나면 알아요'}</span><button class="pg-wchip" data-act="pregsecret" aria-label="누가 아는지 바꾸기">${preg.unaware ? '🙈 모름' : preg.secret ? '🤫 비밀' : '📢 알림'}</button>${preg.fatherCands?.length > 1 ? `<span>👨 아빠 ? · ${preg.fatherCands.map(esc).join(', ')} 중 한 명</span>` : preg.father ? `<span>👨 아빠 · ${esc(preg.father)}</span>` : '<span>👨 아빠 · 미상</span>'}${sel}</div>
       <p class="pg-s">🔍 ${esc(String(preg.why || '').replace('임테기 두 줄(직접 긁음)', { old: '진맥으로 태기 확인(직접 짚음)', fantasy: '수정구슬로 확인(직접 봄)' }[world] || '임테기 두 줄(직접 긁음)'))} <button class="pg-link" data-act="pregfix">틀렸으면 고치기</button></p></div>`;
     const cur = preg.cur && turn >= preg.cur.from;
     const checks = pregChecks(p, world).filter(c => c[0] >= (preg.w0 || 0) && c[0] < p.labor);
@@ -1399,7 +1427,7 @@
     const sec = (h, em, body) => `<div class="pg-sec"><h3>${h}${em ? `<em>${em}</em>` : ''}</h3>${body}</div>`;
     const week = sec('🗓 이번 주', next ? `다음 ${ck} ${next[0]}주 · ${esc(next[1])}` : '', cur ? '<div class="pg-hid"><b>🎲</b><div><b>이번 주 일이 정해졌어요</b><br>이야기에서 나오면 여기 적혀요</div></div>' : '<p class="pg-s">지금 걸린 일은 없어요.</p>');
     const risk = wk < 6 ? `높은 시기예요(${world === 'modern' ? '심장 소리 확인 전' : '태기가 자리 잡기 전'})` : wk < 12 ? '조금씩 낮아지는 중 · 12주 지나면 안정기' : wk < 20 ? '안정기 들어섰어요 🍀' : '아주 낮아요 🍀';
-    const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ' · 쌍둥이라 조금 더 높아요' : ''}</b></div>`) : '';
+    const baby = wk >= 4 ? sec('👶 아기', P_SIZE[wk] ? esc(P_SIZE[wk]) + '만 해요' : '', `<div class="pg-r"><span>발달</span><b>${esc(pDev(wk))}</b></div><div class="pg-r"><span>유산 위험</span><b>${risk}${twin ? ` · ${P_MULT[p.n]}라 조금 더 높아요` : ''}</b></div>`) : '';
     const now = wk < 13 ? '쉽게 피곤하고 졸려요' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심해요' : '있어요') : '') : wk >= 36 ? '언제든 진통이 올 수 있어요' : wk >= 28 ? '허리가 아프고 숨이 차요' : '비교적 편한 시기예요';
     const mom = sec('🤰 엄마 몸', '', `<div class="pg-r"><span>배</span><b>${esc(pBelly(wk, twin))}</b></div><div class="pg-r"><span>요즘</span><b>${now}</b></div>`);
     const scans = checks.filter(c => shown['c' + c[0]] >= 0 && !/당뇨/.test(c[1])).map(c => `<div><b>${preg.ckW?.['c' + c[0]] ?? Math.max(c[0], ...(preg.log || []).filter(x => /알게 됨/.test(x.t) && x.w != null).map(x => x.w).slice(0, 1))}주</b><span>${esc(c[1].split(' · ')[0])}${c[0] <= 8 ? ' 💓' : ''}</span></div>`);
