@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.4
+// @version      5.2.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3966,7 +3966,7 @@
     .fold-ul{margin:0;padding:0;list-style:none}
     .fold-ul li{padding:2px 0;font-size:14.5px;line-height:1.7;color:var(--ink2);overflow-wrap:anywhere}.fold-ul li b{color:var(--ink)}
     @media (prefers-reduced-motion:reduce){.fold>summary::after{transition:none}}
-    .nrow{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline;margin-top:10px}
+    .nrow{display:grid;grid-template-columns:fit-content(40%) minmax(0,1fr);gap:8px;align-items:baseline;margin-top:10px}
     .nk{font-size:12.5px;font-weight:700;color:var(--nf);white-space:nowrap}.npast{opacity:.5}
     .nv{font-size:14px;line-height:1.6;color:var(--ink2);min-width:0}.nv .wear{margin-top:0}
     .nv .wear span{background:var(--nb);color:var(--ink)}
@@ -7340,8 +7340,8 @@
       if (hm && nav.hookEdit === ht) return '<div class="hke"><input data-hookin value="' + esc(rest) + '"><button data-act="hooksave" data-arg="' + esc(ht) + '">저장</button><button data-act="hookcancel">취소</button></div>';
       return '<p class="nl">' + (on ? ce('L' + j, b) : pillLine(b)) + (hm ? '<span class="hka"><button data-act="hookdone" data-arg="' + esc(ht) + '">끝남</button><button data-act="hookedit" data-arg="' + esc(ht) + '">고치기</button><button data-act="hookdel" data-arg="' + esc(ht) + '">지우기</button></span>' : '') + '</p>'; } // 서사 고리 줄: '태정→나 대감'이 있어도 관계 줄이 아니에요(고칠 때는 원래 글 그대로)
     if (REL_RE.test(l)) { const r = relParse(l);
-      return '<p class="nl nrow"><i>→ ' + (on ? '</i>' + ce('O' + j, r.to) + ' ' : esc(r.to) + '</i>') + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
-        : (r.addr.length ? r.addr.map(x => '<span class="addr">「' + esc(x) + '」</span>').join(' ') + ' ' : '') + (r.reg ? '<span class="reg-tag">' + esc(r.reg) + '</span> ' : '') + esc(r.rel)) + '</p>'; }
+      return '<p class="nl nrow"><i>→ ' + (on ? '</i><span>' + ce('O' + j, r.to) + ' ' : esc(r.to) + '</i><span>') + (on ? ce('A' + j, r.addr.join(', ')) + ' <button class="reg-tag n-tone" data-act="ntone" data-tone="' + esc(spec + '¦G' + j) + '" data-reg="' + esc(r.reg) + '" data-reg0="' + esc(r.reg) + '">' + esc(r.reg || '말투?') + '</button> ' + ce('R' + j, r.rel)
+        : (r.addr.length ? r.addr.map(x => '<span class="addr">「' + esc(x) + '」</span>').join(' ') + ' ' : '') + (r.reg ? '<span class="reg-tag">' + esc(r.reg) + '</span> ' : '') + esc(r.rel)) + '</span></p>'; }
     const i = labelCut(b);
     return i > 0 && i <= 12 ? '<p class="nl"><i>' + esc(b.slice(0, i).trim()) + '</i>' + ce('V' + j, b.slice(i + 1).trim()) + '</p>' : '<p class="nl">' + ce('L' + j, b) + '</p>';
   }
