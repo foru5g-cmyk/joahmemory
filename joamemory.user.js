@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.5
+// @version      5.2.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -184,11 +184,11 @@
     return new Promise((res0, rej0) => {
       if (!gmRequest) { rej0(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       // 아이폰은 화면이 꺼지거나 다른 앱에 갔다 오면 연결이 끊겨도 알려 주지 않아 '만드는 중'이 끝없이 갔어요 → 시계를 직접 봐요
-      const t0 = Date.now(); let h = null;
-      const tick = setInterval(() => { if (Date.now() - t0 < timeout) return; reject(new Error('응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
+      const t0 = Date.now(); let h = null, len = 0, last = t0; // len·last: 받던 글이 5분 넘게 안 늘면 끊긴 걸로 봐요(전체 시간까지 안 기다림)
+      const tick = setInterval(() => { const idle = len && Date.now() - last > 300000; if (Date.now() - t0 < timeout && !idle) return; reject(new Error(idle ? 'AI 답이 5분 넘게 멈춰서 끊었어요. 다시 눌러 주세요.' : timeout >= 600000 ? `AI 답이 ${Math.round(timeout / 60000)}분 안에 끝나지 않아 끊었어요. 설정에서 AI 생각을 적게로 하거나 턴을 나눠 다시 해 주세요.` : '응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
       const resolve = v => { clearInterval(tick); res0(v); }, reject = e => { clearInterval(tick); rej0(e); };
       h = gmRequest({ method, url, timeout, headers: { 'Content-Type': 'application/json', ...headers }, data: body === undefined ? undefined : JSON.stringify(body),
-        onprogress: r => { try { onProgress?.(r?.responseText || ''); } catch (_) {} },
+        onprogress: r => { const n = (r?.responseText || '').length; if (n > len) { len = n; last = Date.now(); } try { onProgress?.(r?.responseText || ''); } catch (_) {} },
         onload: r => { if (r.status >= 200 && r.status < 300) return resolve(r.responseText || '');
           let msg = ''; try { const j = JSON.parse(r.responseText); msg = (Array.isArray(j) ? j[0] : j)?.error?.message || ''; } catch (_) {}
           reject(new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`)); },
@@ -2326,7 +2326,7 @@
     const fallback = /^claude-(fable|opus-5|sonnet-5-5)/.test(model); // 거절되면 서버가 다른 모델로(Sonnet 5.5는 'default'만 돼요)
     // 긴 정리는 몇 분 걸려서 한 번에 받으면 연결이 끊기기 쉬워요. Gemini처럼 스트리밍(SSE)으로 끝까지 받습니다.
     const raw = await requestRaw('POST', 'https://api.anthropic.com/v1/messages', {
-      timeout: 600000, onProgress: raw => updateProg(raw),
+      timeout: 1800000, onProgress: raw => updateProg(raw), // Claude는 깊게 생각하면 10분을 넘겨요 · 멈춘 건 requestRaw가 5분 만에 끊어요
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true',
                  ...(fallback ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}) },
       body: { model, max_tokens: 64000, stream: true, system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}), ...(think && model !== 'claude-haiku-4-5' ? { output_config: { effort: think } } : {}) } }); // effort: 설정 › AI 생각(안 보내면 Sonnet 5.5는 high라 느려요)
@@ -6385,6 +6385,7 @@
   }
   function updateProg(raw) {
     const g = genProg; if (!g || Date.now() - g.last < 300) return; g.last = Date.now();
+    if (String(raw).length > g.recv) g.recvAt = Date.now(); // recvAt: 마지막으로 글이 온 때
     g.recv = String(raw).length; let text = '';
     for (const line of String(raw).split('\n')) { if (!line.startsWith('data:')) continue;
       try { const j = JSON.parse(line.slice(5)); for (const p of j.candidates?.[0]?.content?.parts || []) if (!p.thought && p.text) text += p.text;
@@ -6395,14 +6396,16 @@
     const g = genProg, s = Math.floor((Date.now() - g.t0) / 1000), tm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const name = { board: '커뮤니티', more: '새 글', phone: '폰', gc: '단톡방', pc: '컴퓨터', news: '뉴스', wiki: '위키', live: '실시간톡', bet: '베팅판', talk: '토크쇼', summary: '기억 노트', ltm: '장기기억 카드' }[g.kind] || '';
     const board = g.kind === 'board' || g.kind === 'more'; let info;
+    // 글이 안 오는 시간 안내: 받다가 2분 넘게 멈춤 / 3분 넘게 첫 글자도 안 옴
+    const q = Math.floor((Date.now() - (g.recvAt || g.t0)) / 60000), stall = g.recvAt ? (q >= 2 ? `AI 답이 ${q}분째 멈춰 있어요 · 5분이 되면 끊고 알려 줘요` : '') : q >= 3 ? `${q}분째 첫 글자를 기다리는 중 · AI 생각이 깊으면 오래 걸려요` : '';
     if (g.kind === 'summary') { // 정리: 읽는 중 → 쓰는 중(글자 수 · 지난 정리 대비 %)
       info = !g.chars ? (s < 8 ? 'AI에게 대화와 기억 노트를 보내는 중…' : s < 30 ? 'AI가 대화를 읽고 정리하는 중…' : 'AI가 정리하는 중이에요 · 대화가 길면 첫 글자까지 1분 넘게 걸려요')
         : `AI가 쓰는 중 · ${fmt(g.chars)}자`;
-      return { name, tm, info, pct: 0 }; }
+      return { name, tm, info: stall || info, pct: 0 }; }
     if (!g.chars) info = s < 10 ? 'AI에게 기억 노트를 보내는 중…' : s < 25 ? 'AI가 노트를 읽고 구상하는 중…' : 'AI가 구상하는 중이에요 · 긴 글은 첫 글자가 나오기까지 오래 걸려요';
     else if (board && !g.posts) info = '사이트와 게시판을 만드는 중…';
     else info = board ? `글 ${g.posts}개 · 댓글 ${g.comments}개 작성됨` : `${fmt(g.chars)}자 작성됨`;
-    return { name, tm, info, pct: board && g.posts && g.expect ? Math.min(96, Math.round(g.posts / g.expect * 100)) : 0 };
+    return { name, tm, info: stall || info, pct: board && g.posts && g.expect ? Math.min(96, Math.round(g.posts / g.expect * 100)) : 0 };
   }
   // 홈 큰 링 안에 작게: 지난 시간 + (답이 오기 시작하면) 글자 수·지난 정리 대비 %
   const genMini = () => { const g = genProg; return g?.chars ? `${fmt(g.chars)}자 쓰는 중` : ''; };
