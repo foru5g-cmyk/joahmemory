@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.1
+// @version      5.1.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -833,7 +833,8 @@
     if (serious?.[5] && labor > serious[5]) labor = serious[5];
     let loss = null; // 초기 유산(5~12주 합쳐 약 15%) · 중기 유산 · 사산
     const lv = preg.lossV === 2 ? 3 : 1; // lossV 2: 5주 전에 시작한 임신만 중기 유산·사산 3배(롤플용 · 진행 중인 임신은 결과가 안 바뀌게 그대로)
-    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h = (k <= 12 ? 0.027 * era.loss : k <= 20 ? 0.0015 * era.loss * lv : 0.0003 * era.still * lv) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
+    if (!preg.noLoss) // noLoss: 유산·사산을 되돌린 임신은 다시 안 나와요
+    for (let k = Math.max(preg.w0 || 0, 5); k < labor; k++) { const h =(k <= 12 ? 0.027 * era.loss : k <= 20 ? 0.0015 * era.loss * lv : 0.0003 * era.still * lv) * (n > 1 ? 1.5 : 1) * (abn && k > 12 ? 4 : 1); if (pR('loss' + k) < h) { loss = k; break; } }
     const cs = n > 2 || previa || breechStay || (serious?.[6] && pR('cs5') < 0.6) || (n > 1 && pR('cs2') < 0.6) || (pe && pR('cs3') < 0.5) || (macro && pR('cs4') < 0.4) || pR('cs') < 0.35;
     let crisis = pR('crisis') < era.crisis, weak = pR('weak') < era.weak, ndeath = pR('ndeath') < era.ndeath; // 출산 때 산모 위독 · 아기가 약함 · 아기를 잃음
     // 긴박함과 무난함 섞기: 임신마다 30%는 '순탄'(큰 위험이 대부분 빠짐) · 지난 임신이 유산·사산이었으면 큰 위험 0.6배(첫째·둘째 다 힘들지 않게)
@@ -841,6 +842,7 @@
     if (rm < 1) { if (loss != null && !keep('loss')) loss = null; abn = abn && keep('abn'); struct = struct && keep('struct') ? struct : ''; serious = serious && keep('ser') ? serious : null; fgr = fgr && keep('fgr'); pe = pe && keep('pe'); threat = threat && keep('thr'); previa = previa && keep('previa'); breechStay = breechStay && keep('brs'); oligo = oligo && keep('oligo'); poly = poly && keep('poly'); gdm = gdm && keep('gdm'); crisis = crisis && keep('crisis'); weak = weak && keep('weak'); ndeath = ndeath && keep('ndeath'); }
     const thrFail = v2 && threat && !pre && pR('thrF') < 0.25; if (thrFail && thrW + 1 < labor) labor = thrW + 1; // 조산 기미를 못 멈추고 그다음 주에 출산
     const genes = Array.from({ length: n }, (_, b) => (preg.genes || []).filter((g, i) => pR('gene' + b + '-' + i) < g.p)); // 핏줄: 아기마다 따로(쌍둥이가 하나는 수인, 하나는 사람일 수도)
+    if (preg.noLoss) ndeath = false;
     return { genes, crisis, weak, ndeath, n, hideTwin, sex, abn, chrom, fp, minor, struct, serious, cpc, lowP, previa, gdm, pe, peW, fgr, oligo, poly, cord, macro, quiet, quietW, breech, breechStay, threat, thrW, thrFail, rib, ribW, rapid: rapid && !cs, sexFlip, sick, spot, spotW, labor, loss, cs };
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
@@ -1028,7 +1030,8 @@
     const line = `${kind} · ${preg.who || ''} · ${P_STR(preg.start + w0 * 7)}(${w0}주) ~ ${endDay != null ? P_STR(endDay) + '(' + wk + '주)' : '?'}${why ? ' · ' + why : ''}`;
     const nth = (preg.books || []).filter(b => b.kind === '출산').length + (kind === '출산' ? 1 : 0), ORD = ['', '첫째', '둘째', '셋째', '넷째', '다섯째'];
     const book = { title: kind === '출산' ? `${ORD[nth] || nth + '번째'} 산모수첩` : `${kind} 기록`, kind, line, who: preg.who, father: preg.father || '', log: preg.log || [], at: Date.now() };
-    preg = { on: kind !== '출산', world: preg.world, peek: preg.peek, books: [...(preg.books || []), book], history: [...(preg.history || []), line], after: endDay ?? preg.after, afterV2: true, afterTurn: (snapshot?.note?.turns || 0) + freshTurns() };
+    preg = { on: kind !== '출산', world: preg.world, peek: preg.peek, books: [...(preg.books || []), book], history: [...(preg.history || []), line], after: endDay ?? preg.after, afterV2: true, afterTurn: (snapshot?.note?.turns || 0) + freshTurns(),
+      ...(kind === '유산' || kind === '사산' ? { undo: JSON.stringify({ ...preg, books: undefined, history: undefined, undo: undefined }) } : {}) }; // undo: 되돌리기용으로 접어 둔 그 임신
     pregOut = []; pregSig = ''; pregSave();
   }
   const pregSave = () => pregChat && setValue('preg:' + pregChat, JSON.stringify(preg && Object.assign(preg, { saved: Date.now() }))); // saved: 기기끼리 더 최근 걸 고르는 기준
@@ -1040,6 +1043,7 @@
   function pregEnsure(mem, snap = snapshot) {
     if (preg.userOff && !preg.on) return false; // 직접 끄거나 기록을 지웠으면 대화에서 임신 얘기가 나와도 다시 안 켜요(직접 켤 때까지)
     if (preg.start != null) { if (preg.father == null || preg.dadV !== 3) { const first = preg.dadV !== 3; preg.dadV = 3; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; } // dadV: 아빠 찾는 방식이 바뀌면 한 번 다시 찾아요
+    if (pregWhoDefault(mem).male) return false; // 유저 캐릭터 프로필이 '남'이면 이야기·주사위로는 안 켜요(직접 시작·작가 설정만)
     // 임신 시작: 정리 AI가 알려 주거나(%%임신시작), 대화에 임신을 밝힌 말이 나오면 AI에 한 번 물어서(pregGate) · 노트 낱말로는 안 찾아요
     { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(P_SYN(stripBlocks(msgText(m)))); } // 유저 말 + AI 답(유저 캐릭터가 보낸 문자·대사로 나오기도 해요)
       const tell = preg.aiSaid || told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
@@ -1233,7 +1237,7 @@
   function pregConceive(mem, day, ask = false) {
     const rels = pregKitRels(mem, ask).filter(r => r.d <= day && day - r.d <= 42 && (preg.after == null || r.d > preg.after));
     const testable = rels.filter(r => day - r.d >= 10), recent = rels.filter(r => day - r.d < 10);
-    const k = kitCap(rels), hit = testable.find(r => preg.forceRel === r.d || pR('conc' + r.d) < kitChance(r.t) * k);
+    const k = kitCap(rels), male = pregWhoDefault(mem).male, hit = testable.find(r => preg.forceRel === r.d || (!male && pR('conc' + r.d) < kitChance(r.t) * k)); // 유저 캐릭터가 남자면 주사위로는 안 돼요
     return { hit, testable, recent, k, last: rels[rels.length - 1] || null };
   }
   // ✏️ 관계 기록 고치기: 날짜로그 관계 사건마다 지금 판단(유저가 고친 것 → AI → 낱말)을 보여 주고, 내 관계 여부·피임·상대를 눌러서 바꿔요(preg.relFix)
@@ -1390,7 +1394,7 @@
     if (!started) {
       preg = preg || { on: false }; pregChat = pregChat || chatIdFromPath();
       const why0 = [!pPeople(mem).some(p => p.me) ? '노트 인물에 유저(PC) 표시가 없어요' : '', preg.after != null ? `지난 기록(${P_STR(preg.after)}) 뒤 일만 봐요` : '', !(snapshot?.fresh || []).length ? '아직 정리 안 된 대화가 없어요' : ''].filter(Boolean).join(' · ');
-      const det = on || !pregHasKey ? `<p class="pg-s">🔍 아직 임신한 사람이 없어요. ${pregHasKey ? '이야기에서 임신 사실이 나오면 AI가 확인하고 시작해요.' : `직접 시작을 누르거나 ${{ old: '진맥으로', fantasy: '수정구슬로' }[pWorld(mem)] || '임테기로'} 시작해요(키를 넣으면 이야기에서 알아서 찾아요).`} <button class="pg-link" data-act="pregfix">직접 시작</button>${why0 ? `<br><small>${esc(why0)}</small>` : ''}</p>` : (why0 ? `<p class="pg-s"><small>${esc(why0)}</small></p>` : '');
+      const det = on || !pregHasKey ? `<p class="pg-s">🔍 아직 임신한 사람이 없어요. ${pregHasKey ? '이야기에서 임신 사실이 나오면 AI가 확인하고 시작해요.' : `직접 시작을 누르거나 ${{ old: '진맥으로', fantasy: '수정구슬로' }[pWorld(mem)] || '임테기로'} 시작해요(키를 넣으면 이야기에서 알아서 찾아요).`} <button class="pg-link" data-act="pregfix">직접 시작</button>${preg.undo ? ' <button class="pg-link" data-act="pregundo">↩ 유산·사산 되돌리기</button>' : ''}${why0 ? `<br><small>${esc(why0)}</small>` : ''}</p>` : (why0 ? `<p class="pg-s"><small>${esc(why0)}</small></p>` : '');
       return `<div class="pg">${P_TEST}<div class="pg-card"><div class="pg-mode"><span class="pg-ic">🍼</span><div><b>임신</b><small>${on ? '임신한 사람을 기다리는 중' : pregHasKey ? '이야기에서 임신하면 알아채고 알아서 시작해요' : `직접 시작을 누르거나 ${{ old: '진맥으로', fantasy: '수정구슬로' }[pWorld(mem)] || '임테기로'} 시작해요`} <span class="pg-free">${pregHasKey ? '🔑 임신 확인에만 키를 조금 써요' : '🔑 키 안 써요 · 무료'}</span></small></div>${sw}</div>${on ? `<div class="pg-chips">${sel}</div>` : ''}${det}${pregKitHtml(mem, true)}${hist}</div>${soon}</div>`;
     }
     // ── 산모수첩 ──
@@ -2047,8 +2051,14 @@
     // 날짜로그를 맨 앞에: 옛 사건은 그대로고 새 사건은 끝에 붙어서, 지난번에 보낸 글과 앞부분이 길게 같아 Gemini 자동 캐시를 받아요(현재상태·인물은 매번 바뀌어서 뒤로) · 저장되는 노트 순서는 정리 뒤 SECTIONS 순서로 다시 맞춰요
     if (prevMemory) prevMemory = joinSections(splitSections(prevMemory).filter(x => x.key !== SHELF && x.key !== '감정선').sort((a, b) => (b.key === '날짜로그') - (a.key === '날짜로그')));
     // 매번 바뀌는 것(노트 크기 숫자·고친 칸·치운 물건)은 기억 뒤로: Gemini 자동 캐시는 앞부분이 같아야 싸져서
-    // 고정 설정은 정리 AI에게 안 보내요: 직접 쓴 글 그대로 두는 칸이라 읽힐 필요가 없고, 길면 정리할 때마다 그만큼 돈이 나가요
-    return `[기존 기억]\n${prevMemory || '(없음)'}${mine}${size}${dusty}\n\n[새 RP 로그]\n${log}`;
+    // 고정 설정은 통째로 안 보내고 필요한 만큼만: 유저 설정·NPC 항목 중 이번 대화에 나온 사람(이름, 또는 소개 첫 줄의 낱말이 대화에 나옴)은 전부 · 나머지 사람은 이름과 앞 두 줄만
+    //   세계관·지침·기타 항목은 안 보내요(채팅에는 전처럼 다 들어가요) · 전부 보내는 몫은 1만 2천 자까지, 넘는 사람은 이름·앞 두 줄로
+    const said = freshMessages.map(m => msgText(m)).join('\n'), fxAll = fixItems(fixed).filter(it => ['유저 설정', 'NPC'].includes(it.cat) && it.title.trim()), fxNames = fxAll.map(it => it.title.trim());
+    const fxHit = it => !!said && (nameIn(said, it.title.trim()) || ((it.text.split('\n').find(l => l.trim()) || '').match(/[가-힣A-Za-z]{2,}/g) || []).map(injStem).some(w => !INJ_STOP.has(w) && !fxNames.some(n => n !== it.title.trim() && nameIn(w, n)) && said.includes(w)));
+    let fxUsed = 0; const fxOut = fxAll.map(it => { const full = '▸ [' + it.cat + '] ' + it.title.trim() + (it.text.trim() ? '\n' + it.text.trim() : ''); if (fxHit(it) && fxUsed + full.length <= 12000) { fxUsed += full.length; return full; }
+      return '▸ [' + it.cat + '] ' + it.title.trim() + ' (앞부분만) ' + it.text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 2).join(' / ').slice(0, 160); }).join('\n');
+    const fx = fxOut ? `\n\n[고정 설정]\n${fxOut}` : '';
+    return `[기존 기억]\n${prevMemory || '(없음)'}${fx}${mine}${size}${dusty}\n\n[새 RP 로그]\n${log}`;
   }
   const editedKeys = async chatId => { try { return JSON.parse(String(await getValue('edited:' + chatId, '[]')) || '[]'); } catch (_) { return []; } };
   // 단계별 정리: 기존 노트는 프로그램이 들고 있고, AI는 바뀐 항목만 냅니다(mergeNote가 끼워 넣음).
@@ -2073,6 +2083,7 @@
   const EXTRA_RULE = `\n\n[덧붙임 규칙]
 - 인물 항목을 고쳐 쓸 때 기존 관계 줄(→)은 한 글자도 빼지 않고 그대로 두고, 새로 생긴 줄만 날짜 순서대로 덧붙인다.
 - 딱지 말 금지: 집착·강박·통제·소유욕·독점욕·광기·비정상·병적·얀데레·집요·포식자·사냥감·먹잇감·맹수·소유물·지배욕·광적·구속·감금은 대화 원문에 그 말이 그대로 있을 때만 쓴다. 없으면 그 인물이 실제로 한 행동·말로 쓴다(예: '집착함' 대신 '연락이 안 되자 세 번 전화함').
+- [고정 설정]에 이미 적힌 것(인물의 외형·나이·정체·성격·말버릇·기본 말투, 세계관 규칙·배경)은 인물·세계관 칸에 다시 쓰지 않음. 그 인물·세계는 RP에서 새로 생기거나 바뀐 것만 씀(새로 드러난 사실·바뀐 관계·호칭·습관·상태). 고정 설정에 없는 인물·설정만 처음부터 씀. 고정 설정과 원문이 어긋나면 원문대로 쓰되 지우지 않음.
 - 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 장소를 옮기거나(공원 → 기숙사) 함께 있는 사람이 바뀌면(캘빈과 헤어진 뒤 단테와 문자) 그 자체로 새 사건이다. 문자·전화로 다른 사람과 나눈 일도 따로 사건. 기존 사건에 다른 장소·다른 사람의 일을 덧붙이지 않음. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음(노트가 85%를 넘을 때의 줄이기 규칙만 예외).
 - 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄: 지문 문장을 옮겨 적지 않고 짧은 명사 조각(조각 하나 15자 안팎)을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투 · 외모와 달리 다정함 · 담배 피움). 조각 개수는 정하지 않음 — 짧게 쪼개기만 하고 원문에 나온 사실(이름·나이·숫자·소속·대비되는 성격)은 빼지 않음. '~해서 ~함' 같은 사연·이유 문장은 쓰지 않음. 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음. 프로필 줄 꼬리표에 쓴 정체는 여기 다시 쓰지 않음.
 - 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄(나이·관계 등 원문 그대로), 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(60자 안팎, 왜 그랬는지까지)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그. 옮긴 내용은 옮긴 칸에 꼭 씀(어느 칸에서도 빠지지 않게).
@@ -2114,10 +2125,10 @@
     MERGE_RULE];
   // 앱 모드만: 웹처럼 길게 쓰지 않고, 사건 안 쪼개기 · 유저 때문에 달라진 일만 짧게 더해요
   const APP_SHORT = [MERGE_RULE, ['(그 자리에 없던 사람이 한 일 포함)도 씀', '(그 자리에 없던 사람이 한 일, 유저 캐릭터 때문에 달라진 일 포함)도 씀']];
-  // 지침 덜어 내기: 이번 정리에서 쓸 일이 없는 줄만 빼요(글은 안 고침) · 고정 설정은 안 보내니 그 입력 설명 줄 · 크기 제한이 없으면(웹 모드) [분량]의 노트 줄이는 방법 줄
+  // 지침 덜어 내기: 이번 정리에서 쓸 일이 없는 줄만 빼요(글은 안 고침) · 크기 제한이 없으면(웹 모드) [분량]의 노트 줄이는 방법 줄
   //   '85% 전에는 줄이지 않음' 줄은 남겨요(줄이지 말라는 쪽이라)
   const trimPrompt = (sys, noLimit) => { let size = false; return String(sys).split('\n').filter(l => { if (/^\[/.test(l)) size = /^\[분량/.test(l);
-    return !/^- 고정 설정: /.test(l) && !(noLimit && size && /^  · |^- (?:줄여야 하면|85%를 넘으면|그래도 \[현재 노트 크기\]|칸별 몫|전체가 넘칠 때)/.test(l))
+    return !(noLimit && size && /^  · |^- (?:줄여야 하면|85%를 넘으면|그래도 \[현재 노트 크기\]|칸별 몫|전체가 넘칠 때)/.test(l))
       && !(noLimit && /^- 극중 날짜가 오래 지나 교류가 끊긴 인물은 블록을 줄여도 됨/.test(l)); }).join('\n'); }; // 크기 제한이 없으면 오래 안 나온 인물 블록도 안 줄여요
   async function buildSystem(delta = false, base = noteMemory()) {
     const off = await offSections();
@@ -4896,6 +4907,7 @@
   }
   function quoteHtml(q, tr = '') {
     if (!q) return '';
+    q = String(q).replace(/\*\*[^*\n]{1,24}\*\*\s*(?=["“「])/g, '').replace(/\*\*/g, '').replace(/""+/g, '"'); // 말한 사람 이름표(**주결|** "대사")와 굵게 표시는 떼요
     // 근거: (12턴 · 2026.03.14) "원문" → 접힌 버튼엔 "근거 · 12턴", 펼치면 턴·날짜 한 줄 + 원문(대사·지문)
     const m = String(q).match(/^\s*[（(]([^)）]*턴[^)）]*)[)）]\s*(.*)$/), meta = m ? m[1].trim() : '';
     const unq = t => String(t || '').trim().replace(/^["“”]+|["“”]+$/g, '').trim();
@@ -7888,7 +7900,7 @@
     '서사 고리': '아직 안 끝난 약속·계획·복선·갈등 · 끝나면 날짜로그로 이동',
     '명대사': '상대 캐릭터 대사 원문 그대로 · 번역·장면 함께 · 최대 15개 · 버튼을 눌렀을 때만 뽑음 · 화면 확인용(채팅 노트엔 미포함)',
     '세계관': '원문에서 확인된 설정·규칙 · 한 번 확인되면 계속 유지',
-    [FIXED]: '직접 쓰는 절대 기준 · AI 수정 없음 · 정리에 안 들어감',
+    [FIXED]: '직접 쓰는 절대 기준 · AI 수정 없음 · 모든 칸이 이 기준을 따름',
     '현재상태': '정리 시점의 지금 값(장면·몸·옷차림·제약) · 이후 대화와 다르면 대화 우선',
     '소지품': '다시 나올 물건만 · 지금 주인·상태 + 입수→건넴→분실 내력 · 선물·증거는 잃어버려도 남고, 다 쓴 소모품만 빠짐',
     '장소·조직': '다시 찾을 장소·조직만 · 위치·드나드는 조건·지금 상태',
@@ -10218,6 +10230,9 @@
       case 'pregendk': { if (preg?.start == null) return; nav.pgEnd = false; const d = pregDay(noteMemory() || '', snapshot);
         if (arg === '출산' && d != null && !(preg.log || []).some(x => /^출산/.test(x.t))) preg.log = [...(preg.log || []), { w: Math.floor((d - preg.start) / 7), t: '출산', at: (snapshot?.note?.turns || 0) + freshTurns(), res: 1 }]; // 자동으로 못 잡은 출산(지난 답에 있었던 것)
         pregArchive(arg, d, ''); return keepScroll(render); }
+      case 'pregundo': { if (!preg?.undo) return; if (!confirm('마지막 유산·사산 기록을 지우고 그 임신을 건강하게 이어 갈까요?\n· 이 임신은 다시 유산·사산되지 않아요\n· 채팅에 이미 나온 장면은 바뀌지 않아요(그 답을 리롤하거나 고쳐 주세요)')) return;
+        const old = JSON.parse(preg.undo); preg = { ...old, on: true, noLoss: true, endNext: null, books: (preg.books || []).slice(0, -1), history: (preg.history || []).slice(0, -1), log: (old.log || []).filter(x => !/→\s*(?:유산|사산)/.test(x.t)) };
+        if (preg.fired) delete preg.fired.loss; if (preg.shown) delete preg.shown.loss; if (/^(?:loss|lpre)$/.test(preg.cur?.k || '')) preg.cur = null; await pregSave(); return keepScroll(render); }
       case 'pregreset': if (!confirm('지금 임신 기록을 지우고 처음부터 할까요? (주사위도 새로 굴려요 · 지난 기록은 남아요)')) return; preg = { on: true, world: preg?.world, peek: preg?.peek, books: preg?.books || [], history: preg?.history || [], after: preg?.after, reroll: (preg?.reroll || 0) + 1 }; await pregSave(); return keepScroll(render);
       case 'wkrange': nav.rgKind = 'wiki'; nav.bdRange = true; return keepScroll(render);
       case 'wkupd': return makeWiki(0, 0, true);
