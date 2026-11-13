@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.3
+// @version      5.2.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1501,7 +1501,7 @@
   // 옷·신발: 원문이 선물이라 밝힌 게 아니면 바로 빼요 · 시드는 것·먹는 것·쓰고 마는 것: 선물이어도 ITEM_STALE턴 안 나오면 빼요
   const ITEM_CLOTH = /양말|슬리퍼|신발|운동화|구두|부츠|반다나|손수건|수건|티셔츠|셔츠|후드|맨투맨|바지|청바지|치마|원피스|재킷|자켓|점퍼|코트|패딩|모자|장갑|목도리|점프슈트|잠옷|가운|속옷/;
   const ITEM_PERISH = /꽃|민들레|데이지|장미|튤립|백합|국화|해바라기|부케|케이크|과자|사탕|초콜릿|빵|도시락|음식|음료|커피|술|와인|맥주|담배|약$|진통제|테스트기|생수|휴지/;
-  const ITEM_STALE = 20, ITEM_KEEP = /반납|처분|돌려줌|돌려줬|돌려받|입양|반려|강아지|고양이|선물|증거|증표|추억|유품|약속|열쇠|무기|편지|계약|분실|도난|빼앗|훔|신분|목걸이|반지|팔찌|귀걸이|이어링|피어싱|발찌|브로치|머리핀|헤어핀|시계|안경|착용|차고 있|끼고 있|걸고 있|하고 다님/; // 늘 지니는 장신구·착용 중인 것은 안 치워요
+  const ITEM_STALE = 20, ITEM_KEEP = /반납|처분|돌려줌|돌려줬|돌려받|입양|반려|강아지|고양이|선물|증거|증표|추억|유품|약속|열쇠|무기|편지|계약|분실|도난|빼앗|훔|신분|목걸이|반지|팔찌|귀걸이|이어링|피어싱|발찌|브로치|머리핀|헤어핀|비녀|노리개|가락지|뒤꽂이|떨잠|산호잠|옥잠|은장도|향낭|댕기|시계|안경|착용|차고 있|끼고 있|걸고 있|하고 다님/; // 늘 지니는 장신구·착용 중인 것은 안 치워요
   const ITEM_WORN = /착용|입고\s*있|입은\s*채|입었|입음|신고\s*있|신었|쓰고\s*있|걸치고|걸쳤|두르고|둘렀|차고\s*있|끼고\s*있/g, ITEM_OFF = /벗었|벗음|벗어|벗고|벗긴|갈아\s*입|바꿔\s*입|갈아\s*신|버렸|버림/g;
   // 지키는 물건: 폰 속 사진·영상 · 지금 걸치고 있는 것 · 선물·장신구·증거처럼 ITEM_KEEP에 걸리는 것(시들거나 먹고 쓰는 것은 빼고)
   const itemKept = it => { const name = String(it.key).replace(/\s*\(삭제\)\s*$/, '').replace(/\s*\(.*\)\s*$/, '').trim(), text = it.lines.join('\n'), at = re => Math.max(-1, ...[...text.matchAll(re)].map(m => m.index));
