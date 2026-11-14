@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.3.0
+// @version      5.3.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -71,7 +71,7 @@
   function parseMore(message) {
     const b = (msgText(message).match(MORE_RE) || []).pop(); if (!b) return null;
     const lines = b.replace(/^\n+/, '').split('\n'), get = k => (lines[0].match(new RegExp(k + '=([^\\s"]+)')) || [])[1] || '';
-    return { of: get('of'), at: get('at'), memory: lines.slice(1, -1).map(l => l.replace(/^ {4}/, '')).join('\n').trim() };
+    return { of: get('of'), at: get('at'), memory: lines.slice(1, -1).map(l => l.replace(/^ {4}/, '')).filter(l => !/^※ /.test(l)).join('\n').trim() };
   }
 
   const DEFAULT_MODEL = 'gemini-3.8-flash';
@@ -1469,7 +1469,8 @@
     const whole = memory; memory = selectInjection(memory); const sel = keepSel || !lastInj.all;
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => l.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
-    const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim());
+    const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim())
+      .flatMap(l => /^\s*■\s*고정 설정\s*$/.test(l) ? [l, '※ 이 칸은 사용자가 직접 쓴 설정·지시(NPC·지침·세계관) · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 늘 그대로 지킴 · 그 인물이 나오면 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)'] : [l]); // 고정 칸이 전으로 따로 내려가도 안내가 같이 가게
     // 먼지쌓인곳은 이름만 한 줄로: 목록에서만 뺀 물건이라 없어진 걸로 연기하지 않게, 다시 나오면 처음 보는 것처럼 굴지 않게(본문은 화면에만)
     const shelf = shelfNames(whole).slice(-30).map(clean);
     return '\n\n' + [
@@ -1478,11 +1479,10 @@
       ...[`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,
-        `※ 이후 대화·OOC 정정 > 이 노트. 현재상태는 정리 시점 값`,
+        `※ 우선순위: ■ 고정 설정(사용자가 직접 씀) > 이후 대화·OOC 정정 > 나머지 노트. 현재상태는 정리 시점 값`,
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`,
-        ...(/^\s*■\s*고정 설정\s*$/m.test(memory) ? [`※ ■ 고정 설정 = 사용자가 정한 설정(NPC·지침·세계관). 늘 그대로 따름 · 그 인물이 나오면 거기 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)`] : []),
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
         ...(k => k < 0 ? [...lines, ...pregOut] : [...lines.slice(0, k), ...pregOut, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l))), 'MEMO_NOTE_END"'].map(l => '    ' + l),
