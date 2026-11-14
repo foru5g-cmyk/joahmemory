@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.3.3
+// @version      5.3.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5532,7 +5532,8 @@
       const N = splitSections(now), nb = k => N.find(x => x.key === k)?.body || '', n = pastRound(now) + 1;
       const tag = (it, kind = '') => [it.lines[0].replace(/^(\s*▸\s*)\[?(.*?)\]?\s*$/, `$1[${n}회차 · ${kind ? kind + ' · ' : ''}$2]`), ...it.lines.slice(1)];
       const had = k => new Set(itemBlocks(body(k)).items.map(it => itemKey(it.key)));
-      const out = itemBlocks(nb(PAST)).items.map(it => it.lines), hadLog = new Set([...had('날짜로그'), ...had('이정표')]);
+      const rb = pastRound(memory), nk = k => itemKey(String(k).replace(/^\[|\]$/g, '')), inBase = new Set(['날짜로그', '이정표', '소지품', '인지·비밀'].flatMap(k => itemBlocks(body(k)).items.map(it => nk(it.key))));
+      const out = itemBlocks(nb(PAST)).items.filter(it => { const m = String(it.key).match(/^\[(\d+)회차 · (?:(?:물건|아는 것|장소) · )?(.*)\]$/); return !m || +m[1] <= rb || !inBase.has(nk(m[2])); }).map(it => it.lines), hadLog = new Set([...had('날짜로그'), ...had('이정표')]);
       const g2 = t => { const x = String(t).replace(/^\[|\]$/g, '').replace(/^[^-]*\d\s*-\s*/, '').replace(/[\s\p{P}\p{S}]/gu, ''), o = new Set(); for (let q = 0; q < x.length - 1; q++) o.add(x.slice(q, q + 2)); return o; };
       const dice = (A, B) => A.size && B.size ? 2 * [...A].filter(x => B.has(x)).length / (A.size + B.size) : 0;
       const baseEv = ['날짜로그', '이정표'].flatMap(k => itemBlocks(body(k)).items).map(it => ({ d: dayOf(it.key), g: g2(it.key), b: g2(it.lines.slice(1).join(' ')) }));
@@ -8858,24 +8859,25 @@
     const nowMem = noteMemory() || '', chat = (snapshot?.all || []).filter(isChat), who = personsIn(splitSections(base).find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name);
     draft = { chat: chatIdFromPath(), sections: splitSections(carryNote(base, 'rback', who, nowMem)), uptoId: msgId(chat[chat.length - 1]), turns: (snapshot.note.turns || 0) + freshTurns(), evidence: { ok: 0, bad: 0 }, kept: [], lost: [],
       before: { memory: nowMem, upto: snapshot.note.upto, turns: snapshot.note.turns }, carry: { base, now: nowMem, mode: 'rback', who },
-      sub: `1~${T}턴 때로 돌아가요${note ? ' · ' + note : ''}. ${T + 1}턴부터 지금까지 일은 회귀 전 칸에 남아요.${freshTurns() ? ' 마지막 정리 뒤 나눈 ' + freshTurns() + '턴은 회귀 전 칸에 안 들어가요(먼저 정리하고 회귀하면 들어가요).' : ''}` };
+      sub: `1~${T}턴 때로 돌아가요${note ? ' · ' + note : ''}. ${T + 1}턴부터 지금까지 일은 회귀 전 칸에 남아요.${freshTurns() ? ' 마지막 정리 뒤 나눈 ' + freshTurns() + '턴은 회귀 전 칸에 안 들어가요(먼저 정리하고 회귀하면 들어가요).' : ''} 잘못 회귀했으면 채팅을 보내기 전에 회귀 › 이 방 › '방금 한 회귀 취소'로 되돌릴 수 있어요.` };
     nav.view = 'preview'; render(); out('main').scrollTop = 0;
   }
   function pickView() { // 고르는 목록 화면 하나(드라이브 백업 · 이 방 정리 기록) · 줄 모양은 되돌리기 목록과 같게
     const row = (act, arg, b, v) => `<div class="jump" style="margin-top:8px"><button data-act="${act}" data-arg="${esc(arg)}"${busyNow ? ' disabled' : ''}><b>${b}</b><span class="v">${v}</span></button></div>`;
     if (nav.pickKind === 'room') { const hl = histList || [];
       const nowT = (snapshot?.note?.turns || 0) + freshTurns();
-      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b>턴 직접 정하기</b><small>정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값)</small></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>회귀</button></div></section>` + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
+      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b>턴 직접 정하기</b><small>정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값)</small></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>회귀</button></div></section>` + (u => u && noteMemory() === u.after ? row('rgundo', hl.length - 1, '방금 한 회귀 취소', `${new Date(u.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 회귀 전 노트로 · 임신 기록도 그때로`) : '')(hl.length && isRg(hl[hl.length - 1]) ? hl[hl.length - 1] : null) + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0 && !isRg(h)).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
     const L = nav.gsList || []; if (!L.length) return emptyBox('드라이브에 백업이 없어요.');
     return L.map(x => row(nav.pickKind === 'regress' ? 'gsfromr' : 'gsfrom', x.chat, esc(x.title) + (x.here ? ' · 이 방' : ''), esc(x.when))).join('');
   }
+  const isRg = h => !!h && (h.rg || h.from === h.to); // 회귀로 생긴 기록(정리 기록이 아님)
   function changesView(list) {
     if (!list.length) return emptyBox('정리를 한 번 넣으면, 그때부터 회차마다 무엇이 바뀌었는지 여기에 쌓여요.') + branchHtml();
     const i = Math.min(Math.max(0, nav.key ?? list.length - 1), list.length - 1), h = list[i], d = new Date(h.at);
-    const tabs = `<div class="seg">${list.map((x, j) => `<button data-act="chgpick" data-arg="${j}" aria-pressed="${j === i}">${x.from + 1}~${x.to}턴</button>`).join('')}</div>`;
-    return tabs + `<p class="secdesc">${d.getMonth() + 1}/${d.getDate()} 정리 · ${h.from + 1}~${h.to}턴을 더하면서 바뀐 것 · 근거 줄은 빼고 비교해요</p>`
+    const tabs = `<div class="seg">${list.map((x, j) => `<button data-act="chgpick" data-arg="${j}" aria-pressed="${j === i}">${isRg(x) ? '🌀 회귀' : `${x.from + 1}~${x.to}턴`}</button>`).join('')}</div>`;
+    return tabs + `<p class="secdesc">${isRg(h) ? `${d.getMonth() + 1}/${d.getDate()} 회귀 · 회귀하면서 바뀐 것` : `${d.getMonth() + 1}/${d.getDate()} 정리 · ${h.from + 1}~${h.to}턴을 더하면서 바뀐 것`} · 근거 줄은 빼고 비교해요</p>`
       + changesHtml(changesOf(h.before, h.after))
-      + `<div class="jump" style="margin-top:14px"><button data-act="restore" data-arg="${i}"><b>1~${h.from}턴 노트로 되돌리기</b><span class="v">미리보기 후 넣기</span></button></div>` + branchHtml();
+      + `<div class="jump" style="margin-top:14px"><button data-act="${isRg(h) ? 'rgundo' : 'restore'}" data-arg="${i}"><b>${isRg(h) ? '회귀하기 전 노트로 되돌리기' : `1~${h.from}턴 노트로 되돌리기`}</b><span class="v">미리보기 후 넣기</span></button></div>` + branchHtml();
   }
 
   // ── 정리 결과 미리보기 ──
@@ -9865,6 +9867,8 @@
       // 다른 방 정리 기록은 안 가져와요(이 방 '회귀 › 이 방' 목록에 남의 방 턴이 섞이지 않게) · 회귀면 임신 기록도 그 방 것이라 안 가져와요
       if (draft.carry?.etc?.on) { await putEtc(draft.carry.etc, chatId, [...(draft.carry.mode === 'regress' ? ['preg'] : []), ...(draft.carry.other || draft.carry.fromOther ? ['hist'] : [])]); lap('명대사·ETC'); }
       // 이 방 회귀: 돌아간 날보다 뒤에 생긴 임신은 이번 생엔 아직 없어요 → 지난 산모수첩에 '회귀 기록'으로 접어 둬요(지문에 임신이 계속 들어가지 않게)
+      const pregWas = draft.carry?.mode === 'rback' && preg ? JSON.stringify(preg) : null;
+      if (draft.restore && draft.pregBack) { try { preg = JSON.parse(draft.pregBack); pregOut = []; pregSig = ''; pregSave(); } catch (_) {} }
       if (draft.carry?.mode === 'rback' && preg) { const bd = storyDay(noPast(draft.carry.base)); if (bd != null) { if (preg.start != null && !preg.ended && preg.start + 14 > bd) pregArchive('회귀', bd - 1, '회귀로 이번 생에선 아직 없는 임신');
         if (preg.start == null) { Object.assign(preg, { after: bd, afterV2: true, afterTurn: draft.turns }); delete preg.aiSaid; pregOut = []; pregSig = ''; pregSave(); } } }
       if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); lap('뜻 검색·고르기'); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
@@ -9874,7 +9878,7 @@
       if (draft.lastSeen) { lastSeenMap = draft.lastSeen; await setValue('lastseen:' + chatId, JSON.stringify(lastSeenMap)); }
       // 되돌린 노트는 뒤에 밀린 턴이 이미 쌓여 있어서 자동 정리가 바로 다시 돌아 버려요 → 되돌린 뒤 새로 10턴이 쌓일 때까지 자동 정리를 쉬어요
       if (draft.restore) { const k = now.all.findIndex(m => msgId(m) === draft.uptoId); await setValue('autoHold:' + chatId, JSON.stringify({ upto: draft.uptoId, fresh: k < 0 ? cycle : now.all.slice(k + 1).filter(m => isChat(m) && msgRole(m) === 'user').length })); }
-      if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId });
+      if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId, ...(draft.carry?.mode === 'rback' ? { rg: 1, preg: pregWas } : {}) });
       await setValue('edited:' + chatId, '[]');
       const oldId = now.note?.carrierId;
       if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) (async () => { // 예전 노트 지우기는 뒤에서(기다리지 않아요)
@@ -10532,7 +10536,7 @@
       case 'rglist': histList = await historyOf(chatIdFromPath()); nav.view = 'pick'; nav.pickKind = 'room'; render(); out('main').scrollTop = 0; return;
       case 'rgturn': { const T = Math.floor(Number(ui('[data-out="rgturn"]')?.value)), chatId = chatIdFromPath(); if (busyNow || !snapshot?.note) return;
         const nowT = (snapshot.note.turns || 0) + freshTurns(); if (!(T >= 1 && T < nowT)) return toast(`1~${nowT - 1} 사이 턴을 넣어 주세요`, 'err', 3000);
-        const snaps = [{ t: 0, m: '' }]; for (const h of histList || []) { if (h.before) snaps.push({ t: h.from, m: h.before }); if (h.after) snaps.push({ t: h.to, m: h.after }); }
+        const snaps = [{ t: 0, m: '' }]; for (const h of histList || []) { if (h.before) snaps.push({ t: h.from, m: h.before }); if (h.after && !isRg(h)) snaps.push({ t: h.to, m: h.after }); }
         const s0 = snaps.filter(x => x.t <= T).sort((a, b) => b.t - a.t)[0];
         busyNow = true; render(); let base = s0.m, said = '';
         try { const all = await readAll(chatId), end = k => { let u = 0; for (let i = 0; i < all.length; i++) if (msgRole(all[i]) === 'user' && ++u === k) { let j = i; while (all[j + 1] && msgRole(all[j + 1]) !== 'user') j++; return j; } return -1; };
@@ -10542,6 +10546,10 @@
 [회귀 지점] ${T}턴까지만 정리한다. 그 뒤 일은 쓰지 않는다.`); base = base ? mergeNote(base, raw) : raw; }
         } catch (e) { busyNow = false; render(); return toast('회귀 준비 실패 · ' + e.message, 'err', 5000); }
         busyNow = false; rgDraft(base, T, said ? `${T}턴에 보낸 말: "${said}…"` : ''); return; }
+      case 'rgundo': { const h = histList[Number(arg)]; if (!h || busyNow) return;
+        draft = { chat: chatIdFromPath(), sections: splitSections(h.before), uptoId: h.beforeUpto, turns: h.from, evidence: { ok: 0, bad: 0 }, kept: [], lost: [], restore: true, pregBack: h.preg || null,
+          sub: '회귀하기 바로 전 노트예요. 넣으면 회귀가 취소되고 임신 기록도 그때로 돌아가요.' };
+        nav.view = 'preview'; render(); out('main').scrollTop = 0; return; }
       case 'rgroom': { const h = histList[Number(arg)]; if (!h || busyNow || !snapshot?.note) return; rgDraft(h.before, h.from, ''); return; }
       case 'gsfrom': { if (!arg || busyNow) return; nav.gsList = null; if (arg === chatIdFromPath()) return gsLoad();
         try { toast('드라이브에서 백업을 받는 중…'); const r = await gsCall({ action: 'load', chat: arg }); quiet(); await importBackupText(r.data); } catch (e) { toast('불러오기 실패 · ' + e.message, 'err', 5000); } return; }
