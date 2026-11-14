@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.6
+// @version      5.2.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -320,12 +320,19 @@
   //   늘 넣음: 고정 설정·현재상태·직전 장면·열린 서사 고리·최근 사건 INJ_RECENT개·줄거리. 인물은 최근 대화에 나온 사람만 전부, 나머지는 이름·프로필 줄만.
   //   옛 사건·물건·장소·비밀·호칭은 최근 대화에 나온 이름·낱말과 제미나이 의미 검색 점수(injCtx.sim)로 골라요(가장 맞는 INJ_RECALL개까지). WRMC처럼 남는 자리는 채우지 않아요. 전체가 INJ_MAX 안이면 전부 넣어요.
   // INJ_MAX: AI 답이 하나뿐인 새 방은 한 칸(약 5만 자)에 답 글+안내까지 들어가야 해서 4.5만
-  const INJ_MAX = 45000, INJ_BOTH = 70000, INJ_RECENT = 5, INJ_RECALL = 8, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
+  const INJ_MAX = 45000, INJ_BOTH = 70000, INJ_RECENT = 8, INJ_RECALL = 12, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
   // ponytail: 뜻 검색만으로 떠올리는 기준 = 평균보다 코사인이 이만큼 높을 때 · 실제 노트로 맞춘 값이 아니라 어림값(엉뚱한 게 나오면 올리고, 놓치면 내려요)
   const INJ_SEM_GAP = 0.08;
   const INJ_STOP = new Set(['다시', '그냥', '정말', '오늘', '지금', '처음', '같이', '함께', '서로', '모두', '다음', '이번', '그날', '하루', '잠깐', '계속', '결국', '처음으', '마지막',
     '아니', '아닌', '않은', '않고', '않는', '않았', '않음', '없는', '없이', '없고', '없음', '있는', '있고', '있던', '있음', '하는', '하고', '했다', '했던', '한다', '된다', '되어', '이후', '이전', '위해', '대한', '때문',
-    '그리고', '하지만', '그러나', '사실', '자신', '모습', '사람', '생각', '마음', '이야기', '시작', '다른', '모든', '어떤', '이미', '아직', '바로', '먼저', '내용', '정확', '여부', '관련']);
+    '그리고', '하지만', '그러나', '사실', '자신', '모습', '사람', '생각', '마음', '이야기', '시작', '다른', '모든', '어떤', '이미', '아직', '바로', '먼저', '내용', '정확', '여부', '관련',
+    '시간', '일주일', '가지', '때까지', '아침', '저녁', '오전', '오후', '동안', '며칠', '번째', '정도', '언제', '어디', '누구', '무엇']);
+  // 이 방 대화에 늘 나오는 말(최근 AI 답 60개 중 20% 넘게)은 AI 답에 나와도 옛일을 안 떠올려요(유저가 보낸 말에 나오면 떠올려요) · 답이 바뀔 때만 다시 세요
+  let injCommonAt = '', injCommonSet = new Set();
+  const injCommon = () => { const ai = (snapshot?.all || []).filter(m => msgRole(m) === 'assistant').slice(-60), id = ai.length + ':' + msgId(ai[ai.length - 1]);
+    if (id === injCommonAt) return injCommonSet; const c = new Map();
+    for (const m of ai) for (const w of new Set((stripBlocks(msgText(m)).match(/[가-힣]{2,}/g) || []).map(injStem))) c.set(w, (c.get(w) || 0) + 1);
+    injCommonAt = id; return injCommonSet = new Set(ai.length >= 10 ? [...c].filter(([, n]) => n >= ai.length * 0.2).map(([w]) => w) : []); };
   // 낱말 끝 조사 떼기(남는 게 두 글자 이상일 때만): '하비에게' → '하비' · '은반지를' → '은반지'
   const injStem = w => { const m = /[가-힣]$/.test(w) && w.match(/(에게서|으로부터|에서는|에게는|에서|에게|한테|으로|부터|까지|처럼|보다|이랑|과의|와의|의|을|를|이|가|은|는|에|와|과|도|로|만)$/); return m && w.length - m[1].length >= 2 ? w.slice(0, -m[1].length) : w; };
   const FIX_CATS = ['유저 설정', 'NPC', '지침', '세계관', '기타'];
@@ -373,11 +380,13 @@
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
     const cast = personsIn(secs.find(x => x.key === '인물')?.body || '');
-    const here = cast.filter(p => p.isUser || personAlias(p.name).some(a => a && a.length >= 2 && text.includes(a))).map(p => p.name);
-    const hasHere = t => here.some(n => personAlias(n).some(a => a && a.length >= 2 && t.includes(a)));
+    const nmIn = (t, a) => { for (let i = t.indexOf(a); i >= 0; i = t.indexOf(a, i + 1)) if (!i || !/[가-힣]/.test(t[i - 1])) return true; return false; }; // 이름 앞에 한글이 붙은 건 다른 낱말(바나나 ≠ 나나)
+    const here = cast.filter(p => p.isUser || personAlias(p.name).some(a => a && a.length >= 2 && nmIn(text, a))).map(p => p.name);
+    const hasHere = t => here.some(n => personAlias(n).some(a => a && a.length >= 2 && nmIn(t, a)));
     // 점수: 제목의 드문 낱말(항목 여러 개에 두루 나오는 이름·'작업' 같은 말은 빼요)이 최근 대화에 나오면 2씩, 지금 나온 인물이 들어 있으면 1, 의미 검색 1등이면 3
     //   낱말 끝 조사는 떼고 찾아요: '하비에게' → '하비' · 대화 '은반지를'에 제목 '은반지'가 들어 있으면 맞음
     //   제목은 ':' 앞까지만(인지 '정보: 설명' · 설명 속 '아니·않은' 같은 말로 떠올리지 않게)
+    const common = injCommon();
     const words = key => [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w)); // 숫자뿐인 건 빼요(날짜는 dayHit)
     // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(WRMC처럼 · 제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('나나')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
@@ -393,16 +402,16 @@
     const said = injCtx.said || '', saidDays = [];
     for (const m of said.matchAll(/(?:(\d{4})\s*[년.\/-]\s*)?(\d{1,2})\s*(?:월|[.\/])\s*(\d{1,2})\s*일?(?![\d])/g)) saidDays.push([+m[2], +m[3], m[1] || '']);
     const dayHit = key => { const m = String(key).match(/^\[?(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})/); return !!m && saidDays.some(([mo, d, y]) => +m[2] === mo && +m[3] === d && (!y || y === m[1])); };
-    const has = (t, w) => /^[0-9]/.test(w) ? new RegExp('(?<![0-9])' + w).test(t) : t.includes(w);
+    const has = (t, w) => /^[0-9]/.test(w) ? new RegExp('(?<![0-9])' + w).test(t) : /^[가-힣]/.test(w) ? nmIn(t, w) : t.includes(w); // 한글 낱말은 다른 낱말 속에 든 건 빼요('하비가' 속 '비가')
     const saidW = [...new Set((said.match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w)); // 보낸 말 낱말(조사 떼고)
-    const inSaid = w => has(said, w) || saidW.some(x => x.length >= 2 && x.length >= w.length - 1 && w.endsWith(x)); // '반지' → '은반지'
+    const inSaid = w => has(said, w) || saidW.some(x => x.length >= 2 && x.length >= w.length - 1 && w.endsWith(x) && !nameW.has(x)); // '반지' → '은반지' · 인물 이름은 빼요('나나' → '바나나'로 안 걸리게)
     let lastHw = []; // 방금 매긴 항목이 걸린 낱말(한 낱말로 너무 많이 떠올리지 않게)
     // 점수(WRMC처럼): 핵심 = 날짜·제목 낱말·본문 낱말 · 인물·뜻 점수는 순서만 돕고, 핵심이 2점 안 되면 못 떠올려요(뜻이 아주 튈 때만 예외)
     //   예전엔 '최근 대화에 제목 낱말 하나 + 지금 나온 인물'로 2점이 돼서, 주인공이 낀 옛일이 낱말 하나로 줄줄이 떠올랐어요
     const score = (key, body) => { let core = 0, bodyN = 0; const hit = []; lastHw = hit;
       if (dayHit(key)) { core += 6; hit.push(String(key).match(/\d{4}[.\/-]\d{1,2}[.\/-]\d{1,2}/)[0]); }
-      for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (!NOT_NOUN.test(w) && has(scene, w)) { core += 2; hit.push(w); } else if (!NOT_NOUN.test(w) && has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 · 대화와 맞출 땐 명사 꼴만('끝에·에서'로 안 떠올리게) // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
-      let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (w.length >= 3 && has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점 · 직전 답은 길어서 '이마·허리' 같은 두 글자는 우연히 겹쳐 3글자부터)
+      for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(scene, w)) { core += 2; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 · 대화와 맞출 땐 명사 꼴만('끝에·에서'로 안 떠올리게) // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
+      let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (w.length >= 3 && !common.has(w) && has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점 · 직전 답은 길어서 '이마·허리' 같은 두 글자는 우연히 겹쳐 3글자부터)
       bodyN = Math.min(4, bs) + Math.min(2.1, bc); core += bodyN;
       const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + body) ? 1 : 0) + sm * 2;
       why.set(k, [hit.length ? '‘' + hit.slice(0, 3).join('·') + '’ 이야기가 나와서' : '', sm >= 0.5 ? '비슷한 장면이라서' : ''].filter(Boolean).join(' · ') || '지금 나온 인물이 있어서');
@@ -481,6 +490,13 @@
       const free = both && u.sec === FIXED; if (!free && used + cost > cap * 0.97) continue;
       pick.set(id, u); secCost.add(u.sec); if (!free) used += cost; if (u.rc) { recallN++; for (const w of u.hw || []) hwN.set(w, (hwN.get(w) || 0) + 1); }
     }
+    // 남은 항목이 자리에 다 들어가면 전부 넣어요(WRMC처럼 · 일부만은 안 채워요) · 안 넣기 칸·✕ 뺀 것·끈 정보는 빼고
+    const rest = []; let restN = 0;
+    for (const sec of secs) { const k = sec.key; if (k === FIXED || secMode(k) === 'off') continue;
+      itemBlocks(sec.body).items.forEach((it, i) => { const id = k + '|' + i, t = it.lines.join('\n'), p = pick.get(id), key = itemKey(it.key);
+        if ((p && p.text.length >= t.length) || injSkip.has(key) || (k === '인지·비밀' && (injSet.facts?.[key] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) === 'off')) return;
+        rest.push({ id, u: { sec: k, i, text: t, key } }); restN += t.length + 1 - (p ? p.text.length + 1 : 0) + (secCost.has(k) || rest.some(r => r.u.sec === k) ? 0 : k.length + 3); }); }
+    if (!poolMode && rest.length && used + restN <= cap * 0.97) { for (const r of rest) { pick.set(r.id, r.u); secCost.add(r.u.sec); } used += restN; }
     const out = [];
     for (const sec of secs) {
       const b = itemBlocks(sec.body), parts = [];
@@ -894,7 +910,7 @@
     if (p.rib && p.ribW >= (preg.w0 || 0) && p.ribW < Math.min(p.labor, until)) out.push({ k: 'rib', w: p.ribW, t: '태동이 세서 갈비뼈 쪽이 결리고 숨 쉴 때 아픔', kw: /갈비|옆구리|결리|숨\s*쉴/, res: world === 'modern' ? '갈비뼈에 금이 감 · 아기 발차기 때문 · 출산하면 저절로 붙는다며 무리하지 말라 함' : '갈빗대가 상했다며 아기 발길질 탓이라 함 · 해산하면 낫는다 함' });
     if (p.pe && p.peW < Math.min(p.labor, until)) out.push({ k: 'pe', w: p.peW, t: '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음', kw: /두통|머리가 (깨질|지끈|아)|눈앞이|번쩍|부어|부종/, res: world === 'modern' ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기' : '몸에 독기가 올랐다며 절대 안정하라 함' });
     // 중간 사건(아기는 무사 · 긴장만): 새 주사위 키라 진행 중인 임신의 다른 결과는 안 바뀌어요
-    const M = world === 'modern', mid = (k, pc, lo, hi, t, kw, res) => { if (pR(k) >= pc) return; const w = lo + Math.floor(pR(k + 'W') * (hi - lo + 1)); if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k, w, t, kw, res, late: 3 }); };
+    const M = world === 'modern', mid = (k, pc, lo, hi, t, kw, res) => { if (pR(k) >= pc) return; const w = lo + Math.floor(pR(k + 'W') * (hi - lo + 1)); if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k, w, t, kw, res }); };
     if (p.sick === 2) mid('hg', 0.35, 7, 12, '입덧이 너무 심해져 먹은 게 다 올라오고 기운이 쭉 빠짐', /물도|못 (먹|넘기)|토하|게워|기운이/, M ? '탈수가 와서 수액을 맞음(임신오조) · 하루 이틀 입원' : '기력이 쇠했다며 미음과 탕약을 권함');
     mid('fever', 0.12, 8, 34, '갑자기 열이 오르고 온몸이 으슬으슬 쑤심', /열이|으슬|오한|몸살|기침/, M ? '독감 · 임산부도 먹을 수 있는 약을 받음 · 열이 내리면 아기는 괜찮음' : '고뿔 · 열을 내리는 순한 탕약을 받음');
     mid('fall', 0.1, 16, 34, '붐비는 곳에서 누가 세게 부딪혀 와 몸이 휘청함', /부딪|밀치|치이|휘청|넘어/, M ? '초음파상 아기 심장 잘 뜀 · 혹시 몰라 하루 지켜보자고 함' : '배 속 아기가 무사하다 함 · 며칠 누워 지내라 함');
@@ -933,18 +949,22 @@
     let cur = preg.cur;
     if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) preg.cur = cur = null;
     else if (cur && turn > cur.until) preg.cur = cur = cur.big !== undefined && !cur.re ? { ...cur, re: 1, from: turn + 3, until: turn + 8 } : null;
+    if (p.loss != null && p.loss <= 12 && preg.fired.loss == null && wk - p.loss >= 2) { // 건너뛴 사이 초기 유산: 증상 없이 병원에서 알게 돼요
+      for (const e of big) if (e.w <= p.loss) { preg.fired[e.k] ??= turn; if (e.k !== 'loss' && preg.shown[e.k] == null) preg.shown[e.k] = -1; }
+      preg.silent = 1; if (/^(?:lpre|loss|spot)$/.test(cur?.k || '')) preg.cur = cur = null;
+    }
     if (!cur) {
-      const b = big.find(e => e.w <= wk && preg.fired[e.k] == null && !(e.late && wk - e.w > e.late)); // late: 시간을 건너뛰어 3주 넘게 지난 중간 사건은 건너뛰어요(밀린 일이 줄줄이 나오지 않게)
+      const b = big.filter(e => e.w <= wk && preg.fired[e.k] == null).sort((x, y) => x.w - y.w)[0];
       let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
       // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
-      if (!ev && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
+      if (!ev && !preg.silent && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
         const recent = preg.recent || [], pool = P_SYM.filter(s => wk >= s[0] && wk <= s[1] && (p.sick || !/입덧/.test(s[2])) && (s[4] !== 'm' || world === 'modern') && !(me && P_INNER.test(s[2])) && !((preg.secret || preg.unaware) && P_KNOW.test(s[2])) && !(preg.unaware && /산모수첩|모르던 사람/.test(s[2])) && !recent.includes(s[2]));
         const at = preg.symAt || {}, fresh = pool.filter(x => !(preg.seenSym || []).includes(x[2])), pick = fresh.length ? fresh : pool.slice().sort((a, b) => (at[a[2]] || 0) - (at[b[2]] || 0)).slice(0, Math.max(1, Math.ceil(pool.length / 3))); // 이번 임신에 아직 안 나온 일부터 · 다 나왔으면 가장 오래전에 나온 것들 중에서
         if (pick.length) { let x = pR('symp' + turn) * pick.reduce((a, q) => a + 1 / (q[1] - q[0] + 1), 0), s = pick[pick.length - 1]; for (const q of pick) { if ((x -= 1 / (q[1] - q[0] + 1)) < 0) { s = q; break; } } // 오래 머무는 일은 덜, 잠깐 생기는 일은 더
           ev = { k: 't' + turn, t: s[2], kw: s[3].source, wait: 0, soc: P_SYM.indexOf(s) >= P_SOC ? 1 : 0 }; preg.recent = [...recent, s[2]].slice(-10); preg.seenSym = [...new Set([...(preg.seenSym || []), s[2]])]; preg.symAt = { ...at, [s[2]]: turn }; preg.symDay = day; preg.symW = { ...(preg.symW || {}), [wk]: (preg.symW?.[wk] || 0) + 1 }; }
       }
       preg.lastRoll = turn;
-      if (ev) { preg.fired[ev.k] = turn + ev.wait; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 5 : 4) }; }
+      if (ev) { preg.fired[ev.k] = turn + ev.wait; if (b) (preg.firedW ||= {})[b.k] = wk; preg.cur = cur = { ...ev, from: turn + ev.wait, until: turn + ev.wait + (ev.big ? 5 : 4) }; }
       if (ev?.k === 'loss') { const L = big.find(e => e.k === 'loss'); preg.endNext = { kind: L?.end || '유산', dayN: day, why: L?.why || '', turn: turn + 6 }; } // 출혈 뒤엔 병원에 안 가도 유산이 진행돼서 끝나요
     }
     // 검진 결과: 병원 장면일 때만(리롤해도 같은 턴엔 다시 넣어요)
@@ -954,7 +974,7 @@
     const heard = (w, t) => { if (!preg.ckWait.some(c => c.t === t)) preg.ckWait.push({ w, t, from: turn }); };
     if (atHosp && preg.unaware) { preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
     if (atHosp) { // 처음 알게 된 병원에서도 그 자리에서 검진(초음파)까지 받아요
-      for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - e.w <= 4)) { // 출혈·태동 줄어듦 같은 일의 결과는 4주 안에 병원에 갔을 때만(검진과 같은 규칙 · 유산·사산은 늘)
+      for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - (preg.firedW?.[e.k] ?? e.w) <= 4)) { // 출혈·태동 줄어듦 같은 일의 결과는 4주 안에 병원에 갔을 때만(검진과 같은 규칙 · 유산·사산은 늘)
         if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; if (e.end) preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); else heard(wk, e.res); } // 유산·사산은 바로 끝나서 바로 적어요
         res.push(e.res); if (e.end) preg.endNext = { kind: e.end, dayN: day, why: e.why || '', turn };
       }
@@ -1010,7 +1030,7 @@
     }
     if (p.serious && world === 'modern' && wk >= 24 && !(preg.shown.c21 > 0) && !preg.unaware && !atHosp) { if (preg.serCall == null) preg.serCall = turn; if (turn - preg.serCall < 3) todo.push(`${P_DOC[world]}에서 ${who}에게 연락: 정밀초음파를 아직 안 받았다며 꼭 와서 보자고 함${preg.secret ? '(본인에게만)' : ''}`); }
     if (cur && turn >= cur.from) { const sh = pNpc(pShort(cur.t), dad) + (cur.big ? '' : '(시대에 맞게)'); (cur.big || /^(?:lpre|loss|spot|ser|quiet|thr|rib|pe|labor)$/.test(cur.k) ? todo : soft).push(cur.soc ? sh : me && P_FEEL.test(cur.t) ? `${who}의 몸에 ${sh}` : `${who}에게 ${sh}${me ? '(NPC 눈에 보인 대로)' : ''}`); } // 가벼운 일은 예시로만 · 시대·장면에 맞게 AI가 골라 써요
-    if (!cur && !preg.endNext && pR('lite' + turn) < 0.35) soft.push(`${who}에게 ${wk}주에 맞는 몸 변화가 드러남${me ? '(NPC 눈에 보인 대로)' : ''}`); // 가벼운 몸 변화: 턴마다 약 35% · 리롤해도 같아요
+    if (!cur && !preg.endNext && !preg.silent && pR('lite' + turn) < 0.35) soft.push(`${who}에게 ${wk}주에 맞는 몸 변화가 드러남${me ? '(NPC 눈에 보인 대로)' : ''}`); // 가벼운 몸 변화: 턴마다 약 35% · 리롤해도 같아요
     if (preg.fired.loss != null && preg.endNext && turn > preg.fired.loss && cur?.k !== 'loss') todo.push(`${who}의 몸에서 ${preg.endNext.kind}이 계속 진행됨${preg.unaware ? '(본인은 임신을 모름)' : ''} · 증상이 이어지고 심해짐`); // 출혈 뒤 끝날 때까지 턴마다 빈틈없이
     if (preg.kit && !preg.unaware) { if (preg.kitAt == null) preg.kitAt = turn; if (turn - preg.kitAt < 2) { const how = world === 'modern' ? '해 본 임신테스트기에 두 줄이 뜸' : world === 'old' ? '맥을 짚어 보니 태기가 있음' : '수정구슬로 보니 아기가 생김'; todo.push(preg.secret ? `${who}가 몰래 ${how}(임신 확정) — ${who}만 아는 비밀, NPC는 모름` : `${who}가 ${how}(임신 확정) — 장면에 드러내고 곁의 NPC 반응까지`); } }
     if (res.length) todo.push(`${ck} 결과(의사가 전함): ${res.join(', ')}`);
@@ -2091,7 +2111,9 @@
 - 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄(나이·관계 등 원문 그대로), 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(60자 안팎, 왜 그랬는지까지)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그. 옮긴 내용은 옮긴 칸에 꼭 씀(어느 칸에서도 빠지지 않게).
 - 호칭 채우기: 기존 → 줄에 「」가 없으면, 이번 로그 대사에서 그 사람이 상대를 이름 그대로 부른 것을 한 번이라도 찾으면(예: "Nana, wait" → 「Nana」 · "나나야" → 「나나」) 그 인물을 (고침)으로 써서 그 → 줄의 「」를 채움. 이번 로그에 그 인물이 안 나와도 함.
 - 관계 줄(이름 → 상대: …)의 관계 부분은 지금 둘이 어떤 사이인지 한 구(40자 안팎, 예: 연인 직전 · 첫 키스 후 서로 자각). 어떻게 그렇게 됐는지 사건을 잇달아 쓰지 않음(경위는 날짜로그, 자세한 계기는 전환 줄 · → 줄의 (변화: 계기)는 한 마디만).
-- 【이름】 줄의 행동 습관·버릇은 두 번 이상 나왔거나, 원문이 '버릇·습관·늘·매번'이라고 밝힌 것만 씀. 한 번 보인 몸짓·표정은 습관이 아님.
+- 날짜로그에 넣는 대사는 원문 글자 그대로 문장째 옮김: 중간을 '…'·'...'로 잘라 앞뒤를 잇거나, 줄이거나, 말을 바꾸지 않음. 길면 그중 결정적인 문장 하나를 통째로 씀.
+- 【이름】 줄의 행동 습관·버릇은 두 번 이상 나왔거나, 원문이 '버릇·습관·늘·매번'이라고 밝힌 것만 씀. 한 번 보인 몸짓·표정은 습관이 아님. 그 사람의 특징(못하는 것·서툰 것·잘하는 것·좋아하는 것·싫어하는 것·못 먹는 것·체질·무서워하는 것)은 습관이 아니므로 한 번만 나와도 【이름】 줄에 씀.
+- 이야기 속 시간이 흐른 것 반영: 지금 날짜 = 새 로그의 마지막 날짜. 기존 기억의 항목이 지금 날짜와 맞지 않으면(예전 시점의 나이·학년·직업·사는 곳·관계·상태가 그대로 남아 있음) 이번 로그에 그 인물이 조금만 나와도 지금 기준으로 (고침)해서 씀(나이는 흐른 햇수만큼 더함 · 예전 정리 때 이미 건너뛴 시간도 포함 · 이 경우는 '변화 근거가 없는 항목은 유지'의 예외). 날짜가 이미 지난 예정·계획·약속은 원문에서 이루어졌으면 끝난 일로 쓰고, 이루어졌다는 원문이 없으면 지우지 않고 서사 고리를 '[닫힘] … 못 지킴 — 시간이 흘러 이루지 못함(못 본 사람·못 간 곳·못 한 일이 무엇인지)'으로 닫아 남김. 인물 칸을 지금 모습으로 고칠 때 바뀌기 전 모습은 '사연: (그때 날짜) …' 한 줄로 남김(이 줄은 60자 제한 없이 그때 사실을 빠짐없이: 나이·학년·반·직책·알바·사는 곳 등).
 - 고민·향후 계획은 【이름】 블록 안에 '고민: …', '향후 계획: …'으로 한 줄씩, 번호 없이 씀. 프로필 줄에 섞지 않음.
 - 현재상태에는 다음 장면까지 이어질 상태만 씀. 곧 바뀔 순간 상태(앉은 자리·자세·손에 든 컵·잠깐의 표정)는 쓰지 않음.
 - 한 번 허락·동의한 것을 늘 허락한 것으로 넓히지 않음. 약속·합의는 실제로 정한 범위·조건까지만 씀.
@@ -2121,7 +2143,7 @@
 - 고칠 항목이 없으면 '변화 없음' 한 줄만 쓴다.`;
   // 웹 모드(노트 제한 없음): 날짜로그 사건을 500~600자로 자세히 써요(홈에선 6줄까지만 보이고 '더 보기') · 글자 제한 모드는 2~5줄 그대로
   const MERGE_RULE = ['이어지는 사건은 합친다: 새 로그의 일이 기존 날짜로그 마지막 사건과 같은 날·같은 장소·같은 사람들로 그 일이 그대로 이어질 때만 새 사건을 만들지 않는다.', '이어지는 사건: 새 로그의 일이 기존 날짜로그 마지막 사건과 같은 날·같은 장소·같은 사람들로 같은 흐름이 이어지면 새 사건을 만들지 않는다. 같은 자리여도 새 결정·고백·다툼·약속처럼 나중에 따로 떠올릴 일이 시작될 때만 새 사건으로 쓴다.']; // 사건 잘게 쪼개지지 않게(웹·앱 같이)
-  const WEB_LONG = [['결과·남은 조건을 2~5줄로.', '결과·남은 조건을 원문에 있는 그대로 자세히, 보통 300~700자.'], ['한 줄에 한 단계(원인 한 줄, 행동 한 줄, 반응 한 줄, 결과 한 줄)씩 2~5줄로 쓴다.', '한 줄에 한 단계씩 쓴다. 장면을 바꾼 말·행동이 오갈 때마다(양쪽 다) 한 단계다.'], ['대사는 진짜 중요할 때만 넣는다(대사 없는 사건도 괜찮다)', '장면을 바꾼 결정적 한 마디가 원문에 있을 때만 넣는다(없으면 대사 없이 씀)'], ['(그 자리에 없던 사람이 한 일 포함)도 씀', '(그 자리에 없던 사람이 한 일·요즘 지내는 모습, 특히 유저 캐릭터 때문에 달라진 것 포함)도 누가 전한 말인지와 함께 씀'],['- 날짜로그 사건은 2~5줄로 씀.', '- 날짜로그 사건은 원문에 있는 그대로 자세히, 보통 300~700자로 씀. 길이는 원문에 있는 이유·몸짓·짧은 대사·결과로 채움.'],
+  const WEB_LONG = [['결과·남은 조건을 2~5줄로.', '결과·남은 조건을 원문에 있는 그대로 자세히, 보통 300~700자.'], ['한 줄에 한 단계(원인 한 줄, 행동 한 줄, 반응 한 줄, 결과 한 줄)씩 2~5줄로 쓴다.', '한 줄에 한 단계씩 쓴다. 장면을 바꾼 말·행동이 오갈 때마다(양쪽 다) 한 단계다.'], ['대사는 진짜 중요할 때만 넣는다(대사 없는 사건도 괜찮다)', '장면을 바꾼 결정적 대사가 원문에 있을 때만 넣는다(한 마디가 기본 · 고백과 대답처럼 주고받은 말이 둘 다 결정적이면 둘 다 · 없으면 대사 없이 씀)'], ['(그 자리에 없던 사람이 한 일 포함)도 씀', '(그 자리에 없던 사람이 한 일·요즘 지내는 모습, 특히 유저 캐릭터 때문에 달라진 것 포함)도 누가 전한 말인지와 함께 씀'],['- 날짜로그 사건은 2~5줄로 씀.', '- 날짜로그 사건은 원문에 있는 그대로 자세히, 보통 300~700자로 씀. 길이는 원문에 있는 이유·몸짓·짧은 대사·결과로 채움.'],
     ['은 줄 수를 더 써도 됨', '은 더 길게 써도 됨'], ['사건 본문은 6줄 안팎(', '사건 본문은 보통 300~700자('], ['줄 수를 채우려고 지어내지 않음', '길이를 채우려고 지어내지 않음'], ['본문이 6줄을 넘게 되면', '본문이 700자를 넘게 되면'], ['같은 자리에서 쭉 이어진 일(싸우다가 그 자리에서 화해)은 하나로.', '끊김 없이 이어진 한 흐름(싸우다가 그 자리에서 화해)만 하나로. 같은 자리여도 새 결정·고백·다툼이 시작되면 나눈다.'],
     ["'이어지는 사건은 합친다'를 따름", "'이어지는 사건'을 따름"], ['무엇을, 왜 사과했는지와 상대 반응까지.', '무엇을, 왜 사과했는지와 상대 반응까지. 행동한 감정적 이유가 원문(대사·서술)에 있으면 행동과 함께 씀.'],
     MERGE_RULE];
@@ -9238,7 +9260,7 @@
           if (!r || chatIdFromPath() !== chatId || pregChat !== chatId || (preg && !((r.saved || 0) > (preg.saved || 0)))) return; // 저장 시각이 늦은 쪽만(개수로 견주면 출산 뒤 짧아진 기록을 덮어요)
           await setValue('preg:' + chatId, JSON.stringify(r)); await pregLoad(chatId); pageToast('다른 기기 임신 기록을 받아 왔어요'); render(); }); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
-      try { injSet = { secs: {}, recent: 5, recall: 8, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 5, recall: 8 }; }
+      try { injSet = { secs: {}, recent: 8, recall: 12, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 8, recall: 12 }; }
       injSet.recent = 8; injSet.recall = 12; // 최근 사건 8개·떠올릴 기억 12개로 고정(예전에 고른 값은 안 봐요)
       try { injPins = new Set(JSON.parse(String(await getValue('pins:' + chatId, '[]')) || '[]')); } catch (_) { injPins = new Set(); }
       try { if (snap.note) selectInjection(noteMemory()); else lastInj = null; } catch (_) {}
@@ -10230,7 +10252,7 @@
         b.line = sw(b.line); for (const x of b.log || []) x.t = sw(x.t); await pregSave(); return keepScroll(render); }
       case 'preghdel': { if (!preg?.history) return; const i = Number(arg); if (!confirm('이 지난 기록을 지울까요?')) return; preg.history.splice(i, 1); await pregSave(); return keepScroll(render); }
       case 'kitwho': { const a = preg?.kitAsk; if (!a) return; delete preg.kitAsk;
-        if (arg === 'none') Object.assign(preg, { unaware: true, secret: false }); else { Object.assign(preg, { unaware: false, secret: arg === 'me' }); preg.log = [...(preg.log || []), { w: a.w, t: a.t, at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
+        if (arg === 'none') Object.assign(preg, { unaware: true, secret: false, kitAt: -9 }); else { Object.assign(preg, { unaware: false, secret: arg === 'me' }); preg.log = [...(preg.log || []), { w: a.w, t: a.t, at: (snapshot?.note?.turns || 0) + freshTurns() - 1 }]; }
         await pregSave(); if (nav.gsOn) gsSave(true); return keepScroll(render); }
       case 'pregend': if (preg?.start == null) return; nav.pgEnd = !nav.pgEnd; return keepScroll(render);
       case 'pregendk': { if (preg?.start == null) return; nav.pgEnd = false; const d = pregDay(noteMemory() || '', snapshot);
