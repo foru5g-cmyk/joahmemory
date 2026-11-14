@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.3.2
+// @version      5.3.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1481,6 +1481,7 @@
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,
         `※ 우선순위: ■ 고정 설정(사용자가 직접 씀) > 이후 대화·OOC 정정 > 나머지 노트. 현재상태는 정리 시점 값`,
+        ...(pastRound(whole) ? [`※ 회귀: 지금은 ${pastRound(whole) + 1}회차 · 이 채팅 앞쪽에 남아 있는 예전 대화와 ■ ${PAST} 칸의 일은 지난 회차 일이라 이번 생에서는 일어나지 않음 · 그 대화의 날짜·사건·관계·물건을 이어 쓰지 않고 ■ 현재상태의 날짜·상황에서 이어 감 · 지난 회차 일은 인지·비밀 '회귀 전 일'에 '알고 있음'인 사람만 기억함(나머지는 처음 겪는 일처럼)`] : []),
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`,
@@ -3988,7 +3989,7 @@
     .pill-st[data-st="lost"]{color:#B4443F;background:#FBE4E2}
     .pill-st[data-st="broken"]{color:#9A5B12;background:#FBEBD3}
     .pill-st[data-st="off"]{color:var(--graphite);background:var(--mist)}
-    .pill-st[data-st="on"]{color:#1F7A4D;background:#DDF3E6}
+    .pill-st[data-st="on"]{color:#1F7A4D;background:#DDF3E6}.pill-st[data-st="rg"]{color:#fff;background:var(--acc,#7B61D9)}
     .ppills{margin:5px 0 2px}.ppills .pill-st{margin:0 6px 0 0} /* 인물 카드: 이름·호칭 줄 밑에 따로 한 줄 */
     .fold>summary::-webkit-details-marker{display:none}
     .fold-t{flex:1;min-width:0}.fold-t b{font-size:15px;font-weight:600}
@@ -5521,12 +5522,15 @@
   //   여러 번 회귀해도 예전 회차는 그대로 두고 새 회차를 뒤에 붙여요 · 이어가기(same·later)는 회귀 전 칸을 그대로 들고 가요
   const CARRY_MOVE = /→|^\s*-\s*(?:전환|사연|함께한 일|관계|고민|향후 계획)\s*[:：]/;
   const pastRound = mem => Math.max(0, ...[...(splitSections(mem).find(x => x.key === PAST)?.body || '').matchAll(/^\s*▸\s*\[(\d+)회차 ·/gm)].map(m => +m[1]));
+  let rgWhoAt = null, rgWhoV = { n: 0, who: new Set() };
+  const rgWho = mem => { if (mem === rgWhoAt) return rgWhoV; rgWhoAt = mem; const f = itemBlocks(splitSections(mem || '').find(x => x.key === '인지·비밀')?.body || '').items.find(it => /^회귀 전 일/.test(it.key));
+    return rgWhoV = { n: f ? pastRound(mem) + 1 : 0, who: new Set((f?.lines || []).map(l => (l.match(/^\s*-\s*(.+?)\s*[:：]\s*알고 있음/) || [])[1]).filter(Boolean)) }; };
   function carryNote(memory, mode, who = [], now = '') {
     if (mode === 'same' || mode === 'back') return memory;
     const L = splitSections(memory), body = k => L.find(x => x.key === k)?.body || '';
     if (mode === 'rback') { // 이 방에서 회귀: memory = 그때 노트(그대로 지금이 됨) · now = 지금 노트 · 그때 뒤에 생긴 사건·고리·물건만 회귀 전 칸으로
       const N = splitSections(now), nb = k => N.find(x => x.key === k)?.body || '', n = pastRound(now) + 1;
-      const tag = it => [it.lines[0].replace(/^(\s*▸\s*)\[?(.*?)\]?\s*$/, `$1[${n}회차 · $2]`), ...it.lines.slice(1)];
+      const tag = (it, kind = '') => [it.lines[0].replace(/^(\s*▸\s*)\[?(.*?)\]?\s*$/, `$1[${n}회차 · ${kind ? kind + ' · ' : ''}$2]`), ...it.lines.slice(1)];
       const had = k => new Set(itemBlocks(body(k)).items.map(it => itemKey(it.key)));
       const out = itemBlocks(nb(PAST)).items.map(it => it.lines), hadLog = new Set([...had('날짜로그'), ...had('이정표')]);
       const g2 = t => { const x = String(t).replace(/^\[|\]$/g, '').replace(/^[^-]*\d\s*-\s*/, '').replace(/[\s\p{P}\p{S}]/gu, ''), o = new Set(); for (let q = 0; q < x.length - 1; q++) o.add(x.slice(q, q + 2)); return o; };
@@ -5535,7 +5539,8 @@
       // 그때까지 다시 정리한 같은 사건(제목만 다름): 같은 날 + 제목 절반 넘게 같음 + 내용도 3할 넘게 같음 · 같은 날 비슷한 제목의 다른 일은 내용이 달라서 남아요
       const near = it => { const d = dayOf(it.key), g = g2(it.key), b = g2(it.lines.slice(1).join(' ')); return !!d && baseEv.some(e => e.d === d && dice(g, e.g) >= 0.5 && dice(b, e.b) >= 0.3); };
       for (const k of ['이정표', '날짜로그']) for (const it of itemBlocks(nb(k)).items) if (!it.del && !hadLog.has(itemKey(it.key)) && !near(it)) { hadLog.add(itemKey(it.key)); out.push(tag(it)); }
-      for (const k of ['소지품', '인지·비밀']) { const h = had(k); for (const it of itemBlocks(nb(k)).items) if (!h.has(itemKey(it.key)) && !/^회귀 전 일/.test(it.key)) out.push(tag(it)); }
+      for (const k of ['소지품', '인지·비밀']) { const h = had(k); for (const it of itemBlocks(nb(k)).items) if (!h.has(itemKey(it.key)) && !/^회귀 전 일/.test(it.key)) out.push(tag(it, k === '소지품' ? '물건' : '아는 것')); }
+      { const h = new Set(personsIn(body('인물')).map(x => x.name)); for (const it of itemBlocks(nb('인물')).items) { const nm = (it.lines[0].match(/【([^】]+)】/) || [])[1]; if (nm && !h.has(nm.trim())) out.push([`▸ [${n}회차 · 그때 있던 사람 ${nm.trim()}]`, ...[it.lines[0].replace(/^\s*【[^】]+】\s*/, '').trim()].filter(Boolean).map(x => '- ' + x), ...it.lines.slice(1)]); } }
       { const h = new Set(body('서사 고리').split('\n').map(l => l.trim())), t = nb('서사 고리').split('\n').filter(l => /^\s*-\s*\[(열림|닫힘)\]/.test(l) && !h.has(l.trim())); if (t.length) out.push([`▸ [${n}회차 · 서사 고리]`, ...t]); }
       const users = personsIn(body('인물') || nb('인물')).filter(p => p.isUser).map(p => p.name);
       const knowL = [...who.map(x => `- ${x}: 알고 있음`), ...users.filter(x => !who.includes(x)).map(x => `- ${x}: 모름`), '- 그 밖의 사람: 모름'].join('\n');
@@ -5552,7 +5557,7 @@
         out.push(m && was.length ? [m[1], ...nick].join(' ') : it.lines[0], ...(m && was.length ? ['- 사연: (예전) ' + was.join(' · ')] : []), ...it.lines.slice(1)); }
       return joinSections(L.filter(x => x.key !== '현재상태').map(x => x.key === '인물' ? { key: x.key, body: out.join('\n') } : x)); }
     const n = pastRound(memory) + 1, oldPast = itemBlocks(body(PAST)).items.map(it => it.lines);
-    const tag = it => [it.lines[0].replace(/^(\s*▸\s*)\[?(.*?)\]?\s*$/, `$1[${n}회차 · $2]`), ...it.lines.slice(1)];
+    const tag = (it, kind = '') => [it.lines[0].replace(/^(\s*▸\s*)\[?(.*?)\]?\s*$/, `$1[${n}회차 · ${kind ? kind + ' · ' : ''}$2]`), ...it.lines.slice(1)];
     const titleOf = k => String(k).replace(/^\[|\]$/g, '').replace(/^[^-]*\d\s*-\s*/, '').replace(/\s/g, '');
     const log = itemBlocks(body('날짜로그')).items.filter(it => !it.del), logT = new Set(log.map(it => titleOf(it.key)));
     const out = [...oldPast];
@@ -5562,7 +5567,7 @@
     block('줄거리', body('줄거리'));
     const ppl = itemBlocks(body('인물')), keep = [...ppl.head];
     for (const it of ppl.items) { const moved = it.lines.slice(1).filter(l => CARRY_MOVE.test(l)); keep.push(...it.lines.filter((l, i) => !i || !CARRY_MOVE.test(l))); block(it.key + '의 그때 모습', moved.join('\n')); }
-    for (const k of ['인지·비밀', '소지품', '장소·조직']) for (const it of itemBlocks(body(k)).items) if (!/^회귀 전 일/.test(it.key)) out.push(tag(it));
+    for (const k of ['인지·비밀', '소지품', '장소·조직']) for (const it of itemBlocks(body(k)).items) if (!/^회귀 전 일/.test(it.key)) out.push(tag(it, { '인지·비밀': '아는 것', '소지품': '물건', '장소·조직': '장소' }[k]));
     for (const k of ['서사 고리', '관계·감정선', '호칭·말투']) block(k, body(k));
     const users = personsIn(body('인물')).filter(p => p.isUser).map(p => p.name); // 아는 사람 + 유저 캐릭터만 적어요(조연 이름을 줄줄이 늘어놓지 않게)
     const knowL = [...who.map(x => `- ${x}: 알고 있음`), ...users.filter(x => !who.includes(x)).map(x => `- ${x}: 모름`), '- 그 밖의 사람: 모름'].join('\n');
@@ -5965,8 +5970,8 @@
     const groupHtml = (groups, rowOf) => {
       const cur = groups.has(nav.grp) ? nav.grp : '';
       const circle = (g, face, n) => `<button data-act="grp" data-arg="${esc(g)}" aria-pressed="${g === cur}">${face}<small>${esc(g || '전체')}</small></button>`;
-      const row = `<div class="tl-who">${circle('', '<span class="av tl-all">✦</span>', 0)}${[...groups].map(([g, list]) => circle(g, people().has(g) ? avatar(g) : `<span class="av tl-all">${ICON_OF[g] || '•'}</span>`, list.length)).join('')}</div>`;
-      return row + `<div class="fkeep">${(cur ? groups.get(cur) : [...groups].filter(([g]) => g !== SHELF).flatMap(([, l]) => l)).map(rowOf).join('')}</div>`;
+      const row = `<div class="tl-who">${circle('', '<span class="av tl-all">✦</span>', 0)}${[...groups].map(([g, list]) => circle(g, people().has(g) ? avatar(g) : `<span class="av tl-all">${ICON_OF[g] || (/^\d+회차$/.test(g) ? '🌀' : '•')}</span>`, list.length)).join('')}</div>`;
+      return row + `<div class="fkeep">${(cur ? groups.get(cur) : [...groups].filter(([g]) => g !== SHELF && !/^\d+회차$/.test(g)).flatMap(([, l]) => l)).map(rowOf).join('')}</div>`;
     };
     if (k === '소지품') {
       const names = [...people().keys()].sort((a, b) => b.length - a.length), groups = new Map();
@@ -5979,10 +5984,12 @@
       const isShot = b => /^(사진|영상)\s*[:：]/.test(itemName(b.title || ''));
       for (const [g, l] of groups) { const shots = l.filter(isShot); if (shots.length) groups.set(g, [...l.filter(b => !isShot(b)), { phone: g, shots }]); }
       const dusty = blocksOf(bodyOf(SHELF)).filter(b => b.title).reverse().map(b => ({ ...b, shelf: true })); if (dusty.length) groups.set(SHELF, dusty); // 맨 끝 동그라미
+      for (const b of blocksOf(bodyOf(PAST))) { const m = String(b.title || '').match(/^\[(\d+)회차 · 물건 · (.*)\]$/); if (!m) continue; const g = m[1] + '회차'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push({ ...b, title: m[2], past: +m[1] }); } // 회귀 전에 주고받은 물건
+      const pastRow = b => foldOrRow(`<b>${esc(itemName(b.title))}<span class="pill-st" data-st="rg" style="margin-left:7px">${b.past}회차</span></b>`, locOf(b) ? whereIcon(locOf(b)) + locOf(b) : '', itemBody(b, true));
       const itemRow = b => foldOrRow(`<b>${esc(itemName(b.title))}${pillSt(itemStatus(b))}</b>`, locOf(b) ? whereIcon(locOf(b)) + locOf(b) : '', itemBody(b, true));
       const phoneRow = p => { const n = k => p.shots.filter(b => itemName(b.title).startsWith(k)).length, cnt = [n('사진') && '사진 ' + n('사진'), n('영상') && '영상 ' + n('영상')].filter(Boolean).join(' · ');
         return fold(`<b>📱 ${esc(people().has(p.phone) ? p.phone + '의 폰' : '폰')}</b>`, cnt, `<div class="phone-shots">${p.shots.map(b => itemRow({ ...b, title: b.title.replace(/^(사진|영상)\s*[:：]\s*/, (m, k) => (k === '사진' ? '🖼️ ' : '🎞️ ')) })).join('')}</div>`); };
-      return seg + head(nav.grp === SHELF && dusty.length ? `먼지쌓인곳 ${dusty.length}개 · 여기 물건은 채팅에 안 들어가요` : `${bl.length}개 물건 · 지금 가진 사람별로`) + (groups.size ? groupHtml(groups, b => b.shelf ? shelfRow(b) : b.phone ? phoneRow(b) : b.title
+      return seg + head(nav.grp === SHELF && dusty.length ? `먼지쌓인곳 ${dusty.length}개 · 여기 물건은 채팅에 안 들어가요` : /^\d+회차$/.test(nav.grp || '') && groups.has(nav.grp) ? `${nav.grp}(회귀 전) 물건 ${groups.get(nav.grp).length}개 · 이번 생에는 아직 없어요 · 기억하는 사람만 알아요` : `${bl.length}개 물건 · 지금 가진 사람별로`) + (groups.size ? groupHtml(groups, b => b.past ? pastRow(b) : b.shelf ? shelfRow(b) : b.phone ? phoneRow(b) : b.title
         ? itemRow(b) : blkHtml(b, li)) : emptyBox('아직 내용이 없어요.'));
     }
     if (k === '장소·조직') {
@@ -7902,7 +7909,11 @@
     const aliasOf = new Map(names.map(n => [n, tlAlias(n)]));
     const subjOf = t => { t = String(t || ''); let best = '', at = 1e9; for (const [n, als] of aliasOf) for (const a of als) { const i = t.indexOf(a); if (i >= 0 && i < at) { at = i; best = n; } } return best; };
     const isSide = e => { const sj = who && subjOf(e.title); return !!sj && sj !== who; };
-    const evsAll = blocksOf(bodyOf('날짜로그')).map(b => {
+    const rN = pastRound(noteMemory()), rnd = nav.tlRound >= 1 && nav.tlRound <= rN ? nav.tlRound : 0; // 0 = 지금
+    const pastB = rnd ? blocksOf(bodyOf(PAST)).filter(b => String(b.title || '').startsWith('[' + rnd + '회차 · ')).map(b => ({ ...b, title: '[' + String(b.title).slice(('[' + rnd + '회차 · ').length) })) : [];
+    const isEvT = t => !!dayOf(t), pastEv = pastB.filter(b => isEvT(b.title)), pastEtc = pastB.filter(b => !isEvT(b.title) && !/^\[물건 · /.test(b.title) && b.title !== '[줄거리]');
+    const rounds = rN ? `<div class="pchips" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px">${[0, ...Array.from({ length: rN }, (_, i) => i + 1)].map(i => `<button class="pcchk" data-act="tlround" data-arg="${i}" aria-pressed="${i === rnd}">${i ? i + '회차' : '지금 · ' + (rN + 1) + '회차'}</button>`).join('')}</div>` : '';
+    const evsAll = (rnd ? pastEv : blocksOf(bodyOf('날짜로그'))).map(b => {
       const packed = /\(요약\)/.test(b.title || ''), m = (b.title || '').replace(/\s*\(요약\)\s*$/, '').match(/^\[?([^\]\-]+?)\s*-\s*(.+?)\]?$/);
       const q = b.lines.find(l => /^근거\s*[:：]/.test(l));
       return { raw: b.title || '', date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, lines: evMeta2(b.lines.filter(notProofLine)),
@@ -7915,7 +7926,7 @@
     const chips = `<div class="tl-who"><button data-act="tlwho" data-arg="" aria-pressed="${!who}"><span class="av tl-all">✦</span><small>전체</small></button>${names.map(n =>
       `<button data-act="tlwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     // 서사 고리는 여기 한 곳에만: 위엔 아직 끝나지 않은 일, 끝난 일은 접어서
-    const th = threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
+    const th = rnd ? [] : threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
     // 열린 고리의 "(마지막 언급: 날짜 · N턴)"은 본문에서 떼어 아래 근거 버튼 옆 알약으로. 100턴 넘게 안 나온 고리는 '오래됨'
     const nowTurn = (snapshot?.note?.turns || 0) + freshTurns();
     const thRow = t => { let thWho = ''; const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
@@ -7929,7 +7940,7 @@
     const upcoming = openTh.length || doneTh.length ? `<div class="tl-up"><div class="tl-up-h"><b>🪢 아직 끝나지 않은 일 ${openTh.length}</b></div>
       ${openTh.map(thRow).join('') || '<p>지금은 없어요.</p>'}
       ${doneTh.length ? `<details class="tl-done"><summary>끝난 일 ${doneTh.length}</summary>${doneTh.map(thRow).join('')}</details>` : ''}</div>` : '';
-    const mem = who ? (PROF.get(who)?.memories || []) : [];
+    const mem = who && !rnd ? (PROF.get(who)?.memories || []) : [];
     // 기억하는 일 중 같은 날짜 사건이 아래 목록에 있으면 거기 "💭 기억함"만 달고 여기선 뺍니다(같은 일을 두 번 X).
     //   (요약)으로 묶여 목록에서 사라진 일만 여기 남아요.
     const evDays = new Set(evs.filter(e => !e.packed).map(e => dayOf(e.date)).filter(Boolean));
@@ -7939,7 +7950,7 @@
     const peopleIn = e => names.filter(n => tlAlias(n).some(a => e.all.includes(a))).slice(0, 5);
     const sideN = evs.filter(isSide).length;
     // 웹 모드: 사건마다 📌 고정(늘 채팅에 들어가요) · 지금 채팅에 들어가 있으면 '들어감'
-    const webTag = e => { if (!sceneOn) return ''; const k = itemKey(e.raw), p = injPins.has(k), on = !!lastInj && !lastInj.all && lastInj.keys?.has(k);
+    const webTag = e => { if (!sceneOn || rnd) return ''; const k = itemKey(e.raw), p = injPins.has(k), on = !!lastInj && !lastInj.all && lastInj.keys?.has(k);
       return (on && !p ? ' · 🌐 들어감' : '') + '<button class="tl-pin' + (p ? ' on' : '') + '" data-act="pin" data-arg="' + esc(k) + '" title="고정하면 늘 채팅에 들어가요">' + (p ? '📌 고정됨' : '📌') + '</button>'; };
     // 남의 사건: 이 사람의 ⤿ 줄만. 없으면 이 사람 이름이 든 토막만(장소·"루루, 네이선 힐…" 같은 인물 나열은 빼고).
     const isSideLine = l => /^[⤿ㄴ↳]/.test(String(l).trim());
@@ -7962,14 +7973,14 @@
     const RECENT = 10, olderEv = evs.slice(0, -RECENT), recentEv = evs.slice(-RECENT);
     const list = evs.length ? `${olderEv.length ? `<details class="tl-up tl-fold"><summary><b>예전 사건 ${olderEv.length}</b></summary><ol class="tline">${olderEv.map(evLiFold).join('')}</ol></details>` : ''}<ol class="tline">${recentEv.map(evLi).join('')}</ol>`
       : emptyBox(who ? `${esc(josa(who, '이', '가'))} 나온 사건이 아직 없어요.` : '아직 사건이 없어요.');
-    const head = `<div class="sechead"><span>${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개${sideN ? `(나옴 ${sideN})` : ''} · 오래된 일부터</span></div>`;
+    const head = `<div class="sechead"><span>${rnd ? `${rnd}회차(회귀 전) · ` : ''}${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개${sideN ? `(나옴 ${sideN})` : ''} · 오래된 일부터${rnd ? ' · 이번 생에서는 아직 안 일어난 일' : ''}</span></div>`;
     // 큰 흐름(줄거리)은 맨 위에 한 번. 인물을 고르면 그 사람 이야기만 보이니 숨깁니다.
     // AI가 한 문단으로 몰아 쓰면 문장마다 한 줄로 나눠 보여줍니다.
-    const story = itemsOf(bodyOf('줄거리')).flatMap(l => l.length > 80 ? l.split(/(?<=[.!?。])\s+/).filter(Boolean) : [l]);
+    const story = itemsOf(rnd ? (blocksOf(bodyOf(PAST)).find(b => b.title === '[' + rnd + '회차 · 줄거리]')?.lines.join('\n') || '') : bodyOf('줄거리')).flatMap(l => l.length > 80 ? l.split(/(?<=[.!?。])\s+/).filter(Boolean) : [l]);
     const storyHtml = !who && story.length ? `<div class="tl-story"><div class="tl-up-h"><b>🧵 지금까지 큰 흐름</b></div>
       <ol class="story">${story.map(l => `<li>${esc(l)}</li>`).join('')}</ol></div>` : '';
     // 이정표: 이야기가 꺾인 순간들. 날짜로그가 (요약)으로 묶여도 남아요. 인물을 고르면 그 사람이 나온 것만.
-    const miles = blocksOf(bodyOf('이정표')).filter(b => b.title && (!who || has(b.title + ' ' + b.lines.join(' '))));
+    const miles = (rnd ? [] : blocksOf(bodyOf('이정표'))).filter(b => b.title && (!who || has(b.title + ' ' + b.lines.join(' '))));
     // 최근 5개만 펼쳐 두고, 그 앞은 '옛날 이정표' 토글 안에
     const mileHtml = b => { const m = b.title.replace(/^\[|\]$/g, '').match(/^([^\]\-]+?)\s*-\s*(.+)$/);
       return `<div class="thr"><b>${m ? `<em class="thk">${esc(m[1].trim())}</em>${esc(m[2])}` : esc(b.title)}</b>${b.lines.filter(notProofLine).map(bitHtml).join('')}</div>`; };
@@ -7981,10 +7992,11 @@
       ${oldM.length ? `<details class="tl-old"><summary>옛날 이정표 ${oldM.length}개<small>${esc(mileSpan(oldM))}</small></summary>${oldM.map(mileHtml).join('')}</details><p class="tl-span">최근 이정표 ${newM.length}개<small>${esc(mileSpan(newM))}</small></p>` : ''}${newM.map(mileHtml).join('')}</details>` : '';
     // 세계관 · 명대사도 여기 한 곳에 (접어 두고 필요할 때 펼침). 인물을 고르면 그 사람 대사만.
     const world = blocksOf(bodyOf('세계관'));
-    const worldHtml = !who ? `<details class="tl-up tl-fold"><summary><b>🌍 세계관 ${world.reduce((a, b) => a + b.lines.length + (b.title ? 1 : 0), 0)}</b></summary>
+    const etcHtml = rnd && pastEtc.length ? `<details class="tl-up tl-fold"><summary><b>🗂 그때 사람 · 관계 · 아는 것 ${pastEtc.length}</b></summary>${pastEtc.filter(b => !who || has(b.title + ' ' + b.lines.join(' '))).map(b => `<div class="thr"><b>${esc(String(b.title).replace(/^\[|\]$/g, ''))}</b>${b.lines.filter(notProofLine).map(bitHtml).join('')}</div>`).join('')}</details>` : '';
+    const worldHtml = rnd ? '' : !who ? `<details class="tl-up tl-fold"><summary><b>🌍 세계관 ${world.reduce((a, b) => a + b.lines.length + (b.title ? 1 : 0), 0)}</b></summary>
       ${world.map(b => `${b.title ? `<p><span>${esc(b.title)}</span></p>` : ''}${b.lines.filter(notProofLine).map(l => `<p>${esc(l)}</p>`).join('')}`).join('') || '<p>아직 정리된 세계관이 없어요. 원문에서 설정·규칙이 확인되면 정리할 때 여기에 쌓여요.</p>'}</details>` : '';
     const qHtml = quoteFold(who);
-    return rvBar() + descHtml('timeline') + chips + storyHtml + milesHtml + worldHtml + upcoming + memHtml + head + list + qHtml;
+    return rvBar() + descHtml('timeline') + rounds + chips + storyHtml + milesHtml + worldHtml + etcHtml + upcoming + memHtml + head + list + (rnd ? '' : qHtml);
   }
   function quoteFold(who, open) {
     const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who || sameName(q.who, who));
@@ -8635,7 +8647,7 @@
     const cat = (emo, t, rows) => rows.length ? `<section class="pcat">${t ? `<h5>${emo ? emo + ' ' : ''}${t}</h5>` : ''}${rows.join('')}</section>` : '';
     // 이름 옆 알약: 마지막으로 나온 턴(100턴 넘게 안 나왔으면 '오래 안 나옴'), 관계 줄에 "교류 없음"이 있으면 그것도
     const nowT = (snapshot?.note?.turns || 0) + freshTurns(), last = lastSeenMap[name] || 0, gone = rel.some(r => r.from === name && /교류\s*없음/.test(r.text));
-    const pills = (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
+    const pills = (rgWho(noteMemory()).who.has(name) ? pillSt(`회귀 ${rgWho(noteMemory()).n}회차`, 'rg') : '') + (pr.isUser ? '' : last ? (nowT - last >= 100 ? pillSt(`오래 안 나옴 · ${last}턴`, 'broken') : pillSt(`마지막 등장 ${last}턴`, 'off')) : '') + (gone ? pillSt('교류 없음', 'lost') : '');
     const meName = [...PROF.entries()].find(([, v]) => v.isUser)?.[0], heroPill = relPill(pairKind(rel, name, meName), 'float:right;margin:2px 0 4px 8px');
     return `<div class="phero">${avB(name)}<div style="min-width:0;flex:1">${pr.isUser || !meName ? `<span class="pg-hw pcw"><button class="pcchk" data-act="pcset" data-arg="${esc(name)}" aria-pressed="${!!pr.isUser}">유저</button>${pr.isUser && pregMode && pregWhoDefault(noteMemory() || '').male ? `<button class="pcchk" data-act="pregmale" aria-pressed="${!!preg?.maleOk}" aria-label="남성 임신 허용">남성 임신</button>` : ''}<details class="pg-hq"${nav.pcHelp ? ' open' : ''}><summary class="nf-q" data-act="pchelp" aria-label="유저 설명">?</summary><div class="pg-hb"><b>내 캐릭터 표시</b><p>켜면 임테기·임신이 이 사람 기준</p></div></details></span>` : ''}${heroPill}<b>${esc(name)}</b>${pr.tag ? `<em>${esc(pr.tag)}</em>` : ''}${pills ? `<div class="ppills">${pills}</div>` : ''}${(d => { if (!d) return '<p>인물 칸에 설명이 없어요</p>'; // 짧은 조각(16자까지)만 칩 · 긴 조각은 칩이 세로로 줄줄 늘어지지 않게 아래 글로 이어서
       // 이름 옆 꼬리표(프로필 줄)와 같은 조각은 한 번만: '안보학 전공 4학년' 꼬리표가 있으면 'NYU 안보학(Security Studies) 전공 4학년' 칩은 빼요(괄호·띄어쓰기 빼고 견줘요)
@@ -9853,7 +9865,8 @@
       // 다른 방 정리 기록은 안 가져와요(이 방 '회귀 › 이 방' 목록에 남의 방 턴이 섞이지 않게) · 회귀면 임신 기록도 그 방 것이라 안 가져와요
       if (draft.carry?.etc?.on) { await putEtc(draft.carry.etc, chatId, [...(draft.carry.mode === 'regress' ? ['preg'] : []), ...(draft.carry.other || draft.carry.fromOther ? ['hist'] : [])]); lap('명대사·ETC'); }
       // 이 방 회귀: 돌아간 날보다 뒤에 생긴 임신은 이번 생엔 아직 없어요 → 지난 산모수첩에 '회귀 기록'으로 접어 둬요(지문에 임신이 계속 들어가지 않게)
-      if (draft.carry?.mode === 'rback' && preg?.start != null && !preg.ended) { const bd = storyDay(draft.carry.base); if (bd != null && preg.start + 14 > bd) pregArchive('회귀', bd - 1, '회귀로 이번 생에선 아직 없는 임신'); }
+      if (draft.carry?.mode === 'rback' && preg) { const bd = storyDay(noPast(draft.carry.base)); if (bd != null) { if (preg.start != null && !preg.ended && preg.start + 14 > bd) pregArchive('회귀', bd - 1, '회귀로 이번 생에선 아직 없는 임신');
+        if (preg.start == null) { Object.assign(preg, { after: bd, afterV2: true, afterTurn: draft.turns }); delete preg.aiSaid; pregOut = []; pregSig = ''; pregSave(); } } }
       if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); lap('뜻 검색·고르기'); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId; lap('채팅에 쓰기');
@@ -10326,6 +10339,7 @@
       case 'changes': histList = await historyOf(chatIdFromPath()); if (nav.branchRoom !== chatIdFromPath()) nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
       case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
+      case 'tlround': nav.tlRound = Number(arg) || 0; return keepScroll(render);
       case 'prov': { const list = MODELS.find(([g]) => g.toLowerCase() === arg)?.[1] || []; // 회사를 누르면 그 회사 모델로(같은 회사면 그대로)
         const id = provOf(curModel) === arg ? curModel : (list.find(([x]) => x.endsWith(arg === 'claude' ? 'claude-sonnet-5-5' : DEFAULT_MODEL)) || list[0])[0]; pickModel(id); await saveSettings(true); return render(); }
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
@@ -10523,7 +10537,7 @@
         busyNow = true; render(); let base = s0.m, said = '';
         try { const all = await readAll(chatId), end = k => { let u = 0; for (let i = 0; i < all.length; i++) if (msgRole(all[i]) === 'user' && ++u === k) { let j = i; while (all[j + 1] && msgRole(all[j + 1]) !== 'user') j++; return j; } return -1; };
           const b = end(T); if (b < 0) throw new Error(T + '턴을 대화에서 못 찾았어요'); said = stripBlocks(msgText([...all.slice(0, b + 1)].reverse().find(m => msgRole(m) === 'user') || {})).replace(/\s+/g, ' ').slice(0, 40);
-          if (s0.t < T) { toast(`${s0.t ? '1~' + s0.t + '턴 노트에 ' : ''}${s0.t + 1}~${T}턴을 정리하는 중…`, 'info', 8000); const raw = await summarize(base, all.slice(s0.t ? end(s0.t) + 1 : 0, b + 1), '', [], s0.t + 1, !!base, '', `
+          if (s0.t < T) { nav.view = null; startGen('summary', expectSummaryChars()); render(); toast(`회귀 준비 · ${s0.t ? '1~' + s0.t + '턴 노트에 ' : ''}${s0.t + 1}~${T}턴을 정리하는 중… 끝나면 미리보기가 떠요`, 'info'); const raw = await summarize(base, all.slice(s0.t ? end(s0.t) + 1 : 0, b + 1), '', [], s0.t + 1, !!base, '', `
 
 [회귀 지점] ${T}턴까지만 정리한다. 그 뒤 일은 쓰지 않는다.`); base = base ? mergeNote(base, raw) : raw; }
         } catch (e) { busyNow = false; render(); return toast('회귀 준비 실패 · ' + e.message, 'err', 5000); }
