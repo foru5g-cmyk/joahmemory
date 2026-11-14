@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.2.8
+// @version      5.2.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -493,13 +493,6 @@
       const free = both && u.sec === FIXED; if (!free && used + cost > cap * 0.97) continue;
       pick.set(id, u); secCost.add(u.sec); if (!free) used += cost; if (u.rc) { recallN++; for (const w of u.hw || []) hwN.set(w, (hwN.get(w) || 0) + 1); }
     }
-    // 남은 항목이 자리에 다 들어가면 전부 넣어요(WRMC처럼 · 일부만은 안 채워요) · 안 넣기 칸·✕ 뺀 것·끈 정보는 빼고
-    const rest = []; let restN = 0;
-    for (const sec of secs) { const k = sec.key; if (k === FIXED || secMode(k) === 'off') continue;
-      itemBlocks(sec.body).items.forEach((it, i) => { const id = k + '|' + i, t = it.lines.join('\n'), p = pick.get(id), key = itemKey(it.key);
-        if ((p && p.text.length >= t.length) || injSkip.has(key) || (k === '인지·비밀' && (injSet.facts?.[key] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) === 'off')) return;
-        rest.push({ id, u: { sec: k, i, text: t, key } }); restN += t.length + 1 - (p ? p.text.length + 1 : 0) + (secCost.has(k) || rest.some(r => r.u.sec === k) ? 0 : k.length + 3); }); }
-    if (!poolMode && rest.length && used + restN <= cap * 0.97) { for (const r of rest) { pick.set(r.id, r.u); secCost.add(r.u.sec); } used += restN; }
     const out = [];
     for (const sec of secs) {
       const b = itemBlocks(sec.body), parts = [];
