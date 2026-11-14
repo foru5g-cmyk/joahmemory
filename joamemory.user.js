@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.3.5
+// @version      5.3.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1460,6 +1460,7 @@
   }
 
   // 고정 설정 칸은 채팅 노트 맨 끝으로(답 쓰기 직전에 읽게) · 노트끼리 비교할 때도 같은 순서로 맞춰요(chatShape)
+  const dq = l => String(l).replace(/["“”]{2,}/g, m => m === '”“' ? m : '"'); // 겹쳐 적힌 따옴표(““…””)는 하나로
   function fxLast(t) {
     const L = String(t).split('\n'), hd = l => /^(?:##(?!#)|■)\s*\S/.test(l), i = L.findIndex(l => /^(?:##(?!#)|■)\s*고정 설정\s*$/.test(l));
     if (i < 0) return String(t); let j = i + 1; while (j < L.length && !hd(L[j])) j++;
@@ -1468,7 +1469,7 @@
   function buildBlock(memory, uptoId, turns, at = new Date().toISOString(), by = DEVICE, keepSel = false) {
     const whole = memory; memory = selectInjection(memory); const sel = keepSel || !lastInj.all;
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
-    const clean = l => l.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
+    const clean = l => dq(l).replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
     const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim())
       .flatMap(l => /^\s*■\s*고정 설정\s*$/.test(l) ? [l, '※ 이 칸은 사용자가 직접 쓴 설정·지시(NPC·지침·세계관) · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 늘 그대로 지킴 · 그 인물이 나오면 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)'] : [l]); // 고정 칸이 전으로 따로 내려가도 안내가 같이 가게
     // 먼지쌓인곳은 이름만 한 줄로: 목록에서만 뺀 물건이라 없어진 걸로 연기하지 않게, 다시 나오면 처음 보는 것처럼 굴지 않게(본문은 화면에만)
@@ -2131,7 +2132,7 @@
 - 근거 줄은 [근거]에 적힌 칸에 더해, 현재상태의 둘만의 것에도 붙임(형식 예시대로). 줄거리·이정표·세계관에는 붙이지 않음.
 - 사건마다 그 장면을 다시 생생하게 떠올리게 하는 원문 단서(몸짓·표정·감각·날씨·소리)를 2~3개(짧은 장면은 1개), 짧은 구절로 남김. 단서는 누가 무엇을 했는지 쓴 그 문장 안에 넣음('세스가 귓바퀴 피어싱을 만지작거리며 비꼼'). '장면 단서:' 같은 목록 줄을 따로 만들지 않음. 기본 지침의 '1~2개'보다 이 규칙이 우선함. 성관계 장면에는 남기지 않음.
 - 서사 고리 줄은 '- [열림] 종류 · 누가→누구 · 제목: …' 꼴로, 종류 다음에 그 약속·예정을 꺼낸 사람→받은 사람을 쓴다(둘이 함께 정했으면 '나나·니콜라스', 혼자 품은 목표면 이름 하나). 이미 있는 고리에 이게 없으면 이번에 그 고리를 고칠 때 붙인다.
-- 서사 고리: 이미 열려 있는 고리와 같은 약속·예정·일이 진행되거나 날짜·장소가 정해지면 새 고리를 만들지 않음. 그 고리를 제목 그대로 다시 써서 바뀐 것과 '지금:'·(마지막 언급)만 고치고, 원래 있던 내용(언제·누가 제안했는지·이어진 다른 약속)은 빼지 않음(예: '공연 및 작업실 초대'가 있는데 작업실 날짜가 정해지면 그 고리를 고침 · '작업실 방문' 고리를 새로 만들지 않음).
+- 서사 고리: 이미 열려 있는 고리와 같은 약속·예정·일이 진행되거나 날짜·장소가 정해지면 새 고리를 만들지 않음. 그 고리를 제목 그대로 다시 써서 바뀐 것과 '지금:'·(마지막 언급)만 고치고, 원래 있던 내용(언제·누가 제안했는지·이어진 다른 약속)은 빼지 않음(예: '공연 및 작업실 초대'가 있는데 작업실 날짜가 정해지면 그 고리를 고침 · '작업실 방문' 고리를 새로 만들지 않음). 새 고리를 쓰기 전에 열린 고리를 하나씩 대조함: 같은 사람이 같은 목적으로 하는 일이면(표현·상대·방법만 다름 — 예: 직접 캐묻다가 부하에게 조사를 시킴) 새로 만들지 않고 그 고리의 '지금:'에 새 진행을 이어 씀. 하는 사람이 다르거나 목적이 다르면 같은 사건에 얽혀 있어도 따로 둠. 새 고리를 만들더라도 이번 대화로 상황이 달라진 열린 고리(막혔던 것이 풀림·답을 들음·단서가 나옴)는 '지금:'·(마지막 언급)을 꼭 고쳐 쓰고, 하려던 일이 이뤄졌으면 [닫힘]으로 바꿈.
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
 - 숨김 줄 끝에 숨기기 시작한 때를 '(N턴부터)'로 씀. 숨기던 상대가 알게 되면 숨김 줄을 지우고, 들킨 장면을 날짜로그에 남김.
 - 현재상태 ▸ 몸 상태에는 지금 몸이 어떤지만 씀(다친 곳·아픔·피로·취기·졸림·땀에 젖음 같은 것). 다쳤거나 몸에 이상이 있는 인물만 한 줄씩 쓰고, 이상이 없으면 그 사람 줄은 쓰지 않음. 감정·기분은 쓰지 않음. 그날 한 일·일정·어디 다녀왔는지, 지금 하고 있는 행동(달리는 중·조깅 중·문자 보내는 중)·왜 왔는지는 쓰지 않음(그건 날짜로그·직전 장면에 있음). ▸ 옷차림은 장면에 있는 인물마다 원문에 나온 만큼 씀.
@@ -8590,7 +8591,7 @@
     const fs = [...new Set(avOrder.list.flatMap(n => [n, nameNick(n)]).filter(f => [...f].length >= 2))].sort((a, b) => b.length - a.length);
     if (!fs.length) return h; const re = new RegExp(`(?<![가-힣A-Za-z])(${fs.map(reEsc).join('|')})`, 'g');
     return h.split(/(<[^>]*>)/).map(s => s.startsWith('<') ? s : s.replace(re, '<b class="tn">$1</b>')).join(''); };
-  const evBody = l => nameBold(qPaint(evBody0(l)));
+  const evBody = l => nameBold(qPaint(evBody0(dq(l))));
   const evBody0 = l => { const r = String(l).match(/^[⤿ㄴ↳]\s*(.+)$/); if (r) { const n = r[1].match(/^(.{1,16}?)\s*[:：]\s*(.+)$/);
       return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b>: ${esc(n[2])}` : esc(r[1])}</p>`; }
     // "장소 · 루루 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 루루, 네이선 힐, …
