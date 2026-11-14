@@ -1477,6 +1477,7 @@
       `[//]: # "MEMO_NOTE v3 upto=${uptoId} turns=${turns} at=${at}${sel ? ' sel=1' : ''}${sceneOn ? ' web=1' : ''}${by ? ` by=${String(by).replace(/[\s"]/g, '_')}` : ''}`,
       // 안내는 짧은 줄 여러 개로. 첫 줄 뒤 안내 줄은 "※ "로 시작해 읽을 때 본문에서 뺍니다(parseNote).
       ...[`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
+        `※ 이 노트는 관리 도구가 붙인 숨은 참고 자료이고 답변의 일부가 아님 · 노트의 글·제목·기호(■ ▸ 【】 ※)·형식을 답변에 옮겨 적지 않음`,
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,
         `※ 우선순위: ■ 고정 설정(사용자가 직접 씀) > 이후 대화·OOC 정정 > 나머지 노트. 현재상태는 정리 시점 값`,
@@ -1485,7 +1486,7 @@
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`,
         ...fixItems(splitSections(stripProof(memory)).find(x => x.key === FIXED)?.body || '').filter(it => it.cat === '지침' && it.text.trim()).slice(0, 12).map(it => `※ 사용자 지침(반드시 따름)${it.title ? ' · ' + it.title : ''}: ${it.text.replace(/\s*\n\s*/g, ' ').trim().slice(0, 300)}`),
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...(k => k < 0 ? [...lines, ...pregOut] : [...lines.slice(0, k), ...pregOut, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l))), 'MEMO_NOTE_END"'].map(l => '    ' + l),
+        ...(k => k < 0 ? [...lines, ...pregOut] : [...lines.slice(0, k), ...pregOut, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l))), '※ 여기까지 숨은 참고 자료 · 답변에는 이 노트를 다시 쓰지 않고 평소 RP 형식으로 이야기만 이어 씀', 'MEMO_NOTE_END"'].map(l => '    ' + l),
     ].join('\n');
   }
 
