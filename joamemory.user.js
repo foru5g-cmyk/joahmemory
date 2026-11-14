@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.3.4
+// @version      5.3.5
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5524,7 +5524,7 @@
   const pastRound = mem => Math.max(0, ...[...(splitSections(mem).find(x => x.key === PAST)?.body || '').matchAll(/^\s*▸\s*\[(\d+)회차 ·/gm)].map(m => +m[1]));
   let rgWhoAt = null, rgWhoV = { n: 0, who: new Set() };
   const rgWho = mem => { if (mem === rgWhoAt) return rgWhoV; rgWhoAt = mem; const f = itemBlocks(splitSections(mem || '').find(x => x.key === '인지·비밀')?.body || '').items.find(it => /^회귀 전 일/.test(it.key));
-    return rgWhoV = { n: f ? pastRound(mem) + 1 : 0, who: new Set((f?.lines || []).map(l => (l.match(/^\s*-\s*(.+?)\s*[:：]\s*알고 있음/) || [])[1]).filter(Boolean)) }; };
+    return rgWhoV = { n: f ? Math.max(1, pastRound(mem)) : 0, who: new Set((f?.lines || []).map(l => (l.match(/^\s*-\s*(.+?)\s*[:：]\s*알고 있음/) || [])[1]).filter(Boolean)) }; };
   function carryNote(memory, mode, who = [], now = '') {
     if (mode === 'same' || mode === 'back') return memory;
     const L = splitSections(memory), body = k => L.find(x => x.key === k)?.body || '';
@@ -8866,7 +8866,7 @@
     const row = (act, arg, b, v) => `<div class="jump" style="margin-top:8px"><button data-act="${act}" data-arg="${esc(arg)}"${busyNow ? ' disabled' : ''}><b>${b}</b><span class="v">${v}</span></button></div>`;
     if (nav.pickKind === 'room') { const hl = histList || [];
       const nowT = (snapshot?.note?.turns || 0) + freshTurns();
-      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b>턴 직접 정하기</b><small>정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값)</small></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>회귀</button></div></section>` + (u => u && noteMemory() === u.after ? row('rgundo', hl.length - 1, '방금 한 회귀 취소', `${new Date(u.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 회귀 전 노트로 · 임신 기록도 그때로`) : '')(hl.length && isRg(hl[hl.length - 1]) ? hl[hl.length - 1] : null) + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0 && !isRg(h)).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
+      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b>턴 직접 정하기</b><small>정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값)</small></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>${busyNow ? '준비 중…' : '회귀'}</button></div></section>` + genCard() + (u => u && noteMemory() === u.after ? row('rgundo', hl.length - 1, '방금 한 회귀 취소', `${new Date(u.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 회귀 전 노트로 · 임신 기록도 그때로`) : '')(hl.length && isRg(hl[hl.length - 1]) ? hl[hl.length - 1] : null) + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0 && !isRg(h)).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
     const L = nav.gsList || []; if (!L.length) return emptyBox('드라이브에 백업이 없어요.');
     return L.map(x => row(nav.pickKind === 'regress' ? 'gsfromr' : 'gsfrom', x.chat, esc(x.title) + (x.here ? ' · 이 방' : ''), esc(x.when))).join('');
   }
@@ -10538,10 +10538,11 @@
         const nowT = (snapshot.note.turns || 0) + freshTurns(); if (!(T >= 1 && T < nowT)) return toast(`1~${nowT - 1} 사이 턴을 넣어 주세요`, 'err', 3000);
         const snaps = [{ t: 0, m: '' }]; for (const h of histList || []) { if (h.before) snaps.push({ t: h.from, m: h.before }); if (h.after && !isRg(h)) snaps.push({ t: h.to, m: h.after }); }
         const s0 = snaps.filter(x => x.t <= T).sort((a, b) => b.t - a.t)[0];
+        if (s0.t === T && s0.m) return rgDraft(s0.m, T, ''); // 정리한 턴이면 저장된 노트 그대로(대화를 다시 읽지 않아요)
         busyNow = true; render(); let base = s0.m, said = '';
         try { const all = await readAll(chatId), end = k => { let u = 0; for (let i = 0; i < all.length; i++) if (msgRole(all[i]) === 'user' && ++u === k) { let j = i; while (all[j + 1] && msgRole(all[j + 1]) !== 'user') j++; return j; } return -1; };
           const b = end(T); if (b < 0) throw new Error(T + '턴을 대화에서 못 찾았어요'); said = stripBlocks(msgText([...all.slice(0, b + 1)].reverse().find(m => msgRole(m) === 'user') || {})).replace(/\s+/g, ' ').slice(0, 40);
-          if (s0.t < T) { nav.view = null; startGen('summary', expectSummaryChars()); render(); toast(`회귀 준비 · ${s0.t ? '1~' + s0.t + '턴 노트에 ' : ''}${s0.t + 1}~${T}턴을 정리하는 중… 끝나면 미리보기가 떠요`, 'info'); const raw = await summarize(base, all.slice(s0.t ? end(s0.t) + 1 : 0, b + 1), '', [], s0.t + 1, !!base, '', `
+          if (s0.t < T) { startGen('summary', expectSummaryChars()); render(); toast(`회귀 준비 · ${s0.t ? '1~' + s0.t + '턴 노트에 ' : ''}${s0.t + 1}~${T}턴을 정리하는 중… 끝나면 미리보기가 떠요`, 'info'); const raw = await summarize(base, all.slice(s0.t ? end(s0.t) + 1 : 0, b + 1), '', [], s0.t + 1, !!base, '', `
 
 [회귀 지점] ${T}턴까지만 정리한다. 그 뒤 일은 쓰지 않는다.`); base = base ? mergeNote(base, raw) : raw; }
         } catch (e) { busyNow = false; render(); return toast('회귀 준비 실패 · ' + e.message, 'err', 5000); }
