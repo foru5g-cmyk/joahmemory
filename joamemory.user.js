@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.5.2
-// @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
+// @version      5.5.3
+// @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/rsef/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
@@ -271,7 +271,7 @@
   //   인물 칸의 프로필 줄(동물 이모지·특징)은 화면 표시용이고, 유저 캐릭터 블록은 유저 프로필이 따로 들어가니 뺍니다.
   // 글 맨 앞(또는 [ 뒤)의 날짜 "2027.09.14" · "1년차 03.14"만 꺼냅니다. 범위(~)·미상은 ''.
   const dayOf = t => { const m = String(t).replace(/^\[/, '').match(/^((?:\d+년차\s*)?\d{1,4}[./]\d{1,2}(?:[./]\d{1,2})?)(?![\d./])(?!\s*~)/); return m ? m[1].replace(/\s+/g, ' ') : ''; };
-  function stripProof(memory) {
+  function stripProof(memory, keepMiles = false) { // keepMiles: 고르기 전에는 이정표를 남겨요(겹침은 고른 뒤 채팅에 쓸 때 빠져요)
     const users = new Set(personsIn(splitSections(memory).find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name));
     const logT = blocksOf(splitSections(memory).find(x => x.key === '날짜로그')?.body || '')
       .filter(b => !/\(요약\)/.test(b.title)).map(b => (b.title.match(/-\s*(.+?)\]?$/) || [])[1]).filter(t => t && t.length >= 4).map(t => t.replace(/\s/g, ''));
@@ -284,7 +284,7 @@
       if (h) { skip = VIEW_ONLY.includes(h[1]); at = ALIAS[h[1]] || h[1]; mine = false; itemSkip = false; }
       // 이정표: 같은 사건이 아직 날짜로그에 있으면 채팅엔 빼요(두 번 안 들어가게). 날짜로그에서 묶이거나 옮겨져 사라지면 그때부터 들어가요. 화면엔 늘 다 보여요
       else { const it = l.trim().match(/^▸\s*(.+)$/) || l.trim().match(/^【(.+?)】/); if (it) { const mt = at === '이정표' ? ((it[1].match(/-\s*(.+?)\]?$/) || [])[1] || '').replace(/\s/g, '') : '';
-        itemSkip = NO_INJ.has(at + '|' + itemKey(it[1])) || (!!mt && logT.includes(mt)); } }
+        itemSkip = NO_INJ.has(at + '|' + itemKey(it[1])) || (!keepMiles && !!mt && logT.includes(mt)); } }
       if (itemSkip) return false;
       // 유저 캐릭터 블록·프로필 줄(동물 이모지·유저 표시)도 넣습니다: 폰↔컴 어디서 봐도 인물 목록·이모지가 같게.
       return !skip && (!PROOF_LINE.test(l) || (sceneOn && /^\s*-?\s*\[닫힘\]/.test(l))); // 웹 모드: 닫힌 고리 한 줄은 남겨서 대화에 나오면 떠올려요(고르기에서 걸러요)
@@ -321,7 +321,7 @@
   // ── 실험판: 장면 맞춤 주입 ──
   //   전체 기억은 이 기기(full:)에 두고, 채팅에는 지금 장면에 필요한 것만 INJ_MAX자 안으로 골라 넣어요(노트가 커져도 채팅 쪽은 안 늘어요).
   //   늘 넣음: 고정 설정·현재상태·직전 장면·열린 서사 고리·최근 사건 INJ_RECENT개·줄거리. 인물은 최근 대화에 나온 사람만 전부, 나머지는 이름·프로필 줄만.
-  //   옛 사건·물건·장소·비밀·호칭은 최근 대화에 나온 이름·낱말과 제미나이 의미 검색 점수(injCtx.sim)로 골라요(가장 맞는 INJ_RECALL개까지). WRMC처럼 남는 자리는 채우지 않아요. 전체가 INJ_MAX 안이면 전부 넣어요.
+  //   옛 사건·물건·장소·비밀·호칭은 최근 대화에 나온 이름·낱말과 제미나이 의미 검색 점수(injCtx.sim)로 골라요(가장 맞는 INJ_RECALL개까지). 남는 자리는 채우지 않아요. 전체가 INJ_MAX 안이면 전부 넣어요.
   // INJ_MAX: AI 답이 하나뿐인 새 방은 한 칸(약 5만 자)에 답 글+안내까지 들어가야 해서 4.5만
   const INJ_MAX = 45000, INJ_BOTH = 70000, INJ_RECENT = 8, INJ_RECALL = 12, EMB_MODEL = 'gemini-embedding-001', EMB_DIM = 256;
   // ponytail: 뜻 검색만으로 떠올리는 기준 = 평균보다 코사인이 이만큼 높을 때 · 실제 노트로 맞춘 값이 아니라 어림값(엉뚱한 게 나오면 올리고, 놓치면 내려요)
@@ -379,7 +379,7 @@
     items.head = head; return items;
   }
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
-    const all = stripProof(memory), pool = [];
+    const all = stripProof(memory, sceneOn), pool = [];
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
     const cast = personsIn(secs.find(x => x.key === '인물')?.body || '');
@@ -391,7 +391,7 @@
     //   제목은 ':' 앞까지만(인지 '정보: 설명' · 설명 속 '아니·않은' 같은 말로 떠올리지 않게)
     const common = injCommon();
     const words = key => [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w)); // 숫자뿐인 건 빼요(날짜는 dayHit)
-    // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(WRMC처럼 · 제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
+    // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('나나')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든]|(?<!타)운)$/; // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
@@ -409,7 +409,7 @@
     const saidW = [...new Set((said.match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w)); // 보낸 말 낱말(조사 떼고)
     const inSaid = w => has(said, w) || saidW.some(x => x.length >= 2 && x.length >= w.length - 1 && w.endsWith(x) && !nameW.has(x)); // '반지' → '은반지' · 인물 이름은 빼요('나나' → '바나나'로 안 걸리게)
     let lastHw = []; // 방금 매긴 항목이 걸린 낱말(한 낱말로 너무 많이 떠올리지 않게)
-    // 점수(WRMC처럼): 핵심 = 날짜·제목 낱말·본문 낱말 · 인물·뜻 점수는 순서만 돕고, 핵심이 2점 안 되면 못 떠올려요(뜻이 아주 튈 때만 예외)
+    // 점수: 핵심 = 날짜·제목 낱말·본문 낱말 · 인물·뜻 점수는 순서만 돕고, 핵심이 2점 안 되면 못 떠올려요(뜻이 아주 튈 때만 예외)
     //   예전엔 '최근 대화에 제목 낱말 하나 + 지금 나온 인물'로 2점이 돼서, 주인공이 낀 옛일이 낱말 하나로 줄줄이 떠올랐어요
     const score = (key, body) => { let core = 0, bodyN = 0; const hit = []; lastHw = hit;
       if (dayHit(key)) { core += 6; hit.push(String(key).match(/\d{4}[.\/-]\d{1,2}[.\/-]\d{1,2}/)[0]); }
@@ -422,6 +422,7 @@
       if (saidHit) injSaidHits.add(itemKey(key));
       if (ai != null) { why.set(itemKey(key), (aiOk ? '지금 장면과 이어지는 일이라서' : '') + (hit.length ? (aiOk ? ' · ' : '') + '‘' + hit.slice(0, 3).join('·') + '’' : '')); return aiOk ? ai / 10 : 0; } // AI 재검토가 있으면 그 점수로(60 이상 · 1등보다 30 넘게 낮으면 빼요)
       return core >= 2 || semOk ? v : Math.min(v, 1.9); }; // 못 떠올리는 건 2점 밑으로(AI 재검토 후보에는 남아요)
+    const pastHere = [...rgWho(memory).who].some(n => here.some(h => sameName(h, n))); // 회귀 전 일을 기억하는 사람이 지금 장면에 있는지
     const units = []; // { sec, i(항목 번호, -1 = 칸 머리글), text, pri, recall }
     for (const sec of secs) {
       const b = itemBlocks(sec.body), head = b.head.join('\n').trim(), k = sec.key, mode = secMode(k);
@@ -471,8 +472,11 @@
         if (k === '날짜로그' && i >= b.items.length - injSet.recent) return units.push({ sec: k, i, text: t, pri: 75, key: itemKey(it.key) });
         const fm = k === '인지·비밀' ? (injSet.facts?.[itemKey(it.key)] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) : null; // 카드는 정보 이름(':' 앞)으로 저장해요
         if (fm === 'off') return; if (fm === 'on') return units.push({ sec: k, i, text: t, pri: 89, key: itemKey(it.key) });
+        // 이정표·회귀 전 사건은 제목 한 줄을 늘(긴 방에서 큰 흐름이 안 끊기게) · 본문은 떠올릴 때만 · 회귀 전은 기억하는 사람이 장면에 있을 때만
+        const spine = !injSkip.has(itemKey(it.key)) && (k === '이정표' || (k === PAST && pastHere && !/^\[?\d+회차 · (?:물건|아는 것|장소) · /.test(it.key)));
+        if (spine) units.push({ sec: k, i, text: first.replace(/^\s*▸\s*/, '- '), pri: k === PAST ? 55 : 72, short: true });
         const v = score(it.key, t), hw = lastHw; if (poolMode && v > 0.5 && !injSkip.has(itemKey(it.key))) pool.push({ key: itemKey(it.key), sec: k, text: t, v, i, items: k === '날짜로그' ? b.items : null });
-        if (v >= 2 && !injSkip.has(itemKey(it.key))) units.push({ sec: k, i, text: t, pri: 60 + v + i / 1e5, recall: k === '날짜로그', rc: true, key: itemKey(it.key), hw }); // 점수가 같으면 최근 것 먼저
+        if (v >= 2 && !injSkip.has(itemKey(it.key))) units.push({ sec: k, i, text: t, pri: 60 + v + i / 1e5, recall: k === '날짜로그', rc: true, full: spine, key: itemKey(it.key), hw }); // 점수가 같으면 최근 것 먼저
       });
     }
     if (poolMode) { // 위쪽 후보 사건의 바로 앞뒤 사건도(원인·뒷일) — 낱말이 안 겹쳐도 AI가 고를 수 있게
@@ -502,11 +506,13 @@
     const fxN = both ? [...pick.values()].filter(u => u.sec === FIXED).reduce((a, u) => a + u.text.length + 1, 0) : 0;
     const ansN = Math.max(0, ...(snapshot?.all || []).filter(m => msgRole(m) === 'assistant').slice(-4).map(m => stripBlocks(msgText(m)).length)); // 전전 답 글 몫(전으로 안 넘치게)
     if (!poolMode && rest.length && used + restN + fxN <= Math.min(INJ_MAX, (PATCH_MAX - 3000) / 2 - ansN) * 0.97) { for (const r of rest) { pick.set(r.id, r.u); secCost.add(r.u.sec); } used += restN; }
-    const out = [];
+    const out = [], coreOf = k => ((String(k).match(/-\s*(.+?)\]?$/) || [])[1] || '').replace(/\s/g, ''), logCore = new Set([...pick.values()].filter(u => u.sec === '날짜로그' && u.key).map(u => coreOf(u.key)).filter(Boolean));
     for (const sec of secs) {
-      const b = itemBlocks(sec.body), parts = [];
+      const b = itemBlocks(sec.body), parts = [], titles = [], spineSec = sec.key === '이정표' || sec.key === PAST;
       const h = pick.get(sec.key + '|-1'); if (h) parts.push(h.text);
-      b.items.forEach((_, i) => { const u = pick.get(sec.key + '|' + i); if (u) parts.push(u.text); });
+      b.items.forEach((it, i) => { const u = pick.get(sec.key + '|' + i); if (!u) return;
+        if (spineSec && u.short) { if (sec.key !== '이정표' || !logCore.has(coreOf(it.key))) titles.push(u.text); } else parts.push(u.text); }); // 제목 줄: 같은 사건이 이번에 들어가면 빼요
+      parts.splice(h ? 1 : 0, 0, ...titles); // 제목 줄은 본문 있는 항목보다 앞에(뒤에 두면 앞 항목의 줄처럼 읽혀요)
       if (!b.items.length) secItems(sec).forEach((_, j) => { const u = pick.get(sec.key + '|L' + j); if (u) parts.push(u.text); }); // 줄 항목은 노트 순서대로
       if (parts.length) out.push({ key: sec.key, body: parts.join('\n') });
     }
@@ -2282,7 +2288,7 @@
   }
   // AI에게 보낼 대화 본문: 이미지 마크다운·이미지 주소만 있는 줄은 빼서 길이를 아낍니다(이야기 글은 그대로).
   // AI 답 속 숨김 주석(<!-- … -->·[//]: # (…) 줄)은 화면에 안 보이는 상태창·메모라 정리 AI에 안 보내요(입력 절약) · 유저 글의 주석은 OOC일 수 있어 두고, ``` 코드블록 안은 안 건드려요
-  //   규칙은 WRMC(wishCleanRpText)와 같아요: 주석 줄은 [//]: # (…) 괄호 꼴만 · <!-- -->는 안에 또 <!--가 있거나 코드블록을 넘으면 안 빼고, 줄 중간에서 시작해 빈 줄을 넘는 것도 남겨요(잘못 짝지은 걸 수 있어서) · \<!--는 글자
+  //   규칙: 주석 줄은 [//]: # (…) 괄호 꼴만 · <!-- -->는 안에 또 <!--가 있거나 코드블록을 넘으면 안 빼고, 줄 중간에서 시작해 빈 줄을 넘는 것도 남겨요(잘못 짝지은 걸 수 있어서) · \<!--는 글자
   function dropComments(t) {
     const parts = []; let fence = null, cur = [];
     const flush = code => { if (cur.length) parts.push({ code, lines: cur }); cur = []; };
@@ -2843,7 +2849,7 @@
     return res?.data || res;
   }
   // 크랙 메시지 수정은 요청 본문이 102,400바이트를 넘으면 거절(413)합니다.
-  //   UTF-8은 한글 한 글자가 3바이트(약 3만 자가 끝)라, 본문을 UTF-16LE(한 글자 2바이트, 약 5만 자)로 보냅니다(WRMC와 같은 방식).
+  //   UTF-8은 한글 한 글자가 3바이트(약 3만 자가 끝)라, 본문을 UTF-16LE(한 글자 2바이트, 약 5만 자)로 보냅니다.
   //   서버가 UTF-16LE를 안 받거나 저장된 글이 다르면 이 페이지에서는 UTF-8로 되돌아가요.
   const PATCH_MAX = 101400;
   let utf16On = true;
