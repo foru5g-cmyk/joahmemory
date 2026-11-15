@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.5.1
+// @version      5.5.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2973,7 +2973,7 @@
   easeStyle.textContent = ''
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
     + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10.jm-col{padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10.jm-col .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
-    + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}}' // 폰 웹 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
+    + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}html.jm-hh [class*="group/header"]>.transition-transform{transform:none!important;translate:none!important}}' // 폰 웹 맨 위 ☰ 크랙 줄만 숨기고, 크랙이 밀어 올려 숨기는 방 제목 줄은 늘 보이게 · 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로)
     + '#jm-mask-emo{position:fixed;inset:0;pointer-events:none;z-index:2147483647}#jm-mask-emo>i{position:fixed;font-style:normal;line-height:1;display:flex;align-items:center;justify-content:center}';
   document.documentElement.appendChild(easeStyle);
