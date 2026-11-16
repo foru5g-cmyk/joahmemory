@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.5.6
+// @version      5.5.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -612,6 +612,9 @@
         else return; }
       const hash = t => { let x = 0; for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) | 0; return String(x) + ':' + t.length; };
       const units = [];
+      // 고르는 AI(재검토·목차)가 이 키·주소로 안 되면(없는 모델 404 · 권한 403) 하루 동안 안 불러요(보낼 때마다 헛걸음으로 늦어지지 않게)
+      const aiUrl = genUrl(INJ_AI_MODEL), aiNo = (([u, t]) => u === aiUrl && Date.now() - Number(t) < 864e5)(String(await getValue('injAiNo', '')).split('§'));
+      const aiFail = async e => { if (/\b(404|403)\b/.test(String(e?.message))) { await setValue('injAiNo', aiUrl + '§' + Date.now()); logErr('연동', '기억 고르는 AI(' + INJ_AI_MODEL + ')가 이 키로 안 됨 · ' + String(e.message).slice(0, 120) + ' · 하루 동안 낱말·뜻 검색만 써요'); return true; } return false; };
       let embOne = null; if (!key) for (const a of alts) if ((embOne = await embAltRoute(a))) break; // 되는 길이 나올 때까지(시험 중이면 이번엔 건너뜀)
       if (key || embOne) for (const sec of splitSections(stripProof(memory))) if (INJ_SEM.includes(sec.key)) for (const it of itemBlocks(sec.body).items) units.push({ k: itemKey(it.key), t: it.lines.join('\n').slice(0, 2000) });
       if (units.length) {
@@ -645,7 +648,7 @@
       console.info('[조아메모리 실험판] 의미 검색 · ' + Object.keys(injCtx.sim).length + '개 점수 · 새 임베딩 ' + need.length + '개');
       } // 의미 검색 끝(Gemini 키, 또는 Firebase·Vertex 키로 되는 길을 찾았을 때)
       // AI 재검토: 주입 탭에서 방마다 켜고 끔 · 기본은 꺼짐(보낼 때마다 AI를 불러 돈이 들어서 · 키워드·뜻 검색으로 골라요)
-      if (injCtx.said && String(await getValue('aiPick', 'on')) !== 'off' && injSet.ai === 'on') {
+      if (!aiNo && injCtx.said && String(await getValue('aiPick', 'on')) !== 'off' && injSet.ai === 'on') {
         const cand = selectInjection(memory, true);
         if (cand.length >= 2) {
           const prev = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) !== 'user') || {})).slice(-2500);
@@ -662,12 +665,12 @@
             for (const row of Array.isArray(j.scores) ? j.scores : []) { const [id, sc] = Array.isArray(row) ? row : [row?.id, row?.score]; if (cand[id] && Number.isFinite(+sc)) ai[cand[id].key] = Math.max(0, Math.min(100, Math.round(+sc))); }
             if (Object.keys(ai).length) { injCtx.ai = ai; aiPickCache = { k: ck, v: ai }; }
             injCtx.aiTop = Math.max(0, ...Object.values(injCtx.ai || {})); console.info('[조아메모리 실험판] AI 재검토 · 후보 ' + cand.length + '개 · 점수 ' + Object.keys(ai).length + '개 · 1등 ' + injCtx.aiTop);
-          } catch (e) { console.info('[조아메모리 실험판] AI 재검토 건너뜀 · ' + e.message); logErr('AI 재검토', '건너뜀(낱말·뜻으로만 골랐어요) · ' + e.message); }
+          } catch (e) { console.info('[조아메모리 실험판] AI 재검토 건너뜀 · ' + e.message); if (!(await aiFail(e))) logErr('AI 재검토', '건너뜀(낱말·뜻으로만 골랐어요) · ' + e.message); }
         }
       }
       // 목차로 찾기: 보낸 말이 지난 일을 꺼내는데(그때·예전·기억나 등) 확실히 떠올린 게 없으면, 사건·이정표·고리 제목 목록에서 AI가 가리키는 일을 골라요
       //   보낼 때·리롤 때만 · 최대 3초(늦으면 건너뛰고 그냥 보내요) · 최근 사건(늘 들어감)은 목록에서 빼요
-      if (injKind && injCtx.said && INJ_PAST_CUE.test(injCtx.said) && !(injCtx.aiTop >= 80) && !selectInjection(memory, true).some(c => c.v >= 2)) {
+      if (!aiNo && injKind && injCtx.said && INJ_PAST_CUE.test(injCtx.said) && !(injCtx.aiTop >= 80) && !selectInjection(memory, true).some(c => c.v >= 2)) {
         const secs = splitSections(stripProof(memory)), list = [];
         for (const k of ['날짜로그', '이정표', '서사 고리', PAST]) { const sec = secs.find(x => x.key === k); if (!sec) continue; const b = itemBlocks(sec.body).items, items = b.length ? b : secItems(sec);
           (k === '날짜로그' ? items.slice(0, -injSet.recent) : items).forEach(it => { if (!injSkip.has(itemKey(it.key))) list.push({ key: itemKey(it.key), t: String(it.lines[0]).replace(/^\s*[▸-]\s*/, '').slice(0, 90) }); }); }
@@ -682,7 +685,7 @@
           const j = JSON.parse((r?.candidates?.[0]?.content?.parts || []).map(p => p.thought ? '' : p.text || '').join('') || '{}'), got = (Array.isArray(j.ids) ? j.ids : []).map(Number).filter(i => list[i]).slice(0, 3);
           if (got.length) { injCtx.ai = { ...(injCtx.ai || {}) }; injCtx.toc = new Set(); for (const i of got) { injCtx.ai[list[i].key] = 95; injCtx.toc.add(list[i].key); } injCtx.aiTop = Math.max(0, ...Object.values(injCtx.ai)); }
           console.info('[조아메모리 실험판] 목차로 찾기 · 목록 ' + list.length + '개 · 고른 것 ' + got.length + '개');
-        } catch (e) { console.info('[조아메모리 실험판] 목차로 찾기 건너뜀 · ' + e.message); }
+        } catch (e) { console.info('[조아메모리 실험판] 목차로 찾기 건너뜀 · ' + e.message); await aiFail(e); }
       }
     } catch (e) { console.info('[조아메모리 실험판] 의미 검색 건너뜀 · ' + e.message); logErr('뜻 검색', '건너뜀 · ' + e.message); }
   }
@@ -1172,18 +1175,24 @@
   // 방을 열 때도 지금 턴 사본을 접어 둬요(끝난 임신처럼 저장이 안 일어나는 방도 분기방이 산모수첩까지 가져가게) · saved는 안 바꿔요(기기끼리 고르는 기준이라)
   const pregSnapNow = c => { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (preg && t && pregChat === c && c === chatIdFromPath()) pregSnapPut(c, t, JSON.stringify(preg)); };
   // 분기한 방: 이 방엔 임신 기록이 한 번도 없고, 제목이 같은 다른 방과 대화 앞부분(유저 말 3턴 이상)이 글자까지 같으면 → 갈라진 턴까지의 사본 중 가장 늦은 것을 복사
+  // 빈 기록(모드 화면만 열어 생긴 것)은 없는 것과 같아요
+  const pregEmpty = j => { let o = null; try { o = JSON.parse(String(j || 'null')); } catch (_) {} return !o || (o.start == null && !o.history?.length && !o.books?.length); };
+  const pregBranchSeen = new Set(); // 이 페이지에서 이미 찾아본 방(화면을 새로 그릴 때마다 두 방 대화를 다 읽지 않게)
   async function pregBranch(chatId) {
-    if (String(await getValue('preg:' + chatId, '')) !== '') return false;
+    if (pregBranchSeen.has(chatId)) return false; pregBranchSeen.add(chatId);
+    if (!pregEmpty(await getValue('preg:' + chatId, '')) || String(await getValue('pbchk:' + chatId, ''))) return false;
     const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []), t = roomTitle();
     let cur = null;
     for (const k of keys) { if (!String(k).startsWith('pregsnap:') || k === 'pregsnap:' + chatId) continue;
       let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {} if (!o?.list?.length || o.title !== t) continue;
-      cur ||= await readAll(chatId); const from = branchSrc(cur, chatId); if (from && k.slice(9) !== from) continue; // 분기해 온 방 것만
+      cur ||= await readAll(chatId); const from = branchSrc(cur, chatId);
+      if (!from) { await setValue('pbchk:' + chatId, 'no'); return false; } // 분기한 방이 아니면 다음부터 안 찾아요
+      if (k.slice(9) !== from) continue; // 분기해 온 방 것만
       let src; try { src = await readAll(k.slice(9)); } catch (_) { continue; }
       const at = sameTurns(src, cur); // 똑같은 유저 말 수 = 갈라진 턴
       if (at < 3 || chatIdFromPath() !== chatId) continue;
       const x = o.list.filter(y => y.turn <= at).pop(); if (!x) { logErr('연동', '분기 전 방 임신 기록이 ' + at + '턴 뒤 것만 있어 안 가져옴(그때는 임신 기록이 없었거나 60턴보다 오래 전)'); continue; }
-      if (String(await getValue('preg:' + chatId, '')) !== '') return false;
+      if (!pregEmpty(await getValue('preg:' + chatId, ''))) return false;
       await setValue('preg:' + chatId, x.j); logErr('연동', '분기한 방 · ' + k.slice(9, 17) + '… 방의 ' + x.turn + '턴 임신 기록을 복사'); return true; }
     return false;
   }
@@ -1818,12 +1827,18 @@
     if (i < 0) return String(t); let j = i + 1; while (j < L.length && !hd(L[j])) j++;
     return [...L.slice(0, i), ...L.slice(j), ...L.slice(i, j)].join('\n');
   }
+  const agoText = n => n === 0 ? '오늘 일' : n === 1 ? '어제(1일 전)' : n < 60 ? n + '일 전' : n < 730 ? '약 ' + Math.round(n / 30) + '달 전' : '약 ' + Math.round(n / 365) + '년 전';
   function buildBlock(memory, uptoId, turns, at = new Date().toISOString(), by = DEVICE, keepSel = false) {
     const whole = memory; memory = selectInjection(memory); const sel = keepSel || !lastInj.all;
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => dq(l).replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”');
     const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim())
       .flatMap(l => /^\s*■\s*고정 설정\s*$/.test(l) ? [l, '※ 이 칸은 사용자가 직접 쓴 설정·지시(NPC·지침·세계관) · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 늘 그대로 지킴 · 그 인물이 나오면 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)'] : [l]); // 고정 칸이 전으로 따로 내려가도 안내가 같이 가게
+    // 웹 모드: 날짜로그 사건마다 지금 이야기 날짜에서 며칠 전인지 한 줄(※ 줄이라 노트로 다시 읽을 땐 빠져요 · 앱 모드는 정리 때만 다시 써서 숫자가 낡으니 안 붙여요)
+    if (sceneOn) { const today = pregDay(whole, snapshot); let inLog = false, first = true;
+      if (today != null) for (let i = 0; i < lines.length; i++) { const l = lines[i]; if (/^\s*■/.test(l)) { inLog = /^\s*■\s*날짜로그\s*$/.test(l); continue; }
+        if (!inLog || !/^\s*▸\s*\[/.test(l) || /\(요약\)|\[[^\]\-]*~/.test(l)) continue; const d = P_DAY2(l), n = d == null ? -1 : today - d; if (n < 0 || n > 36500) continue;
+        const rel = agoText(n); lines.splice(i + 1, 0, first ? `※ ↑ 지금 이야기 날짜에서 ${rel} · 아래 사건들도 같은 식으로 적음(지난 일을 말할 때 이 날수에 맞춤)` : `※ ↑ ${rel}`); first = false; i++; } }
     // 먼지쌓인곳은 이름만 한 줄로: 목록에서만 뺀 물건이라 없어진 걸로 연기하지 않게, 다시 나오면 처음 보는 것처럼 굴지 않게(본문은 화면에만)
     const shelf = shelfNames(whole).slice(-30).map(clean);
     return '\n\n' + [
@@ -2474,7 +2489,7 @@
 - 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄(나이·관계 등 원문 그대로), 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(60자 안팎, 왜 그랬는지까지)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그. 옮긴 내용은 옮긴 칸에 꼭 씀(어느 칸에서도 빠지지 않게).
 - 호칭 채우기: 기존 → 줄에 「」가 없으면, 이번 로그 대사에서 그 사람이 상대를 이름 그대로 부른 것을 한 번이라도 찾으면(예: "Nana, wait" → 「Nana」 · "나나야" → 「나나」) 그 인물을 (고침)으로 써서 그 → 줄의 「」를 채움. 이번 로그에 그 인물이 안 나와도 함.
 - 관계 줄(이름 → 상대: …)의 관계 부분은 지금 둘이 어떤 사이인지 한 구(40자 안팎, 예: 연인 직전 · 첫 키스 후 서로 자각). 어떻게 그렇게 됐는지 사건을 잇달아 쓰지 않음(경위는 날짜로그, 자세한 계기는 전환 줄 · → 줄의 (변화: 계기)는 한 마디만).
-- 날짜로그에 넣는 대사는 원문 글자 그대로 옮김: 중간을 '…'·'...'로 잘라 앞뒤를 잇거나, 말을 바꾸지 않음.
+- 날짜로그에 넣는 대사는 원문 글자 그대로 문장째 옮김: 중간을 '…'·'...'로 잘라 앞뒤를 잇거나, 줄이거나, 말을 바꾸지 않음. 길면 그중 결정적인 문장 하나를 통째로 씀.
 - 【이름】 줄의 행동 습관·버릇은 두 번 이상 나왔거나, 원문이 '버릇·습관·늘·매번'이라고 밝힌 것만 씀. 한 번 보인 몸짓·표정은 습관이 아님. 그 사람의 특징(못하는 것·서툰 것·잘하는 것·좋아하는 것·싫어하는 것·못 먹는 것·체질·무서워하는 것)은 습관이 아니므로 한 번만 나와도 【이름】 줄에 씀.
 - 이야기 속 시간이 흐른 것 반영: 지금 날짜 = 새 로그의 마지막 날짜. 기존 기억의 항목이 지금 날짜와 맞지 않으면(예전 시점의 나이·학년·직업·사는 곳·관계·상태가 그대로 남아 있음) 이번 로그에 그 인물이 조금만 나와도 지금 기준으로 (고침)해서 씀(예전 정리 때 이미 건너뛴 시간도 포함 · 이 경우는 '변화 근거가 없는 항목은 유지'의 예외). 인물 칸을 지금 모습으로 고칠 때 바뀌기 전 모습은 '사연: (그때 날짜) …' 한 줄로 남김(이 줄은 60자 제한 없이 그때 사실을 빠짐없이: 나이·학년·반·직책·알바·사는 곳 등).
 - 인지·비밀에 '회귀 전 일' 항목이 있으면 지금 이야기는 회귀 뒤다. 회귀 전 일은 이번 생에서 아직 안 일어난 일이라 날짜로그·인물 칸에 지금 일로 다시 쓰지 않고, 인물 칸의 정체·나이·관계·상태가 새 로그와 맞지 않으면 새 로그 기준으로 (고침)함. 회귀 전 일을 기억한다는 원문이 새로 나온 인물만 그 항목에서 '알고 있음'으로 고침.
@@ -3113,7 +3128,7 @@
   const easeStyle = document.createElement('style');
   easeStyle.textContent = ''
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10.jm-col{padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10.jm-col .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:is(.jm-col,:has([data-message-id],[data-message-group-id])){padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10:is(.jm-col,:has([data-message-id],[data-message-group-id])) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}'
     + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}html.jm-hh [class*="group/header"]>.transition-transform{transform:none!important;translate:none!important}}' // 폰 웹 맨 위 ☰ 크랙 줄만 숨기고, 크랙이 밀어 올려 숨기는 방 제목 줄은 늘 보이게 · 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로)
     + '#jm-mask-emo{position:fixed;inset:0;pointer-events:none;z-index:2147483647}#jm-mask-emo>i{position:fixed;font-style:normal;line-height:1;display:flex;align-items:center;justify-content:center}';
@@ -4790,14 +4805,45 @@
     @media (prefers-reduced-motion:reduce){.wd-heart.beat{animation:none}}
     .seg{background:var(--canvas)}
     nav.top.dock-idle{opacity:0;transform:translate(-50%,12px);pointer-events:none;transition:opacity .35s,transform .35s}
+    .fx-top b{font-size:20px;font-weight:800;letter-spacing:-.03em}
+    .fx-list{gap:10px}
+    .fx-box{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:20px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+    .fx-grp[data-st="on"]{border-color:color-mix(in srgb,var(--acc) 35%,var(--rule));box-shadow:0 6px 18px -12px color-mix(in srgb,var(--acc) 70%,transparent)}
+    .fx-rows{list-style:none;margin:0;padding:0}.fx-rows>li+li,.fx-grp>.fx-rows{border-top:1px solid var(--rule)}
+    .fx-rows details{border:0;border-radius:0;background:none}.fx-rows summary{padding:12px 12px 12px 16px;gap:10px}
+    .fx-t{flex:1;min-width:0}.fx-list summary .fx-t b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.01em}.fx-list summary .fx-t small{display:block;margin-top:2px}
+    .fx-off .fx-t{opacity:.5}
+    .fx-sw{width:38px;height:23px;border-radius:999px;background:#DAD6E4;position:relative;transition:background-color .2s}.fx-sw::before{content:"";position:absolute;inset:-10px -6px}
+    .fx-sw i,.fx-sw[aria-pressed="false"] i{position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+    .fx-sw[aria-pressed="true"]{background:var(--acc)}.fx-sw[aria-pressed="true"] i{left:18px}
+    .fx-sw.lg{width:46px;height:28px}.fx-sw.lg i,.fx-sw.lg[aria-pressed="false"] i{width:22px;height:22px}.fx-sw.lg[aria-pressed="true"] i{left:21px}
+    .fx-sw:focus-visible,.fx-grp-n:focus-visible,.fx-grp-m:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+    .fx-grp-h{display:flex;align-items:center;gap:6px;padding:10px 12px 10px 10px}
+    .fx-grp-n{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px;border-radius:10px}
+    .fx-grp-n b{font-size:16px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-grp-n small{font-size:12.5px;font-weight:600;color:var(--graphite);white-space:nowrap}
+    .fx-grp-n em{font-style:normal;font-size:11.5px;font-weight:800;color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--paper,#fff));padding:3px 8px;border-radius:999px;white-space:nowrap}
+    .fx-grp[data-st="off"] .fx-grp-n b{color:var(--graphite)}
+    .fx-grp-m{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 auto;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--graphite);font-size:18px;font-weight:800}
+    @media (prefers-reduced-motion:reduce){.fx-sw,.fx-sw i,.fx-box{transition:none}}
+    .fx-grpname{display:block;width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px 12px;border:1px solid var(--rule);border-radius:12px;font-size:16px;font-weight:700;background:var(--paper,#fff);color:inherit}
     .fx-movebtn{all:unset;cursor:pointer;margin-left:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);font-size:12.5px;font-weight:700;color:var(--ink2);white-space:nowrap;background:var(--paper,#fff)}.fx-movebtn:hover{color:var(--acc)}
     .fx-sheet{position:absolute;inset:0;z-index:20;background:rgba(34,30,46,.28);display:flex;align-items:flex-end;justify-content:center}
     .fx-sheet-in{width:min(520px,100%);max-height:75%;overflow:auto;background:var(--paper,#fff);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(34,30,46,.12)}
     @media(min-width:900px){.fx-sheet{align-items:center}.fx-sheet-in{border-radius:18px}}
     .fx-pg{display:flex;flex-direction:column;gap:12px}.fx-pg-h{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2px}.fx-pg-h b{font-size:16px;font-weight:800;color:var(--ink)}.fx-pg-x{all:unset;justify-self:start;cursor:pointer;padding:6px 4px;font-size:15px;color:var(--ink2)}.fx-pg-ok{all:unset;justify-self:end;cursor:pointer;padding:6px 4px;font-size:15px;font-weight:800;color:var(--acc)}.fx-pg-ok:disabled{opacity:.4}
-    .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:15.5px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
-    .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"⌄";position:absolute;right:0;top:50%;transform:translateY(-62%);font-size:13px;color:var(--graphite);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:none;color:var(--graphite);font:inherit;font-size:13.5px;padding:4px 16px 4px 4px;cursor:pointer;outline:none}
-    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:12px;font-size:15px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
+    .fx-card{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:16px;padding:12px 16px 10px;display:flex;flex-direction:column}.fx-card-top{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}.fx-card .fx-name{all:unset;flex:1;min-width:0;font-size:16px;font-weight:700;color:var(--ink)}.fx-card .fx-name::placeholder{color:var(--graphite);font-weight:600}
+    .fx-catw{position:relative;flex-shrink:0}.fx-catw::after{content:"⌄";position:absolute;right:0;top:50%;transform:translateY(-62%);font-size:13px;color:var(--graphite);pointer-events:none}.fx-cat{appearance:none;-webkit-appearance:none;border:0;margin:0;background:none;color:var(--graphite);font:inherit;font-size:16px;padding:4px 16px 4px 4px;cursor:pointer;outline:none}
+    .fx-card textarea{all:unset;display:block;box-sizing:border-box;width:100%;min-height:300px;height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:12px;font-size:16px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}.fx-cnt{align-self:flex-end;margin-top:6px;font-size:12px;color:var(--graphite)}.fx-pg .fx-save{height:50px;border-radius:14px;font-size:16px}
+    .fx-pg-ok{padding:8px 16px;border-radius:999px;background:var(--acc);color:#fff;font-size:14px}
+    .fx-card{padding:0;border-radius:22px;overflow:hidden}
+    .fx-card .fx-name{display:block;box-sizing:border-box;width:100%;flex:none;padding:18px 18px 12px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+    .fx-lab{font-size:11.5px;font-weight:800;color:var(--graphite);padding:0 18px 6px}
+    .fx-sel{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 12px}
+    .fx-sel button{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;background:color-mix(in srgb,var(--graphite) 10%,var(--paper,#fff));color:var(--ink2)}
+    .fx-sel button[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 12%,var(--paper,#fff));color:var(--acc);box-shadow:inset 0 0 0 1.5px var(--acc)}
+    .fx-sel button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+    .fx-card textarea{border-top:1px solid var(--rule);padding:16px 18px;line-height:1.75;height:52vh}
+    .fx-ft{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--graphite)}.fx-ft .fx-cnt{margin:0;align-self:auto;font-weight:700;color:var(--ink2)}
     .fx-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fx-sheet-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fx-acts2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.fx-libh{display:block;font-size:13px;margin:6px 2px 8px}.fx-lib label{flex:1;min-width:0}.fx-lib .fx-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fx-lib .fx-lt b{display:flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-lib .fx-lt small{font-size:11.5px;color:var(--graphite)}.fx-lib .fx-n{font-style:normal;font-size:11px;color:var(--graphite);opacity:.7;flex:0 0 auto}
     .fx-sheet ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -5383,6 +5429,23 @@
     return `<div class="verfoot">♡ v${esc(MY_VER)}${up ? ` <button class="vup" data-act="getupdate">update 필요!</button> <small>v${esc(latestVer)}</small>` : ''}</div>`;
   };
   const fxOff = it => !!it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)); // 노트관리의 넣음/뺌과 같은 저장소
+  // 묶음: 이름을 '묶음｜제목'으로 적어 둬요(노트에 실려서 다른 기기·내보내기·보관함에도 그대로 따라가요) · 묶음 켜기 = 그 안 항목을 한 번에 넣기
+  const FX_SEP = '｜', fxCut = it => String(it.title || '').indexOf(FX_SEP);
+  const fxGrpOf = it => fxCut(it) > 0 ? it.title.slice(0, fxCut(it)).trim() : '', fxName = it => fxCut(it) > 0 ? it.title.slice(fxCut(it) + 1).trim() : it.title;
+  function fxGrpHtml(items) { const g = nav.fxGrp;
+    return `<div class="fx-sheet" data-act="fxgrpclose"><div class="fx-sheet-in" data-act="fxnoop"><div class="fx-sheet-h"><b>${g.old ? '묶음 편집' : '새 묶음'}</b><button class="ia" data-act="fxgrpclose" aria-label="닫기">✕</button></div>
+      <input class="fx-grpname" placeholder="묶음 이름 (예: 모델 이름)" value="${esc(g.name)}" maxlength="20">
+      <div class="fx-pickbar"><small class="muted">이 묶음에 넣을 것을 골라요 · 한 설정은 한 묶음에만</small></div>
+      <ul class="fx-pick">${items.map((it, i) => it.head ? `<li><label><input type="checkbox" data-act="fxgrpchk" data-arg="${i}"${g.on.has(i) ? ' checked' : ''}><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(fxName(it) || '이름 없음')}</b><small>${fxGrpOf(it) && fxGrpOf(it) !== g.old ? esc(fxGrpOf(it)) + ' 묶음' : fmt(it.text.length) + '자'}</small></label></li>` : '').join('')}</ul>
+      <div class="actions one" style="margin-top:12px"><button class="btn pri" data-act="fxgrpsave">저장</button></div>
+      ${g.old ? '<p style="margin:10px 0 0;text-align:center"><button class="linkbtn" data-act="fxgrpdel">묶음 풀기 (설정은 그대로 남아요)</button></p>' : ''}</div></div>`; }
+  // 묶음 바꾸기: next(it, i) = 새 묶음 이름('' = 묶음 없음 · null = 그대로) · 제목이 바뀌면 넣음/뺌 표시도 새 이름으로 옮겨요
+  async function fxGrpApply(next, msg) { const cid = chatIdFromPath(), items = fixItems(editBody(FIXED)); let moved = false;
+    items.forEach((it, i) => { const g = next(it, i); if (g == null || !it.head || g === fxGrpOf(it)) return;
+      const off = fxOff(it); NO_INJ.delete(FIXED + '|' + itemKey(it.head)); it.title = (g ? g + FX_SEP : '') + fxName(it); if (off) NO_INJ.add(FIXED + '|' + itemKey('[' + it.cat + '] ' + it.title.replace(/\s+/g, ' ').trim())); moved = true; });
+    nav.fxGrp = null; if (!moved) return render();
+    if (cid) await setValue('noinj:' + cid, JSON.stringify([...NO_INJ]));
+    await fxSaveBody(fixJoin(items), msg); }
   function fixedHtml() {
     if (nav.fxEdit) return `<section class="bk fx">${fxEditHtml()}</section>`; // 추가·수정은 메모장처럼 화면 전체로(키보드가 올라와도 안 찌그러지게)
     const items = fixItems((splitSections(noteMemory()).find(x => x.key === FIXED)?.body || '')), total = items.reduce((a, it) => a + it.title.length + it.text.length, 0);
@@ -5391,21 +5454,31 @@
     return `<section class="bk fx">
       <div class="fx-top"><div><b>고정 설정</b><small>켠 것만 매 턴 들어가요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
       <div class="fx-seg"><button data-act="fxfilter" data-arg="" aria-pressed="${!flt}">전체 <small>${items.length}</small></button>${FIX_CATS.map(c => `<button data-act="fxfilter" data-arg="${c}" aria-pressed="${flt === c}">${c} <small>${cnt(c)}</small></button>`).join('')}</div>
-      ${shown.length ? `<ul class="fx-list">${shown.map(([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details><summary><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
-          <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`).join('')}</ul>`
+      ${shown.length ? `<ul class="fx-list">${(() => { const row = ([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details data-k="fx|${esc(it.cat + '|' + it.title)}"><summary><span class="fx-t"><b>${esc(fxName(it) || '이름 없음')}</b><small>${it.cat} · ${fmt(it.title.length + it.text.length)}자</small></span>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
+          <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`;
+          const segs = [], seen = new Set(), fold = nav.fxFold ||= new Set(); // 묶음은 첫 항목 자리에 한 카드로 · 묶음 밖 설정은 이어진 것끼리 한 카드
+          for (const x of shown) { const g = fxGrpOf(x[0]), last = segs[segs.length - 1];
+            if (!g) { if (last && !last.g) last.rows.push(x); else segs.push({ g: '', rows: [x] }); } else if (!seen.has(g)) { seen.add(g); segs.push({ g, rows: shown.filter(y => fxGrpOf(y[0]) === g) }); } }
+          return segs.map(({ g, rows }) => { if (!g) return `<li class="fx-box"><ul class="fx-rows">${rows.map(row).join('')}</ul></li>`;
+            const on = rows.filter(y => !fxOff(y[0])).length, st = on === rows.length ? 'on' : on ? 'part' : 'off', shut = fold.has(g);
+            return `<li class="fx-box fx-grp" data-st="${st}"><div class="fx-grp-h"><button class="fx-grp-n" data-act="fxfold" data-arg="${esc(g)}" aria-expanded="${!shut}"><b>${esc(g)}</b><small>${rows.length}개${shut ? ' · 접힘' : ''}</small>${st === 'on' ? '<em>켜짐</em>' : st === 'part' ? `<em>${on}개 켜짐</em>` : ''}</button>
+              <button class="fx-grp-m" data-act="fxgrpedit" data-arg="${esc(g)}" aria-label="묶음 편집">⋯</button><button class="fx-sw lg" data-act="fxgrpinj" data-arg="${esc(g)}" aria-pressed="${st === 'on'}" aria-label="${st === 'on' ? '묶음 켜짐 · 누르면 모두 빼기' : '누르면 묶음 모두 넣기'}"><i></i></button></div>
+              ${shut ? '' : `<ul class="fx-rows">${rows.map(row).join('')}</ul>`}</li>`; }).join(''); })()}</ul>`
         : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : '바뀌면 안 되는 설정을 넣어 두세요.'}</p>`}
-      <div class="actions one"><button class="btn pri" data-act="fixopen" data-arg="new">+ 새로 추가</button></div>
+      <div class="actions" style="grid-template-columns:1fr 1.4fr"><button class="btn" data-act="fxgrpedit" data-arg=""${items.length ? '' : ' disabled'}>+ 묶음</button><button class="btn pri" data-act="fixopen" data-arg="new">+ 새 설정</button></div>
+      ${nav.fxGrp ? fxGrpHtml(items) : ''}
       ${nav.fxLib ? fxLibHtml(items.length) : ''}
     </section>`;
   }
   // 추가·수정: 메모장처럼 화면 전체 · 흰 카드 하나에 이름·카테고리·글
   function fxEditHtml() {
-    const it = nav.fxEdit, old = Number.isInteger(nav.part);
+    const it = nav.fxEdit, old = Number.isInteger(nav.part), grps = [...new Set(fixItems(editBody(FIXED)).map(fxGrpOf).filter(Boolean))];
     return `<div class="fx-pg"><div class="fx-pg-h"><button class="fx-pg-x" data-act="fxedclose">닫기</button><b>${old ? '고정 설정 수정' : '새 고정 설정'}</b><button class="fx-pg-ok" data-act="saveEdit"${busyNow ? ' disabled' : ''}>저장</button></div>
-      <div class="fx-card"><div class="fx-card-top"><input class="fx-name" data-out="fxtitle" placeholder="이름 (예: 주태정 · 말투 지침)" value="${esc(it.title)}">
-        <label class="fx-catw"><select class="fx-cat" aria-label="카테고리">${FIX_CATS.map(c => `<option${it.cat === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
+      <div class="fx-card"><input class="fx-name" data-out="fxtitle" placeholder="이름 (예: 주태정 · 말투 지침)" value="${esc(it.title)}">
+        <div class="fx-lab">종류</div><div class="fx-sel">${FIX_CATS.map(c => `<button data-act="fxcat" data-arg="${c}" aria-pressed="${it.cat === c}">${c}</button>`).join('')}</div>
+        ${grps.length ? `<div class="fx-lab">묶음</div><div class="fx-sel">${['', ...grps].map(g => `<button data-act="fxgrpset" data-arg="${esc(g)}" aria-pressed="${(it.grp || '') === g}">${g ? esc(g) : '없음'}</button>`).join('')}</div>` : ''}
         <textarea data-out="editor" placeholder="여기에 쓰기 · 유저노트처럼 그대로 붙여 넣어요">${esc(it.text)}</textarea>
-        <small class="fx-cnt">${it.text.length.toLocaleString()}자</small></div>
+        <div class="fx-ft"><span>켜 두면 매 턴 채팅에 들어가요</span><small class="fx-cnt">${it.text.length.toLocaleString()}자</small></div></div>
       ${old ? '<p style="margin:0;text-align:center"><button class="linkbtn" data-act="fxdel">이 설정 지우기</button></p>' : ''}</div>`;
   }
   const fxHead = t => String(t).replace(/^조아메모리 고정 설정[^\n]*\n/, ''); // 내보낸 파일 첫 줄
@@ -9578,7 +9651,8 @@
     const typed = new Map([...main.querySelectorAll('input[data-set]:not([type=checkbox])')].filter(el => el.value).map(el => [el.dataset.set, el.value]));
     main.style.padding = nav.view === 'graph' ? '0' : '';
     const hadSheet = !!main.querySelector('.fx-sheet');
-    main.innerHTML = devAskHtml() + etcAskHtml() + fullAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
+    const opened = new Set([...main.querySelectorAll('details[data-k][open]')].map(d => d.dataset.k)); // 다시 그려도 펼친 칸은 펼친 채로(노트를 다시 읽으면 닫혀 버려서 두 번 눌러야 했어요)
+    main.innerHTML =devAskHtml() + etcAskHtml() + fullAskHtml() + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -9604,6 +9678,7 @@
       : nav.tab === 'settings' ? settingsHtml()
       : homeHtml());
     for (const [k, v] of typed) { const el = main.querySelector(`input[data-set="${k}"]`); if (el && !el.value) el.value = v; }
+    if (opened.size) main.querySelectorAll('details[data-k]').forEach(d => { if (opened.has(d.dataset.k)) d.open = true; });
 
     // 아래
     const bottom = out('bottom');
@@ -9666,7 +9741,8 @@
   root.addEventListener('change', e => { if (e.target?.classList?.contains('fx-cat') && nav.fxEdit) nav.fxEdit.cat = e.target.value; });
   root.addEventListener('input', e => { if (!e.target?.closest?.('.fx-card')) return; // 고정 설정 쓰는 중: 글자를 바로 nav에 담아 둬요(화면이 다시 그려져도 안 지워지게)
     if (e.target.tagName === 'TEXTAREA') { if (nav.fxEdit) nav.fxEdit.text = e.target.value; const c = root.querySelector('.fx-cnt'); if (c) c.textContent = e.target.value.length.toLocaleString() + '자'; }
-    else if (e.target.dataset?.out === 'fxtitle' && nav.fxEdit) nav.fxEdit.title = e.target.value; });
+    else if (e.target.dataset?.out === 'fxtitle' && nav.fxEdit) nav.fxEdit.title = e.target.value;
+    else if (e.target.classList?.contains('fx-grpname') && nav.fxGrp) nav.fxGrp.name = e.target.value; });
   root.addEventListener('change', e => { if (e.target?.id === 'pg-world' && preg?.start != null) { preg.world = e.target.value; pregSave(); render(); } });
   // 물음표 말풍선이 열릴 때 조아메모리 창 밖으로 나가면 안쪽으로 밀어요(꼬리는 물음표 자리 그대로)
   root.addEventListener('toggle', e => { const d = e.target; if (!d.open || !d.matches?.('.pg-hq,.nf-help')) return; const b = d.querySelector(':scope>.pg-hb,:scope>.nf-more'); if (!b) return;
@@ -10397,8 +10473,11 @@
     if (!out('editor')) return; // 항목 목록 화면에선 저장할 게 없어요
     if (root.querySelector('[data-rel]')) { const line = relCompose(); if (line == null) return toast('누가·누구에게를 서로 다른 사람으로 골라 주세요.', 'err'); out('editor').value = line; }
     if (nav.key === FIXED && nav.fxEdit) {
-      const list = fixItems(editBody(FIXED)), it = { cat: nav.fxEdit.cat, title: String(out('fxtitle')?.value || '').trim(), text: out('editor').value };
-      Object.assign(nav.fxEdit, { title: it.title, text: it.text }); // 저장이 실패해도 창에 쓰던 글이 남게
+      const list = fixItems(editBody(FIXED)), typed = String(out('fxtitle')?.value || '').trim(), grp = nav.fxEdit.grp || '', text0 = out('editor').value;
+      const nm = typed || (grp ? (text0.trim().split('\n')[0] || '').replace(/^[-•*\s]+/, '').slice(0, 30) : ''), it = { cat: nav.fxEdit.cat, title: (grp && nm ? grp + FX_SEP : '') + nm, text: text0 };
+      { const o = Number.isInteger(nav.part) && list[nav.part], cid = chatIdFromPath(), nh = '[' + it.cat + '] ' + it.title.replace(/\s+/g, ' ').trim(); // 이름·묶음이 바뀌어도 꺼 둔 표시는 따라가요
+        if (o?.head && fxOff(o) && !nav.fxDel && cid && itemKey(o.head) !== itemKey(nh)) { NO_INJ.delete(FIXED + '|' + itemKey(o.head)); NO_INJ.add(FIXED + '|' + itemKey(nh)); await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); } }
+      Object.assign(nav.fxEdit, { title: typed, text: it.text }); // 저장이 실패해도 창에 쓰던 글이 남게
       if (nav.fxDel || !(it.title || it.text.trim())) { if (Number.isInteger(nav.part)) list.splice(nav.part, 1); } else if (Number.isInteger(nav.part)) list[nav.part] = it; else list.push(it);
       out('editor').value = fixJoin(list); nav.part = null; nav.fxDel = false;
     }
@@ -11145,6 +11224,21 @@
         list.splice(i, 1);
         if (it.head && NO_INJ.delete(FIXED + '|' + itemKey(it.head))) { const cid = chatIdFromPath(); if (cid) await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); }
         fxChain = fxChain.then(() => fxSaveBody(fixJoin(list))); return; }
+      case 'fxfold': { const f = nav.fxFold ||= new Set(); if (f.has(arg)) f.delete(arg); else f.add(arg); const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; return; }
+      case 'fxgrpedit': { if (loading || !snapshot?.note) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+        const items = fixItems(editBody(FIXED)); nav.fxGrp = { old: arg || '', name: arg || '', on: new Set(arg ? items.map((it, i) => (fxGrpOf(it) === arg ? i : -1)).filter(i => i >= 0) : []) }; return render(); }
+      case 'fxgrpclose': nav.fxGrp = null; return render();
+      case 'fxgrpchk': { const g = nav.fxGrp; if (!g) return; if (el.checked) g.on.add(Number(arg)); else g.on.delete(Number(arg)); return; } // 다시 그리지 않아요(창이 깜빡이지 않게)
+      case 'fxgrpsave': { const g = nav.fxGrp; if (!g) return; const name = String(ui('.fx-grpname')?.value || '').replace(/[｜\[\]\n]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!name) return toast('묶음 이름을 적어 주세요.', 'err', 2500); if (!g.on.size) return toast('넣을 설정을 하나 이상 골라 주세요.', 'err', 2500);
+        return fxGrpApply((it, i) => g.on.has(i) ? name : fxGrpOf(it) === g.old && g.old ? '' : null, '묶음을 저장했어요.'); }
+      case 'fxgrpdel': { const g = nav.fxGrp; if (!g?.old) return; return fxGrpApply(it => fxGrpOf(it) === g.old ? '' : null, '묶음을 풀었어요.'); }
+      case 'fxgrpinj': { e.preventDefault(); const cid = chatIdFromPath(); if (loading || !snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+        const mem = fixItems(editBody(FIXED)).filter(it => it.head && fxGrpOf(it) === arg), allOn = mem.every(it => !fxOff(it)); if (!mem.length) return;
+        for (const it of mem) { const key = FIXED + '|' + itemKey(it.head); if (allOn) NO_INJ.add(key); else NO_INJ.delete(key); }
+        const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; // 화면부터 바꿔요
+        fxChain = fxChain.then(async () => { try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); } const y2 = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y2; });
+        return; }
       case 'fxnoop': return;
       case 'fxlibsave': { const items = fixItems(editBody(FIXED)); if (!items.length) return; await fxLibPut(items); render(); return toast(`${items.length}개를 쓴 제목 그대로 보관함에 넣었어요 · 다른 방 고정 › 옮기기에서 골라 넣을 수 있어요`, 'ok', 3500); }
       case 'fxlibopen': { try { nav.fxLib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) { nav.fxLib = []; } nav.fxPick = null; return render(); }
@@ -11165,11 +11259,13 @@
       case 'fxexport': { const body = editBody(FIXED).trim(); if (!body) return; downloadText(`조아메모리-고정설정-${roomName().replace(/[\\/:*?"<>|]/g, '')}.txt`, '조아메모리 고정 설정\n' + body); return toast('파일로 받았어요', 'ok', 2500); }
       case 'fxcat': { if (!nav.fxEdit) return; nav.fxEdit.cat = arg; // 다시 그리지 않고 버튼만 바꿔요(창이 다시 떠서 깜빡이지 않게)
         root.querySelectorAll('[data-act="fxcat"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.arg === arg))); return; }
+      case 'fxgrpset': { if (!nav.fxEdit) return; nav.fxEdit.grp = arg || '';
+        root.querySelectorAll('[data-act="fxgrpset"]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.arg || '') === (arg || '')))); return; }
       case 'fxdel': if (!confirm('이 설정을 지울까요?')) return; nav.fxDel = true; return saveEdit();
       case 'fixopen': { for (let w = 0; (loading || !snapshot) && w < 75; w++) await new Promise(r => setTimeout(r, 200)); // 읽는 중이면 끝날 때까지 기다렸다 바로 열어요(최대 15초)
         if (!snapshot) return toast('기억을 못 읽었어요. 새로고침한 뒤 다시 눌러 주세요.', 'info', 3000);
         const list = fixItems(editBody(FIXED)), i = arg === 'new' ? 'new' : Number(arg);
-        nav.fxEdit = i === 'new' ? { cat: FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : 'NPC', title: '', text: '' } : { ...list[i] };
+        nav.fxEdit = i === 'new' ? { cat: FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : 'NPC', title: '', text: '', grp: '' } : { ...list[i], title: fxName(list[i]), grp: fxGrpOf(list[i]) };
         if (nav.tab === 'story') nav.mem = FIXED; // 저장 뒤에도 고정 탭에 그대로(정리 전 방은 저장하면 탭이 새로 생겨요)
         nav.prevView = nav.view; nav.prevKey = nav.key; nav.key = FIXED; nav.lines = false; nav.part = i; nav.fxY = out('main').scrollTop; render(); out('main').scrollTop = 0; return; } // 메모장처럼 화면 전체로 · 닫으면 보던 자리로
       case 'fxedclose': nav.fxEdit = null; nav.key = nav.prevKey || null; nav.part = null; render(); out('main').scrollTop = nav.fxY || 0; return;
