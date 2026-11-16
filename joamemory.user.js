@@ -4,7 +4,7 @@
 // @version      5.5.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -9548,6 +9548,7 @@
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${spotOf(snapshot) || '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
         <button data-act="errlog"><b>오류 기록</b><span class="v">${errHere().length ? `${errHere().length}개` : '없음'}</span></button>
+        <button data-act="storesize"><b>이 기기 저장 용량</b><span class="v">${nav.storeSize || '눌러서 재기'}</span></button>
         </div>`)
       + box('백업', '보관 · 되돌리기 · 다른 방으로 · 연결', `
         ${backupHtml()}
@@ -10908,6 +10909,11 @@
       case 'gzoom': { const w = out('gwrap'); if (arg === 'fit') return fitGraph(); return zoomAt(arg === 'in' ? 1.25 : 0.8, w.clientWidth / 2, w.clientHeight / 2); }
       case 'fixTurns': return fixTurns();
       case 'injected': nav.view = 'injected'; render(); out('main').scrollTop = 0; return;
+      case 'storesize': { // 이 기기에 저장한 글자 수(방 번호가 붙은 것은 종류별로 · 이 방 것 따로)
+        const keys = typeof GM_listValues === 'function' ? GM_listValues() : (typeof GM !== 'undefined' && GM.listValues ? await GM.listValues() : []), cid = chatIdFromPath() || '', by = {}; let all = 0, here = 0;
+        for (const k of keys) { const n = String(await getValue(k, '') ?? '').length + String(k).length, kind = String(k).split(':')[0]; all += n; by[kind] = (by[kind] || 0) + n; if (cid && String(k).endsWith(':' + cid)) here += n; }
+        const mb = n => n >= 1e6 ? (n / 1e6).toFixed(1) + '백만 자' : Math.round(n / 1000).toLocaleString() + '천 자', top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => k + ' ' + mb(n)).join(' · ');
+        nav.storeSize = mb(all); logErr('저장', `전체 ${mb(all)}(${keys.length}개) · 이 방 ${mb(here)} · 큰 순서: ${top}`); toast(`이 기기 저장 ${mb(all)} · 이 방 ${mb(here)} · 자세한 건 오류 기록에 적었어요`, 'info', 6000); return render(); }
       case 'errlog': { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } } nav.prevView = nav.view; nav.view = 'errlog'; render(); out('main').scrollTop = 0; return; }
       case 'errcopy': { const t = [...errHere()].reverse().map(x => `[${new Date(x.at).toLocaleString('ko-KR')}] ${x.where} · ${x.msg}${x.room ? ' · 방 ' + x.room : ''}`).join('\n');
         const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
