@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.5.7
+// @version      5.5.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -4810,7 +4810,7 @@
     .fx-box{background:var(--paper,#fff);border:1px solid var(--rule);border-radius:20px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
     .fx-grp[data-st="on"]{border-color:color-mix(in srgb,var(--acc) 35%,var(--rule));box-shadow:0 6px 18px -12px color-mix(in srgb,var(--acc) 70%,transparent)}
     .fx-rows{list-style:none;margin:0;padding:0}.fx-rows>li+li,.fx-grp>.fx-rows{border-top:1px solid var(--rule)}
-    .fx-rows details{border:0;border-radius:0;background:none}.fx-rows summary{padding:12px 12px 12px 16px;gap:10px}
+    .fx-rows details{border:0;border-radius:0;background:none;margin:0}.fx-rows summary{color:var(--ink)}.fx .fx-btm{border:0;padding:0;grid-template-columns:1fr 1.4fr}.fx-rows summary{padding:12px 12px 12px 16px;gap:10px}
     .fx-t{flex:1;min-width:0}.fx-list summary .fx-t b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.01em}.fx-list summary .fx-t small{display:block;margin-top:2px}
     .fx-off .fx-t{opacity:.5}
     .fx-sw{width:38px;height:23px;border-radius:999px;background:#DAD6E4;position:relative;transition:background-color .2s}.fx-sw::before{content:"";position:absolute;inset:-10px -6px}
@@ -4826,7 +4826,7 @@
     .fx-grp-m{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 auto;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--graphite);font-size:18px;font-weight:800}
     @media (prefers-reduced-motion:reduce){.fx-sw,.fx-sw i,.fx-box{transition:none}}
     .fx-grpname{display:block;width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px 12px;border:1px solid var(--rule);border-radius:12px;font-size:16px;font-weight:700;background:var(--paper,#fff);color:inherit}
-    .fx-movebtn{all:unset;cursor:pointer;margin-left:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);font-size:12.5px;font-weight:700;color:var(--ink2);white-space:nowrap;background:var(--paper,#fff)}.fx-movebtn:hover{color:var(--acc)}
+    .fx-movebtn{all:unset;cursor:pointer;margin-left:auto;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);font-size:12.5px;font-weight:700;color:var(--ink2);white-space:nowrap;background:var(--paper,#fff)}.fx-movebtn:hover{color:var(--acc)}
     .fx-sheet{position:absolute;inset:0;z-index:20;background:rgba(34,30,46,.28);display:flex;align-items:flex-end;justify-content:center}
     .fx-sheet-in{width:min(520px,100%);max-height:75%;overflow:auto;background:var(--paper,#fff);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(34,30,46,.12)}
     @media(min-width:900px){.fx-sheet{align-items:center}.fx-sheet-in{border-radius:18px}}
@@ -5438,7 +5438,7 @@
       <div class="fx-pickbar"><small class="muted">이 묶음에 넣을 것을 골라요 · 한 설정은 한 묶음에만</small></div>
       <ul class="fx-pick">${items.map((it, i) => it.head ? `<li><label><input type="checkbox" data-act="fxgrpchk" data-arg="${i}"${g.on.has(i) ? ' checked' : ''}><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(fxName(it) || '이름 없음')}</b><small>${fxGrpOf(it) && fxGrpOf(it) !== g.old ? esc(fxGrpOf(it)) + ' 묶음' : fmt(it.text.length) + '자'}</small></label></li>` : '').join('')}</ul>
       <div class="actions one" style="margin-top:12px"><button class="btn pri" data-act="fxgrpsave">저장</button></div>
-      ${g.old ? '<p style="margin:10px 0 0;text-align:center"><button class="linkbtn" data-act="fxgrpdel">묶음 풀기 (설정은 그대로 남아요)</button></p>' : ''}</div></div>`; }
+      ${g.old ? '<div class="actions one" style="margin-top:8px"><button class="btn" data-act="fxgrplib">이 묶음을 보관함에 넣기</button></div><p style="margin:10px 0 0;text-align:center"><button class="linkbtn" data-act="fxgrpdel">묶음 풀기 (설정은 그대로 남아요)</button></p>' : ''}</div></div>`; }
   // 묶음 바꾸기: next(it, i) = 새 묶음 이름('' = 묶음 없음 · null = 그대로) · 제목이 바뀌면 넣음/뺌 표시도 새 이름으로 옮겨요
   async function fxGrpApply(next, msg) { const cid = chatIdFromPath(), items = fixItems(editBody(FIXED)); let moved = false;
     items.forEach((it, i) => { const g = next(it, i); if (g == null || !it.head || g === fxGrpOf(it)) return;
@@ -5452,7 +5452,7 @@
     const flt = FIX_CATS.includes(nav.fxFilter) ? nav.fxFilter : '', shown = items.map((it, i) => [it, i]).filter(([it]) => !flt || it.cat === flt);
     const cnt = c => items.filter(it => it.cat === c).length;
     return `<section class="bk fx">
-      <div class="fx-top"><div><b>고정 설정</b><small>켠 것만 매 턴 들어가요</small></div><em>${items.length ? fmt(total) + '자' : ''}</em><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
+      <div class="fx-top"><div><b>고정 설정</b><small>켠 것만 매 턴 들어가요${items.length ? ' · ' + fmt(total) + '자' : ''}</small></div><button class="fx-movebtn" data-act="fxlibopen">⇄ 옮기기</button></div>
       <div class="fx-seg"><button data-act="fxfilter" data-arg="" aria-pressed="${!flt}">전체 <small>${items.length}</small></button>${FIX_CATS.map(c => `<button data-act="fxfilter" data-arg="${c}" aria-pressed="${flt === c}">${c} <small>${cnt(c)}</small></button>`).join('')}</div>
       ${shown.length ? `<ul class="fx-list">${(() => { const row = ([it, i]) => `<li${fxOff(it) ? ' class="fx-off"' : ''}><details data-k="fx|${esc(it.cat + '|' + it.title)}"><summary><span class="fx-t"><b>${esc(fxName(it) || '이름 없음')}</b><small>${it.cat} · ${fmt(it.title.length + it.text.length)}자</small></span>${it.head ? `<button class="fx-sw" data-act="fxinj" data-arg="${i}" aria-pressed="${!fxOff(it)}" aria-label="${fxOff(it) ? '채팅에 안 넣는 중 · 누르면 넣기' : '채팅에 넣는 중 · 누르면 빼기'}"><i></i></button>` : ''}</summary>
           <div class="fx-body">${esc(it.text) || '<span class="muted">내용 없음</span>'}</div><div class="fx-acts"><button class="btn sm" data-act="fixopen" data-arg="${i}">수정</button><button class="btn sm" data-act="fxrm" data-arg="${i}">삭제</button></div></details></li>`;
@@ -5465,9 +5465,9 @@
               <button class="fx-grp-m" data-act="fxgrpedit" data-arg="${esc(g)}" aria-label="묶음 편집">⋯</button><button class="fx-sw lg" data-act="fxgrpinj" data-arg="${esc(g)}" aria-pressed="${st === 'on'}" aria-label="${st === 'on' ? '묶음 켜짐 · 누르면 모두 빼기' : '누르면 묶음 모두 넣기'}"><i></i></button></div>
               ${shut ? '' : `<ul class="fx-rows">${rows.map(row).join('')}</ul>`}</li>`; }).join(''); })()}</ul>`
         : `<p class="muted fx-empty">${flt ? flt + ' 설정이 아직 없어요.' : '바뀌면 안 되는 설정을 넣어 두세요.'}</p>`}
-      <div class="actions" style="grid-template-columns:1fr 1.4fr"><button class="btn" data-act="fxgrpedit" data-arg=""${items.length ? '' : ' disabled'}>+ 묶음</button><button class="btn pri" data-act="fixopen" data-arg="new">+ 새 설정</button></div>
+      <div class="actions fx-btm"><button class="btn" data-act="fxgrpedit" data-arg=""${items.length ? '' : ' disabled'}>+ 묶음</button><button class="btn pri" data-act="fixopen" data-arg="new">+ 새 설정</button></div>
       ${nav.fxGrp ? fxGrpHtml(items) : ''}
-      ${nav.fxLib ? fxLibHtml(items.length) : ''}
+      ${nav.fxLib ? fxLibHtml(items) : ''}
     </section>`;
   }
   // 추가·수정: 메모장처럼 화면 전체 · 흰 카드 하나에 이름·카테고리·글
@@ -5484,33 +5484,52 @@
   const fxHead = t => String(t).replace(/^조아메모리 고정 설정[^\n]*\n/, ''); // 내보낸 파일 첫 줄
   const roomName = () => document.title.split('|')[0].trim() || '이 방';
   // 옮기기 작은 창: 위 = 넣기·내보내기·불러오기 · 아래 = 보관함 목록, 또는 고른 것의 체크 목록
-  function fxLibHtml(has) {
-    const lib = nav.fxLib || [], pk = nav.fxPick;
+  // 체크 목록 한 벌(보내기·보관함·파일에서 고르기 공통): 묶음은 한 줄 · 체크 하나로 통째로 · list: [{ g, cat, name, sub, n }]
+  function fxRowsHtml(list, on, act, actG, del = '', delG = '') { const seen = new Set();
+    return list.map((x, i) => { if (x.g) { if (seen.has(x.g)) return ''; seen.add(x.g); const mem = list.map((y, j) => (y.g === x.g ? j : -1)).filter(j => j >= 0);
+        return `<li><label><input type="checkbox" data-act="${actG}" data-arg="${esc(x.g)}"${mem.every(j => on.has(j)) ? ' checked' : ''}><span class="fx-lt"><b><span class="fx-tag">묶음</span>${esc(x.g)}</b><small>${esc(mem.map(j => list[j].name).join(' · ').slice(0, 80))}</small></span></label><em class="fx-n">${mem.length}개</em>${delG ? `<button class="linkbtn" data-act="${delG}" data-arg="${esc(x.g)}">지우기</button>` : ''}</li>`; }
+      return `<li><label><input type="checkbox" data-act="${act}" data-arg="${i}"${on.has(i) ? ' checked' : ''}><span class="fx-lt"><b>${x.cat ? `<span class="fx-tag" data-c="${x.cat}">${x.cat}</span>` : ''}${esc(x.name || '이름 없음')}</b><small>${esc(String(x.sub || '').slice(0, 80))}</small></span></label><em class="fx-n">${x.n}</em>${del ? `<button class="linkbtn" data-act="${del}" data-arg="${i}">지우기</button>` : ''}</li>`; }).join(''); }
+  const fxRowOf = it => ({ g: fxGrpOf(it), cat: it.cat, name: fxName(it), sub: (it.text.split('\n').find(l => l.trim()) || '내용 없음').trim(), n: fmt(it.title.length + it.text.length) + '자' });
+  const fxLibGrp = x => { const i = String(x?.name || '').indexOf(FX_SEP); return i > 0 ? x.name.slice(0, i).trim() : ''; };
+  // 옮기기 작은 창: [이 방에서 보내기] 고른 것을 보관함·파일로 / [가져오기] 보관함·파일에서 이 방으로 · 파일에서 고를 땐 체크 목록
+  function fxLibHtml(items) {
+    const lib = nav.fxLib || [], pk = nav.fxPick, mv = nav.fxMv === 'in' || !items.length ? 'in' : 'out';
     const head = `<div class="fx-sheet-h"><b>${pk ? esc(pk.name) : '고정 설정 옮기기'}</b><button class="ia" data-act="${pk ? 'fxpickback' : 'fxlibclose'}" aria-label="${pk ? '뒤로' : '닫기'}">${pk ? '‹' : '✕'}</button></div>`;
     let body;
     if (pk) {
       const n = pk.on.size, all = n === pk.items.length;
-      body = `<div class="fx-pickbar"><button class="linkbtn" data-act="fxpickall">${all ? '전체 해제' : '전체 선택'}</button><small class="muted">${pk.items.length}개 중 ${n}개 · 같은 카테고리·이름이 있으면 새 내용으로 바꿈</small></div>
-        <ul class="fx-pick">${pk.items.map((it, i) => `<li><label><input type="checkbox" data-act="fxpick" data-arg="${i}"${pk.on.has(i) ? ' checked' : ''}><span class="fx-tag" data-c="${it.cat}">${it.cat}</span><b>${esc(it.title || '이름 없음')}</b><small>${fmt(it.title.length + it.text.length)}자</small></label></li>`).join('')}</ul>
+      body = `<div class="fx-pickbar"><small class="muted">${pk.items.length}개 중 ${n}개 · 같은 종류·이름이 있으면 새 내용으로 바꿈</small><button class="linkbtn" data-act="fxpickall">${all ? '전체 해제' : '전체 선택'}</button></div>
+        <ul class="fx-pick fx-lib">${fxRowsHtml(pk.items.map(fxRowOf), pk.on, 'fxpick', 'fxpickgrp')}</ul>
         <div class="actions one" style="margin-top:12px"><button class="btn pri" data-act="fxpickput"${n ? '' : ' disabled'}>지금 방(${esc(roomName())})에 ${n}개 넣기</button></div>`;
-    } else body = `<div class="fx-acts2"><button class="btn sm" data-act="fxlibsave"${has ? '' : ' disabled'}>보관함에 넣기</button><button class="btn sm" data-act="fxexport"${has ? '' : ' disabled'}>내보내기</button><label class="btn sm">불러오기<input type="file" accept=".txt,.json,text/plain,application/json" data-out="fximport" hidden></label></div>
-      <p class="muted" style="margin:0 2px 10px;font-size:12px">보관함 = 이 기기 안 다른 방으로 · 내보내기/불러오기 = 파일로 다른 기기·다른 사람과 · 고른 것만 넣어요</p>
-      ${lib.length ? (() => { const on = nav.fxLibOn || new Set(), n = on.size; // 여러 개 골라 한 번에 넣기
-        return `<div class="fx-pickbar"><b class="fx-libh" style="margin:0">보관함 ${lib.length}개</b><button class="linkbtn" data-act="fxliball">${n === lib.length ? '전체 해제' : '전체 선택'}</button></div>
-        <ul class="fx-pick fx-lib">${lib.map((x, i) => { const its = fixItems(x.text), one = its.length === 1 ? its[0] : null;
-          const peek = one ? (one.text.split('\n').find(l => l.trim()) || '내용 없음').trim() : its.map(it => it.title).join(' · '); // 이름 아래 회색 한 줄: 무슨 내용인지
-          return `<li><label><input type="checkbox" data-act="fxlibchk" data-arg="${i}"${on.has(i) ? ' checked' : ''}><span class="fx-lt"><b>${one ? `<span class="fx-tag" data-c="${one.cat}">${one.cat}</span>` : ''}${esc(x.name)}</b><small>${esc(peek.slice(0, 80))}</small></span></label><em class="fx-n">${one ? fmt(one.title.length + one.text.length) + '자' : its.length + '개'}</em><button class="linkbtn" data-act="fxlibdel" data-arg="${i}">지우기</button></li>`; }).join('')}</ul>
-        <div class="actions one" style="margin-top:12px"><button class="btn pri" data-act="fxlibput"${n ? '' : ' disabled'}>${n ? `지금 방에 ${n}개 넣기` : '넣을 것을 골라 주세요'}</button></div>`; })()
-        : '<b class="fx-libh">보관함</b><p class="muted">비어 있어요. 고정 설정이 있는 방에서 "보관함에 넣기"를 눌러 주세요.</p>'}`;
+    } else { const seg = `<div class="fx-seg" style="margin-bottom:12px"><button data-act="fxmv" data-arg="out" aria-pressed="${mv === 'out'}"${items.length ? '' : ' disabled'}>이 방에서 보내기</button><button data-act="fxmv" data-arg="in" aria-pressed="${mv === 'in'}">가져오기</button></div>`;
+      if (mv === 'out') { const on = nav.fxOutOn ||= new Set(), n = on.size;
+        body = seg + `<div class="fx-pickbar"><small class="muted">보낼 것을 골라요 · 묶음은 통째로</small><button class="linkbtn" data-act="fxoutall">${n === items.length ? '전체 해제' : '전체 선택'}</button></div>
+          <ul class="fx-pick fx-lib">${fxRowsHtml(items.map(fxRowOf), on, 'fxoutchk', 'fxoutgrp')}</ul>
+          <div class="actions fx-btm" style="grid-template-columns:1fr 1fr;margin-top:12px"><button class="btn" data-act="fxexport"${n ? '' : ' disabled'}>파일로 받기</button><button class="btn pri" data-act="fxlibsave"${n ? '' : ' disabled'}>${n ? `보관함에 ${n}개 넣기` : '보관함에 넣기'}</button></div>
+          <p class="muted" style="margin:10px 2px 0;font-size:12px">보관함 = 이 기기 안 다른 방으로 · 파일 = 다른 기기·다른 사람에게</p>`; }
+      else { const on = nav.fxLibOn ||= new Set(), n = on.size;
+        const rows = lib.map(x => { const its = fixItems(x.text), one = its.length === 1 ? its[0] : null, g = fxLibGrp(x);
+          return { g, cat: one?.cat || '', name: g ? x.name.slice(x.name.indexOf(FX_SEP) + 1).trim() : x.name, sub: one ? (one.text.split('\n').find(l => l.trim()) || '내용 없음').trim() : its.map(it => it.title).join(' · '), n: one ? fmt(one.title.length + one.text.length) + '자' : its.length + '개' }; });
+        body = seg + (lib.length ? `<div class="fx-pickbar"><b class="fx-libh" style="margin:0">보관함 ${lib.length}개</b><button class="linkbtn" data-act="fxliball">${n === lib.length ? '전체 해제' : '전체 선택'}</button></div>
+          <ul class="fx-pick fx-lib">${fxRowsHtml(rows, on, 'fxlibchk', 'fxlibgrp', 'fxlibdel', 'fxlibgrpdel')}</ul>`
+          : '<p class="muted" style="margin:6px 2px">보관함이 비어 있어요. 고정 설정이 있는 방에서 "이 방에서 보내기 › 보관함에 넣기"를 눌러 주세요.</p>')
+          + `<div class="actions fx-btm" style="grid-template-columns:1fr 1fr;margin-top:12px"><label class="btn">파일에서 가져오기<input type="file" accept=".txt,.json,text/plain,application/json" data-out="fximport" hidden></label><button class="btn pri" data-act="fxlibput"${n ? '' : ' disabled'}>${n ? `이 방에 ${n}개 넣기` : '이 방에 넣기'}</button></div>`; } }
     return `<div class="fx-sheet" data-act="fxlibclose"><div class="fx-sheet-in" data-act="fxnoop">${head}${body}</div></div>`;
   }
-  // 고정 설정 칸 전체를 새 글로 저장(편집 화면 없이). 노트가 있으면 바로 쓰고, 아직 노트가 없는 방만 저장 길(saveEdit)로 새 노트를 만들어요
   async function fixSaveAll(text) {
     if (snapshot?.note) return fxSaveBody(text, '');
     nav.prevView = nav.view; nav.prevKey = nav.key; nav.view = 'edit'; nav.key = FIXED; nav.part = null; nav.fxEdit = null; nav.lines = false;
     const ta = document.createElement('textarea'); ta.hidden = true; ta.dataset.out = 'editor'; ta.value = text; ui('main').appendChild(ta);
     await saveEdit(); nav.view = null; nav.tab = 'fixed'; render();
   }
+  let fxOps = []; // 아직 채팅에 안 쓴 넣기/빼기(방, 할 일)
+  // 넣기 스위치: 화면은 바로 바꾸고, 채팅 노트 쓰기는 뒤에서 차례로 · 그사이 또 누르면 마지막에 한 번만 써요 · 노트를 다시 읽어 표시가 되돌아가도 쓰기 직전에 다시 맞춰요
+  function fxInjLater(cid, op) { op(); fxOps.push([cid, op]); const my = fxOps.length, keepY = () => { const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; };
+    keepY();
+    fxChain = fxChain.then(async () => { if (my !== fxOps.length) return; const ops = fxOps; fxOps = []; if (chatIdFromPath() !== cid) return;
+      for (const [c, f] of ops) if (c === cid) f();
+      try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); }
+      if (!fxOps.length) keepY(); }); }
   let fxChain = Promise.resolve(); // 주입 동그라미: 화면 이동 없이 바로 저장(여러 번 눌러도 차례로)
   // 고정 칸 저장: 화면은 먼저 바꿔 보여 주고(이 기기 사본), 채팅 노트 쓰기는 그 뒤에. 실패하면 사본을 되돌려요.
   async function fxSaveBody(body, msg = '지웠어요.') {
@@ -11217,13 +11236,9 @@
       case 'castpick': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'person': nav.view = 'person'; nav.key = arg; render(); out('main').scrollTop = 0; return;
       case 'fxfilter': nav.fxFilter = arg; return render();
-      case 'fxinj': { e.preventDefault(); const cid = chatIdFromPath(); if (loading || !snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+      case 'fxinj': { e.preventDefault(); const cid = chatIdFromPath(); if (!snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
         const it = fixItems(editBody(FIXED))[Number(arg)]; if (!it?.head) return; const key = FIXED + '|' + itemKey(it.head), off = !NO_INJ.has(key); // 노트관리의 넣음/뺌과 같은 것
-        if (off) NO_INJ.add(key); else NO_INJ.delete(key);
-        el.setAttribute('aria-pressed', String(!off)); el.closest('li')?.classList.toggle('fx-off', off); // 바로 색부터 바꿔요
-        const y = out('main')?.scrollTop || 0;
-        fxChain = fxChain.then(async () => { try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); } render(); if (out('main')) out('main').scrollTop = y; });
-        return; }
+        return fxInjLater(cid, () => { if (off) NO_INJ.add(key); else NO_INJ.delete(key); }); }
       case 'fxrm': { if (loading || !snapshot) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
         const list = fixItems(editBody(FIXED)), i = Number(arg), it = list[i]; if (!it) return;
         if (!confirm(`'${it.title || '이 설정'}' 설정을 지울까요?`)) return;
@@ -11231,25 +11246,30 @@
         if (it.head && NO_INJ.delete(FIXED + '|' + itemKey(it.head))) { const cid = chatIdFromPath(); if (cid) await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); }
         fxChain = fxChain.then(() => fxSaveBody(fixJoin(list))); return; }
       case 'fxfold': { const f = nav.fxFold ||= new Set(); if (f.has(arg)) f.delete(arg); else f.add(arg); const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; return; }
-      case 'fxgrpedit': { if (loading || !snapshot?.note) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+      case 'fxgrpedit': { if (!snapshot?.note) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
         const items = fixItems(editBody(FIXED)); nav.fxGrp = { old: arg || '', name: arg || '', on: new Set(arg ? items.map((it, i) => (fxGrpOf(it) === arg ? i : -1)).filter(i => i >= 0) : []) }; return render(); }
       case 'fxgrpclose': nav.fxGrp = null; return render();
       case 'fxgrpchk': { const g = nav.fxGrp; if (!g) return; if (el.checked) g.on.add(Number(arg)); else g.on.delete(Number(arg)); return; } // 다시 그리지 않아요(창이 깜빡이지 않게)
       case 'fxgrpsave': { const g = nav.fxGrp; if (!g) return; const name = String(ui('.fx-grpname')?.value || '').replace(/[｜\[\]\n]/g, ' ').replace(/\s+/g, ' ').trim();
         if (!name) return toast('묶음 이름을 적어 주세요.', 'err', 2500); if (!g.on.size) return toast('넣을 설정을 하나 이상 골라 주세요.', 'err', 2500);
         return fxGrpApply((it, i) => g.on.has(i) ? name : fxGrpOf(it) === g.old && g.old ? '' : null, '묶음을 저장했어요.'); }
+      case 'fxgrplib': { const g = nav.fxGrp; if (!g?.old) return; const mem = fixItems(editBody(FIXED)).filter(it => fxGrpOf(it) === g.old); if (!mem.length) return; await fxLibPut(mem); nav.fxLib = null; nav.fxGrp = null; render(); return toast(`'${g.old}' 묶음 ${mem.length}개를 보관함에 넣었어요 · 다른 방 고정 › 옮기기 › 가져오기에서 통째로 넣어요`, 'ok', 3500); }
       case 'fxgrpdel': { const g = nav.fxGrp; if (!g?.old) return; return fxGrpApply(it => fxGrpOf(it) === g.old ? '' : null, '묶음을 풀었어요.'); }
-      case 'fxgrpinj': { e.preventDefault(); const cid = chatIdFromPath(); if (loading || !snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
-        const mem = fixItems(editBody(FIXED)).filter(it => it.head && fxGrpOf(it) === arg), allOn = mem.every(it => !fxOff(it)); if (!mem.length) return;
-        for (const it of mem) { const key = FIXED + '|' + itemKey(it.head); if (allOn) NO_INJ.add(key); else NO_INJ.delete(key); }
-        const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; // 화면부터 바꿔요
-        fxChain = fxChain.then(async () => { try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); } const y2 = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y2; });
-        return; }
+      case 'fxgrpinj': { e.preventDefault(); const cid = chatIdFromPath(); if (!snapshot?.note || !cid) return toast('기억을 읽는 중이에요. 잠깐 뒤에 다시 눌러 주세요.', 'info', 2500); if (busyNow) return toast('정리하는 중이에요 · 끝난 뒤에 해 주세요', 'info', 3000);
+        const mem = fixItems(editBody(FIXED)).filter(it => it.head && fxGrpOf(it) === arg), allOn = mem.every(it => !fxOff(it)), keys = mem.map(it => FIXED + '|' + itemKey(it.head)); if (!mem.length) return;
+        return fxInjLater(cid, () => { for (const key of keys) { if (allOn) NO_INJ.add(key); else NO_INJ.delete(key); } }); }
       case 'fxnoop': return;
-      case 'fxlibsave': { const items = fixItems(editBody(FIXED)); if (!items.length) return; await fxLibPut(items); render(); return toast(`${items.length}개를 쓴 제목 그대로 보관함에 넣었어요 · 다른 방 고정 › 옮기기에서 골라 넣을 수 있어요`, 'ok', 3500); }
-      case 'fxlibopen': { try { nav.fxLib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) { nav.fxLib = []; } nav.fxPick = null; return render(); }
+      case 'fxmv': nav.fxMv = arg; return render();
+      case 'fxoutchk': { const on = nav.fxOutOn ||= new Set(), i = Number(arg); if (el.checked) on.add(i); else on.delete(i); return render(); }
+      case 'fxoutgrp': { const on = nav.fxOutOn ||= new Set(); fixItems(editBody(FIXED)).forEach((it, i) => { if (fxGrpOf(it) === arg) { if (el.checked) on.add(i); else on.delete(i); } }); return render(); }
+      case 'fxoutall': { const n = fixItems(editBody(FIXED)).length; nav.fxOutOn = (nav.fxOutOn?.size || 0) === n ? new Set() : new Set(Array.from({ length: n }, (_, i) => i)); return render(); }
+      case 'fxpickgrp': { const pk = nav.fxPick; if (!pk) return; pk.items.forEach((it, i) => { if (fxGrpOf(it) === arg) { if (el.checked) pk.on.add(i); else pk.on.delete(i); } }); return render(); }
+      case 'fxlibsave': { const items = fixItems(editBody(FIXED)).filter((_, i) => nav.fxOutOn?.has(i)); if (!items.length) return; await fxLibPut(items); nav.fxOutOn = null; nav.fxMv = 'in'; render(); return toast(`${items.length}개를 보관함에 넣었어요 · 다른 방 고정 › 옮기기 › 가져오기에서 넣을 수 있어요`, 'ok', 3500); }
+      case 'fxlibopen': { try { nav.fxLib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) { nav.fxLib = []; } nav.fxPick = null; nav.fxOutOn = null; nav.fxLibOn = null; nav.fxMv = fixItems(editBody(FIXED)).length ? 'out' : 'in'; return render(); }
       case 'fxlibclose': nav.fxLib = null; nav.fxPick = null; nav.fxLibOn = null; return render();
       case 'fxlibchk': { const on = nav.fxLibOn ||= new Set(), i = Number(arg); if (el.checked) on.add(i); else on.delete(i); return render(); }
+      case 'fxlibgrp': { const on = nav.fxLibOn ||= new Set(); (nav.fxLib || []).forEach((x, i) => { if (fxLibGrp(x) === arg) { if (el.checked) on.add(i); else on.delete(i); } }); return render(); }
+      case 'fxlibgrpdel': { if (!confirm('보관함에서 이 묶음을 지울까요? (방에 든 고정 설정은 그대로)')) return; nav.fxLib = (nav.fxLib || []).filter(x => fxLibGrp(x) !== arg); nav.fxLibOn = null; await setValue('fixlib', JSON.stringify(nav.fxLib)); return render(); }
       case 'fxliball': { const lib = nav.fxLib || []; nav.fxLibOn = (nav.fxLibOn?.size || 0) === lib.length ? new Set() : new Set(lib.map((_, i) => i)); return render(); }
       case 'fxlibput': { const lib = nav.fxLib || [], add = [...(nav.fxLibOn || [])].sort((a, b) => a - b).flatMap(i => lib[i] ? fixItems(lib[i].text) : []);
         if (!add.length) return; nav.fxLibOn = null; nav.fxLib = null; return fixMerge(add); }
@@ -11262,7 +11282,7 @@
         if (offs.length && cid) { for (const it of offs) NO_INJ.add(FIXED + '|' + itemKey('[' + it.cat + '] ' + it.title)); await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); }
         return fixMerge(add); }
       case 'fxlibdel': { if (!confirm('보관함에서 지울까요? (방에 든 고정 설정은 그대로)')) return; nav.fxLib.splice(Number(arg), 1); nav.fxLibOn = null; await setValue('fixlib', JSON.stringify(nav.fxLib)); return render(); }
-      case 'fxexport': { const body = editBody(FIXED).trim(); if (!body) return; downloadText(`조아메모리-고정설정-${roomName().replace(/[\\/:*?"<>|]/g, '')}.txt`, '조아메모리 고정 설정\n' + body); return toast('파일로 받았어요', 'ok', 2500); }
+      case 'fxexport': { const body = fixJoin(fixItems(editBody(FIXED)).filter((_, i) => nav.fxOutOn?.has(i))).trim(); if (!body) return; downloadText(`조아메모리-고정설정-${roomName().replace(/[\\/:*?"<>|]/g, '')}.txt`, '조아메모리 고정 설정\n' + body); return toast('파일로 받았어요', 'ok', 2500); }
       case 'fxcat': { if (!nav.fxEdit) return; nav.fxEdit.cat = arg; // 다시 그리지 않고 버튼만 바꿔요(창이 다시 떠서 깜빡이지 않게)
         root.querySelectorAll('[data-act="fxcat"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.arg === arg))); return; }
       case 'fxgrpset': { if (!nav.fxEdit) return; nav.fxEdit.grp = arg || '';
