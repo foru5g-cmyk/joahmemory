@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.6.3
+// @version      5.6.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀🚀
+// @description  랙시들의 RP정리🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -1879,9 +1879,10 @@
       love.lastTurn = turn; loveSave();
     }
     const mine = (love.log || []).filter(x => !x.w || x.w === who), open = mine.filter(x => x.open).slice(-2).map(x => x.t.slice(0, 30));
+    const pile = day == null ? [] : mine.filter(x => x.d != null && x.d <= day && day - x.d <= 30 && (x.open || x.solved || /싸움|싸우|다툼|다투|언쟁|말다툼|서운|질투|화냄|화를|토라|삐침|삐졌|오해|실망/.test(x.t))); // 최근 30일 다툼·서운함(풀린 것도)
     loveOut = [broke ? `※ 현실 연애(규칙): ${who}와 헤어진 사이 · 반응은 캐릭터 설정·성격·서사(남은 마음 포함)대로 · NPC는 유저 편 아님 · 쉽게 수긍·사과·누그러짐 없음 · 오해는 해명과 믿을 근거가 있어야 풀림 · 남은 마음이 서사에 있으면 그만큼 쉽게 이해 못 함 · 유저가 연락하거나 붙잡아도 받아 줄지는 정해지지 않음 · 화해·재회는 서사에 계기 있을 때만(뜬금 화해 없음) · 유저의 말·행동·마음은 안 씀`
-      : `※ 현실 연애(규칙): ${who} · NPC는 유저 기분을 맞추려 하지 않음 · 감정·반응·스킨십은 캐릭터 설정·성격·서사·그날 일대로 · 실제 연인 사이처럼 그날그날 분위기·대화가 다름 · 화난 마음·불신은 몇 턴 이어짐(사과로 바로 안 풀림) · 오해는 해명과 믿을 근거가 있어야 풀림 · 감정 고조 시 헤어지자는 말도 가능 · 유저가 붙잡아도 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
-      `※ 현실 연애 지금: ${who} · ${loveDays(day)}${!broke && loveLive(mem, who) ? ' · 함께 사는 중(같이 사는 연인의 현실대로)' : ''}${loveAnniv(day)}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}${love.side ? ` · 유저 캐릭터의 바람 상대: ${love.side}(누가 아는지는 서사대로)` : ''}${broke && love.exNew ? ` · ${who}의 새 사람: ${love.exNew}(유저가 아는지는 서사대로)` : ''}`];
+      : `※ 현실 연애(규칙): ${who} · NPC는 유저 기분을 맞추려 하지 않음 · NPC도 자기 삶·마음이 있음 · 감정·반응·스킨십은 캐릭터 설정·성격·서사·그날 일대로 · 실제 연인 사이처럼 그날그날 분위기·대화가 다름 · 화난 마음·불신은 몇 턴 이어짐(사과로 바로 안 풀림) · 오해는 해명과 믿을 근거가 있어야 풀림 · 감정 고조 시 헤어지자는 말도 가능 · 유저가 붙잡아도 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
+      `※ 현실 연애 지금: ${who} · ${loveDays(day)}${!broke && loveLive(mem, who) ? ' · 함께 사는 중(같이 사는 연인의 현실대로)' : ''}${loveAnniv(day)}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}${!broke && pile.length >= 3 ? ` · 요즘 다툼·서운함 잦음(최근 30일 ${pile.length}번: ${pile.slice(-3).map(x => x.t.slice(0, 18)).join(' / ')}) — 쌓인 감정은 이 사람 성격대로` : ''}${love.side ? ` · 유저 캐릭터의 바람 상대: ${love.side}(누가 아는지는 서사대로)` : ''}${broke && love.exNew ? ` · ${who}의 새 사람: ${love.exNew}(유저가 아는지는 서사대로)` : ''}`];
     if (love.ev) loveOut.push(love.ev.line);
     loveSig = loveOut.join('\n');
   }
