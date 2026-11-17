@@ -10179,6 +10179,10 @@
         if (nav.devAsk?.key !== key) { nav.devAsk = { key, chatId, c, mine, notHere: !!mine.upto && !snap.all.some(m => msgId(m) === mine.upto) }; pageToast('다른 기기에서 정리한 기억이 들어왔어요 · 조아메모리를 열어 골라 주세요'); }
       } else if (nav.devAsk?.chatId === chatId && (!c || nav.devAsk.key !== c.upto + '|' + c.at + '|' + chatShape(c.memory).length)) nav.devAsk = null; // 고르기 전엔 카드를 두고, 채팅 노트가 실제로 바뀌었을 때만 닫음
       nav.gsOn = !!String(await getValue('gsUrl', '')).trim(); await gsLinkSet();
+      { const c = snap.note; // 드라이브를 연결한 기기: 채팅 노트 머리줄에 연결이 없으면 그 줄만 고쳐 실어요(웹 모드는 보낼 때 노트를 다시 안 써서) · 방·노트마다 한 번
+        const hk = chatId + '|' + (c?.carrierId || ''); if (gsLink && c && !c.parked && c.gs !== gsLink && !busyNow && !(refresh.gsHead ||= new Set()).has(hk)) { refresh.gsHead.add(hk);
+          const m = (snap.all || []).find(x => msgId(x) === c.carrierId), t = msgText(m || {}), t2 = t.replace(/(\[\/\/\]: # "MEMO_NOTE v3[^\n]*?)(?: gs=\S+)?(\n)/, (_, x, y) => x + ' gs=' + gsLink + y);
+          if (m && t2 !== t) writeRaw(chatId, c.carrierId, t2).catch(e => logErr('연동', '노트에 드라이브 연결 싣기 실패 · ' + e.message)); } }
       // ① 사본: 이 기기가 채팅 노트를 볼 때마다(정리를 안 했어도) 최신 노트 사본을 이 브라우저에 남겨요. 언제·어느 기기가 저장했는지도 같이.
       if (snap.note && !snap.note.parked) {
         const n = snap.note, k = n.upto + '|' + n.at + '|' + n.memory.length; let old = null;
