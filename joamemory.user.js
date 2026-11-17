@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.6.8
+// @version      5.6.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -10134,8 +10134,9 @@
       { const c = snap.note; // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && !gsTried.has(chatId + '|' + c.upto) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto, nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
-          let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at }; } catch (e) { why = e.message || String(e); }
-          if (g && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, g.memory, g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요'); }
+          let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, hist: d.store?.hist || '' }; } catch (e) { why = e.message || String(e); }
+          if (g && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, g.memory, g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
+            if (g.hist && !(await historyOf(chatId)).length) { await setValue('hist:' + chatId, g.hist); logErr('연동', '구글 드라이브에서 이 방 정리 기록도 받음(회귀·분기·되돌리기용)'); } } // 이 기기에 정리 기록이 없을 때만
           else if (g) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
           else if (!nth) logErr('연동', '구글 드라이브에서 전체 기억을 못 받음 · ' + (why || '백업에 기억이 비어 있어요'));
           if (!(fullNote && fullNote.upto === c.upto) && c.at && chatIdFromPath() === chatId && !nth) await gsBranch(chatId, c); // 이 방 백업이 없으면 분기 전 방 백업에서
