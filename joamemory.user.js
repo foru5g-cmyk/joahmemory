@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.5.8
+// @version      5.5.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -1174,11 +1174,16 @@
   async function pregSnapPut(c, turn, j) { let o = null; try { o = JSON.parse(String(await getValue('pregsnap:' + c, '') || 'null')); } catch (_) {}
     const list = (o?.list || []).filter(x => x.turn < turn); /* 그 턴보다 뒤 것은 버려요(되돌린 노트·리롤 뒤엔 새 길이라) */ list.push({ turn, j }); await setValue('pregsnap:' + c, JSON.stringify({ title: roomTitle(), list: list.slice(-60) })); }
   // 방을 열 때도 지금 턴 사본을 접어 둬요(끝난 임신처럼 저장이 안 일어나는 방도 분기방이 산모수첩까지 가져가게) · saved는 안 바꿔요(기기끼리 고르는 기준이라)
-  const pregSnapNow = c => { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (preg && t && pregChat === c && c === chatIdFromPath()) pregSnapPut(c, t, JSON.stringify(preg)); };
+  const pregSnapNow = c => { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!preg || !t || pregChat !== c || c !== chatIdFromPath()) return;
+    const j = JSON.stringify(preg), same = c + '|' + t + '|' + j.replace(/"saved":\d+/, ''); if (pregSave.at === same) return; pregSave.at = same; pregSnapPut(c, t, j); }; // 같은 턴·같은 기록이면 다시 안 써요
   // 분기한 방: 이 방엔 임신 기록이 한 번도 없고, 제목이 같은 다른 방과 대화 앞부분(유저 말 3턴 이상)이 글자까지 같으면 → 갈라진 턴까지의 사본 중 가장 늦은 것을 복사
   // 빈 기록(모드 화면만 열어 생긴 것)은 없는 것과 같아요
   const pregEmpty = j => { let o = null; try { o = JSON.parse(String(j || 'null')); } catch (_) {} return !o || (o.start == null && !o.history?.length && !o.books?.length); };
   const pregBranchSeen = new Set(); // 이 페이지에서 이미 찾아본 방(화면을 새로 그릴 때마다 두 방 대화를 다 읽지 않게)
+  // 갈라진 턴 사본이 없을 때(그 기기에서 그 뒤에 처음 열어 사본이 늦게 생긴 방): 가장 이른 사본이 갈라진 턴 뒤 10턴 안이고, 그 사이 임신 기록에 아무 일도 안 생겼으면 그 턴 것과 같아요
+  function pregStill(s, at) { if (!s || s.turn - at > 10) return null; let p = null; try { p = JSON.parse(s.j); } catch (_) {} if (!p) return null;
+    const ts = [...(p.log || []).map(x => x.at), ...Object.values(p.shown || {}), ...Object.values(p.seen || {}), ...Object.values(p.symAt || {}), p.kitAt, p.sexAt, p.twinAt, p.afterTurn].filter(v => typeof v === 'number');
+    return ts.every(v => v <= at) ? s : null; }
   async function pregBranch(chatId) {
     if (pregBranchSeen.has(chatId)) return false; pregBranchSeen.add(chatId);
     if (!pregEmpty(await getValue('preg:' + chatId, '')) || String(await getValue('pbchk:' + chatId, ''))) return false;
@@ -1192,7 +1197,7 @@
       let src; try { src = await readAll(k.slice(9)); } catch (_) { continue; }
       const at = sameTurns(src, cur); // 똑같은 유저 말 수 = 갈라진 턴
       if (at < 3 || chatIdFromPath() !== chatId) continue;
-      const x = o.list.filter(y => y.turn <= at).pop(); if (!x) { logErr('연동', '분기 전 방 임신 기록이 ' + at + '턴 뒤 것만 있어 안 가져옴(그때는 임신 기록이 없었거나 60턴보다 오래 전)'); continue; }
+      const x = o.list.filter(y => y.turn <= at).pop() || pregStill(o.list[0], at); if (!x) { logErr('연동', '분기 전 방 임신 기록이 ' + at + '턴 뒤 것만 있어 안 가져옴(그때는 임신 기록이 없었거나 60턴보다 오래 전)'); continue; }
       if (!pregEmpty(await getValue('preg:' + chatId, ''))) return false;
       await setValue('preg:' + chatId, x.j); logErr('연동', '분기한 방 · ' + k.slice(9, 17) + '… 방의 ' + x.turn + '턴 임신 기록을 복사'); return true; }
     return false;
@@ -5523,14 +5528,14 @@
     const ta = document.createElement('textarea'); ta.hidden = true; ta.dataset.out = 'editor'; ta.value = text; ui('main').appendChild(ta);
     await saveEdit(); nav.view = null; nav.tab = 'fixed'; render();
   }
-  let fxOps = []; // 아직 채팅에 안 쓴 넣기/빼기(방, 할 일)
+  let fxOps = [], fxPend = []; // 아직 채팅에 안 쓴 넣기/빼기(방, 할 일) · fxPend = 지금 쓰는 중인 것
   // 넣기 스위치: 화면은 바로 바꾸고, 채팅 노트 쓰기는 뒤에서 차례로 · 그사이 또 누르면 마지막에 한 번만 써요 · 노트를 다시 읽어 표시가 되돌아가도 쓰기 직전에 다시 맞춰요
   function fxInjLater(cid, op) { op(); fxOps.push([cid, op]); const my = fxOps.length, keepY = () => { const y = out('main')?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; };
     keepY();
-    fxChain = fxChain.then(async () => { if (my !== fxOps.length) return; const ops = fxOps; fxOps = []; if (chatIdFromPath() !== cid) return;
+    fxChain = fxChain.then(async () => { if (my !== fxOps.length) return; const ops = fxOps; fxOps = []; if (chatIdFromPath() !== cid) return; fxPend = ops;
       for (const [c, f] of ops) if (c === cid) f();
       try { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); await rewriteNote(cid, noteMemory()); await refresh(); } catch (err) { toast('반영 실패 · ' + errMsg(err), 'err'); }
-      if (!fxOps.length) keepY(); }); }
+      fxPend = []; if (!fxOps.length) keepY(); }); }
   let fxChain = Promise.resolve(); // 주입 동그라미: 화면 이동 없이 바로 저장(여러 번 눌러도 차례로)
   // 고정 칸 저장: 화면은 먼저 바꿔 보여 주고(이 기기 사본), 채팅 노트 쓰기는 그 뒤에. 실패하면 사본을 되돌려요.
   async function fxSaveBody(body, msg = '지웠어요.') {
@@ -9934,6 +9939,7 @@
       if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
+      for (const [c, f] of [...fxPend, ...fxOps]) if (c === chatId) f(); // 읽는 중에 누른 넣기/빼기는 저장 전이라 다시 얹어요(안 그러면 스위치가 저절로 돌아가요)
       { const c = snap.note; // 다른 기기(폰)에서 고정 설정을 고쳤으면 채팅 노트 쪽이 최신 → 이 기기 전체 사본의 고정 설정도 그걸로
         if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto) { const fx = m => (splitSections(m).find(x => x.key === FIXED)?.body || '').trim(), a = fx(c.memory), b = fx(fullNote.memory);
           if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory)))) {
@@ -11778,10 +11784,10 @@
   }).observe(document.documentElement, { childList: true, subtree: true });
   // 크랙 출석: 하루(한국 날짜) 한 번 출석했는지 보고, 안 했으면 대신 출석한 뒤 다시 확인해요 · 실패하면 이 화면에선 한 번만 알려요
   const kstDay = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
-  let attendBusy = false, attendFailDay = '';
+  let attendBusy = false, attendFailDay = '', attendWait = 0;
   async function autoAttend() {
     const day = kstDay(); if (attendBusy || document.visibilityState === 'hidden' || attendFailDay === day) return;
-    try { token(); } catch (_) { return; } // 로그인 전이면 조용히 넘어가요
+    try { token(); } catch (_) { if (++attendWait < 12) setTimeout(autoAttend, 5000); return; } // 로그인 전이면 조용히 넘어가고 5초 뒤 다시(1분까지)
     if (String(await getValue('attendDay', '')) === day) return;
     attendBusy = true; const URL_ATT = 'https://crack-api.wrtn.ai/crack-cash/attendance', done = async () => String((await crack('GET', URL_ATT))?.data?.attendanceStatus || '') === 'ATTENDED';
     try {
@@ -11796,7 +11802,7 @@
   let lastPath = '';
   setInterval(() => {
     const nowChat = chatIdFromPath() || location.pathname; if (nowChat === lastPath) return;
-    lastPath = nowChat;
+    lastPath = nowChat; autoAttend(); // 방을 옮길 때도 출석 확인(하루 한 번만 실제로 보내요)
     openSheet(false);
     snapshot = null; draft = null; nav = fresh();
     inlineBtn.remove(); capBtn.remove(); if (cap.on) capOff();
