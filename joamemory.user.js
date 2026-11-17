@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.6.1
+// @version      5.6.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -1679,10 +1679,18 @@
   // ── 💞 현실 연애: 방마다 켜요 · 상황만 넣고 반응은 그 인물 성격대로 · 지나온 일은 정리 AI가 실제 대화에서 적어요 ──
   let love = null, loveChat = '', loveOut = [], loveSig = '', loveMode = false; // loveMode: 하트(모든 방 공통 · 기본 꺼짐) · 켜면 연인이 있는 방에서 알아서
   const loveOf = async c => { try { return JSON.parse(String(await getValue('love:' + c, '') || 'null')); } catch (_) { return null; } };
-  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; } // saved: 기록이 실제로 바뀐 때만(매 턴 주사위로 바뀌면 다른 기기의 새 기록보다 늘 최신으로 보여서 못 받아요)
+  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) { clearTimeout(loveSave.up); loveSave.up = setTimeout(() => gsSave(true), 8000); } } // 기록이 바뀌면 다른 기기도 받게 곧바로 드라이브에(여러 번 바뀌면 마지막에 한 번) // saved: 기록이 실제로 바뀐 때만(매 턴 주사위로 바뀌면 다른 기기의 새 기록보다 늘 최신으로 보여서 못 받아요)
     const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + sig; // 턴마다 바뀌는 주사위 값은 빼고 견줘요(기록이 그대로면 사본을 또 안 만들어요)
     if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, j, 'lovesnap:'); } // 턴마다 사본(분기한 방이 갈라진 턴 것을 가져가요)
     return setValue('love:' + loveChat, j); };
+  // 다른 기기 기록과 합치기: 사이·날짜 같은 칸은 더 많은 턴까지 정리를 반영한 쪽(같으면 늦게 고친 쪽) · 지나온 일·안 풀린 일·지난 연애는 양쪽 것을 모두
+  //   같은 일(상대+글)이 양쪽에 있으면 한쪽이라도 풀렸으면 풀림 · 이 기기만 아는 일도 안 지워져요
+  function loveMerge(a, b) {
+    const bNew = (b.sumT || 0) > (a.sumT || 0) || ((b.sumT || 0) === (a.sumT || 0) && (b.saved || 0) > (a.saved || 0)), base = bNew ? b : a, other = bNew ? a : b, m = new Map();
+    for (const x of [...(other.log || []), ...(base.log || [])]) { const k = (x.w || '') + '|' + x.t, o = m.get(k); m.set(k, o ? { ...o, ...x, open: !!(o.open && x.open) } : x); }
+    return { ...base, sumT: Math.max(a.sumT || 0, b.sumT || 0), log: [...m.values()].sort((p, q) => (p.d ?? 0) - (q.d ?? 0)).slice(-60), cycles: [...new Set([...(other.cycles || []), ...(base.cycles || [])])].slice(-30) };
+  }
+  const loveSame = (x, y) => { const pick = L => JSON.stringify([L?.who, L?.stage, L?.start, L?.broke, L?.live, L?.side, (L?.log || []).map(e => [e.w, e.t, e.d, !!e.open]), L?.cycles || []]); return pick(x) === pick(y); };
   // 분기한 방 연애 기록: 갈라진 턴 사본을 복사(그 뒤 싸움·이별은 안 섞여요) · 그 턴 사본이 없으면 가장 이른 사본에서 갈라질 때 이야기 날짜 뒤 일을 빼고
   //   이 방 기록이 비어 있을 때만(모드만 켜서 노트로 짐작한 것뿐인 기록도 빈 것으로 봐요)
   const loveThin = L => !L || (!L.log?.length && !L.cycles?.length && !L.scanned && !L.wedding && L.startBy !== 'user' && L.whoBy !== 'user');
@@ -1837,9 +1845,11 @@
       if (lines.length) { let last = love.start ?? null; const mk = lines.map(b => { const t = `${b.d != null ? P_STR(b.d) + ' · ' : ''}${who}와 ${b.k}${b.k === '헤어짐' && last != null && b.d != null ? ' · ' + (b.d - last + 1) + '일 사귐' : b.k === '다시 사귐' && last != null && b.d != null ? ' · ' + (b.d - last) + '일 만에' : ''}`; last = b.d; return t; });
         love.cycles = [...(love.cycles || []).filter(t => !t.includes(who + '와 헤어짐') && !t.includes(who + '와 다시 사귐') && !t.includes(who + '와 결혼')), ...mk].slice(-30); }
       const evs = (Array.isArray(d.events) ? d.events : []).map(e => ({ d: P_DAY2(e.d || ''), t: String(e.t || '').trim(), open: !!e.open, w: who })).filter(e => e.t);
-      love.log = love.log || []; if (force) { const days = new Set(evs.map(e => e.d).filter(x => x != null)); love.log = love.log.filter(l => !(l.d != null && days.has(l.d) && (!l.w || l.w === who))); } // 다시 확인: 같은 날짜 기록은 새로 읽은 것으로(말만 바뀐 중복 · 풀림 표시) · 날짜가 안 겹친 기록은 그대로
-      for (const e of evs) if (!love.log.some(l => l.t === e.t)) love.log.push(e);
-      love.log.sort((a, b) => (a.d ?? 0) - (b.d ?? 0)); love.log = love.log.slice(-60); love.scanned = key; loveSave();
+      love.log = love.log || [];
+      // 같은 일 찾기: 같은 날 · 같은 상대 · 글자 두 개씩 묶음이 30% 넘게 겹치면 같은 일(말만 바꾼 중복) → 새로 읽은 것으로 바꿈(풀림 표시도) · 아니면 따로 둠
+      const bg = t => { const c = String(t).replace(/[^가-힣A-Za-z0-9]/g, ''), o = new Set(); for (let i = 0; i < c.length - 1; i++) o.add(c.slice(i, i + 2)); return o; }, sim = (p, q) => { const A = bg(p), B = bg(q); let n = 0; for (const x of A) if (B.has(x)) n++; return A.size && B.size ? n / Math.min(A.size, B.size) : 0; };
+      for (const e of evs) { if (love.log.some(l => l.t === e.t)) continue; const k = force ? love.log.findIndex(l => l.d != null && l.d === e.d && (!l.w || l.w === who) && sim(l.t, e.t) >= 0.3) : -1; if (k >= 0) love.log[k] = e; else love.log.push(e); }
+      love.log.sort((a, b) => (a.d ?? 0) - (b.d ?? 0)); love.log = love.log.slice(-60); love.scanned = key; love.sumT = Math.max(love.sumT || 0, snapshot?.note?.turns || 0); loveSave(); if (nav.gsOn) gsSave(true); /* 노트 끝까지 다시 읽은 기록 → 다른 기기도 이걸 받게 바로 드라이브에 */
     } catch (e) { toast('연애 기록 확인 실패 · ' + errMsg(e), 'err', 3500); }
     finally { loveScanBusy = ''; render(); }
   }
@@ -1921,8 +1931,8 @@
     // 해(年)마다 머리 알약 하나, 그 아래 월.일 · 최신이 위
     const yOf = x => x.d == null ? '날짜 모름' : (P_STR(x.d).match(/^(\d{4})\.|^(\d+년차)\s/) || []).slice(1).find(Boolean) || '', lab = x => x.d == null ? '·' : esc(P_STR(x.d).replace(/^\d{4}\.|^\d+년차\s*/, ''));
     const L = src.slice().sort((p, q) => (q.d ?? -1e9) - (p.d ?? -1e9));
-    const byYear = list => { let y = null; return list.map(x => (yOf(x) !== y ? `<li class="lv-yr"><i>${esc(y = yOf(x))}</i></li>` : '') + `<li><em>${lab(x)}</em><span>${esc(x.t)}${x.open ? '<i class="lv-tag">안 풀림</i>' : ''}</span></li>`).join(''); };
-    const card3 = love.who ? `<details class="lv-sec lv-fold"${nav.lvLogFold ? '' : ' open'}><summary data-act="lvlogfold">📖 지나온 일${L.length ? ' ' + L.length : ''}${!ai && L.length ? '<em>노트에서</em>' : ''}</summary>${L.length ? `<ul class="lv-log">${byYear(L.slice(0, 5))}</ul>${L.length > 5 ? `<details class="lv-more"><summary>이전 ${L.length - 5}개 보기</summary><ul class="lv-log">${byYear(L.slice(5))}</ul></details>` : ''}` : '<p class="lv-note" style="text-align:left">정리할 때 두 사람 관계가 흔들리거나 바뀐 일만 여기 적혀요.</p>'}</details>` : '';
+    const byYear = (list, y0 = null) => { let y = y0; return list.map(x => (yOf(x) !== y ? `<li class="lv-yr"><i>${esc(y = yOf(x))}</i></li>` : '') + `<li><em>${lab(x)}</em><span>${esc(x.t)}${x.open ? '<i class="lv-tag">안 풀림</i>' : ''}</span></li>`).join(''); };
+    const card3 = love.who ? `<details class="lv-sec lv-fold"${nav.lvLogFold ? '' : ' open'}><summary data-act="lvlogfold">📖 지나온 일${L.length ? ' ' + L.length : ''}${!ai && L.length ? '<em>노트에서</em>' : ''}</summary>${L.length ? `<ul class="lv-log">${byYear(L.slice(0, 5))}</ul>${L.length > 5 ? `<details class="lv-more"><summary>이전 ${L.length - 5}개 보기</summary><ul class="lv-log">${byYear(L.slice(5), yOf(L[4]))}</ul></details>` : ''}` : '<p class="lv-note" style="text-align:left">정리할 때 두 사람 관계가 흔들리거나 바뀐 일만 여기 적혀요.</p>'}</details>` : '';
     const rels = (() => { try { const { rel, me } = loveCtx(); if (!me || !love.who) return ''; const sp = pairs('호칭·말투'), fl = feelings().filter(f => f.steps.length);
       const row = (x, y) => { const r = rel.find(q => q.from === x && q.to === y), s1 = sp.find(q => q.from === x && q.to === y), fe = fl.find(q => q.from === x && q.to === y);
         const addr = s1 ? speechChips(s1.text).chips.flatMap(c => c.addr)[0] || '' : '', v = r ? relView(r.text, false).text : '', feel = fe ? fe.steps[fe.steps.length - 1].feel : '';
@@ -1930,7 +1940,9 @@
       const L2 = [row(love.who, me), row(me, love.who)].filter(Boolean); return L2.length ? `<section class="lv-sec"><h5>💗 지금 사이</h5><ul class="lv-log lv-rel">${L2.join('')}</ul></section>` : ''; } catch (_) { return ''; } })();
     const ann = !broke && n ? (() => { const M = [[100, '100일'], [200, '200일'], [300, '300일'], [366, '1주년'], [500, '500일'], [731, '2주년'], [1000, '1000일'], [1096, '3주년']], nx = M.find(([m]) => m >= n); return nx ? `<section class="lv-sec"><h5>🎂 다음 기념일</h5><p class="lv-ann"><b>${nx[1]}</b><span>${nx[0] === n ? '오늘이에요!' : 'D-' + (nx[0] - n)} · ${esc(P_STR(love.start + nx[0] - 1))}</span></p></section>` : ''; })() : '';
     const cy = love.cycles || [], card4 = cy.length ? `<details class="lv-sec lv-fold"${nav.lvCycOpen ? ' open' : ''}><summary data-act="lvcycfold">📚 지난 연애 기록 ${cy.length}개</summary><ul class="lv-log">${cy.map((c, k) => `<li><span>${esc(c)}</span><button class="pg-link" data-act="lovecycdel" data-arg="${k}" aria-label="이 기록 지우기">×</button></li>`).reverse().join('')}</ul></details>` : '';
-    const book = ann + rels + card2 + card3 + card4;
+    const opens = (love.log || []).map((x, i) => [x, i]).filter(([x]) => x.open && (!x.w || x.w === love.who)); // 안 풀린 일 모아 보기
+    const card5 = love.who && opens.length ? `<details class="lv-sec lv-fold"${nav.lvOpenList ? ' open' : ''}><summary data-act="lvopenfold">🔥 안 풀린 일 ${opens.length}</summary><ul class="lv-log">${opens.map(([x, i]) => `<li><em>${x.d == null ? '·' : esc(P_STR(x.d))}</em><span>${esc(x.t)}</span><button class="pg-link" data-act="lvopenx" data-arg="${i}" aria-label="풀린 일로 바꾸기">풀림</button></li>`).join('')}</ul><p class="lv-note" style="text-align:left;margin-top:8px">이미 풀렸는데 남아 있으면 [풀림] · 다음 정리 때 AI도 풀린 일을 찾아 닫아요</p></details>` : '';
+    const book = ann + rels + card5 + card2 + card3 + card4;
     const wedSheet = nav.lvWedOpen && love.stage === 'married' ? `<div class="lv-wedsheet" data-act="lvwedclose"><div class="lv-wedbox" data-act="lvwedkeep"><button class="lv-wedx" data-act="lvwedclose" aria-label="닫기">✕</button>${loveWedHtml()}</div></div>` : '';
     return `${wedSheet}${devImgSheet()}<div class="pg"><div class="lv-cover">${head}${card1}</div>${book ? `<div class="lv-book">${book}</div>` : ''}<p class="lv-note">${broke ? "다시 사귀면 저절로 '연애 중'으로 돌아가요" : "답에 실제로 나온 일만 '지나온 일'에 남아요"}</p></div>`;
   }
@@ -10097,8 +10109,8 @@
           await setValue('preg:' + chatId, JSON.stringify(r)); await pregLoad(chatId); pageToast('다른 기기 임신 기록을 받아 왔어요'); render(); }); }
       if (!gsTried.has('love|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('love|' + chatId); // 연애 기록도 같은 식으로(안 풀린 일·지나온 일까지 통째로) · 방마다 한 번
         gsFetch(chatId).then(async d => { let r = null; try { r = JSON.parse(d?.store?.love || 'null'); } catch (_) {} const mine = await loveOf(chatId);
-          if (!r?.saved || chatIdFromPath() !== chatId || (mine && !((r.sumT || 0) > (mine.sumT || 0) || ((r.sumT || 0) === (mine.sumT || 0) && r.saved > (mine.saved || 0))))) return; // 더 많은 턴까지 정리를 반영한 쪽 · 같으면 직접 고친 게 늦은 쪽
-          await setValue('love:' + chatId, JSON.stringify(r)); if (loveChat === chatId) await loveLoad(chatId); pageToast('다른 기기 연애 기록을 받아 왔어요'); render(); }); }
+          if (!r || chatIdFromPath() !== chatId) return; const next = mine ? loveMerge(mine, r) : r; if (mine && loveSame(next, mine)) return; // 받은 게 이 기기 것과 같으면 그대로
+          await setValue('love:' + chatId, JSON.stringify(next)); if (loveChat === chatId) await loveLoad(chatId); pageToast('다른 기기 연애 기록을 합쳤어요'); render(); }); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
       try { origMap = JSON.parse(String(await getValue('orig:' + chatId, '') || '{}')) || {}; } catch (_) { origMap = {}; }
       if (!String(await getValue('origfill:' + chatId, ''))) { await setValue('origfill:' + chatId, '1'); await origKeep(chatId, (await historyOf(chatId)).filter(h => !isRg(h)).map(h => [h.before, h.after])); } // 처음 한 번: 정리 기록(최근 30번)의 줄기 전 노트에서 원문을 되살려요 · 회귀 기록은 빼요
@@ -11102,6 +11114,8 @@
       case 'ifoldfold': nav.ifOldOpen = !nav.ifOldOpen; return;
       case 'lvcycfold': nav.lvCycOpen = !nav.lvCycOpen; return;
       case 'lvlogfold': nav.lvLogFold = !nav.lvLogFold; return;
+      case 'lvopenfold': nav.lvOpenList = !nav.lvOpenList; return;
+      case 'lvopenx': { const x = love?.log?.[Number(arg)]; if (!x?.open) return; loveSnap('안 풀린 일 닫기'); x.open = false; loveSave(); return keepScroll(render); }
       case 'lvwedopen': nav.lvWedOpen = true; return keepScroll(render);
       case 'lvwedclose': nav.lvWedOpen = false; return keepScroll(render);
       case 'lvwedkeep': return;
