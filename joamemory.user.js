@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.6.0
+// @version      5.6.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -157,11 +157,37 @@
   //   ⑤ 옮기기: 방을 처음 열 때 kv의 'full:방번호' 글을 쪼개 items에 넣기 · kv 글은 지우지 않고 둬요(문제가 생기면 그 글로 돌아가는 길)
   //   ⑥ 백업 파일·구글 드라이브·채팅 노트는 지금처럼 노트 글로 주고받기(다른 기기·예전 판과 형식이 안 바뀌게)
   //   주의: 사이트 데이터 지우기나 브라우저 정리로 DB가 비면 → 채팅 노트·드라이브에서 다시 채우는 길(지금 '이 기기엔 전체 기억이 없어요' 처리)이 그대로 돌아야 해요
-  const DB_KEY = /^(hist|full|orig|seen|pregsnap|lovesnap|emb|ltmorig|ltmcache|injlog):/;
+  const DB_KEY = /^(hist|seen|pregsnap|lovesnap|emb|ltmorig|ltmcache|injlog):/;
+  // 잃으면 안 되는 것(웹 모드 전체 기억 full:·원문 보관함 orig:)은 천천히 DB로: 처음엔 두 곳에 같이 쓰고, 읽을 때마다 두 값을 견줘요
+  //   방마다 서로 다른 날(페이지를 새로 연 때) 5번 연달아 똑같으면 'dbok:키' = ok → 그 뒤로는 DB에만 쓰고 확장 프로그램 쪽은 비워요 · 다르면 확장 프로그램 쪽을 믿고 DB를 고쳐 쓴 뒤 다시 0부터 셈
+  //   DB만 쓰는 방에서 DB가 비면(사이트 데이터 지우기 등) 빈 값으로 읽혀 채팅 노트·구글 드라이브에서 다시 채우는 길로 가요
+  const DB_SLOW = /^(full|orig):/, DB_SLOW_OK = 5, dbSlowSeen = new Set(); // dbSlowSeen: 이 페이지에서 이미 센 키(한 번 열 때 한 번만)
   let dbP = null;
-  const db = () => dbP ||= new Promise(res => { try { const r = indexedDB.open('joamemory', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { res(r.result); try { navigator.storage?.persist?.(); } catch (_) {} }; r.onerror = r.onblocked = () => res(null); } catch (_) { res(null); } }); // persist: 브라우저가 공간이 모자랄 때 먼저 지우지 않게 부탁
-  const dbDo = async (mode, fn) => { const d = await db(); if (!d) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction('kv', mode), q = fn(t.objectStore('kv')); t.oncomplete = () => res(q?.result); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
+  const db = () => dbP ||= new Promise(res => { try { const r = indexedDB.open('joamemory', 2); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('hist')) d.createObjectStore('hist', { keyPath: ['chat', 'at'] }); }; r.onsuccess = () => { res(r.result); try { navigator.storage?.persist?.(); } catch (_) {} }; r.onerror = r.onblocked = () => res(null); } catch (_) { res(null); } }); // persist: 브라우저가 공간이 모자랄 때 먼저 지우지 않게 부탁
+  const dbDo = async (mode, fn, name = 'kv') => { const d = await db(); if (!d || !d.objectStoreNames.contains(name)) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction(name, mode), q = fn(t.objectStore(name)); t.oncomplete = () => res(q?.result); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
+  // 정리 기록 칸('hist'): 방마다 정리 한 번 = 한 건(키 [방, 시각]) · 새 기록은 한 건만 넣고, 30건 넘으면 가장 오래된 것만 지워요
+  //   '정리 후 노트'가 다음 기록의 '정리 전 노트'와 같으면 앞 기록에서 빼고 aN 표시(읽을 때 다시 채움 · historyOf)
+  const HIST_MAX = 30, histRange = c => IDBKeyRange.bound([c, -Infinity], [c, Infinity]);
+  const histPackL = l => l.map((h, i) => { const nx = l[i + 1]; if (!nx || h.after == null || h.after !== nx.before) return h; const { after, ...r } = h; return { ...r, aN: 1 }; });
+  const histAll = async c => { const l = ((await dbDo('readonly', st => st.getAll(histRange(c)), 'hist')) || []).map(({ chat, ...r }) => r); l.forEach((h, i) => { if (h.aN) { if (l[i + 1]) h.after = l[i + 1].before; delete h.aN; } }); return l; }; // 꺼낼 땐 채워서(백업 파일은 예전 모양 그대로)
+  const histTx = async (c, fn) => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction('hist', 'readwrite'), st = t.objectStore('hist'); fn(st); t.oncomplete = () => res(true); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
+  const histSet = (c, list) => histTx(c, st => { st.delete(histRange(c)); let t = -Infinity; histPackL(list.slice(-HIST_MAX)).forEach((h, i) => { t = Math.max(Number(h.at ?? i), t + 1); st.put({ ...h, at: t, chat: c }); }); }); // 시각이 같거나 거꾸로면 1씩 밀어 순서·건수 그대로 // 통째로 바꾸기(불러오기·비우기)
+  const histAdd = (c, rec) => histTx(c, st => { const q = st.getAll(histRange(c)); q.onsuccess = () => { const l = q.result || [], last = l[l.length - 1];
+    if (last && last.after != null && last.after === rec.before) { const { after, ...r } = last; st.put({ ...r, aN: 1 }); }
+    st.put({ ...rec, at: Math.max(Number(rec.at) || 0, last ? last.at + 1 : 0), chat: c }); for (const o of l.slice(0, Math.max(0, l.length + 1 - HIST_MAX))) st.delete([c, o.at]); }; });
   async function getValue(key, fallback) {
+    if (DB_SLOW.test(key)) try {
+      const v = await dbDo('readonly', st => st.get(key)), ok = String(await gmGet('dbok:' + key, '')); if (ok === 'ok') return v === undefined ? fallback : v;
+      const g = await gmGet(key, undefined); if (g === undefined || g === '') return v === undefined ? fallback : v;
+      if (v !== g) { await dbDo('readwrite', st => st.put(g, key)); if (v !== undefined) logErr('저장', 'DB 값이 달라 확장 프로그램 쪽 값으로 다시 맞춤 · ' + key.split(':')[0]); await gmSet('dbok:' + key, '0'); dbSlowSeen.add(key); return g; } // 방금 채운 페이지에선 안 셈
+      if (!dbSlowSeen.has(key)) { dbSlowSeen.add(key); const n = (parseInt(ok, 10) || 0) + 1; if (n >= DB_SLOW_OK) { await gmSet('dbok:' + key, 'ok'); await gmSet(key, ''); } else await gmSet('dbok:' + key, String(n)); } return g;
+    } catch (_) {}
+    if (/^hist:/.test(key)) try { // 예전 자리(kv·확장 프로그램 저장소)에 있던 기록은 처음 읽을 때 이 칸으로 옮겨요
+      const c = key.slice(5); let l = await histAll(c);
+      if (!l.length) { let old = null; try { old = await dbDo('readonly', st => st.get(key)); } catch (_) {} if (old == null || old === '') old = await gmGet(key, undefined);
+        if (old != null && old !== '') { let list = null; try { list = JSON.parse(old); } catch (_) {} if (Array.isArray(list) && list.length) { await histSet(c, list); try { await dbDo('readwrite', st => st.delete(key)); } catch (_) {} await gmSet(key, ''); l = await histAll(c); } } }
+      return l.length ? JSON.stringify(l) : fallback;
+    } catch (_) {}
     if (DB_KEY.test(key)) try {
       const v = await dbDo('readonly', st => st.get(key)); if (v !== undefined) return v;
       const old = await gmGet(key, undefined); if (old === undefined || old === '') return fallback;
@@ -170,12 +196,14 @@
     return gmGet(key, fallback);
   }
   // 키 목록: 확장 프로그램 저장소 + DB(같은 키는 한 번)
-  async function listKeys() { const g = typeof GM_listValues === 'function' ? GM_listValues() : (hasGM && GM.listValues ? await GM.listValues() : []); let d = []; try { d = await dbDo('readonly', st => st.getAllKeys()) || []; } catch (_) {} return [...new Set([...g, ...d.map(String)])]; }
+  async function listKeys() { const g = typeof GM_listValues === 'function' ? GM_listValues() : (hasGM && GM.listValues ? await GM.listValues() : []); let d = [], h = []; try { d = await dbDo('readonly', st => st.getAllKeys()) || []; } catch (_) {} try { h = ((await dbDo('readonly', st => st.getAllKeys(), 'hist')) || []).map(k => 'hist:' + k[0]); } catch (_) {} return [...new Set([...g, ...d.map(String), ...h])]; }
   // ETC(커뮤·폰 등) 저장값이 바뀌면 etcHook을 불러요. 동기화가 켜져 있을 때만 쓰고, 불러오기·비우기 중에는 멈춰요(etcQuiet).
   const ETC_KEY = /^(board|phone|pc|news|wiki|live|bet|talk|quotes|etcnames):/;
   let etcHook = null, etcQuiet = false;
   async function setValue(key, value) {
     if (!etcQuiet && etcHook && ETC_KEY.test(key)) setTimeout(() => etcHook(key), 0);
+    if (DB_SLOW.test(key)) try { await dbDo('readwrite', st => st.put(value, key)); if (String(await gmGet('dbok:' + key, '')) === 'ok') return; } catch (_) {}
+    if (/^hist:/.test(key)) try { let l = []; try { l = value ? JSON.parse(value) : []; } catch (_) {} return await histSet(key.slice(5), Array.isArray(l) ? l : []); } catch (_) {}
     if (DB_KEY.test(key)) try { return await dbDo('readwrite', st => st.put(value, key)); } catch (_) {}
     return gmSet(key, value);
   }
@@ -1227,7 +1255,7 @@
     return { turn: at, j: JSON.stringify({ on: last.kind !== '출산', world: p.world, peek: p.peek, maleOk: p.maleOk, books: keep, history: (p.history || []).filter(l => !drop.some(b => b.line === l)), ...(end != null ? { after: end } : {}), afterV2: true, afterTurn: Math.max(...last.log.map(x => x.at).filter(num)) }) }; }
   // 분기 확인: 이 방 대화와 분기해 온 방 대화를 이 페이지에서 방마다 한 번만 읽어요 · null = 분기한 방 아님 · undefined = 읽기 실패(다음에 다시)
   const branchCtxMemo = new Map();
-  const branchCtx = chatId => { if (!branchCtxMemo.has(chatId)) branchCtxMemo.set(chatId, (async () => { const cur = await readAll(chatId), from = branchSrc(cur, chatId); return from ? { from, at: sameTurns(await readAll(from), cur) } : null; })().catch(() => { branchCtxMemo.delete(chatId); return undefined; })); return branchCtxMemo.get(chatId); };
+  const branchCtx = chatId => { if (!branchCtxMemo.has(chatId)) branchCtxMemo.set(chatId, (async () => { const cur = await readAll(chatId), from = branchSrc(cur, chatId); return from ? { from, at: sameTurns(await readAll(from), cur) - (msgRole([...cur].reverse().find(isChat)) === 'user' ? 1 : 0) } : null; /* 유저 말에서 분기했으면 그 턴 AI 답 전 것으로 */ })().catch(() => { branchCtxMemo.delete(chatId); return undefined; })); return branchCtxMemo.get(chatId); };
   async function pregBranch(chatId) {
     if (pregBranchSeen.has(chatId)) return false; pregBranchSeen.add(chatId);
     if (!pregEmpty(await getValue('preg:' + chatId, '')) || String(await getValue('pbchk:' + chatId, ''))) return false;
@@ -1651,7 +1679,8 @@
   // ── 💞 현실 연애: 방마다 켜요 · 상황만 넣고 반응은 그 인물 성격대로 · 지나온 일은 정리 AI가 실제 대화에서 적어요 ──
   let love = null, loveChat = '', loveOut = [], loveSig = '', loveMode = false; // loveMode: 하트(모든 방 공통 · 기본 꺼짐) · 켜면 연인이 있는 방에서 알아서
   const loveOf = async c => { try { return JSON.parse(String(await getValue('love:' + c, '') || 'null')); } catch (_) { return null; } };
-  const loveSave = () => { if (!loveChat || !love) return; love.saved = Date.now(); const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + JSON.stringify({ ...love, lastTurn: 0, ev: 0, evTurn: 0, evDay: 0, kinds: 0, noteKey: 0, saved: 0 }); // 턴마다 바뀌는 주사위 값은 빼고 견줘요(기록이 그대로면 사본을 또 안 만들어요)
+  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; } // saved: 기록이 실제로 바뀐 때만(매 턴 주사위로 바뀌면 다른 기기의 새 기록보다 늘 최신으로 보여서 못 받아요)
+    const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + sig; // 턴마다 바뀌는 주사위 값은 빼고 견줘요(기록이 그대로면 사본을 또 안 만들어요)
     if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, j, 'lovesnap:'); } // 턴마다 사본(분기한 방이 갈라진 턴 것을 가져가요)
     return setValue('love:' + loveChat, j); };
   // 분기한 방 연애 기록: 갈라진 턴 사본을 복사(그 뒤 싸움·이별은 안 섞여요) · 그 턴 사본이 없으면 가장 이른 사본에서 갈라질 때 이야기 날짜 뒤 일을 빼고
@@ -1795,7 +1824,9 @@
     if (!force && love.scanned === key) return; if (!mem) return;
     const nick = nameNick(who), hit = t => t.includes(who) || (nick && t.includes(nick)), me = loveCtx().me || '';
     const pick = k => (splitSections(noPast(mem)).find(x => x.key === k)?.body || '').split(/\n(?=\s*▸)/).filter(b => /^\s*▸/.test(b) && hit(b)).join('\n');
-    const lg = pick('날짜로그'), ms = pick('이정표'), src = ['[날짜로그]', lg, '[이정표]', ms].join('\n').slice(-30000); if ((lg + ms).trim().length < 10) { love.scanned = key; loveSave(); return; }
+    const short = t => t.split('\n').map(l => l.trim()).filter(l => l && !/^(?:-\s*)?(?:근거|번역)\s*[:：]/.test(l)).slice(0, 3).map(l => l.slice(0, 160)).join('\n'); // 사건마다 제목+두 줄만(통째로 보내면 느려요)
+    const lg = pick('날짜로그').split(/\n(?=\s*▸)/).map(short).join('\n'), ms = pick('이정표'), bond = ((splitSections(noPast(mem)).find(x => x.key === '현재상태')?.body || '').match(/▸\s*둘만의 것[\s\S]*?(?=\n\s*▸|$)/) || [''])[0].split('\n').filter(l => hit(l) || /^\s*ㄴ/.test(l)).join('\n');
+    const src = ['[날짜로그]', lg, '[이정표]', ms, '[둘만의 것]', bond].join('\n').slice(-14000); if ((lg + ms).trim().length < 10) { love.scanned = key; loveSave(); return; }
     loveScanBusy = chatId; render();
     try {
       const raw = await askModelRetry(`너는 RP 기억 노트에서 ${me || '유저 캐릭터'}와 ${who} 두 사람의 연애 기록만 뽑는다. 노트에 분명히 적힌 것만 쓰고 지어내지 않는다.\n[출력] JSON 하나만: {"start":"사귀기 시작한 날 YYYY.MM.DD(분명할 때만, 없으면 빈칸)","approxYears":"날짜는 없고 '2년째'·'3년 전부터'처럼 대략만 있으면 지금까지 사귄 햇수(숫자, 반년은 .5) · 없으면 빈칸","breaks":[{"d":"날짜","kind":"헤어짐|다시 사귐|결혼"}],"events":[{"d":"날짜","t":"20자 안팎 한 줄","open":true}]}\n- breaks: 두 사람이 헤어지거나 다시 사귀거나 결혼한 날만, 날짜순.\n- events: 두 사람 관계에 남는 일만(싸움·화해·서운함·질투·권태·이별·재회, 고백·첫 데이트·첫 키스·첫 관계·기념일·청혼 같은 두 사람의 날). 안부·모임·평범한 데이트·다른 인물끼리의 일은 빼고, 다툼이 풀리지 않고 끝났으면 open:true.`, src, '💞연애 기록');
@@ -1830,7 +1861,7 @@
         const open = (love.log || []).filter(x => x.open && (!x.w || x.w === who)), old = !broke && open.length && r('old') < 0.25 ? open[Math.floor(r('o') * open.length)].t : '';
         const era = { modern: '현대', old: '옛날', fantasy: '판타지' }[pWorld(mem)] || '';
         const free = !old && r('free') < 0.5; // 반은 방향 없이 AI가 고르게(한 가지 틀로만 돌지 않게)
-        love.ev = { turn, line: `※ 현실 연애 · 이번 답에 생길 수 있는 일: ${old ? '묵은 일이 또 — ' + old : free ? '실제 연인들에게 일어날 법한 일 중 이 둘에게 그럴듯한 것' : kind + ' 쪽'}(${old || free ? '' : '방향일 뿐 · 실제 연인들에게 일어날 법한 일 중 이 둘에게 더 그럴듯한 다른 일이어도 됨 · '}크기 ${r('sz') < 0.15 ? '크게' : '작게'} · ${era ? era + ' · ' : ''}이 이야기 시대·배경에 맞게 · 노트·최근 대화의 사람·일 먼저 · 지금 장면 흐름 안에서 지문·대사로 자연스럽게 · 이 줄의 낱말을 그대로 옮기지 않고 지난번과 다른 일로) — 어떻게 받아들일지는 정해지지 않음` };
+        love.ev = { turn, line: `※ 현실 연애 · 이번 답에 생길 수 있는 일: ${old ? '묵은 일이 또 — ' + old : free ? '실제 연인들에게 일어날 법한 일 중 이 둘에게 그럴듯한 것' : kind + ' 쪽'}(${old || free ? '' : '방향일 뿐 · 실제 연인들에게 일어날 법한 일 중 이 둘에게 더 그럴듯한 다른 일이어도 됨 · '}크기 ${r('sz') < 0.2 ? '크게' : '작게'} · ${era ? era + ' · ' : ''}이 이야기 시대·배경에 맞게 · 노트·최근 대화의 사람·일 먼저 · 지금 장면 흐름 안에서 지문·대사로 자연스럽게 · 이 줄의 낱말을 그대로 옮기지 않고 지난번과 다른 일로) — 어떻게 받아들일지는 정해지지 않음` };
         love.evTurn = turn; love.evDay = day; love.kinds = [...(love.kinds || []), old ? '묵은 일' : free ? '자유' : kind].slice(-6);
       }
       love.lastTurn = turn; loveSave();
@@ -1848,6 +1879,7 @@
     try { await rewriteNote(chatId, n.memory); love.sig = loveSig; loveSave(); } catch (e) { logErr('연애 줄', '앱 방식 노트 고쳐 쓰기 실패 · ' + e.message); }
   }
   function loveTake(text) { // 정리 AI가 적은 %%연애 줄 → 지나온 일
+    if (love && loveChat === chatIdFromPath()) love.sumT = Math.max(love.sumT || 0, (snapshot?.note?.turns || 0) + freshTurns()); // 몇 턴까지 정리한 대화를 반영했는지(기기끼리 고르는 첫 기준)
     text = String(text); const strip = t => t.replace(/^\s*%%\s*연애.*$/gm, ''); if (!love || loveChat !== chatIdFromPath()) return strip(text);
     const lv = text.match(/^\s*%%\s*연애\s*동거\s*\|\s*(함께|따로)/m); if (lv && love.liveBy !== 'user') love.live = lv[1] === '함께';
     const st = text.match(/^\s*%%\s*연애\s*시작\s*\|\s*(.+)$/m); if (st && love.startBy !== 'user') { const d = P_DAY2(st[1]); if (d != null) { love.start = d; love.startBy = 'ai'; } }
@@ -9385,9 +9417,7 @@
   // 정리 기록: '정리 후 노트'는 다음 기록의 '정리 전 노트'와 같을 때가 대부분이라 한 번만 저장해요(aN: 1 = 다음 기록의 before가 내 after) · 읽을 때 다시 채워요 · 사이에 직접 고쳐서 다르면 둘 다 그대로
   const historyOf = async chatId => { try { const l = JSON.parse(String(await getValue('hist:' + chatId, '[]')) || '[]'); for (let i = 0; i < l.length; i++) if (l[i].aN) { if (l[i + 1]) l[i].after = l[i + 1].before; delete l[i].aN; } return l; } catch (_) { return []; } };
   const histPack = list => list.map((h, i) => { const nx = list[i + 1]; if (!nx || h.after == null || h.after !== nx.before) return h; const { after, ...r } = h; return { ...r, aN: 1 }; });
-  async function pushHistory(chatId, rec) { const list = await historyOf(chatId); if (rec) list.push(rec); await setValue('hist:' + chatId, JSON.stringify(histPack(list.slice(-30)))); } // 자동 백업: 방마다 최근 30번 · rec 없이 부르면 줄여서 다시 저장만
-  const histPacked = new Set(); // 예전 방식으로 크게 저장된 방은 열 때 한 번 줄여요
-  async function histPackOnce(chatId) { if (histPacked.has(chatId) || busyNow) return; histPacked.add(chatId); const raw = String(await getValue('hist:' + chatId, '')); if (raw.length > 100000 && !raw.includes('"aN":1')) await pushHistory(chatId); }
+  async function pushHistory(chatId, rec) { if (!rec) return; try { await histAdd(chatId, rec); return; } catch (_) {} const list = await historyOf(chatId); list.push(rec); await setValue('hist:' + chatId, JSON.stringify(histPack(list.slice(-30)))); } // 자동 백업: 방마다 최근 30번 · rec 없이 부르면 줄여서 다시 저장만
   const notProofLine = l => !/^\s*-?\s*(근거|번역|장면)\s*[:：]/.test(l);
   function changesOf(before, after) {
     const A = new Map(splitSections(before).map(s => [s.key, s.body])), B = new Map(splitSections(after).map(s => [s.key, s.body]));
@@ -9475,11 +9505,11 @@
     return { turn, uptoId: msgId(mine[mine.length - 1]) };
   }
   async function branchFind(chatId, tick = () => {}) {
-    const keys = await listKeys();
-    const cur = await readAll(chatId), found = [];
-    // ponytail: 최근 기록이 있는 방 12개만 읽어요(방마다 대화 전체를 읽어서). 더 오래된 방은 백업 파일로
+    const cur = await readAll(chatId), found = [], anc = branchAnc(cur, chatId), from = anc[0] || '';
+    // ponytail: 최근 기록이 있는 방 12개만 읽어요(방마다 대화 전체를 읽어서). 더 오래된 방은 백업 파일로 · 분기해 온 방을 알면 그 방 정리 기록만 꺼내요(방마다 기록을 다 꺼내면 느려요)
+    const keys = anc.length ? anc.map(a => 'hist:' + a) : await listKeys();
     const rooms = []; for (const k of keys) { if (!/^hist:/.test(k) || k === 'hist:' + chatId) continue; const hl = await historyOf(k.slice(5)); if (hl.length) rooms.push({ room: k.slice(5), hl, at: hl[hl.length - 1].at || 0 }); }
-    const from = branchSrc(cur, chatId), mine = rooms.filter(r => r.room === from);
+    const mine = rooms.filter(r => anc.includes(r.room));
     const pick = mine.length ? mine : rooms.sort((a, b) => b.at - a.at).slice(0, 12); // 분기해 온 방을 알면 그 방 하나만 읽어요(방마다 대화 전체를 읽어서 12개면 1분 넘게 걸려요)
     for (const [i, { room, hl }] of pick.entries()) {
       tick(i + 1, pick.length);
@@ -9490,13 +9520,16 @@
         const m = branchMatch(src, cur, upto); if (m) found.push({ room, memory, at, ...m });
       }
     }
-    const src = branchSrc(cur, chatId); // 크랙은 분기할 때 메시지를 원래 방 번호(chatId) 그대로 복사해요 → 분기해 온 방을 정확히 알아요
+    const src = from; // 크랙은 분기할 때 메시지를 원래 방 번호(chatId) 그대로 복사해요 → 분기해 온 방을 정확히 알아요
     return found.sort((a, b) => (b.room === src) - (a.room === src) || b.turn - a.turn || b.at - a.at); // 분기해 온 방 정리본이 먼저 · 그다음 턴이 큰 것
   }
   // 분기해 온 방: 이 방 메시지 중 다른 방 번호가 붙은 것(분기 전 대화) · 없으면 ''
+  //   분기한 방을 또 분기하면 앞쪽 메시지엔 맨 처음 방, 뒤쪽엔 중간 방 번호가 붙어요 → 가장 뒤에 나온 다른 방 = 바로 위 방
   function branchSrc(cur, chatId) {
-    return String((cur || []).find(m => m?.chatId && String(m.chatId) !== String(chatId))?.chatId || '');
+    return String([...(cur || [])].reverse().find(m => m?.chatId && String(m.chatId) !== String(chatId))?.chatId || '');
   }
+  // 거슬러 올라가는 방들(바로 위 방부터): 정리본은 이 방들 것만 써요
+  const branchAnc = (cur, chatId) => [...new Set([...(cur || [])].reverse().map(m => String(m?.chatId || '')).filter(x => x && x !== String(chatId)))];
   // 고른 다른 방 기억을 미리보기로(넣기는 미리보기에서) · 연애 기록도 이 방에 없으면 같이
   async function branchUse(x) {
     { const cid = chatIdFromPath(); if (cid && loveThin(await loveOf(cid))) { loveBranch.seen?.delete(cid); if (await loveBranch(cid) && loveChat === cid) await loveLoad(cid); } } // 연애 기록도 갈라진 턴 것으로(최신 것을 통째로 가져오면 그 뒤 싸움·이별이 섞여요)
@@ -10017,7 +10050,7 @@
       snapshot = snap;
       usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); pregSnapNow(chatId); pregBranch(chatId).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); loveBranch(chatId).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
-      try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); await histPackOnce(chatId); histList = await historyOf(chatId);
+      try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
@@ -10040,11 +10073,13 @@
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
-        if (c?.turns && !c.parked && !busyNow && !(await historyOf(chatId)).length && !String(await getValue('brchk:' + chatId, ''))) { await setValue('brchk:' + chatId, '1');
-          branchFind(chatId).then(async list => { const x = list[0]; if (!x || x.turn === c.turns || chatIdFromPath() !== chatId || busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
-            const src = branchSrc(await readAll(chatId), chatId); if (src && x.room !== src) { logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return; } // 다른 방 정리본은 대화가 같아도 안 써요
-            if (x.turn < c.turns && sameTurns(await readAll(x.room), await readAll(chatId)) >= c.turns) return; // 앞선 노트인데 원래 방과 노트 턴까지 같으면 노트가 맞아요(그 방 정리 기록이 이 기기에 덜 남았을 뿐)
-            nav.branchList = list; await branchUse(x); await apply(); pageToast(x.turn < c.turns ? `분기한 턴보다 앞선 노트(1~${c.turns}턴)라 1~${x.turn}턴 정리본으로 바꿨어요` : `따라온 노트(1~${c.turns}턴)보다 가까운 1~${x.turn}턴 정리본을 넣었어요`); logErr('분기', `노트 1~${c.turns}턴 → ${x.room.slice(0, 8)}… 방의 1~${x.turn}턴 정리본`); })
+        //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !(await historyOf(chatId)).length && !String(await getValue('brchk:' + chatId, ''))) { await setValue('brchk:' + chatId, '1');
+          const ct = c?.turns || 0;
+          branchFind(chatId).then(async list => { const x = list[0]; if (!x || x.turn === ct || chatIdFromPath() !== chatId || busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
+            const anc = branchAnc(await readAll(chatId), chatId); if (!ct && !anc.length) return; if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return; } // 다른 방 정리본은 대화가 같아도 안 써요
+            if (ct && x.turn < ct && sameTurns(await readAll(x.room), await readAll(chatId)) >= ct) return; // 앞선 노트인데 원래 방과 노트 턴까지 같으면 노트가 맞아요(그 방 정리 기록이 이 기기에 덜 남았을 뿐)
+            nav.branchList = list; await branchUse(x); await apply(); pageToast(!ct ? `분기하기 전 방의 1~${x.turn}턴 정리본을 넣었어요` : x.turn < ct ? `분기한 턴보다 앞선 노트(1~${ct}턴)라 1~${x.turn}턴 정리본으로 바꿨어요` : `따라온 노트(1~${ct}턴)보다 가까운 1~${x.turn}턴 정리본을 넣었어요`); logErr('분기', `노트 ${ct ? '1~' + ct + '턴' : '없음'} → ${x.room.slice(0, 8)}… 방의 1~${x.turn}턴 정리본`); })
             .catch(e => logErr('분기', '분기 전 정리본 찾기 실패 · ' + e.message)); } }
       { const c = snap.note; // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && !gsTried.has(chatId + '|' + c.upto) && String(await getValue('gsUrl', '')).trim()) {
@@ -10062,7 +10097,7 @@
           await setValue('preg:' + chatId, JSON.stringify(r)); await pregLoad(chatId); pageToast('다른 기기 임신 기록을 받아 왔어요'); render(); }); }
       if (!gsTried.has('love|' + chatId) && String(await getValue('gsUrl', '')).trim()) { gsTried.add('love|' + chatId); // 연애 기록도 같은 식으로(안 풀린 일·지나온 일까지 통째로) · 방마다 한 번
         gsFetch(chatId).then(async d => { let r = null; try { r = JSON.parse(d?.store?.love || 'null'); } catch (_) {} const mine = await loveOf(chatId);
-          if (!r?.saved || chatIdFromPath() !== chatId || (mine && !(r.saved > (mine.saved || 0)))) return;
+          if (!r?.saved || chatIdFromPath() !== chatId || (mine && !((r.sumT || 0) > (mine.sumT || 0) || ((r.sumT || 0) === (mine.sumT || 0) && r.saved > (mine.saved || 0))))) return; // 더 많은 턴까지 정리를 반영한 쪽 · 같으면 직접 고친 게 늦은 쪽
           await setValue('love:' + chatId, JSON.stringify(r)); if (loveChat === chatId) await loveLoad(chatId); pageToast('다른 기기 연애 기록을 받아 왔어요'); render(); }); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
       try { origMap = JSON.parse(String(await getValue('orig:' + chatId, '') || '{}')) || {}; } catch (_) { origMap = {}; }
