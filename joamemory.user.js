@@ -4,7 +4,7 @@
 // @version      5.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -1894,7 +1894,7 @@
       if (newDay && gap >= 3) love.evRollDay = day; // 같은 날 또 생기는 건 드물게(긴 장면 하루에 일이 줄줄이 안 터지게) // 이야기 날짜로 며칠에 한 번꼴 · 날짜를 모르면 턴으로
       if (r('ev') < p) {
         const K = [...(broke ? ['마주침', '남은 물건 — 돌려 달라거나 돌려주거나 가져가라는 얘기', '같이 쓰던 것·사는 곳 정리(같이 살았다면 집 문제까지)', '술자리', '소식이 들림', '새 사람 소식(어느 쪽이든)'] : ['이 인물 생활에서 터진 일(일·학업·가족·돈·건강)', '둘 주변에서 생긴 사건사고', '일·학업·약속 때문에 생긴 일', '의견이 갈리는 일', '서운하게 하는 일(본인은 모를 수도)', '오해가 생길 만한 일', '둘 사이에 끼어드는 사람', '둘을 두고 도는 소문', `${who}가 먼저 꺼내는 일(제안·애정·질투·장난)`, '둘이 가까워지는 일(이 인물 방식으로)', ...(loveLive(mem, love.who) ? ['같이 사는 집에서 생기는 일'] : []), ...(love.start != null && day != null && day - love.start >= 180 ? ['오래 사귄 사이라서 생기는 일'] : [])]), ...(love.side ? [`바람 상대 ${love.side} 쪽에서 생긴 일`] : []), ...(!broke && loveExPrev() ? [`전 연인 ${loveExPrev()} 쪽에서 생긴 일`] : [])]; // 새 연애 중에도 전 연인이 가끔 얽혀요
-        const pool0 = K.filter(k => !(love.kinds || []).slice(-2).includes(k)), rub = pool0.filter(k => /의견|서운|오해|약속/.test(k)), good = pool0.filter(k => /먼저 꺼내는|가까워지는/.test(k)), pool = tn >= 2 && rub.length && r('tw') < 0.5 ? rub : tn === 0 && good.length && r('gd') < 0.4 ? good : pool0, kind = pool[Math.floor(r('k') * pool.length)];
+        const cold = mine0.some(x => x.open), pool0 = K.filter(k => !(love.kinds || []).slice(-2).includes(k) && !(cold && /먼저 꺼내는|가까워지는/.test(k))), /* 안 풀린 일이 있으면(냉전·다툼 중) NPC가 다가가는 쪽 후보는 빼요 · 풀리는 건 서사에 계기 있을 때 */ rub = pool0.filter(k => /의견|서운|오해|약속/.test(k)), good = pool0.filter(k => /먼저 꺼내는|가까워지는/.test(k)), pool = tn >= 2 && rub.length && r('tw') < 0.5 ? rub : tn === 0 && good.length && r('gd') < 0.4 ? good : pool0, kind = pool[Math.floor(r('k') * pool.length)];
         const open = (love.log || []).filter(x => x.open && (!x.w || x.w === who)), old = !broke && open.length && r('old') < 0.25 ? open[Math.floor(r('o') * open.length)].t : '';
         const era = { modern: '현대', old: '옛날', fantasy: '판타지' }[pWorld(mem)] || '';
         const free = !old && r('free') < 0.25; // 반은 방향 없이 AI가 고르게(한 가지 틀로만 돌지 않게)
