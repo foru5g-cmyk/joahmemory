@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.0
+// @version      5.8.1
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -3550,7 +3550,7 @@
       const onlyNote = p && p.textContent.trim().length && [...p.childNodes].every(c =>
         c.nodeType === 1 ? (c.tagName === 'BR' || NOTE_MARK.test(c.textContent) || c.classList?.contains('memo-note-hidden')) : (!c.nodeValue.trim() || NOTE_MARK.test(c.nodeValue)));
       if (onlyNote && /^(P|LI|PRE|BLOCKQUOTE|SPAN|DIV)$/.test(p.tagName) && p.childElementCount <= 200 && !p.querySelector('p,li,div')) {
-        p.classList.add('memo-note-hidden');
+        p.classList.add('memo-note-hidden'); noteTail(p);
       } else {
         const span = document.createElement('span');
         span.className = 'memo-note-hidden';
@@ -3558,9 +3558,14 @@
         span.appendChild(t);
         // 노트 바로 앞 줄바꿈도 같이 숨겨요(말풍선 아래 빈 줄로 남지 않게)
         for (let s = span.previousSibling; s && (s.nodeName === 'BR' || (s.nodeType === 3 && !s.nodeValue.trim()));) { const prev = s.previousSibling; span.prepend(s); s = prev; }
+        // 크랙이 노트를 글로 그려 버렸으면(취소선·굵은 글씨로 쪼개짐) 같은 문단의 뒤 조각도 노트예요
+        while (span.nextSibling) span.appendChild(span.nextSibling);
+        if (span.parentElement && /^(P|LI)$/.test(span.parentElement.tagName)) noteTail(span.parentElement);
       }
     }
   }
+  // 노트 뒤에 따라온 마크다운 문단도 숨겨요(노트는 늘 답 맨 끝 · 마크다운 문단이 아닌 칸을 만나면 멈춰요 → 다음 말풍선·버튼은 안 건드림)
+  function noteTail(el) { for (let e = el.nextElementSibling; e && /^(P|UL|OL|LI|BLOCKQUOTE|PRE|H[1-6]|HR|TABLE|BR)$/.test(e.tagName); e = e.nextElementSibling) e.classList.add('memo-note-hidden'); }
   let hideTimer = null;
   new MutationObserver(() => { if (!hideTimer) hideTimer = setTimeout(() => { hideTimer = null; hideRenderedNotes(); }, 250); })
     .observe(document.documentElement, { childList: true, subtree: true, characterData: true });
@@ -5227,8 +5232,10 @@
     const tk = t => String(t).split(/\s+/).map(skelOf).filter(k => k.length >= 2); const ty = tk(b);
     return tk(a).some(k => ty.includes(k)); };
   // 성 빼고 이름만(대런 ↔ 대런 하트): 한 단어 이름이 띄어 쓴 이름의 첫 단어와 똑같으면 같은 사람
+  // 뒤 단어가 가족·관계 말이면(백호랑 ↔ 백호랑 모친) 다른 사람
+  const REL_WORD = /^(?:의)?(?:모친|부친|어머니|어머님|아버지|아버님|엄마|아빠|형|형님|누나|누님|오빠|언니|동생|여동생|남동생|할머니|할아버지|조부|조모|아내|남편|부인|와이프|딸|아들|자식|비서|친구|부하|직원|사촌|이모|고모|삼촌|외삼촌|숙부|숙모|장모|장인|시어머니|시아버지|애인|여친|남친|약혼녀|약혼자|전처|전남편|가족|일가|집안)$/;
   const givenName = (a, b) => { a = String(a || '').trim().toLowerCase(); b = String(b || '').trim().toLowerCase(); const [s, l] = /\s/.test(a) ? [b, a] : [a, b];
-    return !!s && !/\s/.test(s) && /\s/.test(l) && l.split(/\s+/)[0] === s; };
+    return !!s && !/\s/.test(s) && /\s/.test(l) && l.split(/\s+/)[0] === s && !l.split(/\s+/).slice(1).some(w => REL_WORD.test(w)); };
   const sameName = (a, b) => !pairHas(NAME_PAIRS.diff, a, b) && (pairHas(NAME_PAIRS.same, a, b) || nameForms(a).some(x => nameForms(b).some(y => sameName1(x, y) || crossName(x, y) || givenName(x, y))));
   // 물어볼 이름 쌍: 노트 인물 중 앞뒤로만 겹치고, 자동으로 같다고 보지도 않고, 아직 답하지 않은 것
   const askPairs = memory => { const ns = personsIn(splitSections(memory).find(x => x.key === '인물')?.body || '').map(p => p.name), out = [];
