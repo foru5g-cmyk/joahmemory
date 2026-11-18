@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.1
+// @version      5.7.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -1164,7 +1164,8 @@
     // 검진 결과는 한 번만 넣고, 그다음 답 지문에 나왔을 때만 수첩에 적어요(안 나왔으면 안 적음 · 다시 넣지 않음)
     preg.ckWait = (preg.ckWait || []).filter(c => turn <= c.from);
     const heard = (w, t) => { if (!preg.ckWait.some(c => c.t === t)) preg.ckWait.push({ w, t, from: turn }); };
-    if (atHosp && preg.unaware) { preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
+    const userHosp = P_HOSP[world].test(said + '\n' + stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'user') || {}))); // 유저가 직접 병원에 간 말
+    if ((me ? userHosp : atHosp) && preg.unaware) { /* 유저 캐릭터 임신은 유저가 간 병원으로만 알게 돼요(AI가 지어낸 진료·리롤로 지울 답으론 안 바뀜) */ preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
     if (atHosp) { // 처음 알게 된 병원에서도 그 자리에서 검진(초음파)까지 받아요
       for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - (preg.firedW?.[e.k] ?? e.w) <= 4)) { // 출혈·태동 줄어듦 같은 일의 결과는 4주 안에 병원에 갔을 때만(검진과 같은 규칙 · 유산·사산은 늘)
         if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; if (e.end) preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); else heard(wk, e.res); } // 유산·사산은 바로 끝나서 바로 적어요
@@ -1255,6 +1256,11 @@
   async function pregSnapPut(c, turn, j, pre = 'pregsnap:') { let o = null; try { o = JSON.parse(String(await getValue(pre + c, '') || 'null')); } catch (_) {} // pre: 'lovesnap:'이면 연애 기록 사본
     const list = (o?.list || []).filter(x => x.turn < turn); /* 그 턴보다 뒤 것은 버려요(되돌린 노트·리롤 뒤엔 새 길이라) */ list.push({ turn, j }); await setValue(pre + c, JSON.stringify({ title: roomTitle(), list: list.slice(-60) })); }
   // 방을 열 때도 지금 턴 사본을 접어 둬요(끝난 임신처럼 저장이 안 일어나는 방도 분기방이 산모수첩까지 가져가게) · saved는 안 바꿔요(기기끼리 고르는 기준이라)
+  // 대화를 지웠으면 임신 기록도 그때로: 지금 턴(정리한 턴+그 뒤 유저 말)보다 뒤 사본이 있으면, 지금 턴까지 중 마지막 사본으로 되돌리고 뒤 사본은 버려요
+  async function pregRewind(c) { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!t || c !== chatIdFromPath() || pregChat !== c) return;
+    let o = null; try { o = JSON.parse(String(await getValue('pregsnap:' + c, '') || 'null')); } catch (_) {} const list = o?.list || []; if (!list.some(x => x.turn > t)) return;
+    const keep = list.filter(x => x.turn <= t), x = keep[keep.length - 1]; await setValue('pregsnap:' + c, JSON.stringify({ ...o, list: keep }));
+    if (x && x.j !== JSON.stringify(preg)) { await setValue('preg:' + c, x.j); await pregLoad(c); pregSave.at = ''; logErr('임신', '지운 대화 뒤 임신 기록을 ' + x.turn + '턴 때로 되돌림'); pageToast('지운 대화에 맞춰 임신 기록을 ' + x.turn + '턴 때로 되돌렸어요'); } }
   const pregSnapNow = c => { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!preg || !t || pregChat !== c || c !== chatIdFromPath()) return;
     const j = JSON.stringify(preg), same = c + '|' + t + '|' + j.replace(/"saved":\d+/, ''); if (pregSave.at === same) return; pregSave.at = same; pregSnapPut(c, t, j); }; // 같은 턴·같은 기록이면 다시 안 써요
   // 분기한 방: 이 방엔 임신 기록이 한 번도 없고, 제목이 같은 다른 방과 대화 앞부분(유저 말 3턴 이상)이 글자까지 같으면 → 갈라진 턴까지의 사본 중 가장 늦은 것을 복사
@@ -10096,7 +10102,7 @@
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
       snapshot = snap;
       usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregRewind(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); histList = await historyOf(chatId);
       if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
       try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
