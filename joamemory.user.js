@@ -4,7 +4,7 @@
 // @version      5.8.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -3167,7 +3167,7 @@
     return [...words].filter(w => w && !NO_ADDR.test(w) && !source.includes(norm(w)) && !prev.includes(norm(w)));
   }
   // 지어낸 호칭 지우기: 인물·호칭 칸에서 「그 말」(번역 괄호 포함)과 "별명 그 말"만 빼고, 말투·태도는 남깁니다.
-  //   "네이선 힐 → 루루: 「Little rabbit (꼬마 토끼)」·반말 · 태도" → "네이선 힐 → 루루: 반말 · 태도"
+  //   "네이선 힐 → 윤희수: 「Little rabbit (꼬마 토끼)」·반말 · 태도" → "네이선 힐 → 윤희수: 반말 · 태도"
   function dropNames(sections, words) {
     const re = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return sections.map(s => !['인물', '호칭·말투'].includes(s.key) ? s : { ...s, body: words.reduce((b, w) => b
@@ -8653,7 +8653,7 @@
   // CANON이 비어 있어도(예전 형식 노트 등) 인물 목록에서 직접 "딱 이 사람에게만 맞는지" 확인합니다
   let _poolKey = null, _poolVal = [];
   const namePool = () => { if (CANON.length) return CANON; const k = bodyOf('인물'); if (k !== _poolKey) { _poolKey = k; try { _poolVal = [...people().keys()]; } catch (_) { _poolVal = []; } } return _poolVal; };
-  // 【루루】 … 별명 온윤아 · 가명 ○○ → 이 사람의 다른 이름. 이야기 속에서 새 이름(조선 이름 등)을 얻어도 같은 사람으로.
+  // 【윤희수】 … 별명 온윤아 · 가명 ○○ → 이 사람의 다른 이름. 이야기 속에서 새 이름(조선 이름 등)을 얻어도 같은 사람으로.
   const ALT_RE = /(?:별명|가명|본명|새 이름|다른 이름|개명|코드네임|콜사인)\s*[:：]?\s*([^\s·,()（）「」]{2,20})/g;
   let _altKey = null, _altVal = new Map();
   const altNames = () => { const body = bodyOf('인물'); if (body !== _altKey) { _altKey = body; _altVal = new Map();
@@ -8734,7 +8734,7 @@
     // 웹 모드: 사건마다 📌 고정(늘 채팅에 들어가요) · 지금 채팅에 들어가 있으면 '들어감'
     const webTag = e => { if (!sceneOn || rnd) return ''; const k = itemKey(e.raw), p = injPins.has(k), on = !!lastInj && !lastInj.all && lastInj.keys?.has(k);
       return (on && !p ? ' · 🌐 들어감' : '') + '<button class="tl-pin' + (p ? ' on' : '') + '" data-act="pin" data-arg="' + esc(k) + '" title="고정하면 늘 채팅에 들어가요">' + (p ? '📌 고정됨' : '📌') + '</button>'; };
-    // 남의 사건: 이 사람의 ⤿ 줄만. 없으면 이 사람 이름이 든 토막만(장소·"루루, 네이선 힐…" 같은 인물 나열은 빼고).
+    // 남의 사건: 이 사람의 ⤿ 줄만. 없으면 이 사람 이름이 든 토막만(장소·"윤희수, 네이선 힐…" 같은 인물 나열은 빼고).
     const isSideLine = l => /^[⤿ㄴ↳]/.test(String(l).trim());
     const nameList = x => String(x).split(/[,，·]\s*/).every(p => !p.trim() || names.some(n => personAlias(n).some(a => p.includes(a))));
     const sideBody = e => { const own = e.lines.filter(l => isSideLine(l) && has(l));
@@ -9291,7 +9291,7 @@
   const LABEL = /^([^\s:："“”'「」()（）\d→][^:："“”'「」()（）→.]{0,15}?)\s*[:：]\s+(.+)$/;
   const labelHtml = x => { const m = String(x).match(LABEL); return m ? `<b>${esc(m[1])}</b> ${esc(m[2])}` : esc(x); };
   const bitHtml = x => { const ba = x.match(/^전\s*(?:→|->)\s*후\s*[:：]?\s*(.+)$/); if (ba) return `<p class="pnt"><i class="pba">전 → 후</i>${esc(ba[1])}</p>`; const m = x.match(/^(지금|원인|위험|배경|다음|결과)\s*[:：]\s*(.+)$/) || x.match(LABEL); return m ? `<p class="pnt"><i>${esc(m[1])}</i>${esc(m[2])}</p>` : `<p class="pnt">${esc(x)}</p>`; };
-  // 물건을 사람이 가지고 있으면 👤, 어딘가에 놓여 있으면 📦(위 "놓인 곳" 동그라미와 같은 아이콘) ("루루" · "루루 가방 안" → 👤)
+  // 물건을 사람이 가지고 있으면 👤, 어딘가에 놓여 있으면 📦(위 "놓인 곳" 동그라미와 같은 아이콘) ("윤희수" · "윤희수 가방 안" → 👤)
   const whereIcon = loc => { const head = String(loc).trim().split(/[\s(（,·]/)[0]; return [...people().keys()].some(n => sameName(n, head) || sameName(n, String(loc).trim())) ? '👤 ' : '📦 '; };
   // 소지품 하나: 📍 지금 있는 곳(제목 괄호) · ⤷ 상태 조각 · ⤷ 내력 · 근거
   const ITEM_HIST = /^(내력|입수|이력)\s*[:：]\s*(.*)$/;
@@ -9333,7 +9333,7 @@
   const placeHead = t => { t = String(t).trim(); return /·/.test(t) || /^📍/.test(t) || ([...t].length <= 18 && /(실|방|집|관|장|원|교|당|점|터|역|층|복도|거실|부엌|주방|옥상|골목|길|거리|카페|병원|사무실|라운지|하우스|캠퍼스|공원|호텔|숲|해변|창고|차고|마당|정원|학교|기숙사|강당|도서관|식당)\s*(?:[(（][^)）]*[)）])?\s*$/.test(t)); };
   // "⤿ 헤이든: 지켜봄 (끼기 싫어서)" = 곁에 있던 인물이 한 일 · 이유. 쪼개지 않고 한 줄 들여서. (AI가 ㄴ·↳로 써도 받음)
   //   화면에선 다른 줄과 같은 ⤷ 화살표로, 이름만 굵게 구분합니다(화살표 모양을 하나로).
-  // "장소 · 루루 · 네이선 힐 · …"처럼 장소+그 자리 인물 나열만 있는 줄 → { place, who[] }. 아니면 null.
+  // "장소 · 윤희수 · 네이선 힐 · …"처럼 장소+그 자리 인물 나열만 있는 줄 → { place, who[] }. 아니면 null.
   //   장소 이름 안에도 '·'가 있을 수 있어서(401호 욕실·게스트룸) 뒤에서부터 인물만 이어진 데까지를 인물, 그 앞 전부를 장소로 봅니다.
   // AI가 장소와 인물을 두 줄로 나눠 쓴 경우("미줄라 카페" / "피터, 가브리엘 케인, 타일러") 한 줄 📍👥로 합쳐요
   //   인물 줄: 쉼표로 나눈 짧은 이름들이고 그중 하나는 노트 인물. 장소 줄: 화살표·문장 끝 없이 짧은 줄
@@ -9374,13 +9374,13 @@
   const evBody = l => nameBold(qPaint(evBody0(dq(l))));
   const evBody0 = l => { const r = String(l).match(/^[⤿ㄴ↳]\s*(.+)$/); if (r) { const n = r[1].match(/^(.{1,16}?)\s*[:：]\s*(.+)$/);
       return `<p class="pnt tl-side">${n ? `<b>${esc(n[1])}</b>: ${esc(n[2])}` : esc(r[1])}</p>`; }
-    // "장소 · 루루 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 루루, 네이선 힐, …
+    // "장소 · 윤희수 · 네이선 힐 · …"처럼 장소+인물 나열만 있는 줄은 한 줄로 묶습니다: 📍 장소 · 👥 윤희수, 네이선 힐, …
     const pm = String(l).match(/^\u0001(.*)\u0002(.*)$/); // 장소 줄 + 인물 줄을 합친 것(evMeta2)
     if (pm) return `<p class="tl-meta">${pm[1] ? `📍 ${esc(pm[1])} · ` : ''}👥 ${esc(pm[2])}</p>`;
     const meta = metaOf(l);
     if (meta) return `<p class="tl-meta">${meta.place ? `📍 ${esc(meta.place)} · ` : ''}👥 ${esc(meta.who.join(', '))}</p>`;
     const parts = String(l).split(/\s+→\s+/), hasMeta = parts.length > 1 && placeHead(parts[0]);
-    // "장소 · 루루, 네이선 → 원인 → …"처럼 화살표 앞에 장소+인물이 같이 있으면 📍 장소 · 👥 인물로 나눕니다.
+    // "장소 · 윤희수, 네이선 → 원인 → …"처럼 화살표 앞에 장소+인물이 같이 있으면 📍 장소 · 👥 인물로 나눕니다.
     const m0 = hasMeta && metaOf(parts[0]);
     // "누가 → 무엇을 → 결과"로 이어진 줄(한 줄로 줄인 사건 등)은 쪼개지 않고 한 줄 그대로 보여 줘요
     const rest = hasMeta ? parts.slice(1) : parts;
