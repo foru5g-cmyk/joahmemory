@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.6
+// @version      5.7.7
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -701,9 +701,10 @@
       const units = [];
       // 고르는 AI(재검토·목차)가 이 키·주소로 안 되면(없는 모델 404 · 권한 403) 하루 동안 안 불러요(보낼 때마다 헛걸음으로 늦어지지 않게)
       const aiUrl = genUrl(INJ_AI_MODEL), aiNo = (([u, t]) => u === aiUrl && Date.now() - Number(t) < 864e5)(String(await getValue('injAiNo', '')).split('§'));
-      const aiFail = async e => { if (/\b(404|403)\b/.test(String(e?.message))) { await setValue('injAiNo', aiUrl + '§' + Date.now()); logErr('연동', '기억 고르는 AI(' + INJ_AI_MODEL + ')가 이 키로 안 됨 · ' + String(e.message).slice(0, 120) + ' · 하루 동안 낱말·뜻 검색만 써요'); return true; } return false; };
-      let embOne = null; if (!key) for (const a of alts) if ((embOne = await embAltRoute(a))) break; // 되는 길이 나올 때까지(시험 중이면 이번엔 건너뜀)
-      if (key || embOne) for (const sec of splitSections(stripProof(memory))) if (INJ_SEM.includes(sec.key)) for (const it of itemBlocks(sec.body).items) units.push({ k: itemKey(it.key), t: it.lines.join('\n').slice(0, 2000) });
+      const aiFail = async e => { if (/\b(40[1-4])\b/.test(String(e?.message))) { /* 401 키 틀림 · 402 크레딧·결제 없음 · 403 권한 · 404 모델 없음 = 다시 불러도 안 됨 → 하루 쉬어요 */ await setValue('injAiNo', aiUrl + '§' + Date.now()); logErr('연동', '기억 고르는 AI(' + INJ_AI_MODEL + ')가 이 키로 안 됨 · ' + String(e.message).slice(0, 120) + ' · 하루 동안 낱말·뜻 검색만 써요'); return true; } return false; };
+      const embNo = Date.now() - Number(await getValue('embNo', '0')) < 864e5; // 뜻 검색이 막혀 하루 쉬는 중
+      let embOne = null; if (!key && !embNo) for (const a of alts) if ((embOne = await embAltRoute(a))) break; // 되는 길이 나올 때까지(시험 중이면 이번엔 건너뜀)
+      if ((key || embOne) && !embNo) for (const sec of splitSections(stripProof(memory))) if (INJ_SEM.includes(sec.key)) for (const it of itemBlocks(sec.body).items) units.push({ k: itemKey(it.key), t: it.lines.join('\n').slice(0, 2000) });
       if (units.length) {
       let cache = {}; try { cache = JSON.parse(String(await getValue('emb:' + chatId, '') || '{}')) || {}; } catch (_) {}
       const url = verb => 'https://generativelanguage.googleapis.com/v1beta/models/' + EMB_MODEL + ':' + verb;
@@ -774,7 +775,7 @@
           console.info('[조아메모리 실험판] 목차로 찾기 · 목록 ' + list.length + '개 · 고른 것 ' + got.length + '개');
         } catch (e) { console.info('[조아메모리 실험판] 목차로 찾기 건너뜀 · ' + e.message); await aiFail(e); }
       }
-    } catch (e) { console.info('[조아메모리 실험판] 의미 검색 건너뜀 · ' + e.message); logErr('뜻 검색', '건너뜀 · ' + e.message); }
+    } catch (e) { console.info('[조아메모리 실험판] 의미 검색 건너뜀 · ' + e.message); if (/\b40[1-4]\b/.test(String(e?.message))) { await setValue('embNo', String(Date.now())); logErr('뜻 검색', '키가 막혀서(' + String(e.message).slice(0, 80) + ') 하루 동안 낱말 검색만 써요 · 크레딧·결제를 확인해 주세요'); } else logErr('뜻 검색', '건너뜀 · ' + e.message); }
   }
   // ── 🍼 임신 모드 (임신테스트 파일 전용) ──
   // 주사위는 스크립트가 굴려요: 방마다 seed 하나 → 같은 seed면 늘 같은 결과(리롤해도 안 바뀜). AI는 받은 걸 사실로 쓰기만 해요.
@@ -5103,7 +5104,7 @@
   async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
       const m = String(msg?.message || msg || '').slice(0, 300), last = errLog[errLog.length - 1];
-      if (last && last.where === where && last.msg === m && Date.now() - last.at < 3000) return; // 같은 게 연달아 오면 한 번만
+      if (errLog.some(x => x.where === where && x.msg === m && Date.now() - x.at < (/건너뜀/.test(m) ? 6 * 3600e3 : 3000))) return; // 같은 게 연달아 오면 한 번만 · '건너뜀'(보낼 때마다 나는 것)은 같은 이유면 6시간에 한 번만
       errLog.push({ at: Date.now(), where, msg: m, room }); errLog = errLog.slice(-200); // 방마다 따로 보여서 넉넉히(한 방이 다른 방 기록을 밀어내지 않게)
       await setValue('errlog', JSON.stringify(errLog)); } catch (_) {}
   }
@@ -6321,8 +6322,12 @@
       if (!data.memory && quiet) return;
       if (!quiet) toast('구글 드라이브에 올리는 중…');
       await gsCall({ action: 'save', chat: data.chat, title: roomTitle(), data: JSON.stringify(data) });
-      if (!quiet) toast('구글 드라이브에 백업했어요.', 'ok', 3000);
-    } catch (e) { toast('구글 백업 실패 · ' + e.message, 'err', 5000); }
+      if (!quiet) toast('구글 드라이브에 백업했어요.', 'ok', 3000); gsSave.fails = 0;
+    } catch (e) { // 자동 올리기는 한 번 실패로는 안 띄워요(잠깐 끊김·구글이 바쁠 때가 많아서) · 1분 뒤 한 번 더 · 두 번 연달아 실패하면 그때 알려요
+      logErr('드라이브', (quiet ? '자동 ' : '') + '백업 실패 · ' + e.message);
+      if (!quiet) return toast('구글 백업 실패 · ' + e.message, 'err', 5000);
+      gsSave.fails = (gsSave.fails || 0) + 1; if (gsSave.fails >= 2) { gsSave.fails = 0; return toast('구글 백업이 두 번 연달아 안 됐어요 · ' + e.message, 'err', 6000); }
+      clearTimeout(gsSave.retry); gsSave.retry = setTimeout(() => gsSave(true), 60000); }
   }
   // auto: 새 기기에서 방을 처음 열 때(이 기기에 이 방 기록이 하나도 없을 때) 한 번만. 백업이 없으면 조용히 넘어가요.
   async function gsLoad(auto = false) {
