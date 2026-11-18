@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.5
+// @version      5.7.6
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -140,8 +140,14 @@
   // 3. 확장 프로그램 호환 (탬퍼몽키: GM_*, 아이폰 Userscripts 앱: GM.*)
   // ══════════════════════════════════════════════════════════════
   const hasGM = typeof GM !== 'undefined' && GM;
-  const gmRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest
+  const gmRequest0 = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest
     : (hasGM && GM.xmlHttpRequest ? opts => GM.xmlHttpRequest(opts) : null);
+  // 요청이 살아 있는지 세요: netIn = 지금 오가는 요청 수 · netLast = 마지막으로 보내거나 받은 때(정리가 멈췄는지 아는 데 써요)
+  let netIn = 0, netLast = Date.now();
+  const gmRequest = gmRequest0 && (opts => { netIn++; netLast = Date.now(); let done = false;
+    const end = fn => function (...a) { if (!done) { done = true; netIn = Math.max(0, netIn - 1); } netLast = Date.now(); return fn?.apply(this, a); };
+    const prog = opts.onprogress;
+    return gmRequest0({ ...opts, onprogress: function (...a) { netLast = Date.now(); return prog?.apply(this, a); }, onload: end(opts.onload), onerror: end(opts.onerror), ontimeout: end(opts.ontimeout), onabort: end(opts.onabort) }); });
   async function gmGet(key, fallback) {
     if (typeof GM_getValue === 'function') return GM_getValue(key, fallback);
     if (hasGM && GM.getValue) return GM.getValue(key, fallback);
@@ -7142,7 +7148,8 @@
     const name = { board: '커뮤니티', more: '새 글', phone: '폰', gc: '단톡방', pc: '컴퓨터', news: '뉴스', wiki: '위키', live: '실시간톡', bet: '베팅판', if: '속마음', talk: '토크쇼', summary: '기억 노트', ltm: '장기기억 카드' }[g.kind] || '';
     const board = g.kind === 'board' || g.kind === 'more'; let info;
     // 글이 안 오는 시간 안내: 받다가 2분 넘게 멈춤 / 3분 넘게 첫 글자도 안 옴
-    const q = Math.floor((Date.now() - (g.recvAt || g.t0)) / 60000), stall = g.recvAt ? (q >= 2 ? `AI 답이 ${q}분째 멈춰 있어요 · 5분이 되면 끊고 알려 줘요` : '') : q >= 3 ? `${q}분째 첫 글자를 기다리는 중 · AI 생각이 깊으면 오래 걸려요` : '';
+    const dead = netIn === 0 && Date.now() - netLast > 30000, deadLeft = Math.max(1, Math.ceil((180000 - (Date.now() - netLast)) / 60000));
+    const q = Math.floor((Date.now() - (g.recvAt || g.t0)) / 60000), stall = dead ? `AI 연결이 끊긴 것 같아요 · ${deadLeft}분 안에 저절로 풀고 알려 줘요` : g.recvAt ? (q >= 2 ? `AI 답이 ${q}분째 멈춰 있어요 · 5분이 되면 끊고 알려 줘요` : '') : q >= 3 ? `${q}분째 첫 글자를 기다리는 중 · AI 생각이 깊으면 오래 걸려요` : '';
     if (g.kind === 'summary') { // 정리: 읽는 중 → 쓰는 중(글자 수 · 지난 정리 대비 %)
       info = !g.chars ? (s < 8 ? 'AI에게 대화와 기억 노트를 보내는 중…' : s < 30 ? 'AI가 대화를 읽고 정리하는 중…' : 'AI가 정리하는 중이에요 · 대화가 길면 첫 글자까지 1분 넘게 걸려요')
         : `AI가 쓰는 중 · ${fmt(g.chars)}자`;
@@ -7160,6 +7167,9 @@
     root.querySelectorAll('.gen-prog').forEach(c => { c.querySelector('.gp-time').textContent = v.tm; c.querySelector('.gp-info').textContent = v.info;
       const bar = c.querySelector('.gp-bar'); bar.classList.toggle('ind', !v.pct); bar.firstElementChild.style.width = (v.pct || 35) + '%'; });
   }
+  setInterval(() => { if (!busyNow || netIn > 0 || Date.now() - netLast < 180000) return; // 요청 없이 3분 넘게 '정리 중' = 중간에 끊긴 것
+    busyNow = false; try { autoBusy = false; } catch (_) {} genProg = null; logErr('정리', '3분 넘게 AI 연결 없이 멈춰 있어서 풀었어요(중간에 끊김) · 다시 눌러 주세요');
+    toast('정리가 중간에 끊겨서 멈췄어요 · 다시 눌러 주세요 · 쓴 돈은 그 AI가 답한 만큼만', 'err', 6000); try { repaintInline(); } catch (_) {} if (isOpen()) render(); }, 15000);
   const genCard = () => { if (!busyNow || !genProg) return ''; const v = genView();
     const ch = chunkRun && genProg.kind === 'summary' ? `<p class="gp-info">나눠서 정리 · ${chunkRun.done + 1}번째 묶음${chunkRun.total ? ` / ${chunkRun.total}` : ''}${chunkRun.stop ? ' · 이 묶음까지 넣고 멈춰요' : ` · <button class="linkbtn" data-act="chunkstop">멈추기</button>`}</p>` : '';
     return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p>${ch}</div>`; };
