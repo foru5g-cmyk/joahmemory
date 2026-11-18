@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.2
+// @version      5.7.3
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -1685,7 +1685,7 @@
     // 정리 AI가 실제 대화에서 읽어 적은 검진만(채팅에 넣은 결과를 받은 걸로 적지 않게)
     const scans = (preg.log || []).filter(x => x.ai && x.w != null && /초음파|검진|진찰|진맥|심장\s*소리|태기/.test(x.t)).map(x => `<div><b>${x.w}주</b><span>${esc(x.t)}</span></div>`);
     const scan = sec(world === 'modern' ? '🩻 초음파 기록' : world === 'old' ? '🩺 진맥 기록' : '🔮 진찰 기록', '', `<div class="pg-scan">${scans.length > 3 ? `<details><summary>지난 검진 ${scans.length - 3}개 더 보기</summary>${scans.slice(0, -3).join('')}</details>` : ''}${scans.slice(-3).join('')}${next ? `<div class="soon"><b>${next[0]}주</b><span>${esc(next[1].split(' · ')[0])}</span><i>곧</i></div>` : ''}${!scans.length && !next ? '<p class="pg-s">아직 없어요</p>' : ''}</div>`);
-    const logs = (preg.log || []).filter(x => x.at < turn).sort((x, y) => y.at - x.at || y.w - x.w).map(x => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}</li>`);
+    const logs = (preg.log || []).map((x, i) => [x, i]).filter(([x]) => x.at < turn).sort(([x], [y]) => y.at - x.at || y.w - x.w).map(([x, i]) => `<li><em>${x.w}주</em>${esc(pNpc(x.t, preg.fatherCands?.length > 1 ? '' : preg.father))}${x.res ? '<span class="pg-tag">검진</span>' : ''}<button class="pg-link" data-act="preglogdel" data-arg="${i}" aria-label="이 줄 지우기" style="margin-left:6px">×</button></li>`); // ×: 이 일만 없던 일로(임신은 그대로)
     const log = logs.length ? sec('📖 지나온 일', '', `<ul class="pg-log">${logs.slice(0, 5).join('')}${logs.length > 5 ? `<li class="pg-more"><details><summary>이전 ${logs.length - 5}개 보기</summary><ul class="pg-log">${logs.slice(5).join('')}</ul></details></li>` : ''}</ul>`) : '';
     const foot = `<div class="pg-card"><p class="pg-s" style="margin-top:0">한 번 굴린 결과는 저장돼요. 리롤해도 안 바뀌어요.</p><div class="pg-btns"><button class="btn ghost" data-act="devimg" data-arg="preg">📸 수첩 캡처</button>${nav.pgEnd ? '<button class="btn ghost" data-act="pregendk" data-arg="출산">출산</button><button class="btn ghost" data-act="pregendk" data-arg="유산">유산</button><button class="btn ghost" data-act="pregendk" data-arg="중단">중단</button><button class="btn ghost" data-act="pregend">취소</button>' : '<button class="btn ghost" data-act="pregend">이야기에서 끝났어요</button>'}<button class="btn ghost" data-act="pregreset">처음부터</button><button class="btn ghost" data-act="pregdel">🗑 기록 지우기</button></div></div>`;
     const posDay = Object.keys(preg.tests || {}).find(d => preg.tests[d] === 'pos'), kitView = preg.kit && posDay ? `<details style="margin:2px 4px 0;font-size:12px;color:var(--graphite)"><summary style="cursor:pointer">임테기 보기</summary><div class="pg-kit">${world === 'modern' ? '<div class="pg-stick"><span class="pg-win"><i class="c"></i><i class="t on"></i></span><small>C T</small></div>' : `<div class="pg-stick"><b style="font-size:14px">${world === 'old' ? '🌿 희맥이 잡혀요 · 태기가 있어요' : '🔮 구슬이 분홍빛으로 빛나요'}</b></div>`}</div><p class="pg-s" style="text-align:center;margin:4px 0 0">${esc(P_STR(+posDay))}${preg.kitHow ? ' · ' + esc(preg.kitHow) : ''}</p></details>` : ''; // 이번 임신을 확인한 결과만(다시 긁기 없음)
@@ -9833,7 +9833,7 @@
     out('header').innerHTML = editing
       ? `${back}<div class="htitle"><b>${esc(title)}</b><span>${sub}</span></div>
         ${nav.part == null && !nav.fxEdit && editHasList(nav.key) ? '' : `<button class="hsave" data-act="saveEdit"${busyNow ? ' disabled' : ''}>${nav.view === 'pvEdit' ? '적용' : '저장'}</button>`}`
-      : `${inline ? '' : back}<div class="htitle"><b>${esc(inline ? baseTitle : title)}</b><span>${inline ? baseSub : sub}</span></div>
+      : `${inline ? '' : back}<div class="htitle"><b>${esc(inline ? baseTitle : title)}</b><span>${inline ? baseSub : sub}${attendMiss && attendMiss === new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) ? ' · <button class="linkbtn" data-act="attendnow" style="color:#D7263D;font-weight:800">오늘 출석 안 됨</button>' : ''}</span></div>
       ${inSettings ? '' : `<button class="hbtn gear" data-act="tab" data-arg="settings" aria-label="설정">설정</button>`}
       <button class="pg-hd" data-act="tab" data-arg="mode" aria-label="모드 열기">🎲 모드<small>임시</small></button>
       <button class="hbtn" data-act="close" aria-label="닫기">${icon('close', 'currentColor', 20)}</button>`;
@@ -11163,6 +11163,7 @@
           Object.assign(love, { who: arg, start: null, startBy: '', broke: null, ev: null, stageBy: '', stage: 'dating' }); }
         love.whoBy = 'user'; love.whoAuto = auto; } nav.loveAll = false; loveSave(); return keepScroll(render);
       case 'lovecycdel': if (!love?.cycles) return; loveSnap('기록 지우기'); love.cycles.splice(Number(arg), 1); loveSave(); return keepScroll(render); // 잘못 잡힌 깨붙 줄은 하나씩 지워요(임신 지난 기록 ×와 같은 모양)
+      case 'attendnow': { attendFailDay = ''; await autoAttend(true); if (String(await getValue('attendDay', '')) !== kstDay()) toast('출석이 안 됐어요 · 크랙 크래커 화면에서 직접 눌러 주세요', 'err', 4000); return render(); }
       case 'lovequiet': if (!love) return; love.quiet = !love.quiet; loveSave(); toast(love.quiet ? '기록만 해요 · 채팅엔 연애 줄이 안 들어가요' : '다시 채팅에 연애 줄을 넣어요', 'ok', 2200); return keepScroll(render);
       case 'lovelive': if (!love?.who) return; loveSnap('동거'); love.live = !loveLive(noteMemory() || '', love.who); love.liveBy = 'user'; loveSave(); return keepScroll(render);
       case 'ifoldfold': nav.ifOldOpen = !nav.ifOldOpen; return;
@@ -11208,6 +11209,10 @@
         await pregSave(); return keepScroll(render); }
       case 'relforce': if (preg?.start == null && arg) await pregForce(+arg); return; // 관계 고치기 줄의 🍼 칩: 그 날로 임신(본인은 모름)
       case 'pregforce': if (!confirm(`주사위 대신 직접 정할까요? 마지막 관계로 임신된 걸로 하고, 본인은 아직 몰라요(증상만 생겨요). ${{ old: '맥을 짚거나 의원에게 진맥을 받으면', fantasy: '수정구슬을 보거나 치유사에게 가면' }[pWorld(noteMemory() || '')] || '임테기를 긁거나 병원에 가면'} 알게 돼요.`)) return; await pregForce(); return;
+      case 'preglogdel': { const i = Number(arg), x = preg?.log?.[i]; if (!x) return; preg.log.splice(i, 1);
+        if (/알게 됨/.test(x.t) && preg.start != null && !preg.log.some(y => /알게 됨/.test(y.t))) { preg.unaware = true; preg.kit = null; } // 알게 된 일을 지우면 다시 모르는 상태로
+        for (const k of Object.keys(preg.shown || {})) if (preg.shown[k] === x.at) delete preg.shown[k]; // 그 턴에 나온 검진·일 표시도 풀어요(나중에 제때 다시 나와요)
+        await pregSave(); toast('그 일만 지웠어요 · 임신 기록은 그대로예요', 'ok', 2500); return keepScroll(render); }
       case 'pregdel': if (!confirm('지금 임신 기록을 지울까요? (채팅에 더 안 들어가요 · 지난 기록은 남아요)')) return; preg = { on: false, userOff: true, world: preg?.world, peek: preg?.peek, maleOk: preg?.maleOk, books: preg?.books || [], history: preg?.history || [], after: preg?.after }; await pregSave(); nav.pgBook = false; return keepScroll(render);
       case 'pregbooksex': { const b = preg?.books?.[Number(arg)]; if (!b || !confirm('아기 성별을 바꿀까요? (아들↔딸 · 한 번 더 누르면 원래대로)')) return; // 지난 수첩의 성별을 이야기에 맞게 고쳐요(기록 글 속 아들↔딸·남아↔여아)
         const sw = t => String(t || '').replace(/아들|딸(?!꾹|기)|남아|여아/g, m => ({ 아들: '딸', 딸: '아들', 남아: '여아', 여아: '남아' })[m]);
@@ -11975,8 +11980,10 @@
   // 크랙 출석: 하루(한국 날짜) 한 번 출석했는지 보고, 안 했으면 대신 출석한 뒤 다시 확인해요 · 실패하면 이 화면에선 한 번만 알려요
   const kstDay = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   let attendBusy = false, attendFailDay = '', attendWait = 0;
-  async function autoAttend() {
-    const day = kstDay(); if (attendBusy || document.visibilityState === 'hidden' || attendFailDay === day) return;
+  var attendMiss = ''; // var: 화면 그리기가 이 줄보다 먼저 불려도 안 멈추게 · 밤 10시 뒤에도 출석이 안 된 날(머리 줄에 빨간 표시)
+  const kstHM = () => { const d = new Date(Date.now() + 9 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+  async function autoAttend(force = false) { // force: 밤 재시도·직접 누름(낮에 실패한 날도 다시)
+    const day = kstDay(); if (attendBusy || (!force && (document.visibilityState === 'hidden' || attendFailDay === day))) return;
     try { token(); } catch (_) { if (++attendWait < 12) setTimeout(autoAttend, 5000); return; } // 로그인 전이면 조용히 넘어가고 5초 뒤 다시(1분까지)
     if (String(await getValue('attendDay', '')) === day) return;
     attendBusy = true; const URL_ATT = 'https://crack-api.wrtn.ai/crack-cash/attendance', done = async () => String((await crack('GET', URL_ATT))?.data?.attendanceStatus || '') === 'ATTENDED';
@@ -11984,10 +11991,16 @@
       if (!(await done())) { const r = await crack('POST', URL_ATT);
         if (!(await done())) throw new Error('출석을 보냈는데 확인이 안 됨');
         pageToast('🎁 크랙 출석 완료 · 크래커 +' + (r?.data?.cash?.quantity ?? 350)); }
-      await setValue('attendDay', day);
-    } catch (e) { attendFailDay = day; logErr('출석', '자동 출석 실패 · ' + e.message); pageToast('⚠ 크랙 출석이 안 됐어요 · 크래커 화면에서 직접 눌러 주세요'); }
+      await setValue('attendDay', day); if (attendMiss) { attendMiss = ''; if (isOpen()) render(); }
+    } catch (e) { attendFailDay = day; logErr('출석', '자동 출석 실패 · ' + e.message); if (!force || kstHM() < 22 * 60) pageToast('⚠ 크랙 출석이 안 됐어요 · 크래커 화면에서 직접 눌러 주세요'); }
     finally { attendBusy = false; }
   }
+  // 밤 확인: 1분마다 시각만 봐요(요청은 10시·11시 50분에 한 번씩만) · 탭이 열려 있을 때만 돌아요
+  const attendNightDone = new Set();
+  setInterval(async () => { const day = kstDay(), m = kstHM(); if (m < 22 * 60) return; if (String(await getValue('attendDay', '')) === day) { if (attendMiss) { attendMiss = ''; if (isOpen()) render(); } return; }
+    const slot = m >= 23 * 60 + 50 ? '2350' : '2200'; if (attendNightDone.has(day + slot)) return; attendNightDone.add(day + slot);
+    await autoAttend(true); if (String(await getValue('attendDay', '')) === day) return;
+    attendMiss = day; if (isOpen()) render(); pageToast(slot === '2350' ? '⚠ 10분 뒤 자정이에요 · 오늘 크랙 출석이 아직 안 됐어요 · 조아메모리 위 빨간 글씨를 눌러 주세요' : '⚠ 오늘 크랙 출석이 아직 안 됐어요 · 조아메모리 위 빨간 글씨를 누르면 바로 출석해요'); }, 60000);
   setTimeout(autoAttend, 4000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoAttend(); }); // 자정을 넘겨 다시 볼 때도
   let lastPath = '';
   setInterval(() => {
