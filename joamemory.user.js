@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.6.9
+// @version      5.7.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -166,7 +166,7 @@
   //   DB만 쓰는 방에서 DB가 비면(사이트 데이터 지우기 등) 빈 값으로 읽혀 채팅 노트·구글 드라이브에서 다시 채우는 길로 가요
   const DB_SLOW = /^(full|orig):/, DB_SLOW_OK = 5, dbSlowSeen = new Set(); // dbSlowSeen: 이 페이지에서 이미 센 키(한 번 열 때 한 번만)
   let dbP = null;
-  const db = () => dbP ||= new Promise(res => { try { const r = indexedDB.open('joamemory', 2); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('hist')) d.createObjectStore('hist', { keyPath: ['chat', 'at'] }); }; r.onsuccess = () => { res(r.result); try { navigator.storage?.persist?.(); } catch (_) {} }; r.onerror = r.onblocked = () => res(null); } catch (_) { res(null); } }); // persist: 브라우저가 공간이 모자랄 때 먼저 지우지 않게 부탁
+  const db = () => dbP ||= new Promise(res => { try { const r = indexedDB.open('joamemory', 2); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('hist')) d.createObjectStore('hist', { keyPath: ['chat', 'at'] }); }; r.onsuccess = () => { r.result.onversionchange = () => { try { r.result.close(); } catch (_) {} dbP = null; }; /* 다른 탭이 새 버전으로 DB를 올리려 하면 이 탭 연결을 닫아 비켜 줘요(안 그러면 그 탭은 DB를 못 열고 예전 저장소에 써요) · 다음에 쓸 때 다시 열어요 */ res(r.result); try { navigator.storage?.persist?.(); } catch (_) {} }; r.onerror = r.onblocked = () => res(null); } catch (_) { res(null); } }); // persist: 브라우저가 공간이 모자랄 때 먼저 지우지 않게 부탁
   const dbDo = async (mode, fn, name = 'kv') => { const d = await db(); if (!d || !d.objectStoreNames.contains(name)) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction(name, mode), q = fn(t.objectStore(name)); t.oncomplete = () => res(q?.result); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
   // 정리 기록 칸('hist'): 방마다 정리 한 번 = 한 건(키 [방, 시각]) · 새 기록은 한 건만 넣고, 30건 넘으면 가장 오래된 것만 지워요
   //   '정리 후 노트'가 다음 기록의 '정리 전 노트'와 같으면 앞 기록에서 빼고 aN 표시(읽을 때 다시 채움 · historyOf)
@@ -1146,7 +1146,7 @@
       preg.silent = 1; if (/^(?:lpre|loss|spot)$/.test(cur?.k || '')) preg.cur = cur = null;
     }
     if (!cur) {
-      const b = big.filter(e => e.w <= wk && preg.fired[e.k] == null).sort((x, y) => x.w - y.w)[0];
+      const b = big.filter(e => e.w <= wk && preg.fired[e.k] == null && !(preg.unaware && /병원|의사|검진|검사|초음파|진찰|진맥|산부인과|의원|치유사|연락이 옴/.test(e.t))).sort((x, y) => x.w - y.w)[0]; // 본인도 모를 땐 병원·검사로 알게 되는 일은 미뤄요(알게 된 뒤에 나와요)
       let ev = b ? { k: b.k, t: b.t, kw: b.kw.source, big: b.res ? 1 : 0, wait: 0 } : null;
       // 가벼운 일: 턴마다 약 30%(평균 3턴에 하나 · 매 순간 이벤트는 아니게 · 이야기 속 하루가 길어도 심심하지 않게) · 최근 4개는 안 겹치게 · 턴 번호로 굴려서 리롤해도 같아요
       if (!ev && !preg.silent && preg.lastRoll !== turn && pR('sym' + turn) < 0.3) {
@@ -1209,7 +1209,7 @@
     if (sexKnown && !preg.sexFix) { preg.sexFix = p.sex; pregSave(); } // 예전에 알게 된 성별도 지금 것으로 고정
     const body = '배: ' + pBelly(wk, twinKnown) + (wk >= 14 ? (preg.secret ? (wk >= 20 ? ' · 배를 숨기기 어려워짐(주변이 수상하게 봄)' : '') : preg.unaware ? ' · 배 변화가 겉으로 보임' : ' · 주변 인물은 배 크기에 맞게 알아봄') : '') + (wk < 13 ? ' · 쉽게 피곤하고 졸림' + (wk >= 6 && p.sick ? ' · 입덧 ' + (p.sick === 2 ? '심함' : '있음') : '') : wk >= 36 ? ' · 언제든 진통이 올 수 있음' : wk >= 28 ? ' · 허리가 아픔' : '');
     // 채팅에 들어가는 줄은 3줄까지: ① 규칙 ② 지금 상태 ③ 이번 답에 할 일(있을 때만)
-    const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름 · 증상만 생김` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
+    const L = [`※ ■ 임신 = 정해진 사실(주수·결과 그대로) · NPC의 마음과 성격은 원래 관계대로${preg.unaware ? ` · 아직 아무도 임신을 모름 · 증상만 생김${me ? ' · 유저 캐릭터가 직접 확인할 때만 알게 됨(유저가 하지 않은 진찰·검사·통화는 없음)' : ''}` : preg.secret ? ` · ${who}만 아는 비밀: NPC는 눈치·의심까지만` : ''}`];
     const next = checks.find(c => preg.shown['c' + c[0]] == null && preg.start + c[0] * 7 >= day - 14), todo = [], soft = []; // soft: 가벼운 일은 장면에 맞을 때만(억지로 끼우지 않게) // 2주 넘게 지난 검진은 '다음'에서 빼요(결과는 다음 병원 때 같이)
     if (preg.wk !== wk) { preg.wk = wk; preg.wkAt = turn; } // 주가 바뀌면 2턴 동안 한 번 드러내기
     L.push(`※ 임신 지금: ${who}${me ? '(유저 캐릭터)' : ''} ${wk}주 ${dd}일(${P_STR(day)}) · 예정일 ${P_STR(preg.start + 280)}${preg.father && /친자|친부|유전자|DNA/i.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said) ? ' · 아빠 ' + preg.father : ''} · 아기 ${anyShown ? (twinKnown ? P_MULT[p.n] : '한 명') : '몇 명인지 아직 모름'}${sexKnown || preg.fired.labor != null ? '(' + p.sex.map(x => x === '남' ? '아들' : '딸').join('·') + ')' : ''} · ${body}${preg.unaware ? '' : ' · 아기 모습은 주수에 맞게 자유롭게'} · 몸 변화·증상은 주수에 맞게, 장면에 어울릴 때만 알아서`);
@@ -1906,7 +1906,7 @@
     const mine = (love.log || []).filter(x => !x.w || x.w === who), open = mine.filter(x => x.open).slice(-2).map(x => x.t.slice(0, 30));
     const pile = day == null ? [] : mine.filter(x => x.d != null && x.d <= day && day - x.d <= 30 && (x.open || x.solved || /싸움|싸우|다툼|다투|언쟁|말다툼|서운|섭섭|속상|상처|질투|화냄|화를|토라|삐침|삐졌|오해|실망/.test(x.t))); // 최근 30일 다툼·서운함(풀린 것도)
     loveOut = [broke ? `※ 현실 연애(규칙): ${who}와 헤어진 사이 · 반응은 캐릭터 설정·성격·서사(남은 마음 포함)대로 · NPC는 유저 편 아님 · 쉽게 수긍·사과·누그러짐 없음 · 오해는 해명과 믿을 근거가 있어야 풀림 · 남은 마음이 서사에 있으면 그만큼 쉽게 이해 못 함 · 유저가 연락하거나 붙잡아도 받아 줄지는 정해지지 않음 · 화해·재회는 서사에 계기 있을 때만(뜬금 화해 없음) · 유저의 말·행동·마음은 안 씀`
-      : `※ 현실 연애(규칙): ${who} · 개연성 먼저(앞 이야기·설정과 맞게 · 억지 사건 없음) · 성격·기질은 원래 설정대로(사귄다고 순해지거나 유저 없으면 못 사는 쪽으로 안 바뀜 · 원래 그런 캐릭터면 그대로) · 유저 편만 들거나 맞춰 주지 않음 · 자기 잘못·약점은 성격대로 감추거나 둘러대거나 남 탓하기도 함 · 숨긴 건 나중에 드러날 수도 있음 · 연애도 이 인물 서사·처지(형편·일·가족)대로 묻어남 · 자기 생활(일·학업·친구·가족)이 있고 연애보다 먼저일 때도 있음 · 답마다 자기 뜻으로 먼저 말하고 움직이며 이야기를 끎 · 티격태격·말꼬리 잡기부터 언성 높이는 싸움까지 · 감정 크기는 그날 일·쌓인 정도대로 오르내림 · 마찰만 이어지지 않음 — 좋아하는 마음·좋은 날도 성격대로 드러남(까칠한 사람은 까칠한 식으로) · 드러내는 방식·풀리는 속도는 성격대로 · 고친 문제·약속이 또 어긋나기도 함 · 애정·질투·장난도 성격대로 · 이별 얘기는 마음이 식거나 쌓여도 나옴 · 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
+      : `※ 현실 연애(규칙): ${who} · 개연성 먼저(앞 이야기·설정과 맞게 · 억지 사건 없음) · 성격·기질은 원래 설정대로(사귄다고 순해지거나 유저 없으면 못 사는 쪽으로 안 바뀜 · 원래 그런 캐릭터면 그대로) · 유저 편만 들거나 맞춰 주지 않음 · 자기 잘못·약점은 성격대로 감추거나 둘러대거나 남 탓하기도 함 · 숨긴 건 나중에 드러날 수도 있음 · 연애도 이 인물 서사·처지(형편·일·가족)대로 묻어남 · 자기 생활(일·학업·친구·가족)이 있고 연애보다 먼저일 때도 있음 · 자기 뜻대로 움직임(다가가기도 하고, 다투면 성격대로 연락을 끊거나 냉전·혼자 삭이기도) · 티격태격·말꼬리 잡기부터 언성 높이는 싸움까지 · 감정 크기는 그날 일·쌓인 정도대로 오르내림 · 마찰만 이어지지 않음 — 좋아하는 마음·좋은 날도 성격대로 드러남(까칠한 사람은 까칠한 식으로) · 드러내는 방식·풀리는 속도는 성격대로 · 고친 문제·약속이 또 어긋나기도 함 · 애정·질투·장난도 성격대로 · 다툼은 억지로 봉합하지 않음 · 화해는 서사에 계기 있을 때만 · 이별 얘기는 마음이 식거나 쌓여도 나옴 · 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
       `※ 현실 연애 지금: ${who} · ${loveDays(day)}${!broke && loveLive(mem, who) ? ' · 함께 사는 중(같이 사는 연인의 현실대로)' : ''}${loveAnniv(day)}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}${!broke && pile.length >= 3 ? ` · 요즘 다툼·서운함 잦음(최근 30일 ${pile.length}번: ${pile.slice(-3).map(x => x.t.slice(0, 18)).join(' / ')}) — 쌓인 감정은 이 사람 성격대로` : ''}${love.side ? ` · 유저 캐릭터의 바람 상대: ${love.side}(누가 아는지는 서사대로)` : ''}${broke && love.exNew ? ` · ${who}의 새 사람: ${love.exNew}(유저가 아는지는 서사대로)` : ''}`];
     if (love.phase && !broke) { const P = love.phase, n = day != null && P.from != null ? day - P.from + 1 : 0;
       loveOut.push(`※ ${who} 요즘: ${P.what ? P.what : '생활에 며칠 이어지는 일 하나(' + (P.hard ? '힘든 쪽' : '좋은 쪽') + ' · 이 인물 직업·나이·처지에서 AI가 정하고 이어 감 · 설정에 없는 큰 과거·가족사는 새로 만들지 않음)'}${n > 0 ? ' · ' + n + '일째' : ''} — 장면에 저절로 묻어남(연락·약속·기분·데이트에 영향) · 이 인물이 먼저 꺼내거나 움직임`); }
