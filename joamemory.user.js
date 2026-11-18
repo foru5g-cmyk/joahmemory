@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.3
+// @version      5.6.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -1904,7 +1904,7 @@
         const open = (love.log || []).filter(x => x.open && (!x.w || x.w === who)), old = !broke && open.length && r('old') < 0.25 ? open[Math.floor(r('o') * open.length)].t : '';
         const era = { modern: '현대', old: '옛날', fantasy: '판타지' }[pWorld(mem)] || '';
         const free = !old && r('free') < 0.25; // 반은 방향 없이 AI가 고르게(한 가지 틀로만 돌지 않게)
-        love.ev = { turn, line: `※ 현실 연애 · 이번 답에 넣을 일: ${old ? '묵은 일이 또 — ' + old : free ? '이 인물 생활·성격에서 지금 생길 법한 일' : kind}(크기 ${r('sz') < Math.min(0.6, 0.35 + tn * 0.07) ? '크게' : '작게'} · ${era ? era + ' · ' : ''}이 인물 직업·나이·처지·시대에 맞게 구체적으로 · 지금 장면 안에서 · 지난번과 다른 일로 · 지금 장면에 개연성 없으면 다음 기회로 미룸) — 유저 반응은 안 씀` };
+        love.ev = { turn, line: `※ 현실 연애 · 맥락이 맞으면 이번 답에 넣을 일: ${old ? '묵은 일이 또 — ' + old : free ? '이 인물 생활·성격에서 지금 생길 법한 일' : kind}(크기 ${r('sz') < Math.min(0.6, 0.35 + tn * 0.07) ? '크게' : '작게'} · ${era ? era + ' · ' : ''}이 인물 직업·나이·처지·시대에 맞게 구체적으로 · 지금 장면 안에서 · 지난번과 다른 일로) — 유저 반응은 안 씀` };
         love.evTurn = turn; love.evDay = day; love.kinds = [...(love.kinds || []), old ? '묵은 일' : free ? '자유' : kind].slice(-6);
       }
       love.lastTurn = turn; loveSave();
