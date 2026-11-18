@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.1
+// @version      5.8.2
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -501,7 +501,7 @@
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
     const cast = personsIn(secs.find(x => x.key === '인물')?.body || '');
-    const nmIn = (t, a) => { for (let i = t.indexOf(a); i >= 0; i = t.indexOf(a, i + 1)) if (!i || !/[가-힣]/.test(t[i - 1])) return true; return false; }; // 이름 앞에 한글이 붙은 건 다른 낱말(바나나 ≠ 나나)
+    const nmIn = (t, a) => { for (let i = t.indexOf(a); i >= 0; i = t.indexOf(a, i + 1)) if (!i || !/[가-힣]/.test(t[i - 1])) return true; return false; }; // 이름 앞에 한글이 붙은 건 다른 낱말(주피터 ≠ 피터)
     const here = cast.filter(p => p.isUser || personAlias(p.name).some(a => a && a.length >= 2 && nmIn(text, a))).map(p => p.name);
     const hasHere = t => here.some(n => personAlias(n).some(a => a && a.length >= 2 && nmIn(t, a)));
     // 점수: 제목의 드문 낱말(항목 여러 개에 두루 나오는 이름·'작업' 같은 말은 빼요)이 최근 대화에 나오면 2씩, 지금 나온 인물이 들어 있으면 1, 의미 검색 1등이면 3
@@ -510,7 +510,7 @@
     const common = injCommon();
     const words = key => [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w)); // 숫자뿐인 건 빼요(날짜는 dayHit)
     // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
-    //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('나나')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
+    //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('피터')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
     const bodyWords = (key, body) => { const tw = new Set(words(key)); return [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w)); }; // '백호랑이가' → '백호랑이' → 이름
@@ -525,7 +525,7 @@
     const dayHit = key => { const m = String(key).match(/^\[?(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})/); return !!m && saidDays.some(([mo, d, y]) => +m[2] === mo && +m[3] === d && (!y || y === m[1])); };
     const has = (t, w) => /^[0-9]/.test(w) ? new RegExp('(?<![0-9])' + w).test(t) : /^[가-힣]/.test(w) ? nmIn(t, w) : t.includes(w); // 한글 낱말은 다른 낱말 속에 든 건 빼요('하비가' 속 '비가')
     const saidW = [...new Set((said.match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w)); // 보낸 말 낱말(조사 떼고)
-    const inSaid = w => has(said, w) || saidW.some(x => x.length >= 2 && x.length >= w.length - 1 && w.endsWith(x) && !nameW.has(x)); // '반지' → '은반지' · 인물 이름은 빼요('나나' → '바나나'로 안 걸리게)
+    const inSaid = w => has(said, w) || saidW.some(x => x.length >= 2 && x.length >= w.length - 1 && w.endsWith(x) && !nameW.has(x)); // '반지' → '은반지' · 인물 이름은 빼요('피터' → '주피터'로 안 걸리게)
     let lastHw = []; // 방금 매긴 항목이 걸린 낱말(한 낱말로 너무 많이 떠올리지 않게)
     // 점수: 핵심 = 날짜·제목 낱말·본문 낱말 · 인물·뜻 점수는 순서만 돕고, 핵심이 2점 안 되면 못 떠올려요(뜻이 아주 튈 때만 예외)
     //   예전엔 '최근 대화에 제목 낱말 하나 + 지금 나온 인물'로 2점이 돼서, 주인공이 낀 옛일이 낱말 하나로 줄줄이 떠올랐어요
@@ -936,7 +936,7 @@
     if (!x) return false;
     if (/^아빠 /.test(x)) return true;
     const kg = [...x.matchAll(/(\d+\.\d)kg/g)].map(m => m[1]); if (kg.length) return kg.every(k => new RegExp(k.replace('.', '\\.') + '\\s*(?:kg|킬로)').test(text));
-    const hair = x.match(/^([^\s()]+)\(([^()]+)\)$/); if (hair && names.includes(hair[2])) return text.includes(hair[1]); // 흑발(나나)
+    const hair = x.match(/^([^\s()]+)\(([^()]+)\)$/); if (hair && names.includes(hair[2])) return text.includes(hair[1]); // 흑발(피터)
     if (/닮음$/.test(x)) return /닮/.test(text) && x.replace(/\s*닮음$/, '').split(/,\s*/).some(t => text.includes(t.replace(/[은는]\s+\S+$/, '').trim()));
     const r = P_BORN_KEEP.find(([k]) => k.test(x)); if (r) return r[1].test(text);
     return (x.match(/[가-힣]{2,}/g) || []).filter(w => !names.some(n => w.startsWith(n)) && !/^(태어|보니|아기|아이|있었|무사)/.test(w)).some(w => text.includes(w.length > 2 ? w.slice(0, -1) : w));
@@ -1276,7 +1276,8 @@
     const list = (o?.list || []).filter(x => x.turn < turn); /* 그 턴보다 뒤 것은 버려요(되돌린 노트·리롤 뒤엔 새 길이라) */ list.push({ turn, j }); await setValue(pre + c, JSON.stringify({ title: roomTitle(), list: list.slice(-60) })); }
   // 방을 열 때도 지금 턴 사본을 접어 둬요(끝난 임신처럼 저장이 안 일어나는 방도 분기방이 산모수첩까지 가져가게) · saved는 안 바꿔요(기기끼리 고르는 기준이라)
   // 대화를 지웠으면 임신 기록도 그때로: 지금 턴(정리한 턴+그 뒤 유저 말)보다 뒤 사본이 있으면, 지금 턴까지 중 마지막 사본으로 되돌리고 뒤 사본은 버려요
-  async function pregRewind(c) { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!t || c !== chatIdFromPath() || pregChat !== c) return;
+  async function pregRewind(c, again) { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!t || c !== chatIdFromPath() || pregChat !== c) return;
+    if (!again) { let o0 = null; try { o0 = JSON.parse(String(await getValue('pregsnap:' + c, '') || 'null')); } catch (_) {} if ((o0?.list || []).some(x => x.turn > t)) setTimeout(async () => { try { const s = await readSinceLastNote(c); if (chatIdFromPath() === c && !busyNow) { snapshot = s; await pregRewind(c, true); if (isOpen()) render(); } } catch (_) {} }, 3000); return; }
     let o = null; try { o = JSON.parse(String(await getValue('pregsnap:' + c, '') || 'null')); } catch (_) {} const list = o?.list || []; if (!list.some(x => x.turn > t)) return;
     const keep = list.filter(x => x.turn <= t), x = keep[keep.length - 1]; await setValue('pregsnap:' + c, JSON.stringify({ ...o, list: keep }));
     if (x && x.j !== JSON.stringify(preg)) { await setValue('preg:' + c, x.j); await pregLoad(c); pregSave.at = ''; logErr('임신', '지운 대화 뒤 임신 기록을 ' + x.turn + '턴 때로 되돌림'); pageToast('지운 대화에 맞춰 임신 기록을 ' + x.turn + '턴 때로 되돌렸어요'); } }
@@ -1931,7 +1932,7 @@
     const mine = (love.log || []).filter(x => !x.w || x.w === who), open = mine.filter(x => x.open).slice(-2).map(x => x.t.slice(0, 30));
     const pile = day == null ? [] : mine.filter(x => x.d != null && x.d <= day && day - x.d <= 30 && (x.open || x.solved || /싸움|싸우|다툼|다투|언쟁|말다툼|서운|섭섭|속상|상처|질투|화냄|화를|토라|삐침|삐졌|오해|실망/.test(x.t))); // 최근 30일 다툼·서운함(풀린 것도)
     loveOut = [broke ? `※ 현실 연애(규칙): ${who}와 헤어진 사이 · 반응은 캐릭터 설정·성격·서사대로(남은 마음은 서사에 있을 때만) · 헤어진 뒤엔 자기 생활(일·친구·가족)대로 지냄 · 거리는 상처·화난 정도와 남은 마음만큼 · 다가갈지 말지는 그 사람이 정함(성격·서사대로) · 유저가 있는 곳에 우연히 나타나게 만들지 않음(그 사람이 원래 갈 만한 곳일 때만) · NPC는 유저 편 아님 · 쉽게 수긍·사과·누그러짐 없음 · 오해는 해명과 믿을 근거가 있어야 풀림 · 남은 마음이 서사에 있으면 그만큼 쉽게 이해 못 함 · 유저가 연락하거나 붙잡아도 받아 줄지는 정해지지 않음 · 다툼은 억지로 봉합하지 않음 · 화해·재회는 서사·성격대로(마음이 갑자기 풀리기도 함) · 유저의 말·행동·마음은 안 씀`
-      : `※ 현실 연애(규칙): ${who} · 개연성 먼저(앞 이야기·설정과 맞게 · 억지 사건 없음) · 성격·기질·자존심은 원래 설정대로(사귄다고 바뀌지 않음) · 유저 편만 들거나 맞춰 주지 않음 · 자기 생활(일·학업·친구·가족)이 있고 연애도 이 인물 서사·처지대로 · 장소는 그 사람이 원래 갈 만한 곳(유저 있는 곳에 우연히 나타나게 만들지 않음) · 무엇을 하고 어떻게 반응할지는 그 사람이 정함(냉전·잠수·버티기·먼저 사과하기·먼저 헤어지자고 하기·잘못을 감추거나 둘러대거나 남 탓하기 등 · 예시에 없는 반응도 · 그때그때 상황에 따라 다르게 · 성격·서사·그날 일·쌓인 감정대로) · 숨긴 건 나중에 드러날 수도 있음 · 감정은 그날 일과 쌓인 만큼 오르내림 · 다툼은 억지로 봉합하지 않음 · 화해는 서사·성격대로(마음이 갑자기 풀리기도 함) · 헤어짐도 열려 있음 · 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
+      : `※ 현실 연애(규칙): ${who} · 개연성 먼저(앞 이야기·설정과 맞게 · 억지 사건 없음) · 성격·기질·자존심은 원래 설정대로(사귄다고 바뀌지 않음) · 유저 편만 들거나 맞춰 주지 않음 · 자기 생활(일·학업·친구·가족)이 있고 연애도 이 인물 서사·처지대로 · 장소는 그 사람이 원래 갈 만한 곳(유저 있는 곳에 우연히 나타나게 만들지 않음) · 자기 뜻으로 먼저 말하고 움직임(지금 장면에 있을 때) · 좋아하는 마음·애정·질투·장난도 성격대로 · 무엇을 하고 어떻게 반응할지는 그 사람이 정함(냉전·잠수·버티기·먼저 사과하기·먼저 헤어지자고 하기·잘못을 감추거나 둘러대거나 남 탓하기 등 · 예시에 없는 반응도 · 그때그때 상황에 따라 다르게 · 성격·서사·그날 일·쌓인 감정대로) · 숨긴 건 나중에 드러날 수도 있음 · 감정은 그날 일과 쌓인 만큼 오르내림 · 다툼은 억지로 봉합하지 않음 · 화해는 서사·성격대로(마음이 갑자기 풀리기도 함) · 헤어짐도 열려 있음 · 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
       `※ 현실 연애 지금: ${who} · ${loveDays(day)}${!broke && loveLive(mem, who) ? ' · 함께 사는 중(같이 사는 연인의 현실대로)' : ''}${loveAnniv(day)}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}${!broke && pile.length >= 3 ? ` · 요즘 다툼·서운함 잦음(최근 30일 ${pile.length}번: ${pile.slice(-3).map(x => x.t.slice(0, 18)).join(' / ')}) — 쌓인 감정은 이 사람 성격대로` : ''}${love.side ? ` · 유저 캐릭터의 바람 상대: ${love.side}(누가 아는지는 서사대로)` : ''}${broke && love.exNew ? ` · ${who}의 새 사람: ${love.exNew}(유저가 아는지는 서사대로)` : ''}`];
     if (love.phase && !broke) { const P = love.phase, n = day != null && P.from != null ? day - P.from + 1 : 0;
       loveOut.push(`※ ${who} 요즘: ${P.what ? P.what : '생활에 며칠 이어지는 일 하나(' + (P.hard ? '힘든 쪽' : '좋은 쪽') + ' · 이 인물 직업·나이·처지에서 AI가 정하고 이어 감 · 설정에 없는 큰 과거·가족사는 새로 만들지 않음)'}${n > 0 ? ' · ' + n + '일째' : ''} — 장면에 저절로 묻어남(연락·약속·기분·데이트에 영향) · 드러낼지는 이 인물이 정함`); }
@@ -2373,7 +2374,7 @@
       let packAt = -1; const keysBefore = new Set(o.items.map(x => itemKey(x.key)));
       const packing = noPack && d.key === '날짜로그' && n.items.some(it => isPack(it) && !o.items.some(x => itemKey(x.key) === itemKey(it.key)));
       for (let it of n.items) {
-        // 소지품·장소는 제목 끝 괄호(가진 사람·장소/조직)가 바뀌어도 같은 물건·장소로 봅니다: "은빛 라이터 (가브리엘 케인)" → "은빛 라이터 (나나)"가 두 개로 안 생기게
+        // 소지품·장소는 제목 끝 괄호(가진 사람·장소/조직)가 바뀌어도 같은 물건·장소로 봅니다: "은빛 라이터 (가브리엘 케인)" → "은빛 라이터 (피터)"가 두 개로 안 생기게
         const nameOf = k => itemKey(k).replace(/\s*\(.*\)\s*$/, '');
         const i = o.items.findIndex(x => itemKey(x.key) === itemKey(it.key) || (d.key === '인물' && sameName(x.key, it.key))
           || (['소지품', '장소·조직'].includes(d.key) && nameOf(x.key) && nameOf(x.key) === nameOf(it.key)));
@@ -2381,7 +2382,7 @@
           if (i < 0) { patchMiss.push(it.key); continue; }
           const p = applyPatch(o.items[i].lines, it.lines.slice(1), d.key === '날짜로그' && proofsHidden, d.key === '현재상태' && /몸/.test(o.items[i].key));
           if (p.miss.length) patchMiss.push(`${it.key}: ${p.miss.length}줄`);
-          it = { key: o.items[i].key, del: false, lines: p.lines };
+          it = { key: o.items[i].key, del: false, lines: p.lines, patched: true };
         }
         // 이어 쓴 사건인데 AI가 제목을 살짝 바꿨으면: 같은 날짜이고 예전 사건의 내용 줄이 새 글에 전부 있으면 같은 사건으로 보고 바꿔 끼워요(둘로 남지 않게)
         let j = i;
@@ -2402,12 +2403,18 @@
         // 인물: AI가 【이름】 줄을 설명 없이 이름만 보냈으면 예전 설명을 둬요(설명이 통째로 지워지지 않게)
         if (d.key === '인물' && i >= 0 && !it.del) { const hd = l => (String(l).match(/^\s*【[^】]*】\s*(.*)$/) || [])[1], nh = hd(it.lines[0]), oh = hd(o.items[i].lines[0]); if (nh != null && !nh.trim() && oh?.trim()) it = { ...it, lines: [o.items[i].lines[0], ...it.lines.slice(1)] }; }
         // 인물: 다시 쓴 【이름】 줄에서 빠진 예전 특징 조각은 뒤에 다시 붙여요(비슷한 조각이 새 줄에 있으면 바뀐 걸로 봐요) · 기억 다시 확인은 빼는 게 맞아서 그대로
-        // 조각이 3개 넘게 한꺼번에 빠질 때만(줄을 통째로 줄여 쓴 것) · 한두 개는 바뀐 것(긴 생머리 → 단발)일 수 있어서 AI 것을 따라요
-        // ponytail: 두 글자 조각 겹침으로만 봐요 · 말을 완전히 바꿔 쓰면 둘 다 남을 수 있어요(그땐 기억 다시 확인으로 정리)
-        if (!noGuard && d.key === '인물' && i >= 0 && !it.del) { const hd = l => (String(l).match(/^\s*【[^】]*】\s*(.*)$/) || [])[1], nh = hd(it.lines[0]), oh = hd(o.items[i].lines[0]);
+        if (d.key === '인물' && !it.del) { const m = String(it.lines[0]).match(/^(\s*【[^】]*】\s*)(.*)$/);
+          if (m && /✕/.test(m[2])) { const ps = m[2].split(/\s+·\s+/), gone = ps.filter(x => /^\s*✕/.test(x)).map(x => x.replace(/^\s*✕\s*/, '').trim()); it = { ...it, gone, lines: [m[1] + ps.filter(x => !/^\s*✕/.test(x)).join(' · '), ...it.lines.slice(1)] }; } }
+        if (!noGuard && d.key === '인물' && i >= 0 && !it.del && !it.patched) { const hd = l => (String(l).match(/^\s*【[^】]*】\s*(.*)$/) || [])[1], nh = hd(it.lines[0]), oh = hd(o.items[i].lines[0]);
           if (nh?.trim() && oh?.trim()) { const fr = t => t.split(/\s+·\s+/).map(x => x.trim()).filter(Boolean), gr = t => { const x = t.replace(/[\s\p{P}\p{S}]/gu, ''), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; };
             const sim = (a, b) => { const A = gr(a), B = gr(b); if (!A.size || !B.size) return a === b ? 1 : 0; let c = 0; for (const x of A) if (B.has(x)) c++; return c / Math.min(A.size, B.size); };
-            const nf = fr(nh), lost = fr(oh).filter(x => !nf.some(y => sim(x, y) >= 0.5)); if (lost.length >= 3) it = { ...it, lines: [it.lines[0].trimEnd() + ' · ' + lost.join(' · '), ...it.lines.slice(1)] }; } }
+            const top = t => { const w = t.trim().split(/\s+/).pop(); return (w.match(/(머리카락|머리|헤어|눈동자|체격|체형|몸매|피부|말투|목소리)$/) || w.match(/^(눈|키)$/) || [])[1] || ''; };
+            const same = (x, y) => { if (x.replace(/\d+/g, '#') === y.replace(/\d+/g, '#') || (top(x) && top(x) === top(y))) return true;
+              const a = x.trim().split(/\s+/), b = y.trim().split(/\s+/);
+              const ea = a[a.length - 1], eb = b[b.length - 1], LIKE = /^(좋아함|싫어함|즐김)$/, STOP = /^(끊음|그만둠|관둠|안함|접음)$/;
+              if (a.length > 1 && b.length > 1 && a.slice(0, -1).join('') === b.slice(0, -1).join('') && ((LIKE.test(ea) && LIKE.test(eb)) || STOP.test(ea) || STOP.test(eb))) return true;
+              return a.length > 1 && b.length > 1 && a[a.length - 1] === b[b.length - 1] ? sim(a.slice(0, -1).join(''), b.slice(0, -1).join('')) >= 0.5 : sim(x, y) >= 0.5; };
+            const nf = fr(nh), lost = fr(oh).filter(x => !nf.some(y => same(x, y)) && !(it.gone || []).some(g => same(x, g))); if (lost.length) it = { ...it, lines: [it.lines[0].trimEnd() + ' · ' + lost.join(' · '), ...it.lines.slice(1)] }; } }
         if (guard && i >= 0 && !it.del && it.lines.join('').length < o.items[i].lines.join('').length && shrunkOnly(o.items[i].lines.join(' '), it.lines.join(' ')) && !freshWord(o.items[i].lines.join(' '), it.lines.join(' '))) continue;
         if (it.del) { if (i >= 0) { const logKeep = proofsHidden && d.key === '날짜로그' && !n.items.some(isPack) && !mergedInto(it, n.items, o.items[i]); /* 평소 정리: AI가 사건을 지우려 해도 남겨요(모델마다 복불복이라) · 정정·(요약) 묶기·새 사건에 합친 것(mergedInto)은 지울 수 있어요 */ if (!logKeep && !(d.key === '소지품' && delSrc && !itemSaid(o.items[i].key) && itemKept(o.items[i])) && (delOk(it) || (d.key === '날짜로그' && n.items.some(isPack)))) { /* 소지품: 선물·장신구·걸친 것·사진(itemKept)은 이번 대화에 안 나왔으면 AI가 지우려 해도 남겨요 · 소모품은 AI가 지우는 대로 */ if (d.key === '날짜로그') packAt = packAt < 0 ? i : Math.min(packAt, i); o.items.splice(i, 1); } else delKept.push(it.key.replace(/\s*\(삭제\)\s*$/, '')); } }
         else if (i >= 0 && d.key === '인지·비밀') o.items[i] = mergeSecret(o.items[i], it); // 정정·형식 맞추기 때도 AI가 안 쓴 사람 줄은 그대로(줄이 사라지지 않게)
@@ -2678,9 +2685,9 @@
 - 딱지 말 금지: 집착·강박·통제·소유욕·독점욕·광기·비정상·병적·얀데레·집요·포식자·사냥감·먹잇감·맹수·소유물·지배욕·광적·구속·감금은 대화 원문에 그 말이 그대로 있을 때만 쓴다. 없으면 그 인물이 실제로 한 행동·말로 쓴다(예: '집착함' 대신 '연락이 안 되자 세 번 전화함').
 - [고정 설정]에 이미 적힌 것(인물의 외형·나이·정체·성격·말버릇·기본 말투, 세계관 규칙·배경)은 인물·세계관 칸에 다시 쓰지 않음. 그 인물·세계는 RP에서 새로 생기거나 바뀐 것만 씀(새로 드러난 사실·바뀐 관계·호칭·습관·상태). 고정 설정에 없는 인물·설정만 처음부터 씀. 고정 설정과 원문이 어긋나면 원문대로 쓰되 지우지 않음.
 - 날짜로그 사건 하나 = 따로 떠올릴 일 하나. 같은 파티·같은 장소에 계속 있어도, 성격이 다른 일이 일어나면(나중에 그 일만 따로 떠올릴 만한 일) 같은 날짜의 새 사건으로 나눈다. 장소를 옮기거나(공원 → 기숙사) 함께 있는 사람이 바뀌면(캘빈과 헤어진 뒤 단테와 문자) 그 자체로 새 사건이다. 문자·전화로 다른 사람과 나눈 일도 따로 사건. 기존 사건에 다른 장소·다른 사람의 일을 덧붙이지 않음. 기존 사건에 덧붙이는 건 그 일 자체가 이어질 때만(이 규칙이 '이음새' 규칙보다 먼저). 사건 본문은 6줄 안팎(⤿ 줄 2줄 따로). 이미 쓴 줄은 줄이거나 지우지 않음(노트가 85%를 넘을 때의 줄이기 규칙만 예외).
-- 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄: 지문 문장을 옮겨 적지 않고 짧은 명사 조각(조각 하나 15자 안팎)을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투 · 외모와 달리 다정함 · 담배 피움). 조각 개수는 정하지 않음 — 짧게 쪼개기만 하고 원문에 나온 사실(이름·나이·숫자·소속·대비되는 성격)은 빼지 않음. '~해서 ~함' 같은 사연·이유 문장은 쓰지 않음. 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음. 직업·소속이 바뀌면 지금 것으로 고치고 예전 것은 '전 ○○'로 짧게 남김. 프로필 줄 꼬리표에 쓴 정체는 여기 다시 쓰지 않음.
+- 【이름】 줄(정체·나이·외형·성격·말버릇)은 한 줄: 지문 문장을 옮겨 적지 않고 짧은 명사 조각(조각 하나 15자 안팎)을 ' · '로 이음(예: 산불공수대원 · 30대 · 거친 말투 · 외모와 달리 다정함 · 담배 피움). 조각 개수는 정하지 않음 — 짧게 쪼개기만 하고 원문에 나온 사실(이름·나이·숫자·소속·대비되는 성격)은 빼지 않음. '~해서 ~함' 같은 사연·이유 문장은 쓰지 않음. 새로 드러난 것만 보태고, 같은 뜻을 두 번 쓰지 않음. 직업·소속이 바뀌면 지금 것으로 고치고 예전 것은 '전 ○○'로 짧게 남김. 끝났거나 바뀐 특징은 지금 상태를 새 조각으로 쓰고(끊었으면 끊었다고), 예전 조각은 그냥 빼지 말고 앞에 ✕를 붙여 둠(지울 표시).프로필 줄 꼬리표에 쓴 정체는 여기 다시 쓰지 않음.
 - 【이름】 줄에 넣지 않는 것: 가족은 블록 안 '가족: …' 한 줄(나이·관계 등 원문 그대로), 지난 사연(늦게 입학한 이유 같은 내력)은 '사연: …' 한 줄(60자 안팎, 왜 그랬는지까지)로 따로 · 가진 물건은 ■ 소지품 · 그날·그 행사에서 맡은 일은 날짜로그. 옮긴 내용은 옮긴 칸에 꼭 씀(어느 칸에서도 빠지지 않게).
-- 호칭 채우기: 기존 → 줄에 「」가 없으면, 이번 로그 대사에서 그 사람이 상대를 이름 그대로 부른 것을 한 번이라도 찾으면(예: "Nana, wait" → 「Nana」 · "나나야" → 「나나」) 그 인물을 (고침)으로 써서 그 → 줄의 「」를 채움. 이번 로그에 그 인물이 안 나와도 함.
+- 호칭 채우기: 기존 → 줄에 「」가 없으면, 이번 로그 대사에서 그 사람이 상대를 이름 그대로 부른 것을 한 번이라도 찾으면(예: "Peter, wait" → 「Peter」 · "희수야" → 「희수」) 그 인물을 (고침)으로 써서 그 → 줄의 「」를 채움. 이번 로그에 그 인물이 안 나와도 함.
 - 관계 줄(이름 → 상대: …)의 관계 부분은 지금 둘이 어떤 사이인지 한 구(40자 안팎, 예: 연인 직전 · 첫 키스 후 서로 자각). 어떻게 그렇게 됐는지 사건을 잇달아 쓰지 않음(경위는 날짜로그, 자세한 계기는 전환 줄 · → 줄의 (변화: 계기)는 한 마디만).
 - → 줄은 좋아하는 마음만 쌓지 않음 · 지금 그 사람에게 남아 있는 불만·서운함·불안·거리감이 원문에 있으면 같이 씀(풀리면 지움) · '푹 빠짐·없으면 못 삶' 같은 정도 말은 원문이 그렇게 보여 줄 때만.
 - 날짜로그에 넣는 대사는 원문 글자 그대로 문장째 옮김: 중간을 '…'·'...'로 잘라 앞뒤를 잇거나, 줄이거나, 말을 바꾸지 않음. 길면 그중 결정적인 문장 하나를 통째로 씀.
@@ -2691,7 +2698,7 @@
 - 현재상태에는 다음 장면까지 이어질 상태만 씀. 곧 바뀔 순간 상태(앉은 자리·자세·손에 든 컵·잠깐의 표정)는 쓰지 않음.
 - 한 번 허락·동의한 것을 늘 허락한 것으로 넓히지 않음. 약속·합의는 실제로 정한 범위·조건까지만 씀.
 - 근거 줄은 [근거]에 적힌 칸에 더해, 현재상태의 둘만의 것에도 붙임(형식 예시대로). 줄거리·이정표·세계관에는 붙이지 않음.
-- 서사 고리 줄은 '- [열림] 종류 · 누가→누구 · 제목: …' 꼴로, 종류 다음에 그 약속·예정을 꺼낸 사람→받은 사람을 쓴다(둘이 함께 정했으면 '나나·니콜라스', 혼자 품은 목표면 이름 하나). 이미 있는 고리에 이게 없으면 이번에 그 고리를 고칠 때 붙인다.
+- 서사 고리 줄은 '- [열림] 종류 · 누가→누구 · 제목: …' 꼴로, 종류 다음에 그 약속·예정을 꺼낸 사람→받은 사람을 쓴다(둘이 함께 정했으면 '주태정·윤희수', 혼자 품은 목표면 이름 하나). 이미 있는 고리에 이게 없으면 이번에 그 고리를 고칠 때 붙인다.
 - 서사 고리: 이미 열려 있는 고리와 같은 약속·예정·일이 진행되거나 날짜·장소가 정해지면 새 고리를 만들지 않음. 그 고리를 제목 그대로 다시 써서 바뀐 것과 '지금:'·(마지막 언급)만 고치고, 원래 있던 내용(언제·누가 제안했는지·이어진 다른 약속)은 빼지 않음(예: '공연 및 작업실 초대'가 있는데 작업실 날짜가 정해지면 그 고리를 고침 · '작업실 방문' 고리를 새로 만들지 않음). 새 고리를 쓰기 전에 열린 고리를 하나씩 대조함: 같은 사람이 같은 목적으로 하는 일이면(표현·상대·방법만 다름 — 예: 직접 캐묻다가 부하에게 조사를 시킴) 새로 만들지 않고 그 고리의 '지금:'에 새 진행을 이어 씀. 하는 사람이 다르거나 목적이 다르면 같은 사건에 얽혀 있어도 따로 둠. 새 고리를 만들더라도 이번 대화로 상황이 달라진 열린 고리(막혔던 것이 풀림·답을 들음·단서가 나옴)는 '지금:'·(마지막 언급)을 꼭 고쳐 쓰고, 하려던 일이 이뤄졌으면 [닫힘]으로 바꿈.
 - 인물이 죽거나 떠나 이야기에서 빠지면 그 사람 블록에 '퇴장: 죽음/떠남/연락 끊김 · 날짜 · (N턴)' 한 줄을 씀. 다시 나오면 그 줄을 지움.
 - 숨김 줄 끝에 숨기기 시작한 때를 '(N턴부터)'로 씀. 숨기던 상대가 알게 되면 숨김 줄을 지우고, 들킨 장면을 날짜로그에 남김.
@@ -2701,8 +2708,8 @@
 - 끝난 서사 고리는 지우지 않고 '[닫힘]' 줄로 계속 남김(끝난 일은 날짜로그에도 남김). 닫을 때는 '- [닫힘] 종류 · 누가→누구 · 제목: 시작 (날짜) 어떻게 생겼는지 → 끝 (날짜) 지킴/깨짐/취소 — 어떻게 끝났는지' 한 줄로 쓰고 근거 줄은 쓰지 않음(언제 무슨 일로 시작해 언제 어떻게 끝났는지가 이 한 줄로 다 보이게).
 - → 줄의 자각과 전환 줄을 원문에 드러난 속마음과 행동을 보고 판단함. 자각 괄호에는 자각·무자각·부정·숨김 중 한 단어만 씀.
 - 날짜가 다른 지난 사건을 다시 꺼내다가 같은 사람 사이에서 그 일과 이어지는 새 일이 생기면, 둘을 한 사건으로 합쳐 새 일이 일어난 극중 날짜로 맨 아래에 씀.
-  · 제목: 그 극중 날짜 + 지금 일어난 일 한 문장 (예: ▸ [2026.04.20-닉이 나나를 작업실에도 초대함])
-  · 본문: 첫 줄은 '장소 · 인물'. 그 아래 지난 일과 새 일을 줄마다 극중 날짜·턴과 함께 씀 (예: - 2026.04.15 닉이 나나를 브루클린 공연에 초대함 (12턴) / - 2026.04.20 다시 그 공연 얘기를 하다 작업실에도 초대함 (32턴)). 지난 사건의 줄은 하나도 빼지 않음.
+  · 제목: 그 극중 날짜 + 지금 일어난 일 한 문장 (예: ▸ [2026.04.20-카인이 윤희수를 작업실에도 초대함])
+  · 본문: 첫 줄은 '장소 · 인물'. 그 아래 지난 일과 새 일을 줄마다 극중 날짜·턴과 함께 씀 (예: - 2026.04.15 카인이 윤희수를 홍대 공연에 초대함 (12턴) / - 2026.04.20 다시 그 공연 얘기를 하다 작업실에도 초대함 (32턴)). 지난 사건의 줄은 하나도 빼지 않음.
   · 지난 사건은 제목 줄 + ' (삭제)' + '- 이유: [새 제목]에 합침'으로 지움.
   · 같은 날 같은 장면이 이어지는 건 이 규칙이 아니라 '이어지는 사건은 합친다'를 따름. 상관없는 사건끼리는 합치지 않음.`;
   // 회귀 전 일 규칙은 노트에 그 항목이 있는 방에만 보내요(없는 방엔 쓸 일이 없어 정리마다 그만큼 덜 나가요)
@@ -3350,7 +3357,7 @@
   async function maskLoad() {
     mask.on = String(await getValue('maskOn', 'off')) === 'on'; mask.panel = String(await getValue('maskPanel', 'off')) === 'on';
     const raw = String(await getValue('maskNames', '')).split(/[,，\n]/).map(x => x.trim()).filter(Boolean);
-    mask.raw = raw; mask.names = [...new Set(raw.flatMap(n => [n, nameNick(n)]).filter(x => [...x].length >= 2))].sort((a, b) => b.length - a.length); // '주나나' → '나나'도 · 긴 이름부터
+    mask.raw = raw; mask.names = [...new Set(raw.flatMap(n => [n, nameNick(n)]).filter(x => [...x].length >= 2))].sort((a, b) => b.length - a.length); // '주피터' → '피터'도 · 긴 이름부터
     mask.mode = String(await getValue('maskMode', 'box')); mask.color = String(await getValue('maskColor', '#1F1D27')); mask.emoji = String(await getValue('maskEmoji', '💜')).trim() || '💜';
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
     maskCss.textContent = maskCss2.textContent = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute}' + (mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
@@ -5168,7 +5175,7 @@
   // 11. 화면 조각
   // ══════════════════════════════════════════════════════════════
   const AV = [['#E6E0FA', '#4B3F8A'], ['#F9E0EA', '#93405F'], ['#DFEFE5', '#2F6A4C'], ['#DCEAF8', '#2F5F8F'], ['#FBE4D4', '#94522B'], ['#F7EDCB', '#7A6420'], ['#D7F0EC', '#2B6B64'], ['#F4DEF4', '#7D3D84'], ['#FCDFD9', '#9A4436'], ['#DFE4FA', '#3E4E98'], ['#E9F1D2', '#566A20'], ['#E2E7ED', '#45586A']];
-  // 인물 색: 인물 칸 순서대로 돌아가며(이름 글자로 정하면 나나·단테처럼 겹쳐서) · 인물 칸에 없는 이름만 글자로
+  // 인물 색: 인물 칸 순서대로 돌아가며(이름 글자로 정하면 피터·단테처럼 겹쳐서) · 인물 칸에 없는 이름만 글자로
   let avOrder = { k: null, list: [] };
   const avColor = name => { let k = ''; try { k = bodyOf('인물'); } catch (_) {}
     if (avOrder.k !== k) { let list = []; try { list = [...people().keys()]; } catch (_) {} avOrder = { k, list }; }
@@ -8822,7 +8829,7 @@
       const when = parts.filter(x => isTime(x) && !isWho(x)), who = parts.filter(isWho), where = parts.filter(x => !when.includes(x) && !who.includes(x));
       const row = (k, v) => v ? `<div class="scl"><span>${k}</span><b>${esc(v)}</b></div>` : '';
       const main = parts.length > 1 ? row('때', when.join(' ')) + row('곳', where.join(', ')) + row('함께', who.join(', ')) : `<div class="scl"><span>장면</span><b>${esc(parts[0] || '')}</b></div>`;
-      return main + scene.slice(1).map(l => { const m = l.match(LABEL); return m && /분위기/.test(m[1]) ? `<div class="scl"><span>분위기</span><b class="scv">${esc(m[2])}</b></div>` : `<p class="scm">⤷ ${labelHtml(l)}</p>`; }).join('');
+      return main + scene.slice(1).filter(l => /[\p{L}\p{N}]/u.test(l)).map(l => { const m = l.match(LABEL); return m && /분위기/.test(m[1]) ? `<div class="scl"><span>분위기</span><b class="scv">${esc(m[2])}</b></div>` : `<p class="scm">⤷ ${labelHtml(l)}</p>`; }).join('');
     })();
     const sceneHtml = scene.length ? `<section class="scene"><span class="scene-k">📍 지금 장면</span>${sceneRows}</section>` : '';
     // 인물 카드는 늘 펼쳐 둡니다. 이름 줄을 누르면 인물 화면.
@@ -8842,7 +8849,7 @@
         if (q) { if (out.length) out[out.length - 1].q = q[1]; continue; }
         if (!/^번역\s*[:：]/.test(l)) out.push({ l }); }
       return out.map(({ l, q }) => { let who = l.match(/^(.+?)\s*(?:→|->)\s*(.+?)\s*[:：]\s*(.+)$/), sep = '→';
-        if (!who) { const one = l.match(/^([^:：]{1,24}?)\s*[:：]\s*(.+)$/), isP = x => people().has(canon(String(x).trim())); // "가브리엘: …" · "가브리엘과 나나: …"도 이름 칩으로(유저 인물 포함)
+        if (!who) { const one = l.match(/^([^:：]{1,24}?)\s*[:：]\s*(.+)$/), isP = x => people().has(canon(String(x).trim())); // "가브리엘: …" · "가브리엘과 피터: …"도 이름 칩으로(유저 인물 포함)
           const two = one && one[1].match(/^(.+?)[와과]\s+(.+)$/);
           if (two && isP(two[1]) && isP(two[2])) { who = [l, two[1], two[2], one[2]]; sep = '·'; } else if (one && isP(one[1])) who = [l, one[1], '', one[2]]; }
         const [k, t0] = who ? kind(who[3]) : kind(l); // 'A → B: …' 줄도 같은 알약(약속·금지·조건)
@@ -9029,9 +9036,9 @@
   const kidBadge = name => !relPillOn || !name ? '' : preg?.start != null && preg.on && !preg.ended && preg.who === name ? '🤰' : (preg?.books || []).some(b => b.kind === '출산' && (b.who === name || b.father === name)) || relAll.parents?.has(name) ? '👶' : '';
   const avB = name => { const b = kidBadge(name); return b ? `<span class="avb-w">${avatar(name)}<i class="avb">${b}</i></span>` : avatar(name); };
   const relPillSw = () => `<button class="gtg${relPillOn ? ' on' : ''}" data-act="relpill" aria-pressed="${relPillOn}">알약 ${relPillOn ? '켬' : '끔'}</button>`;
-  // 관계 줄이 없는 아기·자녀도 부모와 이어요: ① 설명에 '나나와 단테의 딸'처럼 부모 이름 + 딸·아들·아기 ② 가족 줄에 '엄마 나나'(아이 쪽) 또는 '딸 하린'(부모 쪽)
+  // 관계 줄이 없는 아기·자녀도 부모와 이어요: ① 설명에 '피터와 단테의 딸'처럼 부모 이름 + 딸·아들·아기 ② 가족 줄에 '엄마 피터'(아이 쪽) 또는 '딸 하린'(부모 쪽)
   const reEsc = n => String(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // '나나와 단테의 딸'·'단테의 아들'·'주결과 나나의 첫 핏줄' 꼴: 부모 이름(+와·과·랑 다른 이름) 뒤에 바로 '의 딸·아들·아기·핏줄·공주…'
+  // '피터와 단테의 딸'·'단테의 아들'·'주결과 피터의 첫 핏줄' 꼴: 부모 이름(+와·과·랑 다른 이름) 뒤에 바로 '의 딸·아들·아기·핏줄·공주…'
   const kidOf = (d, m) => new RegExp(`${reEsc(m)}(?:\\s*(?:와|과|랑|하고)\\s*[^\\s·,]{1,12})?의\\s*(?:친|외동|막내|첫째|둘째|셋째|첫)?\\s*(?:딸|아들|아기|자녀|자식|핏줄|혈육|소생|공주|옹주|왕자|대군|원자|세자)`).test(String(d || ''));
   const noteKids = (rel, ppl) => {
     const out = [], names = [...ppl.keys()], fam = n => String(PROF.get(n)?.family || ''), re = (w, n) => new RegExp(`(?:${w})\\s*[:：]?\\s*${reEsc(n)}`);
@@ -9328,7 +9335,7 @@
   //   화면에선 다른 줄과 같은 ⤷ 화살표로, 이름만 굵게 구분합니다(화살표 모양을 하나로).
   // "장소 · 루루 · 네이선 힐 · …"처럼 장소+그 자리 인물 나열만 있는 줄 → { place, who[] }. 아니면 null.
   //   장소 이름 안에도 '·'가 있을 수 있어서(401호 욕실·게스트룸) 뒤에서부터 인물만 이어진 데까지를 인물, 그 앞 전부를 장소로 봅니다.
-  // AI가 장소와 인물을 두 줄로 나눠 쓴 경우("미줄라 카페" / "나나, 가브리엘 케인, 타일러") 한 줄 📍👥로 합쳐요
+  // AI가 장소와 인물을 두 줄로 나눠 쓴 경우("미줄라 카페" / "피터, 가브리엘 케인, 타일러") 한 줄 📍👥로 합쳐요
   //   인물 줄: 쉼표로 나눈 짧은 이름들이고 그중 하나는 노트 인물. 장소 줄: 화살표·문장 끝 없이 짧은 줄
   function evMeta2(lines) {
     const [a, b] = lines; if (!a || !b || metaOf(a)) return lines;
@@ -9354,7 +9361,7 @@
   // 날짜로그 대사 형광펜(화면만): "…"·“…” 안을 말한 사람 색으로 · 따옴표 바로 앞에 나온 인물 이름 · 못 찾으면 노랑
   const qPaint = h => !/&quot;|“/.test(h) ? h : h.replace(/(&quot;|“)((?:(?!&quot;|”|<).){2,}?)(&quot;|”)/g, (m, a, body, z, at) => {
     const before = h.slice(0, at).replace(/<[^>]*>/g, ''); let who = '', best = -1; avColor(''); // avColor가 인물 순서(avOrder)를 최신으로 맞춰요
-    // 말한 사람 = 따옴표 앞에서 가장 가까운 '이름+이/가/은/는' · 없으면 가장 가까운 이름('에반이 나나에게 "…"'는 에반)
+    // 말한 사람 = 따옴표 앞에서 가장 가까운 '이름+이/가/은/는' · 없으면 가장 가까운 이름('에반이 피터에게 "…"'는 에반)
     for (const subj of [true, false]) { for (const n of avOrder.list) for (const f of [n, nameNick(n)].filter(Boolean)) { let i = before.length;
         while ((i = before.lastIndexOf(f, i - 1)) >= 0) { if (!subj || /^(이|가|은|는|께서)(?![가-힣])|^(이|가|은|는)\s/.test(before.slice(i + f.length))) { if (i > best) { best = i; who = n; } break; } if (!i) break; } }
       if (who) break; }
@@ -9461,7 +9468,7 @@
       const who = nav.part === 'new'
         ? '<div class="rf-row"><label class="rf"><span>누가</span><select data-rel="from">' + names.map(n => opt(n, '')).join('') + '</select></label><label class="rf"><span>누구에게</span><select data-rel="to">' + names.map((n, i) => opt(n, names[1] || '')).join('') + '</select></label></div>'
         : '<div class="rel-who">' + esc(cur.from) + ' <i>→</i> ' + esc(cur.to) + '</div>';
-      const speech = '<label class="rf"><span>부르는 말</span><input data-rel="ho" value="' + esc(cur.addr.join(', ')) + '" placeholder="이름이나 애칭 · 여러 개면 쉼표로" autocomplete="off"><small>저장하면 「나나」처럼 양식에 맞춰 들어가요</small></label>'
+      const speech = '<label class="rf"><span>부르는 말</span><input data-rel="ho" value="' + esc(cur.addr.join(', ')) + '" placeholder="이름이나 애칭 · 여러 개면 쉼표로" autocomplete="off"><small>저장하면 「태정」처럼 양식에 맞춰 들어가요</small></label>'
         + '<label class="rf"><span>말투</span><select data-rel="tone">' + ['반말', '존댓말', '혼용'].map(v => opt(v, cur.reg.includes('혼용') ? '혼용' : cur.reg.includes('존댓말') ? '존댓말' : cur.reg ? '반말' : '')).join('') + '<option value=""' + (cur.reg ? '' : ' selected') + '>모름</option></select></label>';
       const att = '<label class="rf"><span>대하는 태도</span><textarea data-rel="att" rows="3" placeholder="예: 무뚝뚝하지만 늘 먼저 챙김">' + esc(cur.rel) + '</textarea></label>';
       return '<div class="rel-form">' + who + (nav.part === 'new' || nav.relMode === 's' ? speech : '') + (nav.part === 'new' || nav.relMode !== 's' ? att : '')
