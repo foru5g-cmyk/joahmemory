@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.3
+// @version      5.8.4
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -216,13 +216,21 @@
   }
   // 키 목록: 확장 프로그램 저장소 + DB(같은 키는 한 번)
   async function listKeys() { const g = typeof GM_listValues === 'function' ? GM_listValues() : (hasGM && GM.listValues ? await GM.listValues() : []); let d = [], h = []; try { d = await dbDo('readonly', st => st.getAllKeys()) || []; } catch (_) {} try { h = ((await dbDo('readonly', st => st.getAllKeys(), 'hist')) || []).map(k => 'hist:' + k[0]); } catch (_) {} return [...new Set([...g, ...d.map(String), ...h])]; }
-  // 기기마다 한 번: 확장 프로그램 저장소에 남은 큰 자료(안 연 방 것까지)를 모두 DB로 · 읽기만 하면 getValue가 옮겨요 · 하나라도 남으면 다음에 다시
-  setTimeout(async () => { try { if (String(await gmGet('dbMigAll', '')) === '1' || !(await db())) return;
-    const big = k => DB_KEY.test(k) || /^hist:/.test(k) || DB_SLOW.test(k), gl = async () => (typeof GM_listValues === 'function' ? GM_listValues() : (hasGM && GM.listValues ? await GM.listValues() : [])).filter(big);
-    let n = 0; for (const k of await gl()) { if (String(await gmGet(k, '') ?? '') === '') continue; await getValue(k, ''); n++; }
-    let left = 0; for (const k of await gl()) if (!DB_SLOW.test(k) && String(await gmGet(k, '') ?? '') !== '') left++; // 전체 기억·원문 보관함은 5번 확인할 때까지 두 곳에 있어요(정상)
-    if (!left) await gmSet('dbMigAll', '1'); if (n) logErr('저장', '예전 저장소 자료 ' + n + '개를 DB로 옮김' + (left ? ' · ' + left + '개는 다음에 다시' : ''));
-  } catch (e) { try { logErr('저장', 'DB로 한꺼번에 옮기기 실패 · ' + e.message); } catch (_) {} } }, 8000);
+  // 기기마다: 확장 프로그램 저장소에 남은 큰 자료(안 연 방 것까지)를 DB로 · 한 번 열 때 8개씩, 하나마다 0.3초 쉬며 나눠 옮겨요(한꺼번에 읽으면 아이폰 사파리가 메모리 넘쳐 탭을 꺼요)
+  //   읽기만 하면 getValue가 옮기고, 원래 값은 DB에 들어간 뒤에만 비워요 → 중간에 꺼져도 기억은 원래 저장소에 그대로
+  //   옮기다 페이지가 두 번 연달아 꺼지면(dbMigRun) 나눠 옮기기를 멈춰요('stop') · 그 뒤로도 방을 열면 그 방 것은 지금처럼 옮겨지고, 안 옮긴 건 원래 저장소에서 읽어요
+  setTimeout(async () => { try { const st = String(await gmGet('dbMigAll', '')); if (st === '1' || st === 'stop' || !(await db())) return;
+    const run = (parseInt(await gmGet('dbMigRun', '0'), 10) || 0) + 1;
+    if (run > 2) { await gmSet('dbMigAll', 'stop'); logErr('저장', 'DB로 나눠 옮기다 두 번 꺼져서 멈춤 · 방을 열 때 그 방 것만 옮겨요'); return; }
+    const inDb = new Set((await dbDo('readonly', s => s.getAllKeys()) || []).map(String)); // 전체 기억·원문 보관함은 DB에 들어간 뒤 5번 확인까지 두 곳에 있어서(정상) 이미 들어간 건 건너뜀
+    const big = k => DB_KEY.test(k) || /^hist:/.test(k) || (DB_SLOW.test(k) && !inDb.has(k));
+    const keys = (typeof GM_listValues === 'function' ? GM_listValues() : (hasGM && GM.listValues ? await GM.listValues() : [])).filter(big);
+    await gmSet('dbMigRun', String(run));
+    let n = 0, more = false;
+    for (const k of keys) { if (String(await gmGet(k, '') ?? '') === '') continue; if (n >= 8) { more = true; break; } await getValue(k, ''); n++; await new Promise(r => setTimeout(r, 300)); }
+    await gmSet('dbMigRun', '0'); if (!more) await gmSet('dbMigAll', '1');
+    if (n) logErr('저장', '예전 저장소 자료 ' + n + '개를 DB로 옮김' + (more ? ' · 나머지는 다음에 열 때' : ''));
+  } catch (e) { try { await gmSet('dbMigRun', '0'); logErr('저장', 'DB로 나눠 옮기기 실패 · ' + e.message); } catch (_) {} } }, 8000);
   // ETC(커뮤·폰 등) 저장값이 바뀌면 etcHook을 불러요. 동기화가 켜져 있을 때만 쓰고, 불러오기·비우기 중에는 멈춰요(etcQuiet).
   const ETC_KEY = /^(board|phone|pc|news|wiki|live|bet|talk|quotes|etcnames):/;
   let etcHook = null, etcQuiet = false;
