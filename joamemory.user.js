@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.7.7
+// @version      5.7.8
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀
@@ -546,6 +546,14 @@
       const b = itemBlocks(sec.body), head = b.head.join('\n').trim(), k = sec.key, mode = secMode(k);
       if (k === FIXED || k === '현재상태') { if (sec.body.trim()) units.push({ sec: k, i: -1, text: sec.body, pri: 100 }); continue; } // 고정 설정: 칸 방식과 상관없이 항목마다 고른 대로(미주입만 빼고 늘 넣어요) · 현재상태: 지금 이 순간의 사실이라 늘 통째로(주입 탭에 버튼 없음)
       if (mode === 'off') { if (k === '날짜로그') b.items.forEach((it, i) => { if (injPins.has(itemKey(it.key))) units.push({ sec: k, i, text: it.lines.join('\n'), pri: 88, pin: true, key: itemKey(it.key) }); }); continue; } // 안 넣기(📌 고정한 사건은 남겨요)
+      if (k === '소지품' && mode === 'on' && b.items.length) { // 소지품: 물건마다 · 최근 대화·보낸 말에 나온 물건만 내용까지, 나머지는 이름 한 줄(있다는 건 안 잊게)
+        if (head && !isNone(head)) units.push({ sec: k, i: -1, text: head, pri: 92 });
+        const SYN = [['반지', '링'], ['목걸이', '팬던트', '네크리스'], ['오토바이', '바이크'], ['휴대폰', '핸드폰', '스마트폰', '폰'], ['자동차', '차', '세단', '차량'], ['시계', '워치'], ['가방', '핸드백', '백팩'], ['귀걸이', '이어링'], ['팔찌', '브레이슬릿']]; // 같은 물건을 다르게 부르는 말
+        const near = text + '\n' + said, synOn = g => g.some(x => x.length >= 2 && (text + said).includes(x)); // 대화에 그 무리 말이 하나라도 나오면
+        b.items.forEach((it, i) => { const t = it.lines.join('\n'), key = itemKey(it.key), name = String(it.key).replace(/^\[|\]$/g, '').split(/[(:：]/)[0], ws = (name.match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem).filter(w => w.length >= 2 && !INJ_STOP.has(w));
+          const bw = said ? [...new Set((it.lines.slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !nameW.has(w) && !NOT_NOUN.test(w)) : []; // 본문 명사는 보낸 말에 나올 때만('오토바이' → 스포츠 바이크 · '반지' → 커플링)
+          const hot = injPins.has(key) || ws.some(w => has(near, w)) || SYN.some(g => synOn(g) && g.some(x => name.includes(x))) || bw.some(w => has(said, w)); units.push({ sec: k, i, text: hot ? t : it.lines[0], pri: hot ? 91 : 89, key, short: !hot }); });
+        continue; }
       if (mode === 'on' && b.items.length && k !== '인물') { units.push({ sec: k, i: -1, text: sec.body, pri: 92 }); continue; } // 늘: 칸 통째로
       if ((mode === 'auto' || k === '서사 고리') && !b.items.length && !['줄거리', '직전 장면', '세계관'].includes(k)) { // 서사 고리 '항상': 열린 고리는 늘 · 닫힌 고리는 대화에 나올 때만 // ▸ 항목이 없는 칸(서사 고리 등)도 '나올 때만'이면 줄(고리) 하나씩 골라요 · 세계관 규칙 줄(- …)은 낱말로 안 걸려서 예전처럼 통째로
         const L = secItems(sec), lh = (L.head || []).join('\n').trim();
@@ -5126,6 +5134,10 @@
   const noteMemory = () => { const n = snapshot?.note; return n ? (fullNote && fullNote.upto === n.upto ? fullNote.memory : n.memory) : ''; };
   // 전체본을 채팅에 넣으면 나올 글과 실제 채팅 노트가 같은지(공백·따옴표 모양 차이는 무시).
   const chatShape = t => fxLast(t).replace(/["“”]/g, '').replace(/\s+/g, '');
+  // 받아 온 전체 기억에 채팅 노트의 고정 설정을 얹어요 · 채팅엔 안 들어가는 꺼 둔(미주입) 항목은 받아 온 쪽 것을 살려요
+  function withChatFixed(mem, chatMem) { const fx = m => (splitSections(m || '').find(x => x.key === FIXED)?.body || '').trim(), a = fx(chatMem); if (!a) return mem;
+    const b = fx(mem), inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = fixItems(b).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head)));
+    const list = splitSections(mem), sec = list.find(x => x.key === FIXED), body = offs.length ? a + '\n' + fixJoin(offs) : a; if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); return joinSections(list); }
   const sameAsChat = (full, chatMemory) => chatShape(stripProof(full)) === chatShape(chatMemory);
   const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { fullNote = { upto, memory, turns, at }; return setValue('full:' + chatId, JSON.stringify(fullNote)); };
   const sections = () => (snapshot?.note ? splitSections(noteMemory()) : []);
@@ -6311,7 +6323,7 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, d.memory, c.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, withChatFixed(d.memory, c.memory), c.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
   async function gsSave(quiet = false) {
@@ -10136,7 +10148,7 @@
           const keys = await listKeys();
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, o.memory, c.turns || o.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await saveFull(chatId, c.upto, withChatFixed(o.memory, c.memory), c.turns || o.turns, c.at); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
@@ -10156,7 +10168,7 @@
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && !gsTried.has(chatId + '|' + c.upto) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto, nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
           let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, hist: d.store?.hist || '' }; } catch (e) { why = e.message || String(e); }
-          if (g && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, g.memory, g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
+          if (g && g.upto === c.upto && chatIdFromPath() === chatId) { await saveFull(chatId, g.upto, withChatFixed(g.memory, c.memory), g.turns || c.turns, g.at || c.at); pageToast('구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
             if (g.hist && !(await historyOf(chatId)).length) { await setValue('hist:' + chatId, g.hist); logErr('연동', '구글 드라이브에서 이 방 정리 기록도 받음(회귀·분기·되돌리기용)'); } } // 이 기기에 정리 기록이 없을 때만
           else if (g) logErr('연동', '구글 드라이브 사본이 채팅 노트와 정리 지점이 달라 안 받음(' + (g.turns || '?') + '턴 · 채팅 ' + c.turns + '턴) · 정리한 기기에서 한 번 더 올려 주세요');
           else if (!nth) logErr('연동', '구글 드라이브에서 전체 기억을 못 받음 · ' + (why || '백업에 기억이 비어 있어요'));
@@ -10702,7 +10714,10 @@
     if (root.querySelector('[data-rel]')) { const line = relCompose(); if (line == null) return toast('누가·누구에게를 서로 다른 사람으로 골라 주세요.', 'err'); out('editor').value = line; }
     if (nav.key === FIXED && nav.fxEdit) {
       const list = fixItems(editBody(FIXED)), typed = String(out('fxtitle')?.value || '').trim(), grp = nav.fxEdit.grp || '', text0 = out('editor').value;
-      const nm = typed || (grp ? (text0.trim().split('\n')[0] || '').replace(/^[-•*\s]+/, '').slice(0, 30) : ''), it = { cat: nav.fxEdit.cat, title: (grp && nm ? grp + FX_SEP : '') + nm, text: text0 };
+      let nm = typed || (text0.trim().split('\n')[0] || '').replace(/^[-•*▹▪＊#\s]+/, '').slice(0, 30); // 이름이 비면 글 첫 줄로(이름 없는 항목끼리 하나로 합쳐지지 않게)
+      { const same = t => list.some((x, i) => i !== nav.part && x.cat === nav.fxEdit.cat && itemKey('[' + x.cat + '] ' + x.title) === itemKey('[' + nav.fxEdit.cat + '] ' + (grp ? grp + FX_SEP : '') + t)); // 같은 종류·같은 이름이 이미 있으면 번호를 붙여요(같은 이름 둘은 정리·다시 읽기에서 하나로 합쳐져 하나가 사라져요)
+        if (nm && same(nm)) { const base = nm; let k = 2; while (same(base + ' ' + k)) k++; nm = base + ' ' + k; toast(`같은 이름이 있어서 '${nm}'(으)로 저장해요`, 'info', 3000); } }
+      const it = { cat: nav.fxEdit.cat, title: (grp && nm ? grp + FX_SEP : '') + nm, text: text0 };
       { const o = Number.isInteger(nav.part) && list[nav.part], cid = chatIdFromPath(), nh = '[' + it.cat + '] ' + it.title.replace(/\s+/g, ' ').trim(); // 이름·묶음이 바뀌어도 꺼 둔 표시는 따라가요
         if (o?.head && fxOff(o) && !nav.fxDel && cid && itemKey(o.head) !== itemKey(nh)) { NO_INJ.delete(FIXED + '|' + itemKey(o.head)); NO_INJ.add(FIXED + '|' + itemKey(nh)); await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); } }
       Object.assign(nav.fxEdit, { title: typed, text: it.text }); // 저장이 실패해도 창에 쓰던 글이 남게
@@ -10730,7 +10745,8 @@
       } catch (e) { toast('저장 실패 · ' + e.message, 'err'); } finally { busyNow = false; }
       await refresh(); render(); return;
     }
-    if (!chatId || !n || busyNow) return;
+    if (busyNow) return toast('정리하는 중이라 아직 저장 못 했어요 · 끝나고 다시 눌러 주세요(쓰던 글은 그대로 있어요)', 'info', 4000); // 예전엔 아무 말 없이 넘어가서 '추가가 안 된다'로 보였어요
+    if (!chatId || !n) return;
     const partOnly = n.sel && !(fullNote && fullNote.upto === n.upto); // 이 기기엔 채팅 속 일부만 있음
     if (partOnly && nav.key !== FIXED) return toast('이 기기에 전체 기억이 없어서 고칠 수 없어요(채팅엔 장면에 맞춘 일부만 있어요). 정리한 기기에서 고쳐 주세요.', 'err', 6000);
     { const was = (splitSections(noteMemory()).find(x => x.key === nav.key)?.body || '').trim();
