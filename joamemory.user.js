@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.21
+// @version      5.8.22
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -536,6 +536,10 @@
   const packInherit = async (cid, src, store) => { if (!cid || !src || cid === src) return;
     for (const k of ['orig', 'pack']) { if (String(await getValue(k + ':' + cid, '') || '')) continue; const v = String(store?.[k] || await getValue(k + ':' + src, '') || ''); if (!v || v === '{}') continue;
       await setValue(k + ':' + cid, v); if (chatIdFromPath() === cid) try { const o = JSON.parse(v) || {}; if (k === 'orig') origMap = o; else packSig = o; } catch (_) {} } };
+  const origJoin = (mine, theirs) => { const o = { ...mine }; for (const [k, v] of Object.entries(theirs || {})) if (!o[k] || String(o[k]).length < String(v).length) o[k] = v; return o; }; // 같은 사건은 더 긴 원문을 남겨요
+  const packTake = async (cid, orig, pack) => { if (!cid || !pack) return; /* 다른 기기에서 간추린 표시·원문을 이 기기에도(되돌리기 버튼이 따라오게) */
+    let o, s; try { o = origJoin(JSON.parse(String(await getValue('orig:' + cid, '') || '{}')) || {}, JSON.parse(orig || '{}')); s = JSON.parse(pack) || {}; } catch (_) { return; }
+    await setValue('orig:' + cid, JSON.stringify(o)); await setValue('pack:' + cid, JSON.stringify(s)); if (chatIdFromPath() === cid) { origMap = o; packSig = s; } };
   function origSwap(memory) { // 떠올릴 노트: 줄어든 사건은 원문으로 · (요약)에 묶인 사건은 그 (요약) 바로 뒤에 원문을 날짜순으로(빠진 사건 중 (요약) 기간 안의 것만 · 정정으로 지운 사건은 안 살려요)
     if (!Object.keys(origMap).length) return memory;
     const L = splitSections(memory), sec = L.find(x => x.key === '날짜로그'); if (!sec) return memory;
@@ -10635,9 +10639,9 @@
         if (c?.sel && !c.parked && (stale || !(fullNote && fullNote.upto === c.upto)) && !gsTried.has(chatId + '|' + c.upto + '|' + (c.me || 0)) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto + '|' + (c.me || 0), nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
           const pull = async () => { // 드라이브에서 받기(큰 백업이라 5초쯤 걸려요)
-          let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, me: Number(d.me) || 0, hist: d.store?.hist || '' }; } catch (e) { why = e.message || String(e); }
+          let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, me: Number(d.me) || 0, hist: d.store?.hist || '', orig: d.store?.orig || '', pack: d.store?.pack || '' }; } catch (e) { why = e.message || String(e); }
           // memTake: 분기하면 크랙이 메시지 번호를 새로 매겨서 정리 지점 번호만 달라요 → 정리 시각·턴 수가 같으면 같은 정리본
-          if (memTake(c, g, stale) && chatIdFromPath() === chatId) { await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); pageToast(stale ? '다른 기기에서 고친 기억을 구글 드라이브에서 받아 왔어요' : '구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
+          if (memTake(c, g, stale) && chatIdFromPath() === chatId) { await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); await packTake(chatId, g.orig, g.pack); pageToast(stale ? '다른 기기에서 고친 기억을 구글 드라이브에서 받아 왔어요' : '구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
             if (g.hist && !(await historyOf(chatId)).length) { await setValue('hist:' + chatId, g.hist); logErr('연동', '구글 드라이브에서 이 방 정리 기록도 받음(회귀·분기·되돌리기용)'); }
             else if (!g.hist) gsHistPull(chatId).catch(() => {}); } /* 새 판은 정리 기록을 따로 올려서 그 파일에서 */ // 이 기기에 정리 기록이 없을 때만
           else if (stale) { if (nth >= 2) { await memTouch(chatId, c.me); logErr('연동', '다른 기기가 고친 기억이 드라이브에 없어 이 기기 것을 그대로 씀 · 고친 기기에서 한 번 더 올려 주세요'); } /* 세 번 받아 봐도 없으면 그만 찾아요(방을 열 때마다 다시 받지 않게) */
