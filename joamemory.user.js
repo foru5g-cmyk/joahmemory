@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.19
+// @version      5.8.20
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -188,9 +188,11 @@
       t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
   const histTx = async (c, fn) => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction('hist', 'readwrite'), st = t.objectStore('hist'); fn(st); t.oncomplete = () => res(true); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
   const histSet = (c, list) => histTx(c, st => { st.delete(histRange(c)); let t = -Infinity; histPackL(list.slice(-HIST_MAX)).forEach((h, i) => { t = Math.max(Number(h.at ?? i), t + 1); st.put({ ...h, at: t, chat: c }); }); }); // 시각이 같거나 거꾸로면 1씩 밀어 순서·건수 그대로 // 통째로 바꾸기(불러오기·비우기)
-  const histAdd = (c, rec) => histTx(c, st => { const q = st.getAll(histRange(c)); q.onsuccess = () => { const l = q.result || [], last = l[l.length - 1];
-    if (last && last.after != null && last.after === rec.before) { const { after, ...r } = last; st.put({ ...r, aN: 1 }); }
-    st.put({ ...rec, at: Math.max(Number(rec.at) || 0, last ? last.at + 1 : 0), chat: c }); for (const o of l.slice(0, Math.max(0, l.length + 1 - HIST_MAX))) st.delete([c, o.at]); }; });
+  //   번호만 훑고 마지막 한 건만 꺼내요(전부 꺼내면 노트가 큰 방은 정리할 때마다 수천만 자가 메모리에 올라와요)
+  const histAdd = (c, rec) => histTx(c, st => { const q = st.getAllKeys(histRange(c)); q.onsuccess = () => { const ks = q.result || [];
+    const write = last => { if (last && last.after != null && last.after === rec.before) { const { after, ...r } = last; st.put({ ...r, aN: 1 }); }
+      st.put({ ...rec, at: Math.max(Number(rec.at) || 0, last ? last.at + 1 : 0), chat: c }); for (const k of ks.slice(0, Math.max(0, ks.length + 1 - HIST_MAX))) st.delete(k); };
+    if (!ks.length) return write(null); const g = st.get(ks[ks.length - 1]); g.onsuccess = () => write(g.result || null); }; });
   // a = DB 값, b = 확장 프로그램 쪽 값(DB가 안 열린 날 쓴 것) · 전체 기억은 더 많은 턴·늦은 정리 쪽 · 원문 보관함은 합쳐요(같은 사건은 긴 쪽) · 나머지는 b(마지막에 쓴 값)
   const dbPick = (key, a, b) => { if (a == null || a === '') return b; if (b == null || b === '' || a === b) return a;
     try { const x = JSON.parse(a), y = JSON.parse(b);
