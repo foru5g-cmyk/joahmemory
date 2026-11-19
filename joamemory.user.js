@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.23
+// @version      5.8.24
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6051,7 +6051,7 @@
     const n = snapshot.note, turns = freshTurns(), left = Math.max(0, cycle - turns), due = turns >= cycle;
     // 큰 진행 링: 다음 정리까지
     const R = 64, C = 2 * Math.PI * R, done = Math.min(turns, cycle) / cycle, over = Math.max(0, turns - cycle);
-    const spin = busyNow && genProg?.kind !== 'pack'; // 간추리기는 맨 위 창 하나만 돌아요 · 정리 동그라미는 가만히 둬요
+    const spin = busyNow && genProg?.kind !== 'pack' && !nav.packWork; // 간추리기는 맨 위 창 하나만 돌아요 · 정리 동그라미는 가만히 둬요
     const ring = `<div class="bigring${due ? ' due' : ''}${spin ? ' busy' + (runningMode === 'rebuild' ? ' rebuild' : '') : ''}">
       <svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="${R}" class="track"/>
         <circle cx="80" cy="80" r="${R}" class="fill" stroke-dasharray="${(C * (spin ? 0.28 : done)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/></svg>
@@ -6061,7 +6061,7 @@
     const hero = `<section class="hero2">${ring}
       <p class="hero-sub">${n ? `1~${n.turns}턴을 기억하고 있어요` : '아직 정리한 기억이 없어요'}</p>
       ${n?.at ? `<p class="hero-meta">마지막 정리 · ${esc(new Date(n.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${n.by ? ` · ${esc(n.by)}${n.by === DEVICE ? ' (이 기기)' : ''}` : ''}</p>` : ''}
-      <div class="hero-btns"><div style="position:relative;display:flex;align-items:center"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '정리하기'}</button><span style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);display:flex">${driveBtn()}</span></div>
+      <div class="hero-btns"><div style="position:relative;display:flex;align-items:center"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow && !nav.packWork ? '정리하는 중…' : '정리하기'}</button><span style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);display:flex">${driveBtn()}</span></div>
 </div>
       <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label><span class="hero-dot">·</span><label class="inj-sw"><input type="checkbox" data-act="scenemode"${sceneOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>웹 모드</label>
         ${n ? `<span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button>` : ''}</div>
@@ -6126,7 +6126,7 @@
       <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
       ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<section class="nf"><details class="nf-help"><summary><b>이 기기엔 전체 기억이 없어요</b><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more"><p>웹 모드는 전체 기억을 <b>정리한 기기</b>(예: 폰)에만 저장하고, 채팅엔 장면에 맞게 고른 일부만 넣어요. 그래서 다른 기기에선 전체 기억을 가져와야 이어서 정리할 수 있어요.</p><p><b>구글 드라이브</b> · 정리할 때마다 자동으로 올라가고, 다른 기기에서 이 방을 열면 알아서 받아 와요. 정리한 기기와 이 기기 <b>둘 다</b> 같은 주소·비밀번호로 연결해 주세요. 드라이브에 이 방이 없으면 정리한 기기에서 설정 › 백업 › 지금 올리기를 한 번 눌러요.</p><p><b>백업 파일</b> · 정리한 기기에서 설정 › 백업 › 백업 파일 받기 → 그 파일을 여기서 불러와요. 그 뒤 거기서 또 정리하면 다시 옮겨야 해요.</p></div></details><p class="nf-sub">다른 기기에서 정리한 방이에요 · 둘 중 하나로 가져와 주세요</p><div class="nf-opts"><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">☁️</span><b>구글 드라이브</b><em class="nf-tag">추천</em><small>정리할 때마다 자동 백업 · 기기끼리 알아서 맞춰요</small></div>${nav.gsOn ? `<button class="btn pri" data-act="gspick"${busyNow ? ' disabled' : ''}>드라이브에서 찾기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">💾</span><b>백업 파일</b><small>지금 한 번만 · 정리한 기기에서 받은 파일로</small></div><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>${nav.gsPick ? `<div class="nf-pick"><small>${nav.gsPickAll ? '드라이브의 다른 방 백업 · 턴 수가 같아야 가져올 수 있어요' : '이 방과 제목·턴 수가 같은 백업'}</small>${nav.gsPick.length ? nav.gsPick.map(x => `<button class="nf-pi" data-act="gspickgo" data-arg="${esc(x.chat)}"><b>${esc(x.title)}</b><small>${esc(x.note)} · ${esc(x.when)}</small></button>`).join('') : `<small>맞는 방이 없어요 · 정리한 기기에서 그 방을 드라이브에 올렸는지 확인해 주세요</small>`}${nav.gsPickAll ? '' : '<button class="linkbtn" data-act="gspick" data-arg="all">제목 다른 방도 보기</button>'}</div>` : ''}<p class="nf-foot">둘 다 안 되면 <button class="linkbtn" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button> · 시간·돈이 많이 들어요</p></section>` : ''}
       <div class="wd-tiles">
-        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${(busyNow && genProg?.kind !== 'pack') || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
+        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${(busyNow && genProg?.kind !== 'pack' && !nav.packWork) || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
           <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
@@ -8709,10 +8709,10 @@
       const orig = it.lines.join('\n'); if (!origMap[r.k] || origMap[r.k].length < orig.length) origMap[r.k] = orig; it.lines = r.lines; packSig[r.k] = (p.level === 2 ? '2:' : '') + fxH(r.lines.join('\n')); n++; }
     if (!n) { toast('그 사이 노트가 바뀌어서 적용하지 않았어요.', 'info', 3000); return render(); }
     sec.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); const memory = joinSections(list.filter(x => x.body.trim()));
-    busyNow = true; render();
+    nav.packWork = '적용하는 중'; busyNow = true; render();
     try { await setValue('orig:' + cid, JSON.stringify(origMap)); await setValue('pack:' + cid, JSON.stringify(packSig)); // 원문부터 보관함에 넣고 나서 노트를 바꿔요
       await rewriteNote(cid, memory); toast(`사건 ${n}개를 간추렸어요 · 원문은 보관함에 있어요`, 'ok', 3000); await refresh(); if (nav.gsOn) gsSave(true); }
-    catch (e) { toast('저장 실패 · ' + errMsg(e), 'err'); } finally { busyNow = false; render(); } }
+    catch (e) { toast('저장 실패 · ' + errMsg(e), 'err'); } finally { nav.packWork = ''; busyNow = false; render(); } }
   // 간추린 사건을 원문으로 되돌려요: 간추린 그대로인 사건만(그 뒤 고쳐진 사건은 고친 글을 둬요) · 되돌린 사건은 다음에 다시 간추릴 수 있어요
   const packDone = () => { const n = snapshot?.note; if (!n) return []; return logItems(noteMemory()).filter(it => { const k = itemKey(it.key); return origMap[k] && packIs(k, it.lines); }); };
   async function packUndo() { const cid = chatIdFromPath(); if (!cid || !snapshot?.note || busyNow) return;
@@ -8720,9 +8720,9 @@
     for (const it of b.items) { const k = itemKey(it.key); if (it.del || !origMap[k] || !packIs(k, it.lines)) continue; it.lines = origMap[k].split('\n'); delete packSig[k]; n++; }
     if (!n) return toast('되돌릴 간추린 사건이 없어요.', 'info', 3000);
     sec.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); const memory = joinSections(list.filter(x => x.body.trim()));
-    busyNow = true; render();
+    nav.packWork = '되돌리는 중'; busyNow = true; render();
     try { await rewriteNote(cid, memory); await setValue('pack:' + cid, JSON.stringify(packSig)); toast(`사건 ${n}개를 원문으로 되돌렸어요`, 'ok', 3000); await refresh(); if (nav.gsOn) gsSave(true); }
-    catch (e) { toast('되돌리기 실패 · ' + errMsg(e), 'err'); } finally { busyNow = false; render(); } }
+    catch (e) { toast('되돌리기 실패 · ' + errMsg(e), 'err'); } finally { nav.packWork = ''; busyNow = false; render(); } }
   // 간추리기 창을 열 때 방마다 한 번: 드라이브에서 원문·간추린 표시를 받아요(다른 기기에서 간추린 방 · 없으면 분기 전 방 것) · 지금 글과 똑같은 표시만 받아요
   async function packSync(cid) { if (!cid || !snapshot?.note || packSync.done?.has(cid) || !String(await getValue('gsUrl', '')).trim()) return;
     (packSync.done ||= new Set()).add(cid); nav.packSyncing = true; render();
@@ -8741,6 +8741,7 @@
     finally { nav.packSyncing = false; if (chatIdFromPath() === cid) render(); } }
   // 간추리기 창: 맨 위에 하나만 떠요 · 오른쪽 – 를 누르면 한 줄로 접혀서 다른 메뉴를 볼 수 있어요 · 시작 전 → 간추리는 중 → 결과
   function packAskHtml() { const p = nav.pack && nav.pack.cid === chatIdFromPath() ? nav.pack : null, run = busyNow && genProg?.kind === 'pack';
+    if (nav.packWork) return `<div class="devask pk gen-prog"><div class="pk-h"><b>🗜 간추리기</b><span class="pk-s">${nav.packWork}</span></div><div class="pk-b"><div class="gp-bar ind"><i style="width:35%"></i></div><p class="gp-info">노트를 다시 쓰는 중이에요 · 잠깐이면 돼요</p></div></div>`;
     if (!run && !p && !(nav.packAsk && snapshot?.note)) return '';
     const min = !!nav.packMin, v = run ? genView() : null, l = packLeft(), hide = min ? ' style="display:none"' : '';
     const head = `<div class="pk-h"><b>🗜 간추리기</b><span class="pk-s">${run ? '간추리는 중' : p ? (p.level === 2 ? '2차 결과' : '1차 결과') : '시작 전'}</span>${run ? `<span class="gp-time pk-t">${v.tm}</span>` : ''}<button class="ia pk-min" data-act="packmin" aria-label="${min ? '펼치기' : '접기'}">${min ? '＋' : '–'}</button></div>`;
