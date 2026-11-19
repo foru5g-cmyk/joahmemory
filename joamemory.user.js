@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.13
+// @version      5.8.14
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2544,7 +2544,12 @@
   // 대화 목록 한 쪽(최신부터 50개). crack-api가 안 되면(404·405·5xx·네트워크) contents-api에서 같은 목록을 읽습니다.
   const API_A = 'https://crack-api.wrtn.ai/crack-gen/v3/chats/', API_B = 'https://contents-api.wrtn.ai/character-chat/v3/chats/';
   const serverDown = e => /HTTP (404|405|5\d\d)|네트워크|시간이 초과/.test(String(e?.message || e));
+  // 읽기는 페이지에서 바로(fetch · 0.1초): 확장 프로그램을 거치는 요청은 방을 열 때 4~10초씩 걸렸어요(오류 기록 '느림'으로 잼) · 안 되면(막힘·8초 넘음·로그인 틈) 그 뒤로는 예전 길만 써요
+  let pageGetOff = false;
+  async function pageGet(url) { const ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
+    try { const r = await fetch(url, { signal: ac.signal, cache: 'no-store', headers: { Authorization: 'Bearer ' + token(), platform: 'web', Accept: 'application/json' } }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); } finally { clearTimeout(t); } }
   async function crackGet(path) {
+    if (!pageGetOff) try { return await pageGet(API_A + path); } catch (e) { if (!/HTTP (401|403|429|5\d\d)/.test(String(e?.message))) pageGetOff = true; } // 서버가 잠깐 거절한 건 다음에 다시 · 그 밖(막힘)은 이 페이지에선 그만
     try { return await crack('GET', API_A + path); }
     catch (e) { if (!serverDown(e)) throw e; return crack('GET', API_B + path); }
   }
