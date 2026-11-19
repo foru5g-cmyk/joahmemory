@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.8
+// @version      5.8.9
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5170,7 +5170,8 @@
     .sty-note{background:#fff;border:1px solid var(--rule);border-radius:18px;margin:10px 0 0}
     .sty-note>summary{list-style:none;display:flex;justify-content:space-between;padding:14px 16px;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2)}
     .sty-note>summary::-webkit-details-marker{display:none}
-    .sty-note pre{white-space:pre-wrap;font:inherit;font-size:12px;line-height:1.6;margin:0;padding:0 16px 14px;color:var(--ink2)}
+    .sty-note pre{white-space:pre-wrap;font:inherit;font-size:12px;line-height:1.6;margin:0 12px 12px;padding:12px 14px;border-radius:12px;background:var(--mist);max-height:40vh;overflow:auto;color:var(--ink2)}
+    .sty-pg{padding-bottom:45vh} /* 맨 아래 칸을 닫아도 페이지가 짧아져 튕기지 않게 아래 자리를 남겨요 */
   </style>
   <div class="under" data-act="close" aria-hidden="true"></div>
   <div class="screen" role="dialog" aria-label="조아메모리">
@@ -10077,7 +10078,7 @@
         <div class="actions" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><button class="btn pri" data-act="errcopy">복사</button><button class="btn" data-act="errclear">지우기</button></div>
         ${errHere().length ? '<ol class="errl-list">' + [...errHere()].reverse().map(x => `<li><small>${esc(new Date(x.at).toLocaleString('ko-KR'))} · ${esc(x.where)}</small><p>${esc(x.msg)}</p></li>`).join('') + '</ol>' : emptyBox('아직 오류가 없어요.')}</section>`
       : nav.tab === 'timeline' ? timelineHtml()
-      : nav.tab === 'mode' ? (nav.modeSub ? `<p class="md-back"><button class="linkbtn" data-act="modesub" data-arg="">‹ 모드</button></p>` + (nav.modeSub === 'love' ? loveHtml() : nav.modeSub === 'sty' ? `<div class="pg">${styHtml()}</div>` : modeHtml()) : modeSummary())
+      : nav.tab === 'mode' ? (nav.modeSub ? `<p class="md-back"><button class="linkbtn" data-act="modesub" data-arg="">‹ 모드</button></p>` + (nav.modeSub === 'love' ? loveHtml() : nav.modeSub === 'sty' ? `<div class="pg sty-pg">${styHtml()}</div>` : modeHtml()) : modeSummary())
       : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'if' ? ifHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
       : nav.tab === 'story' ? memoryHtml(STORY_TABS)
       : nav.tab === 'now' ? memoryHtml(NOW_TABS)
