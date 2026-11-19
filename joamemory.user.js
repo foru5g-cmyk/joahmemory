@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.17
+// @version      5.8.18
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2954,7 +2954,7 @@
     // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
     let out; const waits = [4, 10];
     for (let k = 0; ; k++) {
-      try { out = await askAny(model, system, input, json, thinkLevel).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, input, json) : Promise.reject(e)); break; } // 설정 › AI 생각을 정리 말고도 전부에 · 못 받는 모델이면 그냥
+      try { out = await askAny(model, system, input, json, thinkLevel).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, input, json) : Promise.reject(e)); break; } // 설정 › AI 생각(적게·보통·깊게)을 ETC·점검에도 그대로 · 그 값을 못 받는 모델이면 값 없이 한 번 더
       catch (e) {
         if (k >= waits.length || !/HTTP (429|500|502|503|504)\b/.test(String(e?.message))) throw e;
         toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
@@ -2988,7 +2988,7 @@
     return { ...h, 'X-Firebase-AppCheck': fbCheck.t };
   }
   async function askGemini(model, system, input, json = false, think = '') { // think: AI 생각 정도(low·medium·high)
-    const pv = provOf(model), id = model.replace(/^(vertex|firebase):/, ''), tk = /^gemini-(2\.5|3|4)/.test(id); // tk: 생각하는 모델 · 생각 요약을 받아 살아 있는지 봐요(글엔 안 넣어요) // Vertex express·Firebase AI Logic: 같은 요청 모양, 주소·키만 달라요
+    const pv = provOf(model), id = model.replace(/^(vertex|firebase):/, ''), tk = /^gemini-(2\.5|3|4)/.test(id) && !json; // ETC(JSON으로 받는 것)는 5.8.5 때처럼: 생각 요약 안 받고 · 10분 · 첫 글자 전엔 안 끊어요(5.8.6부터 느려지고 다시 시도가 나서) // tk: 생각하는모델 · 생각 요약을 받아 살아 있는지 봐요(글엔 안 넣어요) // Vertex express·Firebase AI Logic: 같은 요청 모양, 주소·키만 달라요
     const key = String(await getValue(KEYS[pv][0], '')).trim(), proj = pv === 'firebase' ? String(await getValue('firebaseProject', '')).trim() : '';
     if (!key) throw new Error(`설정에서 ${KEYS[pv][1]}를 먼저 넣어 주세요.`);
     if (pv === 'firebase' && !proj) throw new Error('설정에서 Firebase 프로젝트 ID를 먼저 넣어 주세요.');
@@ -3002,7 +3002,7 @@
                 // 창작 RP 정리라 조절 가능한 필터는 끔(공식 설정). 끌 수 없는 금지 항목은 그대로 막혀요.
                 safetySettings: ['HARASSMENT', 'HATE_SPEECH', 'SEXUALLY_EXPLICIT', 'DANGEROUS_CONTENT', 'CIVIC_INTEGRITY'].map(c => ({ category: 'HARM_CATEGORY_' + c, threshold: 'OFF' })),
                 // ETC는 JSON 모드: 글 안 따옴표가 저절로 이스케이프돼서 답이 중간에 깨지지 않아요
-                generationConfig: { maxOutputTokens: 65536, ...(json ? { responseMimeType: 'application/json' } : {}), ...(tk ? { thinkingConfig: { includeThoughts: true, ...(think && /^gemini-(3|4)/.test(id) ? { thinkingLevel: think } : {}) } } : {}) } } })
+                generationConfig: { maxOutputTokens: 65536, ...(json ? { responseMimeType: 'application/json' } : {}), ...(tc => Object.keys(tc).length ? { thinkingConfig: tc } : {})({ ...(tk ? { includeThoughts: true } : {}), ...(think && /^gemini-(3|4)/.test(id) ? { thinkingLevel: think } : {}) }) } } })
       .catch(async e => { // Firebase가 401·403인데 App Check 값이 비었으면 그게 원인일 가능성이 커서 알려 줘요
         if (pv === 'firebase' && /HTTP 40[13]\b/.test(e.message) && !(String(await getValue('firebaseAppId', '')).trim() && String(await getValue('firebaseDebugToken', '')).trim()))
           e.message += ' · App Check 앱 ID·디버그 토큰이 비어 있어요 · 설정 › Firebase에서 [채우기]·디버그 토큰을 넣고 [확인]을 눌러 보세요';
@@ -7006,7 +7006,7 @@
       catch (e) {
         if (e?.cut && e.partial) { toast('답이 길어서 받은 만큼만 보여 드려요', 'ok', 3000); return e.partial; }
         if (!soft && /안전 필터/.test(String(e?.message))) { soft = true; sys = system + SOFT_RETRY; toast('안전 필터에 걸려서 살짝 돌려 말하게 다시 하는 중이에요…', 'ok', 3000); continue; }
-        if (i < 1 && !/키를|안전 필터|거절|빈 답/.test(String(e?.message))) { toast('한 번 더 시도하는 중이에요…', 'ok', 2500); continue; }
+        if (i < 1 && !/키를|안전 필터|거절|빈 답/.test(String(e?.message))) { toast('한 번 더 시도하는 중이에요…', 'ok', 2500); logErr('알림', (label || 'AI') + ' 첫 시도 실패 → 한 번 더 · ' + String(e?.message || e).slice(0, 160)); continue; } /* 왜 다시 했는지 오류 기록에 남겨요 */
         throw e;
       }
     }
@@ -7059,6 +7059,10 @@
     { key: 'music', label: '음악', title: '재생 목록', color: '#FF2D55', emoji: '🎵', dock: false,
       row: x => [x.title || '', x.artist || '', x.note || ''] },
   ];
+  // AI가 기본 앱과 같은 앱을 또 만들거나 같은 앱을 두 번 적으면 홈 화면엔 하나만 보여요(저장된 글은 그대로 · 이름이 똑같을 때만)
+  const phUniq = d => { const n = t => String(t || '').replace(/\s+/g, '').toLowerCase();
+    const seen = new Set(['인스타', '인스타그램', 'instagram', '당근', '당근마켓', '메모', '메모장', '전화', '통화', '사파리', 'safari', '캘린더', '달력', '음악', '뮤직', '사진', '갤러리', '앨범', '메시지', '문자', d?.bank?.bank, ...SYS_APPS.map(s => s.label)].map(n).filter(Boolean));
+    return ([x]) => { const k = n(x?.name); if (!k) return true; if (seen.has(k)) return false; seen.add(k); return true; }; };
   const sysBtn = s => `<button class="ph-app" data-act="phgo" data-arg="sys:${s.key}"><i class="ic-x" style="background:${s.color}">${s.emoji}</i><span>${s.label}</span></button>`;
   // 유저가 한 말·보낸 연락은 AI가 지어낸 것이라 화면에서 뺍니다 (이미 만든 폰도 보일 때 걸러요)
   function scrubUser(d0) {
@@ -7118,7 +7122,7 @@
         const app = (key, label, cls, emo, n) => `<button class="ph-app" data-act="phapp" data-arg="${key}"><i class="${cls}">${PH_ICON[key] || emo}</i><span>${label}</span>${n ? `<em>${n}</em>` : ''}</button>`;
         const unread = msgs.filter(m => !(m.thread || []).slice(-1)[0]?.me).length, dmUnread = dms.filter(m => !(m.thread || []).slice(-1)[0]?.me).length;
         inner = `${bar}<div class="ph-home" style="--wb:${bg};--wf:${fg}"><div class="ph-widget"><span>${face}</span><b>${esc(who)}</b><small>${rec.turns}턴 시점</small></div>
-          <div class="ph-grid">${d.insta ? app('insta', '인스타', 'ic-insta', '📷', dmUnread) : ''}${d.market ? app('market', '당근', 'ic-market', '🥕', items.reduce((a, x) => a + (Number(x.chats) || 0), 0) || '') : ''}${memo.length || secret.length ? app('memo', '메모', 'ic-memo', '📝', '') : ''}${bank ? `<button class="ph-app" data-act="phapp" data-arg="bank"><i class="ic-bank" style="background:linear-gradient(${fg},${fg}cc)">${PH_ICON.bank}</i><span>${esc(String(bank.bank || '은행').slice(0, 5))}</span></button>` : ''}${SYS_APPS.filter(s => s.dock === false && (d[s.key] || []).length).map(s => sysBtn(s)).join('')}${(d.apps || []).map((x, i) => `<button class="ph-app" data-act="phgo" data-arg="xapp:${i}"><i class="ic-x" style="background:${esc(x.color || '#5856D6')}">${esc(x.emoji || '📱')}</i><span>${esc(String(x.name || '').slice(0, 6))}</span></button>`).join('')}</div>
+          <div class="ph-grid">${d.insta ? app('insta', '인스타', 'ic-insta', '📷', dmUnread) : ''}${d.market ? app('market', '당근', 'ic-market', '🥕', items.reduce((a, x) => a + (Number(x.chats) || 0), 0) || '') : ''}${memo.length || secret.length ? app('memo', '메모', 'ic-memo', '📝', '') : ''}${bank ? `<button class="ph-app" data-act="phapp" data-arg="bank"><i class="ic-bank" style="background:linear-gradient(${fg},${fg}cc)">${PH_ICON.bank}</i><span>${esc(String(bank.bank || '은행').slice(0, 5))}</span></button>` : ''}${SYS_APPS.filter(s => s.dock === false && (d[s.key] || []).length).map(s => sysBtn(s)).join('')}${(d.apps || []).map((x, i) => [x, i]).filter(phUniq(d)).map(([x, i]) => `<button class="ph-app" data-act="phgo" data-arg="xapp:${i}"><i class="ic-x" style="background:${esc(x.color || '#5856D6')}">${esc(x.emoji || '📱')}</i><span>${esc(String(x.name || '').slice(0, 6))}</span></button>`).join('')}</div>
           ${SYS_APPS.some(s => s.dock && (d[s.key] || []).length) || msgs.length || album.length ? `<div class="ph-dock">${SYS_APPS.filter(s => s.dock && (d[s.key] || []).length).map(s => sysBtn(s)).join('')}${msgs.length ? app('msg', '메시지', 'ic-msg', '💬', unread) : ''}${album.length ? app('album', '사진', 'ic-photos', '🌼', '') : ''}</div>` : ''}</div>`;
       } else if (scr === 'insta') {
         inner = screen(`<div class="ig-top"><span class="ig-av" style="background:${bg}">${face}</span><div class="ig-nums"><p><b>${posts.length}</b>게시물</p><p><b>${esc(ins.followers || '0')}</b>팔로워</p><p><b>${esc(ins.following || '0')}</b>팔로잉</p></div></div>
