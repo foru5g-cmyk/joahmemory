@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.22
+// @version      5.8.23
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -8723,6 +8723,22 @@
     busyNow = true; render();
     try { await rewriteNote(cid, memory); await setValue('pack:' + cid, JSON.stringify(packSig)); toast(`사건 ${n}개를 원문으로 되돌렸어요`, 'ok', 3000); await refresh(); if (nav.gsOn) gsSave(true); }
     catch (e) { toast('되돌리기 실패 · ' + errMsg(e), 'err'); } finally { busyNow = false; render(); } }
+  // 간추리기 창을 열 때 방마다 한 번: 드라이브에서 원문·간추린 표시를 받아요(다른 기기에서 간추린 방 · 없으면 분기 전 방 것) · 지금 글과 똑같은 표시만 받아요
+  async function packSync(cid) { if (!cid || !snapshot?.note || packSync.done?.has(cid) || !String(await getValue('gsUrl', '')).trim()) return;
+    (packSync.done ||= new Set()).add(cid); nav.packSyncing = true; render();
+    try { const cur = new Map(logItems(noteMemory()).map(it => [itemKey(it.key), fxH(it.lines.join('\n'))])), hit = s => Object.entries(s || {}).filter(([k, v]) => cur.get(k) === String(v).replace(/^2:/, ''));
+      let rooms = [cid], got = 0, own = 0;
+      for (let i = 0; i < rooms.length && i < 3; i++) { const id = rooms[i]; let d = null, o = {}, s = {};
+        try { d = JSON.parse((await gsCall({ action: 'load', chat: id })).data); } catch (_) { if (!i) packSync.done.delete(cid); }
+        if (chatIdFromPath() !== cid) return;
+        if (d?.app === 'memo-note' && d.chat === id) { try { o = JSON.parse(d.store?.orig || '{}') || {}; s = JSON.parse(d.store?.pack || '{}') || {}; } catch (_) {}
+          const h = hit(s).filter(([k]) => o[k] || origMap[k]); if (!i) own = h.length;
+          for (const [k, v] of h) { if (o[k] && (!origMap[k] || origMap[k].length < o[k].length)) origMap[k] = o[k]; if (packSig[k] !== v) { packSig[k] = v; got++; } } }
+        if (!i) { if (hit(packSig).length) break; try { rooms = [cid, ...branchAnc(await readAll(cid), cid)]; } catch (_) {} } }
+      if (got) { await setValue('orig:' + cid, JSON.stringify(origMap)); await setValue('pack:' + cid, JSON.stringify(packSig)); logErr('간추리기', '드라이브에서 간추린 표시 ' + got + '개와 원문을 받음'); }
+      if (hit(packSig).length > own && nav.gsOn) gsSave(true); /* 이 기기에만 있으면 드라이브에도 */ }
+    catch (e) { logErr('간추리기', '드라이브에서 원문 받기 실패 · ' + String(e?.message || e).slice(0, 120)); }
+    finally { nav.packSyncing = false; if (chatIdFromPath() === cid) render(); } }
   // 간추리기 창: 맨 위에 하나만 떠요 · 오른쪽 – 를 누르면 한 줄로 접혀서 다른 메뉴를 볼 수 있어요 · 시작 전 → 간추리는 중 → 결과
   function packAskHtml() { const p = nav.pack && nav.pack.cid === chatIdFromPath() ? nav.pack : null, run = busyNow && genProg?.kind === 'pack';
     if (!run && !p && !(nav.packAsk && snapshot?.note)) return '';
@@ -8734,6 +8750,7 @@
       <p><b>1차</b> · ${l.n ? `오래된 사건 <b>${l.n}개</b>를 30%쯤 짧게 · ${l.times}번쯤 누르면 한 바퀴` : '더 줄일 오래된 사건이 없어요'}</p>
       <p><b>2차</b> · ${l.n2 ? `1차로 줄인 아주 오래된 사건 <b>${l.n2}개</b>를 한 줄로 · ${l.times2}번쯤` : '아직 대상이 없어요 · 1차로 줄인 사건이 더 오래되면 생겨요'}</p>
       <p class="pk-sub">원문은 보관함에 남아요 · AI 1번 · 1~2분 · 끝나면 미리 보고 적용해요</p>
+      ${packDone().length ? `<p class="pk-sub"><button type="button" class="linkbtn" data-act="packundo"${busyNow ? ' disabled' : ''}>↩ 간추린 사건 ${packDone().length}개 원문으로 되돌리기</button></p>` : nav.packSyncing ? '<p class="pk-sub">드라이브에서 되돌릴 원문을 찾는 중…</p>' : ''}
       <div class="devask-btns">${l.n ? `<button class="btn pri" data-act="packgo" data-arg="1"${busyNow ? ' disabled' : ''}>1차 시작</button>` : ''}${l.n2 ? `<button class="btn${l.n ? '' : ' pri'}" data-act="packgo" data-arg="2"${busyNow ? ' disabled' : ''}>2차 시작</button>` : ''}<button class="btn" data-act="packcancel">${l.n || l.n2 ? '취소' : '닫기'}</button></div></div></div>`;
     const ok = p.rows.filter(r => r.ok), a = ok.reduce((s, r) => s + r.before.length, 0), b = ok.reduce((s, r) => s + r.after.length, 0), bad = p.rows.length - ok.length, lv2 = p.level === 2, more = Math.max(0, (lv2 ? l.n2 : l.n) - ok.length), moreC = lv2 ? l.c2 : l.c;
     return `<div class="devask pk">${head}<div class="pk-b">
@@ -11416,7 +11433,7 @@
       case 'notes': nav.view = 'notes'; nav.key = null; if (arg) nav.ngrp = N_GROUPS.find(([, ks]) => ks.includes(arg))?.[0] || nav.ngrp; nav.nopen = nav.nedit = null; render(); out('main').scrollTop = 0; return;
       case 'nfold': { if (e.target.closest('.nh-add')) return; const o = nav.nshow?.open || []; nav.nshow = { g: nav.ngrp, open: o.includes(arg) ? o.filter(x => x !== arg) : [...o, arg] }; return keepScroll(render); }
       case 'ngrp': nav.ngrp = arg; nav.nopen = nav.nedit = nav.nnew = null; keepScroll(render); if (arg === '검색') ui('[data-nq]')?.focus(); return;
-      case 'packold': nav.pack = null; nav.packAsk = true; render(); out('main').scrollTop = 0; return;
+      case 'packold': nav.pack = null; nav.packAsk = true; render(); out('main').scrollTop = 0; packSync(chatIdFromPath()); return;
       case 'packgo': nav.packAsk = false; return packOld(Number(arg) === 2 ? 2 : 1);
       case 'packmin': nav.packMin = !nav.packMin; return keepScroll(render);
       case 'packopen': { const s = nav.packOpen ||= new Set(); if (s.has(arg)) s.delete(arg); else s.add(arg); e.preventDefault(); return keepScroll(render); } // 펼친 것을 기억해 둬요(화면이 다시 그려져도 안 접히게)
