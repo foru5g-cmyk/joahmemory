@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.16
+// @version      5.8.17
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2390,6 +2390,9 @@
   //   옛 줄은 앞부분(띄어쓰기 무시)이 맞는 줄이 딱 하나일 때만 고쳐요(못 찾으면 그 줄만 건너뜀 · miss). 예전 항목에 이미 있는 줄은 다시 안 더해요.
   //   제목 줄은 안 바꿔요(【이름】은 이름이 같을 때만). 바꾼 줄 바로 다음 '+ 근거'는 그 줄의 옛 근거를 갈아 끼워요.
   let patchMiss = [];
+  // 지금 장면(현재상태 ▸ 기준 시점·장소)은 정리 때마다 바뀌는 값: 때·곳이 바뀌면 예전 장면의 근거는 떼요(안 그러면 다른 날 근거가 계속 쌓여요) · 이번에 새로 온 근거는 둬요
+  const isScene = (sec, key) => sec === '현재상태' && /기준\s*시점/.test(String(key));
+  const sceneProofs = (old, next) => { const had = new Set(old), changed = next.some((l, k) => k && l.trim() && !PROOF_LINE.test(l) && !had.has(l)); return changed ? next.filter(l => !(PROOF_LINE.test(l) && had.has(l))) : next; };
   // endKeep(현재상태 ▸ 몸 상태): ✕로 뺄 줄을 지우지 않고 끝에 (끝남)을 붙여 남겨요 → 나중에 "그때 다쳤었지"로 쓸 수 있게
   function applyPatch(old, ops, noProof = false, endKeep = false) {
     const out = endKeep ? old.map(l => l.replace(/^(\s*-\s*)[✕×]\s*(.+?)\s*$/, (_, a, t) => a + t + (/\(끝남\)$/.test(t) ? '' : ' (끝남)'))) : old.slice(), miss = [], flat = t => String(t).replace(/^\s*(?:[-•]\s+)?/, '').replace(/\s+/g, ''); // 예전에 '- ✕ …' 글자로 박힌 줄도 (끝남)으로
@@ -2455,6 +2458,7 @@
         if (it.patch) { // 고친 줄만 온 항목: 예전 항목에 끼워 넣어 온전한 항목으로 만든 뒤 아래 흐름을 그대로 타요
           if (i < 0) { patchMiss.push(it.key); continue; }
           const p = applyPatch(o.items[i].lines, it.lines.slice(1), d.key === '날짜로그' && proofsHidden, d.key === '현재상태' && /몸/.test(o.items[i].key));
+          if (isScene(d.key, o.items[i].key)) p.lines = sceneProofs(o.items[i].lines, p.lines);
           if (p.miss.length) patchMiss.push(`${it.key}: ${p.miss.length}줄`);
           it = { key: o.items[i].key, del: false, lines: p.lines, patched: true };
         }
@@ -2492,7 +2496,7 @@
         if (guard && i >= 0 && !it.del && it.lines.join('').length < o.items[i].lines.join('').length && shrunkOnly(o.items[i].lines.join(' '), it.lines.join(' ')) && !freshWord(o.items[i].lines.join(' '), it.lines.join(' '))) continue;
         if (it.del) { if (i >= 0) { const logKeep = proofsHidden && d.key === '날짜로그' && !n.items.some(isPack) && !mergedInto(it, n.items, o.items[i]); /* 평소 정리: AI가 사건을 지우려 해도 남겨요(모델마다 복불복이라) · 정정·(요약) 묶기·새 사건에 합친 것(mergedInto)은 지울 수 있어요 */ if (!logKeep && !(d.key === '소지품' && delSrc && !itemSaid(o.items[i].key) && itemKept(o.items[i])) && (delOk(it) || (d.key === '날짜로그' && n.items.some(isPack)))) { /* 소지품: 선물·장신구·걸친 것·사진(itemKept)은 이번 대화에 안 나왔으면 AI가 지우려 해도 남겨요 · 소모품은 AI가 지우는 대로 */ if (d.key === '날짜로그') packAt = packAt < 0 ? i : Math.min(packAt, i); o.items.splice(i, 1); } else delKept.push(it.key.replace(/\s*\(삭제\)\s*$/, '')); } }
         else if (i >= 0 && d.key === '인지·비밀') o.items[i] = mergeSecret(o.items[i], it); // 정정·형식 맞추기 때도 AI가 안 쓴 사람 줄은 그대로(줄이 사라지지 않게)
-        else if (i >= 0) o.items[i] = (proofsHidden || it.lines.some(l => PROOF_LINE.test(l))) ? it : { ...it, lines: [...it.lines, ...o.items[i].lines.filter(l => PROOF_LINE.test(l) && !it.lines.includes(l))] }; else o.items.push(it); // 고쳐 쓴 글에 근거·번역이 하나도 없으면 예전 것을 붙여요(근거가 사라지지 않게) · 근거를 안 보낸 정리에선 고친 항목의 옛 근거를 안 붙여요(안 맞는 근거가 남아서)
+        else if (i >= 0) o.items[i] = (proofsHidden || it.lines.some(l => PROOF_LINE.test(l)) || isScene(d.key, it.key)) ? it : { ...it, lines: [...it.lines, ...o.items[i].lines.filter(l => PROOF_LINE.test(l) && !it.lines.includes(l))] }; else o.items.push(it); // 고쳐 쓴 글에 근거·번역이 하나도 없으면 예전 것을 붙여요(근거가 사라지지 않게) · 근거를 안 보낸 정리에선 고친 항목의 옛 근거를 안 붙여요(안 맞는 근거가 남아서)
       }
       if (packAt >= 0) { const packs = o.items.filter(x => isPack(x) && !keysBefore.has(itemKey(x.key)));
         if (packs.length) { o.items = o.items.filter(x => !packs.includes(x)); o.items.splice(Math.min(packAt, o.items.length), 0, ...packs); } }
@@ -5268,7 +5272,7 @@
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
       const m = String(msg?.message || msg || '').slice(0, 300), last = errLog[errLog.length - 1];
       if (errLog.some(x => x.where === where && x.msg === m && Date.now() - x.at < (/건너뜀/.test(m) ? 6 * 3600e3 : 3000))) return; // 같은 게 연달아 오면 한 번만 · '건너뜀'(보낼 때마다 나는 것)은 같은 이유면 6시간에 한 번만
-      errLog.push({ at: Date.now(), where, msg: m, room }); errLog = errLog.slice(-200); // 방마다 따로 보여서 넉넉히(한 방이 다른 방 기록을 밀어내지 않게)
+      errLog.push({ at: Date.now(), where, msg: m, room }); { const mine = errLog.filter(x => x.room === room); if (mine.length > 20) { const old = new Set(mine.slice(0, mine.length - 20)); errLog = errLog.filter(x => !old.has(x)); } } /* 방마다 최근 20개만 */ errLog = errLog.slice(-200); // 방마다 따로 보여서 넉넉히(한 방이 다른 방 기록을 밀어내지 않게)
       await setValue('errlog', JSON.stringify(errLog)); } catch (_) {}
   }
   function toast(text, kind = 'info', ms = 0) {
@@ -10087,7 +10091,7 @@
     if (nav.view === 'graph') { title = '전체 관계도'; sub = '확대해서 한눈에'; }
     if (nav.view === 'injected') { title = '들어간 노트'; sub = '채팅 안에 실제로 있는 그대로'; }
     if (nav.view === 'history') { title = '정리 기록'; sub = '이어진 기억 · 쓴 돈'; }
-    if (nav.view === 'errlog') { title = '오류 기록'; sub = '안 될 때 남는 기록 · 최근 60개'; }
+    if (nav.view === 'errlog') { title = '오류 기록'; sub = '안 될 때 남는 기록 · 최근 20개'; }
     if (nav.view === 'run') { title = '정리하기'; sub = '무엇을 · 누가 정리할지 골라요'; }
     if (nav.view === 'edit' || nav.view === 'pvEdit') { title = nav.key + ' 편집'; sub = nav.view === 'pvEdit' ? '넣기 전 결과 고치기' : '저장된 노트 고치기'; }
     if (nav.view === 'preview') { title = '새 기억 확인'; sub = '확인하고 넣어 주세요'; }
@@ -10344,7 +10348,7 @@
     const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
-    loading = true; loadingAt = Date.now(); const rT = loadingAt; let rRead = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
+    loading = true; loadingAt = Date.now(); const rT = loadingAt; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
     try {
       let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT;
       if (chatIdFromPath() !== chatId) return;
@@ -10358,11 +10362,12 @@
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
       injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; relPillOn = String(await getValue('relPill', 'on')) !== 'off'; pregMode = String(await getValue('pregMode', 'on')) !== 'off'; { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; pregHasKey = !!String(await getValue(keyOf(m), '')).trim(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); }
-      if (injectOn && snap.note && !snap.note.parked && behind !== 0) await updateInjCtx(chatId, snap, undefined, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); // 마지막 유저 말로 골라요
+      if (injectOn && snap.note && !snap.note.parked && behind !== 0) { const t = Date.now(); await updateInjCtx(chatId, snap, undefined, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); rPick = Date.now() - t; } // 마지막 유저 말로 골라요
       if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && !(snap.note.web && !sceneOn) && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
         try {
-          if (await moveNote(chatId, snap)) {
+          const tm = Date.now(), moved = await moveNote(chatId, snap); rMove = Date.now() - tm;
+          if (moved) {
             snap = await readSinceLastNote(chatId);
             await setValue('moved:' + chatId, JSON.stringify({ at: Date.now(), from: behind }));
             if (sceneOn) flashHeart(); else pageToast(`기억(1~${snap.note?.turns || '?'}턴)을 최근 AI 답변 쪽으로 옮겼어요`);
@@ -10518,7 +10523,7 @@
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
     finally { loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
-      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 맞추기 ${s(rv - rT - rRead)} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개`, chatId); }
+      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개`, chatId); }
   }
 
   // mode: 'new' 지난 정리 뒤 대화로 이어서 / 'tidy' 지금 노트만 새 형식·규칙대로 다시 / 'rebuild' 채팅 전체로 처음부터
