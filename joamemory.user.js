@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.10
+// @version      5.8.11
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1952,12 +1952,12 @@
     const mine0 = (love.log || []).filter(x => !x.w || x.w === who), tn = Math.min(4, mine0.filter(x => x.open).length + (day == null ? 0 : mine0.filter(x => !x.open && x.d != null && x.d <= day && day - x.d <= 14 && LV_FIGHT.test(x.t)).length * 0.5)); // 긴장: 쌓일수록 일이 잦고 커져요
     // 요즘: 그 사람 생활에 며칠씩 이어지는 일 · 무슨 일인지는 AI가 이 인물 처지에서 정하고 정리 때 %%연애요즘으로 적어 둬요 · 끝나면 이틀(날짜 모르면 6턴) 쉬어요
     const ph = love.phase; if (ph && (ph.to != null && day != null ? day > ph.to : turn > ph.toT)) { love.phase = null; love.phaseGap = day != null ? { d: day + 2 } : { t: turn + 6 }; loveSave(); }
-    const phKey = day != null ? 'd' + day : turn; if (!broke && !love.phase && love.phaseRoll !== phKey) { love.phaseRoll = phKey; const g = love.phaseGap || {};
+    const phKey = day != null ? 'd' + day + '|' + Math.floor(turn / 15) : turn; /* 같은 날이 길면 15턴마다 한 번 더 */ if (!broke && !love.phase && love.phaseRoll !== phKey) { love.phaseRoll = phKey; const g = love.phaseGap || {};
       if (!(day != null && g.d != null && day < g.d) && !(g.t != null && turn < g.t) && r('ph') < (day != null ? 0.15 : 0.05)) { const len = 3 + Math.floor(r('phl') * 8); love.phase = { from: day, to: day != null ? day + len : null, fromT: turn, toT: turn + len * 3, hard: r('pht') < 0.6, what: '' }; }
       loveSave(); }
     if (love.lastTurn !== turn && !love.ev) {
       const gap = turn - (love.evTurn ?? -99), dd = day != null ? (love.evDay != null ? day - love.evDay : 99) : null;
-      const newDay = dd != null && dd >= 1 && love.evRollDay !== day, p0 = gap < 3 ? 0 : dd != null ? (dd >= 1 ? (newDay ? (dd >= 3 ? 0.4 : 0.2) : 0) : gap >= 25 ? 0.05 : 0) : (gap >= 8 ? 0.2 : 0), p = p0 ? Math.min(0.6, p0 + tn * 0.05) : 0;
+      const newDay = dd != null && dd >= 1 && love.evRollDay !== day, p0 = gap < 3 ? 0 : dd != null ? (newDay ? (dd >= 3 ? 0.4 : 0.2) : gap >= 8 ? 0.15 : 0) : (gap >= 8 ? 0.2 : 0), p = p0 ? Math.min(0.6, p0 + tn * 0.05) : 0;
       if (newDay && gap >= 3) love.evRollDay = day; // 같은 날 또 생기는 건 드물게(긴 장면 하루에 일이 줄줄이 안 터지게) // 이야기 날짜로 며칠에 한 번꼴 · 날짜를 모르면 턴으로
       if (r('ev') < p) {
         const K = [...(broke ? ['이 인물 생활에서 생긴 일(일·친구·가족)', '마주침(원래 같이 다니던 곳·같은 생활권일 때만)', '남은 물건 — 돌려 달라거나 돌려주거나 가져가라는 얘기', '같이 쓰던 것·사는 곳 정리(같이 살았다면 집 문제까지)', '술자리', '소식이 들림', '새 사람 소식(어느 쪽이든)'] : ['이 인물 생활에서 터진 일(일·학업·가족·돈·건강)', '둘 주변에서 생긴 사건사고', '일·학업·약속 때문에 생긴 일', '의견이 갈리는 일', '서운하게 하는 일(본인은 모를 수도)', '오해가 생길 만한 일', '둘 사이에 끼어드는 사람', '둘을 두고 도는 소문', `${who}가 먼저 꺼내는 일(제안·애정·질투·장난)`, '둘이 가까워지는 일(이 인물 방식으로)', ...(loveLive(mem, love.who) ? ['같이 사는 집에서 생기는 일'] : []), ...(love.start != null && day != null && day - love.start >= 180 ? ['오래 사귄 사이라서 생기는 일'] : [])]), ...(love.side ? [`바람 상대 ${love.side} 쪽에서 생긴 일`] : []), ...(!broke && loveExPrev() ? [`전 연인 ${loveExPrev()} 쪽에서 생긴 일`] : [])]; // 새 연애 중에도 전 연인이 가끔 얽혀요
@@ -1975,10 +1975,13 @@
     loveOut = [broke ? `※ 현실 연애(규칙): ${who}와 헤어진 사이 · 반응은 캐릭터 설정·성격·서사대로(남은 마음은 서사에 있을 때만) · 헤어진 뒤엔 자기 생활(일·친구·가족)대로 지냄 · 거리는 상처·화난 정도와 남은 마음만큼 · 다가갈지 말지는 그 사람이 정함(성격·서사대로) · 유저가 있는 곳에 우연히 나타나게 만들지 않음(그 사람이 원래 갈 만한 곳일 때만) · NPC는 유저 편 아님 · 쉽게 수긍·사과·누그러짐 없음 · 오해는 해명과 믿을 근거가 있어야 풀림 · 남은 마음이 서사에 있으면 그만큼 쉽게 이해 못 함 · 유저가 연락하거나 붙잡아도 받아 줄지는 정해지지 않음 · 다툼은 억지로 봉합하지 않음 · 화해·재회는 서사·성격대로(마음이 갑자기 풀리기도 함) · 유저의 말·행동·마음은 안 씀`
       : `※ 현실 연애(규칙): ${who} · 개연성 먼저(앞 이야기·설정과 맞게 · 억지 사건 없음) · 성격·기질·자존심은 원래 설정대로(사귄다고 바뀌지 않음) · 유저 편만 들거나 맞춰 주지 않음 · 자기 생활(일·학업·친구·가족)이 있고 연애도 이 인물 서사·처지대로 · 장소는 그 사람이 원래 갈 만한 곳(유저 있는 곳에 우연히 나타나게 만들지 않음) · 자기 뜻으로 먼저 말하고 움직임(지금 장면에 있을 때) · 좋아하는 마음·애정·질투·장난도 성격대로 · 티격태격부터 언성 높이는 싸움까지 · 유저가 한 일도 좋게만 받아 주지 않고 성격대로 반응(화남·억울함도 그대로) · 무엇을 하고 어떻게 반응할지는 그 사람이 정함(냉전·잠수·버티기·먼저 사과하기·먼저 헤어지자고 하기·잘못을 감추거나 둘러대거나 남 탓하기 등 · 예시에 없는 반응도 · 그때그때 상황에 따라 다르게 · 성격·서사·그날 일·쌓인 감정대로) · 숨긴 건 나중에 드러날 수도 있음 · 감정은 그날 일과 쌓인 만큼 오르내림 · 다툼은 억지로 봉합하지 않음 · 싸우다 갑자기 철들거나 아픈 과거를 꺼내 화해로 끌고 가지 않음 · 화해는 서사·성격대로(마음이 갑자기 풀리기도 함) · 헤어짐도 열려 있음 · 받아 줄지는 정해지지 않음 · 유저의 말·행동·마음은 안 씀`,
       `※ 현실 연애 지금: ${who} · ${loveDays(day)}${!broke && loveLive(mem, who) ? ' · 함께 사는 중(같이 사는 연인의 현실대로)' : ''}${loveAnniv(day)}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}${!broke && pile.length >= 3 ? ` · 요즘 다툼·서운함 잦음(최근 30일 ${pile.length}번: ${pile.slice(-3).map(x => x.t.slice(0, 18)).join(' / ')}) — 쌓인 감정은 이 사람 성격대로` : ''}${love.side ? ` · 유저 캐릭터의 바람 상대: ${love.side}(누가 아는지는 서사대로)` : ''}${broke && love.exNew ? ` · ${who}의 새 사람: ${love.exNew}(유저가 아는지는 서사대로)` : ''}`];
+    if (!broke) { const mk = day != null ? 'd' + day : 't' + Math.floor(turn / 10); let h = 2166136261; for (const ch of chatId + '|mood|' + mk) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 12;
+      const M = [['좋음', 1], ['평소', 2], ['장난기', 1.5], ['고집', 1], ['피곤', 1], ['예민', 1 + tn * 0.5], ['서운', 0.8 + tn * 0.5], ['퉁명', 0.8 + tn * 0.5]], tot = M.reduce((a, x) => a + x[1], 0); let roll = (h >>> 0) / 4294967296 * tot, mood = M[0][0]; for (const [m, w] of M) { if ((roll -= w) < 0) { mood = m; break; } }
+      if (mood !== '평소') loveOut.push(`※ ${who} ${day != null ? '오늘' : '요즘'} 기분: ${mood} — 이유·드러내는 방식은 이 인물 생활·성격대로`); }
     if (love.phase && !broke) { const P = love.phase, n = day != null && P.from != null ? day - P.from + 1 : 0;
       loveOut.push(`※ ${who} 요즘: ${P.what ? P.what : '생활에 며칠 이어지는 일 하나(' + (P.hard ? '힘든 쪽' : '좋은 쪽') + ' · 이 인물 직업·나이·처지에서 AI가 정하고 이어 감 · 설정에 없는 큰 과거·가족사는 새로 만들지 않음)'}${n > 0 ? ' · ' + n + '일째' : ''} — 장면에 저절로 묻어남(연락·약속·기분·데이트에 영향) · 드러낼지는 이 인물이 정함`); }
     if (love.ev) loveOut.push(love.ev.line);
-    if (!sceneOn) loveOut = [loveOut[0], `※ 현실 연애 지금: ${who}${broke ? ' · 헤어진 사이' : ''}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}`]; // 앱 방식: 규칙 + 짧은 지금 줄만(날수·요즘·사건처럼 자주 바뀌는 줄 빼요)
+    if (!sceneOn) loveOut = [loveOut[0], `※ 현실 연애 지금: ${who}${broke ? ' · 헤어진 사이' : ''}${open.length ? ' · 안 풀림: ' + open.join(' / ') : ''}`, ...loveOut.filter(l => / 기분: /.test(l)), ...(love.ev ? [love.ev.line] : [])]; // 앱 방식: 규칙 + 짧은 지금 줄 + 생긴 일(날수·요즘처럼 자주 바뀌는 줄은 빼요)
     loveSig = loveOut.join('\n');
   }
   async function loveAppSync(chatId) { // 앱 방식: 줄이 바뀌었으면 노트 든 답변에 한 번 고쳐 써요
