@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.24
+// @version      5.8.25
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2576,6 +2576,7 @@
     //   AI가 말을 조금 바꿔 줄여도(대답 없이 → 말없이) 알아보게 절반으로 잡았어요. 새 사실이 든 수정은 건드리지 않아요.
     const grams = t => { const x = sq(t).replace(/[\p{P}\p{S}]/gu, ''), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; };
     const near = (a, b) => { const A = grams(a), B = grams(b); if (!B.size) return true; let c = 0; for (const x of B) if (A.has(x)) c++; return c / B.size >= 0.5; };
+    const NEG = /않|못\s|못함|못했|아니|없(?:음|다|었|어|는|던|고)|안\s|거짓|사실은|알고\s*보니|불확실|모름|모른|모르|미확인|취소|번복/g; // coreLost 안의 NEG는 밖에서 안 보여서 여기서 다시 선언해요
     const n = itemBlocks(sec.body);
     n.items = n.items.map(it => {
       const o = oldItems.find(x => itemKey(x.key) === itemKey(it.key));
