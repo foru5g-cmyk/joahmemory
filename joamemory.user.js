@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.25
+// @version      5.8.26
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -96,10 +96,9 @@
   //   이 크기는 근거 줄·감정선까지 센 값이고, 채팅에 들어가는 건 그걸 뺀 나머지라 실제 주입은 더 작아요.
   const LIMITS = [30000, 35000, 40000, 45000, 50000, 1000000]; const NO_LIMIT = 1000000; // NO_LIMIT: 웹 모드용 "제한 없음"
   let NOTE_LIMIT = 50000;
-  // 웹 모드('제한 없음')도 노트는 말풍선 2개(약 10만 자)에 들어가야 해요. 근거·명대사까지 센 실제 노트가 8만 자를 넘으면 한도를 채팅 주입 기준으로 바꿔 줘서
-  //   실제 8.5만 자(85%)에서 끝난 옛 사건 줄이기, 9만 자(90%)에서 (요약) 묶기가 켜져요. 그 밑이면 예전처럼 제한 없음.
-  const STORE_LIMIT = 100000;
-  const noteLimit = base => { if (NOTE_LIMIT !== NO_LIMIT) return NOTE_LIMIT; const full = String(base || '').length; return full < STORE_LIMIT * 0.8 ? NO_LIMIT : Math.round(STORE_LIMIT * stripProof(base).length / full); };
+  // 웹 모드('제한 없음')는 정리 때 노트를 줄이지 않아요: 채팅엔 장면에 맞춘 일부만 들어가고 전체 기억은 기기에 있어서 크기 한도가 없어요 · 줄이는 건 간추리기 버튼으로만
+  //   (예전엔 8만 자를 넘으면 한도를 10만 자로 잡아 정리 AI가 옛 사건을 (요약)으로 묶었어요 → 12만 자가 한 번에 7만 자로 줄어서 뺐어요)
+  const noteLimit = base => NOTE_LIMIT;
 
   // 기억 칸. key는 노트 안 "## 제목"과 같습니다.
   const FIXED = '고정 설정';
@@ -286,8 +285,10 @@
       if (!gmRequest) { rej0(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       // 아이폰은 화면이 꺼지거나 다른 앱에 갔다 오면 연결이 끊겨도 알려 주지 않아 '만드는 중'이 끝없이 갔어요 → 시계를 직접 봐요
       const t0 = Date.now(); let h = null, len = 0, last = t0; // len·last: 받던 글이 5분 넘게 안 늘면 끊긴 걸로 봐요(전체 시간까지 안 기다림)
-      const tick = setInterval(() => { const idle = (len || idle0) && Date.now() - last > 300000; if (Date.now() - t0 < timeout && !idle) return; reject(new Error(idle ? 'AI 답이 5분 넘게 멈춰서 끊었어요. 다시 눌러 주세요.' : timeout >= 600000 ? `AI 답이 ${Math.round(timeout / 60000)}분 안에 끝나지 않아 끊었어요. 설정에서 AI 생각을 적게로 하거나 턴을 나눠 다시 해 주세요.` : '응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
-      const resolve = v => { clearInterval(tick); res0(v); }, reject = e => { clearInterval(tick); rej0(e); };
+      const quiet = idle0 ? 600000 : 300000; // 생각하는 모델(Neon 등)은 생각 중에 글이 뜸하게 와서 10분까지 기다려요(살아 있는 답을 5분에 끊지 않게)
+      const tick = setInterval(() => { const idle = (len || idle0) && Date.now() - last > quiet; if (Date.now() - t0 < timeout && !idle) return; reject(new Error(idle ? `AI 답이 ${quiet / 60000}분 넘게 멈춰서 끊었어요. 다시 눌러 주세요. (받은 글 ${len.toLocaleString()}자 · 도중에 화면을 떠난 적 ${hid ? '있음' : '없음'})` : timeout >= 600000 ? `AI 답이 ${Math.round(timeout / 60000)}분 안에 끝나지 않아 끊었어요. 설정에서 AI 생각을 적게로 하거나 턴을 나눠 다시 해 주세요.` : '응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
+      let hid = document.hidden; const vis = () => { if (document.hidden) hid = true; }; document.addEventListener('visibilitychange', vis); // 끊긴 까닭 가르기: 도중에 화면을 떠났으면(다른 앱·화면 꺼짐) 폰이 연결을 끊은 쪽
+      const resolve = v => { clearInterval(tick); document.removeEventListener('visibilitychange', vis); res0(v); }, reject = e => { clearInterval(tick); document.removeEventListener('visibilitychange', vis); rej0(e); };
       h = gmRequest({ method, url, timeout, headers: { 'Content-Type': 'application/json', ...headers }, data: body === undefined ? undefined : JSON.stringify(body),
         onprogress: r => { const n = (r?.responseText || '').length; if (n > len) { len = n; last = Date.now(); } try { onProgress?.(r?.responseText || ''); } catch (_) {} },
         onload: r => { if (r.status >= 200 && r.status < 300) return resolve(r.responseText || '');
@@ -3722,6 +3723,7 @@
   // ── 말풍선 위 턴 번호: 어디까지 정리됐는지 눈으로 확인 ──
   //    전체 대화를 순서대로 세서, 사용자 메시지마다 턴이 하나씩 올라갑니다. 노트의 턴 수에 맞춰 보정해요.
   let turnMap = new Map(), turnMapRoom = '', turnMapAt = 0, noteTurns = 0, badgeMiss = new Set();
+  let turnBase = null; // 보정 전 턴 번호(메시지 ID → 턴). 같은 방에서 이어 셀 때 써요
   async function readAll(chatId, maxPages = MAX_PAGES) {
     const out = []; let cursor = '';
     for (let page = 0; page < maxPages; page++) {
@@ -3734,17 +3736,35 @@
     return list;
   }
   async function loadTurnMap(chatId, snap) {
-    if (String(await getValue('badges', 'on')) === 'off') { turnMap = new Map(); paintBadges(); return; }
+    if (String(await getValue('badges', 'on')) === 'off') { turnMap = new Map(); turnBase = null; paintBadges(); return; }
     if (turnMapRoom === chatId && Date.now() - turnMapAt < 8000) return;
-    if (turnMapRoom !== chatId) badgeMiss.clear();
+    if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; }
     turnMapRoom = chatId; turnMapAt = Date.now();
     try {
-      const all = await readAll(chatId);
-      const map = new Map(); let t = 0;
-      for (const m of all) { if (msgRole(m) === 'user') t++; map.set(msgId(m), { turn: t, role: msgRole(m) }); }
-      const n = snap?.note, upto = n && map.get(n.upto);
+      // 같은 방은 최신 한 쪽만 읽어, 이미 센 메시지 뒤부터 이어 셉니다(답마다 방 전체를 다시 읽지 않게). 이을 자리를 못 찾으면 전체를 다시 읽어요.
+      //   한 쪽보다 오래된 메시지를 지우면 방을 다시 열 때까지 그 뒤 번호가 밀려요. 번호 표시만 그렇고, 정리 지점은 메시지 ID로 따로 잡아요.
+      let base = null;
+      if (turnBase) {
+        const page = liveLine(sortOld((await listPage(chatId, '')).list)).filter(isChat);
+        const i = page.findIndex(m => turnBase.has(msgId(m)));
+        if (i >= 0) {
+          const aid = msgId(page[i]); let t = turnBase.get(aid).turn;
+          base = new Map();
+          for (const [id, v] of turnBase) { base.set(id, v); if (id === aid) break; } // 이음 자리 뒤는 버리고 다시 셉니다(리롤·삭제 반영)
+          for (const m of page.slice(i + 1)) { if (msgRole(m) === 'user') t++; base.set(msgId(m), { turn: t, role: msgRole(m) }); }
+        }
+      }
+      if (!base) {
+        const all = await readAll(chatId); let t = 0;
+        base = new Map();
+        for (const m of all) { if (msgRole(m) === 'user') t++; base.set(msgId(m), { turn: t, role: msgRole(m) }); }
+      }
+      if (turnMapRoom !== chatId) return; // 읽는 사이 방을 옮겼으면 버려요(다른 방 번호가 붙지 않게)
+      turnBase = base;
+      const n = snap?.note, upto = n && base.get(n.upto);
       const offset = n && upto ? n.turns - upto.turn : 0;
-      map.forEach(v => { v.turn += offset; });
+      const map = new Map();
+      base.forEach((v, id) => map.set(id, { turn: v.turn + offset, role: v.role }));
       turnMap = map; noteTurns = n ? n.turns : 0;
       paintBadges();
     } catch (_) { /* 번호 표시는 보조 기능이라 실패해도 조용히 넘어갑니다 */ }
@@ -4662,7 +4682,7 @@
     .tl-up,.tl-mem,.tl-story{border:1px solid var(--rule);border-radius:16px;padding:10px 14px;margin:0 0 10px}
     .tl-story .story{margin-top:8px}
     .tl-up b,.tl-mem b{display:block;font-size:13px;margin-bottom:4px}
-    .tl-up .tl-side b{display:inline;font-size:inherit;margin:0}
+    .tl-up .tl-side b,.tl-up b.tn{display:inline;font-size:inherit;margin:0}
     .tl-fold .tl-ev-fold summary{display:block;list-style:none;cursor:pointer;position:relative;padding-right:22px;margin:0}
     .tl-fold .tl-ev-fold summary b::after,.tl-fold .tl-ev-fold summary::before{content:none}
     .tl-ev-fold summary::-webkit-details-marker{display:none}
@@ -6636,6 +6656,9 @@
       if (d.reset || (!d.memory && !Object.keys(d.store || {}).some(k => d.store[k]))) { if (!auto) toast('구글 백업이 비어 있어요(초기화된 방이에요).', 'info', 3000); return; }
       const when = d.at ? new Date(d.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
       const now = snapshot?.note;
+      // 새 기기 자동 복원인데 채팅 노트와 같은 정리본이면 확인 화면 없이 명대사·ETC·기록만 채워요(노트는 이미 들어와 있어요)
+      //   같은 정리본 = 정리 지점·턴 수·마지막으로 고친 때(me)가 모두 같을 때만. 하나라도 다르면 예전처럼 묻고 확인 화면을 거쳐요
+      if (auto && now?.upto && d.upto === now.upto && (Number(d.turns) || 0) === (now.turns || 0) && (Number(d.me) || 0) === (now.me || 0)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 채팅 노트와 같은 정리본이라 확인 없이 받음'); return; }
       if (!two && !confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
       await importBackupText(r.data, true);
     }
@@ -10468,6 +10491,7 @@
     try {
       pageToast(freshTurns() + '턴이 쌓여서 기억을 갱신하는 중이에요…');
       draft = null; await run('new');
+      if (!draft) autoSum.wait = { c: chatId, n: freshTurns() + 3 }; // run은 실패를 알림만 띄우고 끝내서, 결과가 없으면 여기서 3턴 쉬어요
       // 자동 정리는 확인 화면에서 멈추지 않고 바로 넣어요(멈추면 다음 자동 정리도 줄줄이 멈춰서) · 걸리는 게 있으면 알림 + 오류 기록에 남겨요 · 정리 기록에서 되돌릴 수 있어요
       if (draft && nav.view === 'preview') { const w = [(draft.lost || []).length && '빠진 인물 ' + draft.lost.slice(0, 3).join('·'), (draft.dropped || []).length && '빠진 줄 ' + draft.dropped.length + '개', (draft.gone || []).length && '빠진 소지품·고리 ' + draft.gone.length + '개', (draft.askNames || []).length && '같은 사람인지 헷갈리는 이름 ' + draft.askNames.length + '쌍'].filter(Boolean);
         apply.auto = true; try { await apply(); } finally { apply.auto = false; }
@@ -10644,7 +10668,7 @@
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
         //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
-        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !(await historyOf(chatId)).length && !String(await getValue('brchk:' + chatId, ''))) { await setValue('brchk:' + chatId, '1');
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !String(await getValue('brchk:' + chatId, '')) && !(await historyOf(chatId)).length) { // 한 번 본 방(brchk)은 정리 기록을 안 꺼내요: 기록은 건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요 await setValue('brchk:' + chatId, '1');
           const ct = c?.turns || 0;
           branchFind(chatId).then(async list => { const x = list[0]; if (!x || x.turn === ct || chatIdFromPath() !== chatId || busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
             const anc = branchAnc(await readAll(chatId), chatId); if (!ct && !anc.length) return; if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return; } // 다른 방 정리본은 대화가 같아도 안 써요
@@ -11300,7 +11324,7 @@
     for (const k of ['gsUrl', 'gsKey', 'firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     { const on = !!String(await getValue('gsUrl', '')).trim(); if (ui('[data-set="gsUrl"]')) await setValue('gsAuto', on ? '' : 'off'); await gsLinkSet(); }
     for (const [, key] of OPTIONAL) { const el = ui(`[data-set="${key}"]`); if (el) await setValue(key, el.checked ? 'on' : 'off'); }
-    turnMapAt = 0; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
+    turnMapAt = 0; turnBase = null; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot); // 설정 저장 때는 전체를 다시 세요
     if (quiet) { if (wasScene !== sceneOn) render(); else fillSettings(); if (wasScene === sceneOn) toast('저장했어요', 'ok', 1200); return; } // 바로 저장: 화면은 그대로(입력 중인 칸 안 날아가게)
     toast('저장했어요.', 'ok', 2500);
     nav.tab = 'home';
