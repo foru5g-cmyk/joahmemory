@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.27
+// @version      5.8.28
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -147,10 +147,14 @@
     const end = fn => function (...a) { if (!done) { done = true; netIn = Math.max(0, netIn - 1); } netLast = Date.now(); return fn?.apply(this, a); };
     const prog = opts.onprogress;
     return gmRequest0({ ...opts, onprogress: function (...a) { netLast = Date.now(); return prog?.apply(this, a); }, onload: end(opts.onload), onerror: end(opts.onerror), ontimeout: end(opts.ontimeout), onabort: end(opts.onabort) }); });
+  const io = { gm: 0, n: 0, db: 0, dn: 0 }; // 저장소에서 꺼내는 데 쓴 시간·횟수(확장 프로그램 저장소 / 브라우저 DB) · 방 읽기가 느릴 때 오류 기록 '느림'에 같이 적어요
   async function gmGet(key, fallback) {
-    if (typeof GM_getValue === 'function') return GM_getValue(key, fallback);
-    if (hasGM && GM.getValue) return GM.getValue(key, fallback);
-    try { const v = localStorage.getItem('memo-note:' + key); return v === null ? fallback : v; } catch (_) { return fallback; }
+    const t = Date.now();
+    try {
+      if (typeof GM_getValue === 'function') return await GM_getValue(key, fallback);
+      if (hasGM && GM.getValue) return await GM.getValue(key, fallback);
+      try { const v = localStorage.getItem('memo-note:' + key); return v === null ? fallback : v; } catch (_) { return fallback; }
+    } finally { io.gm += Date.now() - t; io.n++; }
   }
   // 브라우저 DB(IndexedDB): 크고 방마다 쌓이는 자료(정리 기록·전체 기억·원문 보관함·턴 사본·뜻 검색 값 등)는 여기에 · 작은 설정·모드 기록은 그대로 확장 프로그램 저장소에
   //   예전에 확장 프로그램 저장소에 있던 값은 처음 읽을 때 DB로 옮기고 그쪽은 비워요(저장 공간을 돌려받게) · DB를 못 쓰는 환경이면 예전처럼 확장 프로그램 저장소만 써요
@@ -172,7 +176,7 @@
   const DB_SLOW = /^(full|orig):/, DB_SLOW_OK = 5, dbSlowSeen = new Set(); // dbSlowSeen: 이 페이지에서 이미 센 키(한 번 열 때 한 번만)
   let dbP = null;
   const db = () => dbP ||= new Promise(res => { try { const r = indexedDB.open('joamemory', 2); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('hist')) d.createObjectStore('hist', { keyPath: ['chat', 'at'] }); }; r.onsuccess = () => { r.result.onversionchange = () => { try { r.result.close(); } catch (_) {} dbP = null; }; /* 다른 탭이 새 버전으로 DB를 올리려 하면 이 탭 연결을 닫아 비켜 줘요(안 그러면 그 탭은 DB를 못 열고 예전 저장소에 써요) · 다음에 쓸 때 다시 열어요 */ res(r.result); try { navigator.storage?.persist?.(); } catch (_) {} }; r.onerror = r.onblocked = () => res(null); } catch (_) { res(null); } }); // persist: 브라우저가 공간이 모자랄 때 먼저 지우지 않게 부탁
-  const dbDo = async (mode, fn, name = 'kv') => { const d = await db(); if (!d || !d.objectStoreNames.contains(name)) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction(name, mode), q = fn(t.objectStore(name)); t.oncomplete = () => res(q?.result); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
+  const dbDo = async (mode, fn, name = 'kv') => { const t0 = Date.now(); try { const d = await db(); if (!d || !d.objectStoreNames.contains(name)) throw new Error('DB 없음'); return await new Promise((res, rej) => { const t = d.transaction(name, mode), q = fn(t.objectStore(name)); t.oncomplete = () => res(q?.result); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); } finally { io.db += Date.now() - t0; io.dn++; } };
   // 정리 기록 칸('hist'): 방마다 정리 한 번 = 한 건(키 [방, 시각]) · 새 기록은 한 건만 넣고, 30건 넘으면 가장 오래된 것만 지워요
   //   '정리 후 노트'가 다음 기록의 '정리 전 노트'와 같으면 앞 기록에서 빼고 aN 표시(읽을 때 다시 채움 · historyOf)
   const HIST_MAX = 30, histRange = c => IDBKeyRange.bound([c, -Infinity], [c, Infinity]);
@@ -10609,7 +10613,7 @@
     const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
-    loading = true; loadingAt = Date.now(); const rT = loadingAt; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
+    loading = true; loadingAt = Date.now(); const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
     try {
       let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT;
       if (chatIdFromPath() !== chatId) return;
@@ -10786,7 +10790,7 @@
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
     finally { loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
-      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개`, chatId); }
+      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번)`, chatId); }
   }
 
   // mode: 'new' 지난 정리 뒤 대화로 이어서 / 'tidy' 지금 노트만 새 형식·규칙대로 다시 / 'rebuild' 채팅 전체로 처음부터
