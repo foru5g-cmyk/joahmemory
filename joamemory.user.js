@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.28
+// @version      5.8.29
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -143,11 +143,11 @@
     : (hasGM && GM.xmlHttpRequest ? opts => GM.xmlHttpRequest(opts) : null);
   // 요청이 살아 있는지 세요: netIn = 지금 오가는 요청 수 · netLast = 마지막으로 보내거나 받은 때(정리가 멈췄는지 아는 데 써요)
   let netIn = 0, netLast = Date.now();
-  const gmRequest = gmRequest0 && (opts => { netIn++; netLast = Date.now(); let done = false;
-    const end = fn => function (...a) { if (!done) { done = true; netIn = Math.max(0, netIn - 1); } netLast = Date.now(); return fn?.apply(this, a); };
+  const io = { gm: 0, n: 0, db: 0, dn: 0, net: 0, nn: 0 }; // 꺼내고 기다리는 데 쓴 시간·횟수(확장 프로그램 저장소 / 브라우저 DB / 확장 프로그램을 거친 요청) · 방 읽기가 느릴 때 오류 기록 '느림'에 같이 적어요
+  const gmRequest = gmRequest0 && (opts => { netIn++; netLast = Date.now(); let done = false; const tN = netLast;
+    const end = fn => function (...a) { if (!done) { done = true; netIn = Math.max(0, netIn - 1); io.net += Date.now() - tN; io.nn++; } netLast = Date.now(); return fn?.apply(this, a); };
     const prog = opts.onprogress;
     return gmRequest0({ ...opts, onprogress: function (...a) { netLast = Date.now(); return prog?.apply(this, a); }, onload: end(opts.onload), onerror: end(opts.onerror), ontimeout: end(opts.ontimeout), onabort: end(opts.onabort) }); });
-  const io = { gm: 0, n: 0, db: 0, dn: 0 }; // 저장소에서 꺼내는 데 쓴 시간·횟수(확장 프로그램 저장소 / 브라우저 DB) · 방 읽기가 느릴 때 오류 기록 '느림'에 같이 적어요
   async function gmGet(key, fallback) {
     const t = Date.now();
     try {
@@ -6077,17 +6077,17 @@
     const n = snapshot.note, turns = freshTurns(), left = Math.max(0, cycle - turns), due = turns >= cycle;
     // 큰 진행 링: 다음 정리까지
     const R = 64, C = 2 * Math.PI * R, done = Math.min(turns, cycle) / cycle, over = Math.max(0, turns - cycle);
-    const spin = busyNow && genProg?.kind !== 'pack' && !nav.packWork; // 간추리기는 맨 위 창 하나만 돌아요 · 정리 동그라미는 가만히 둬요
+    const spin = busyNow && (!genProg || genProg.kind === 'summary') && !nav.packWork; // 정리할 때만 돌아요 · 기타(폰·커뮤 등)·장기기억·간추리기를 만드는 동안엔 정리 동그라미는 가만히 둬요
     const ring = `<div class="bigring${due ? ' due' : ''}${spin ? ' busy' + (runningMode === 'rebuild' ? ' rebuild' : '') : ''}">
       <svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="${R}" class="track"/>
         <circle cx="80" cy="80" r="${R}" class="fill" stroke-dasharray="${(C * (spin ? 0.28 : done)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)"/></svg>
       ${spin && genProg ? `<div class="ringtext busy"><b class="gp-time">${genView().tm}</b><span>정리하는 중</span><small class="gp-mini">${genMini()}</small></div>`
         : `<div class="ringtext">${over ? `<b>+${over}</b><span>턴 넘었어요</span>` : due ? '<b>정리할<br>때예요</b>' : `<b>${left}</b><span>턴 남았어요</span>`}<small>${turns} / ${cycle}</small></div>`}</div>`;
     const injectedText = n ? stripProof(noteMemory()) : '', injected = injectedText.length, pc = Math.min(100, Math.round(injected / NOTE_LIMIT * 100));
-    const hero = `<section class="hero2">${ring}
+    const hero = `<section class="hero2">${ring}${chunkLine()}
       <p class="hero-sub">${n ? `1~${n.turns}턴을 기억하고 있어요` : '아직 정리한 기억이 없어요'}</p>
       ${n?.at ? `<p class="hero-meta">마지막 정리 · ${esc(new Date(n.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${n.by ? ` · ${esc(n.by)}${n.by === DEVICE ? ' (이 기기)' : ''}` : ''}</p>` : ''}
-      <div class="hero-btns"><div style="position:relative;display:flex;align-items:center"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow && !nav.packWork ? '정리하는 중…' : '정리하기'}</button><span style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);display:flex">${driveBtn()}</span></div>
+      <div class="hero-btns"><div style="position:relative;display:flex;align-items:center"><button class="btn${!n ? ' pri' : ''}${due ? ' due' : ''} hero-run" data-act="runsheet"${busyNow ? ' disabled' : ''}>${spin ? '정리하는 중…' : '정리하기'}</button><span style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);display:flex">${driveBtn()}</span></div>
 </div>
       <div class="hero-foot"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>채팅에 넣기${injectOn ? '' : ' <small>꺼짐</small>'}</label><span class="hero-dot">·</span><label class="inj-sw"><input type="checkbox" data-act="scenemode"${sceneOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>웹 모드</label>
         ${n ? `<span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button>` : ''}</div>
@@ -7538,9 +7538,11 @@
   setInterval(() => { if (!busyNow || netIn > 0 || Date.now() - netLast < 180000) return; // 요청 없이 3분 넘게 '정리 중' = 중간에 끊긴 것
     busyNow = false; try { autoBusy = false; } catch (_) {} genProg = null; logErr('정리', '3분 넘게 AI 연결 없이 멈춰 있어서 풀었어요(중간에 끊김) · 다시 눌러 주세요');
     toast('정리가 중간에 끊겨서 멈췄어요 · 다시 눌러 주세요 · 쓴 돈은 그 AI가 답한 만큼만', 'err', 6000); try { repaintInline(); } catch (_) {} if (isOpen()) render(); }, 15000);
-  const genCard = () => { if (!busyNow || !genProg) return ''; const v = genView();
-    const ch = chunkRun && genProg.kind === 'summary' ? `<p class="gp-info">나눠서 정리 · ${chunkRun.done + 1}번째 묶음${chunkRun.total ? ` / ${chunkRun.total}` : ''}${chunkRun.stop ? ' · 이 묶음까지 넣고 멈춰요' : ` · <button class="linkbtn" data-act="chunkstop">멈추기</button>`}</p>` : '';
-    return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p>${ch}</div>`; };
+  // 기타 화면(폰·커뮤 등)·장기기억 탭의 진행 카드: 거기서 만드는 것만 보여요 · 정리·간추리기는 홈에서만 표시(한 번에 하나만 만드는 건 그대로)
+  const etcGen = () => busyNow && !!genProg && !['summary', 'pack'].includes(genProg.kind);
+  const chunkLine = () => chunkRun && busyNow && genProg?.kind === 'summary' ? `<p class="gp-info">나눠서 정리 · ${chunkRun.done + 1}번째 묶음${chunkRun.total ? ` / ${chunkRun.total}` : ''}${chunkRun.stop ? ' · 이 묶음까지 넣고 멈춰요' : ` · <button class="linkbtn" data-act="chunkstop">멈추기</button>`}</p>` : ''; // 나눠서 정리 멈추기(홈 동그라미 아래)
+  const genCard = () => { if (!etcGen()) return ''; const v = genView();
+    return `<div class="gen-prog"><div class="gp-top"><b>${esc(v.name)} 만드는 중</b><span class="gp-time">${v.tm}</span></div><div class="gp-bar${v.pct ? '' : ' ind'}"><i style="width:${v.pct || 35}%"></i></div><p class="gp-info">${esc(v.info)}</p></div>`; };
   // AI가 글의 게시판 칸을 이름 그대로 안 쓰면(“음지”, “잿더미 뒤편(음지)”, “[음지] 잿더미 뒤편”, “음지 게시판”, 띄어쓰기 다름) 메인에만 뜨고 게시판엔 0개
   //   → 그 회차 게시판 목록에서 맞는 게시판을 찾아요(이름은 매번 달라도 됨). 순서: 같은 이름 → 기호·띄어쓰기 빼고 같음 → 이름이 들어 있음 → 분위기(자유·익명·음지)가 들어 있음.
   const fitBoard = (boards, x) => {
@@ -7837,7 +7839,7 @@
     if (!snapshot?.note && !freshTurns()) return emptyBox('아직 대화가 없어요. RP를 조금 하고 나면 이 세계의 커뮤니티를 열어 볼 수 있어요.');
     const head = devSeg(); // 회색 설명 상자 없이 바로 사이트
     // 만드는 중엔 로딩 카드만(빈 사이트·열어 보기 버튼은 숨김)
-    if (!boardData && busyNow && genProg) return head + genCard();
+    if (!boardData && etcGen()) return head + genCard();
     if (!boardData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 커뮤니티</b><small>자유·익명·음지 게시판을 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>
       <button class="ph-make" data-act="bdrange">🗨 커뮤니티 열어 보기</button></div></div>${nav.bdRange ? rangeSheet('만들기') : ''}`;
     // 사이트처럼: 색 막대 + 이름 / 메뉴(메인·게시판들) / 메인·게시판·게시글 화면
@@ -7966,7 +7968,7 @@
     const head = devSeg();
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
     const sheet = nav.bdRange && nav.rgKind === 'news' ? rangeSheet(newsData ? '다시 만들기' : '만들기') : '';
-    if (!newsData && busyNow && genProg) return head + genCard();
+    if (!newsData && etcGen()) return head + genCard();
     if (!newsData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 뉴스</b><small>속보·단독·연예·찌라시 기사와 실시간 검색어를 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="nwrange">📰 뉴스 열어 보기</button></div></div>${sheet}`;
     const d = newsData.data || {}, arts = d.articles || [], trends = (d.trends || []).slice(0, 10);
     const cats = [...new Set(arts.map(a => a.cat).filter(Boolean))];
@@ -8096,7 +8098,7 @@
   function betHtml() {
     const head = devSeg();
     if (!snapshot?.note) return head + emptyBox('베팅판은 기억 노트의 서사 고리(약속·떡밥)로 만들어요. 정리를 한 번 하고 오세요.');
-    if (!betData && busyNow && genProg) return head + genCard();
+    if (!betData && etcGen()) return head + genCard();
     if (!betData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 떡밥 베팅판</b><small>열린 약속·떡밥마다 "어떻게 끝날까" 베팅 · 고리가 닫히면 자동 정산 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="btmake">🎲 베팅판 열어 보기</button></div></div>`;
     settleBets();
     const ms = betData.markets || [], openM = ms.filter(m => !m.result), doneM = ms.filter(m => m.result);
@@ -8143,7 +8145,7 @@
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
     const names = etcPeople().filter(n => !PROF.get(n)?.isUser), picked = (nav.tkPick || []).filter(n => names.includes(n));
     const sheet = nav.bdRange && nav.rgKind === 'talk' ? rangeSheet(talkData ? '다시 녹화' : '녹화') : '';
-    if (!talkData && busyNow && genProg) return head + genCard();
+    if (!talkData && etcGen()) return head + genCard();
     const picker = `<div class="tl-who">${names.map(n => `<button data-act="tkpick" data-arg="${esc(n)}" aria-pressed="${picked.includes(n)}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     if (!talkData) return head + genCard() + `<div class="bd"><div class="bd-empty"><b>이 세계의 토크쇼</b><small>게스트를 1~2명 고르면 진행자가 사건·소문·관계를 꼬치꼬치 캐물어요 · 인물은 자기 말투·아는 만큼만 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small>${picker}<button class="ph-make" data-act="tkrange"${picked.length ? '' : ' disabled'}>🎤 ${picked.length ? picked.join(' · ') + ' 녹화 시작' : '게스트를 골라 주세요'}</button></div></div>${sheet}`;
     const d = talkData, [c1, c2] = boardColors(d.show), segs = d.segments || [], n = Number.isInteger(nav.tkSeg) && segs[nav.tkSeg] ? nav.tkSeg : 0, seg = segs[n];
@@ -8287,7 +8289,7 @@
     const head = devSeg();
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
     const sheet = nav.bdRange && nav.rgKind === 'gc' ? rangeSheet(gcData ? '다시 만들기' : '만들기') : '';
-    if (!gcData && busyNow && genProg) return head + genCard();
+    if (!gcData && etcGen()) return head + genCard();
     if (!gcData) return head + genCard() + '<div class="bd"><div class="bd-empty"><b>유저 빠진 단톡방</b><small>NPC들끼리 몰래 떠드는 단톡 · 성격·말투·아는 만큼만 · 유저 얘기는 노트에 있던 일만 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="gcrange">💬 단톡방 엿보기</button></div></div>' + sheet;
     const d = gcData, rooms = d.rooms || [], room = Number.isInteger(nav.gcRoom) ? rooms[nav.gcRoom] : null;
     const clk = phClock(), bar = '<div class="ph-status"><b>' + clk.t + '</b>' + PH_STATUS + '</div>';
@@ -9076,7 +9078,7 @@
     const head = devSeg();
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
     const sheet = nav.bdRange && nav.rgKind === 'wiki' ? rangeSheet(wikiData ? '다시 만들기' : '만들기') : '';
-    if (!wikiData && busyNow && genProg) return head + genCard();
+    if (!wikiData && etcGen()) return head + genCard();
     if (!wikiData) return head + genCard() + '<div class="bd"><div class="bd-empty"><b>이 세계의 위키</b><small>인물·사건 문서와 토론·편집 전쟁을 한 번에 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="wkrange">📚 위키 열어 보기</button></div></div>' + sheet;
     const d = wikiData.data || {}, docs = d.docs || [], nm = '랙시위키', [c1] = boardColors(nm);
     const open = nav.wkDoc != null && docs[nav.wkDoc] ? docs[nav.wkDoc] : null;
@@ -9105,7 +9107,7 @@
     const head = devSeg();
     if (!snapshot?.note && !freshTurns()) return head + emptyBox('아직 대화가 없어요.');
     const sheet = nav.bdRange && nav.rgKind === 'live' ? rangeSheet(liveData ? '다시 만들기' : '방송 시작') : '';
-    if (!liveData && busyNow && genProg) return head + genCard();
+    if (!liveData && etcGen()) return head + genCard();
     if (!liveData) return head + genCard() + '<div class="bd"><div class="bd-empty"><b>시청자 실시간톡</b><small>고른 턴을 드라마 한 화로 · 시청자들과 같이 달리는 채팅방 · AI를 1번 불러요 · 기억 노트엔 안 들어가요</small><button class="ph-make" data-act="lvrange">📺 실시간톡 열어 보기</button></div></div>' + sheet;
     const eps = liveData.eps || [], n = Math.min(nav.lvEp ?? eps.length - 1, eps.length - 1), ep = eps[n], [c1, c2] = boardColors(liveData.drama || '');
     if (lvShown(n) == null) nav.lvShownBy[n] = nav.lvFresh === n ? 0 : (ep.chat || []).length;
@@ -10790,7 +10792,7 @@
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
     finally { loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
-      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번)`, chatId); }
+      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번) · 요청 ${s(io.net - io0.net)}초(${io.nn - io0.nn}번)`, chatId); }
   }
 
   // mode: 'new' 지난 정리 뒤 대화로 이어서 / 'tidy' 지금 노트만 새 형식·규칙대로 다시 / 'rebuild' 채팅 전체로 처음부터
