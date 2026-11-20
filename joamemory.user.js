@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.34
+// @version      5.8.35
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10799,6 +10799,8 @@
       { const c = snap.note; if (c?.gs && !String(await getValue('gsUrl', '')).trim() && String(await getValue('gsAuto', '')) !== 'off' && String(await getValue('gsAutoFail', '')) !== c.gs) { // 다른 기기에서 연결한 드라이브를 이 기기에도
         try { const [u, k] = unveil(c.gs).split('§'); if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(u) || !k) throw new Error('연결 글을 못 읽음'); await setValue('gsUrl', u); await setValue('gsKey', k); await gsCall({ action: 'ping' }); await gsLinkSet(); nav.gsOn = true; pageToast('다른 기기에서 연결한 구글 드라이브를 이 기기에도 연결했어요'); logErr('연동', '노트에 실린 드라이브 연결로 이 기기도 연결함'); }
         catch (e) { await setValue('gsUrl', ''); await setValue('gsKey', ''); await setValue('gsAutoFail', c.gs); logErr('연동', '노트에 실린 드라이브 연결이 안 돼서 안 씀 · ' + e.message); } } }
+      { const c = snap.note, fx = m => splitSections(stripProof(m || '')).every(x => x.key === FIXED); // 정리 전(고정 설정만 든 노트): 가져올 전체 기억이 없으니 채팅 노트를 이 기기 사본으로 · 정리한 사본은 안 덮어요
+        if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && fx(c.memory) && (!fullNote || fx(fullNote.memory))) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); }
       { const c = snap.note, stale = memStale(c, fullNote, MEM_AT.get(chatId)); // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만 · stale: 정리 지점은 같아도 다른 기기가 나중에 고쳤으면 다시 받아요
         if (c?.sel && !c.parked && (stale || !(fullNote && fullNote.upto === c.upto)) && !gsTried.has(chatId + '|' + c.upto + '|' + (c.me || 0)) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto + '|' + (c.me || 0), nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
