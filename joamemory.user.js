@@ -417,11 +417,10 @@
   // 글 맨 앞(또는 [ 뒤)의 날짜 "2027.09.14" · "1년차 03.14"만 꺼냅니다. 범위(~)·미상은 ''.
   const dayOf = t => { const m = String(t).replace(/^\[/, '').match(/^((?:\d+년차\s*)?\d{1,4}[./]\d{1,2}(?:[./]\d{1,2})?)(?![\d./])(?!\s*~)/); return m ? m[1].replace(/\s+/g, ' ') : ''; };
   function stripProof(memory, keepMiles = false) { // keepMiles: 고르기 전에는 이정표를 남겨요(겹침은 고른 뒤 채팅에 쓸 때 빠져요)
-    const users = new Set(personsIn(splitSections(memory).find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name));
-    const logT = blocksOf(splitSections(memory).find(x => x.key === '날짜로그')?.body || '')
-      .filter(b => !/\(요약\)/.test(b.title)).map(b => (b.title.match(/-\s*(.+?)\]?$/) || [])[1]).filter(t => t && t.length >= 4).map(t => t.replace(/\s/g, ''));
-    const logEv = blocksOf(splitSections(memory).find(x => x.key === '날짜로그')?.body || '').filter(b => !/\(요약\)/.test(b.title))
-      .map(b => ({ date: dayOf(b.title), all: b.title + ' ' + b.lines.join(' ') }));
+    const S = splitSections(memory), logB = blocksOf(S.find(x => x.key === '날짜로그')?.body || '').filter(b => !/\(요약\)/.test(b.title)); // 같은 글은 한 번만 쪼개요(큰 방은 이 글이 수십만 자)
+    const users = new Set(personsIn(S.find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name));
+    const logT = logB.map(b => (b.title.match(/-\s*(.+?)\]?$/) || [])[1]).filter(t => t && t.length >= 4).map(t => t.replace(/\s/g, ''));
+    const logEv = logB.map(b => ({ date: dayOf(b.title), all: b.title + ' ' + b.lines.join(' ') }));
     const inLog = (item, name) => { const d = dayOf(item); return !!d && !!name && logEv.some(e => e.date === d && personAlias(name).some(a => e.all.includes(a))); };
     let skip = false, sec = '', who = '', mine = false, at = '', itemSkip = false;
     const kept = String(memory).split('\n').filter(l => {
@@ -452,10 +451,10 @@
     const order = k => { const i = SECTIONS.findIndex(x => x.key === k); return i < 0 ? 99 : i; };
     return splitSections(kept)
       // 같은 칸 안에서 글자까지 똑같은 줄은 하나만 남깁니다.
-      .map(x => ({ key: x.key, body: x.body.split('\n').filter(l => !isNone(l)).filter((l, i, a) => !l.trim() || a.indexOf(l) === i)
+      .map(x => { const seen = new Set(); return ({ key: x.key, body: x.body.split('\n').filter(l => !isNone(l)).filter(l => !l.trim() || (!seen.has(l) && !!seen.add(l))) /* 처음 나온 줄만 · 줄마다 앞줄 전체를 다시 훑지 않아요(사건 700개 방에서 수천만 번 견줬어요) */
         // 내용 없이 제목만 남은 ▸ 소제목도 뺍니다.
         .filter((l, i, a) => !/^\s*(▸|###)/.test(l) || (a[i + 1] !== undefined && !/^\s*(▸|###)/.test(a[i + 1]) && a[i + 1].trim()))
-        .join('\n').trim() }))
+        .join('\n').trim() }); })
       .filter(x => x.body)
       .sort((a, b) => order(a.key) - order(b.key))
       .map(x => `■ ${x.key}\n${x.body}`).join('\n');
@@ -572,6 +571,8 @@
     const all = stripProof(sceneOn ? origSwap(memory) : memory, sceneOn), pool = []; // 웹 모드: 줄어든·묶인 사건은 보관함 원문으로 떠올려요
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
+    // 이번 한 번 고르는 동안은 칸마다 한 번만 항목으로 나눠요(같은 칸을 서너 번 다시 나누지 않게 · 결과는 읽기만 해요)
+    const IB = new Map(), ib = sec => { let b = IB.get(sec); if (!b) IB.set(sec, b = itemBlocks(sec.body)); return b; }, SI = new Map(), si = sec => { let l = SI.get(sec); if (!l) SI.set(sec, l = ib(sec).items.length ? ib(sec).items : secItems(sec)); return l; };
     const cast = personsIn(secs.find(x => x.key === '인물')?.body || '');
     const nmIn = (t, a) => { for (let i = t.indexOf(a); i >= 0; i = t.indexOf(a, i + 1)) if (!i || !/[가-힣]/.test(t[i - 1])) return true; return false; }; // 이름 앞에 한글이 붙은 건 다른 낱말(주피터 ≠ 피터)
     const here = cast.filter(p => p.isUser || personAlias(p.name).some(a => a && a.length >= 2 && nmIn(text, a))).map(p => p.name);
@@ -587,7 +588,7 @@
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
     const bodyWords = (key, body) => { const tw = new Set(words(key)); return [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w)); }; // '백호랑이가' → '백호랑이' → 이름
     const df = new Map(), bdf = new Map(); let nItems = 0;
-    for (const sec of secs) for (const it of secItems(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
+    for (const sec of secs) for (const it of si(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
     const scene = injCtx.scene ?? text; // 지금 장면 = 직전 AI 답(없으면 최근 대화) · 그보다 앞 대화는 약하게만
     const why = new Map(); // 항목 키 → 떠올린 이유(화면용)
@@ -615,7 +616,7 @@
     const pastHere = [...rgWho(memory).who].some(n => here.some(h => sameName(h, n))); // 회귀 전 일을 기억하는 사람이 지금 장면에 있는지
     const units = []; // { sec, i(항목 번호, -1 = 칸 머리글), text, pri, recall }
     for (const sec of secs) {
-      const b = itemBlocks(sec.body), head = b.head.join('\n').trim(), k = sec.key, mode = secMode(k);
+      const b = ib(sec), head = b.head.join('\n').trim(), k = sec.key, mode = secMode(k);
       if (k === FIXED || k === '현재상태') { if (sec.body.trim()) units.push({ sec: k, i: -1, text: sec.body, pri: 100 }); continue; } // 고정 설정: 칸 방식과 상관없이 항목마다 고른 대로(미주입만 빼고 늘 넣어요) · 현재상태: 지금 이 순간의 사실이라 늘 통째로(주입 탭에 버튼 없음)
       if (mode === 'off') { if (k === '날짜로그') b.items.forEach((it, i) => { if (injPins.has(itemKey(it.key))) units.push({ sec: k, i, text: it.lines.join('\n'), pri: 88, pin: true, key: itemKey(it.key) }); }); continue; } // 안 넣기(📌 고정한 사건은 남겨요)
       if (k === '소지품' && mode === 'on' && b.items.length) { // 소지품: 물건마다 · 최근 대화·보낸 말에 나온 물건만 내용까지, 나머지는 이름 한 줄(있다는 건 안 잊게)
@@ -628,7 +629,7 @@
         continue; }
       if (mode === 'on' && b.items.length && k !== '인물') { units.push({ sec: k, i: -1, text: sec.body, pri: 92 }); continue; } // 늘: 칸 통째로
       if ((mode === 'auto' || k === '서사 고리') && !b.items.length && !['줄거리', '직전 장면', '세계관'].includes(k)) { // 서사 고리 '항상': 열린 고리는 늘 · 닫힌 고리는 대화에 나올 때만 // ▸ 항목이 없는 칸(서사 고리 등)도 '나올 때만'이면 줄(고리) 하나씩 골라요 · 세계관 규칙 줄(- …)은 낱말로 안 걸려서 예전처럼 통째로
-        const L = secItems(sec), lh = (L.head || []).join('\n').trim();
+        const L = si(sec), lh = (L.head || []).join('\n').trim();
         if (lh && (k !== '서사 고리' || mode === 'on') && !isNone(lh)) units.push({ sec: k, i: -1, text: lh, pri: 90 });
         // 열린 고리라도 '마지막 언급'이 지금보다 100턴 넘게 전이면 잊힌 떡밥으로 보고 '나올 때만'(노트엔 [열림] 그대로) · 마지막 언급이 없거나 지금 턴을 모르면 늘 · 📌 고정한 고리는 늘
         const nowT = (snapshot?.note?.turns || 0) + freshTurns();
@@ -704,7 +705,7 @@
       pick.set(id, u); secCost.add(u.sec); if (!free) used += cost; if (u.rc) { recallN++; for (const w of u.hw || []) hwN.set(w, (hwN.get(w) || 0) + 1); }
     }
     // 떠올린 옛 사건의 바로 앞뒤 사건은 제목만 같이(일이 어디서 시작해 어떻게 끝났는지) · 같은 NPC가 나오는 사건만 · 이미 들어간 건 빼요
-    { const logSec = secs.find(x => x.key === '날짜로그'), L = logSec ? itemBlocks(logSec.body).items : [], got = [...pick.values()].filter(u => u.sec === '날짜로그' && u.recall);
+    { const logSec = secs.find(x => x.key === '날짜로그'), L = logSec ? ib(logSec).items : [], got = [...pick.values()].filter(u => u.sec === '날짜로그' && u.recall);
       const inIt = (p, it) => personAlias(p.name).some(a => a && a.length >= 2 && nmIn(it.lines.join(' '), a));
       // 유저는 이어짐 판단에서 빼요 · 유저 표시가 없으면 가장 자주 나오는 한 사람(동률이면 아무도 안 뺌) · 떠올린 사건이 있을 때만 세요
       let npcs = got.length ? cast.filter(p => !p.isUser) : [];
@@ -717,7 +718,7 @@
     // 전체 기억(고정 포함)이 전전 한 칸(INJ_MAX)에 다 들어가면 전부 넣어요 · 넘치면 위에서 고른 그대로 · 안 넣기 칸·✕ 뺀 것·끈 정보는 빼고
     const rest = []; let restN = 0;
     for (const sec of secs) { const k = sec.key; if (k === FIXED || secMode(k) === 'off') continue;
-      itemBlocks(sec.body).items.forEach((it, i) => { const id = k + '|' + i, t = it.lines.join('\n'), p = pick.get(id), key = itemKey(it.key);
+      ib(sec).items.forEach((it, i) => { const id = k + '|' + i, t = it.lines.join('\n'), p = pick.get(id), key = itemKey(it.key);
         if ((p && p.text.length >= t.length) || injSkip.has(key) || (k === '인지·비밀' && (injSet.facts?.[key] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) === 'off')) return;
         rest.push({ id, u: { sec: k, i, text: t, key } }); restN += t.length + 1 - (p ? p.text.length + 1 : 0) + (secCost.has(k) || rest.some(r => r.u.sec === k) ? 0 : k.length + 3); }); }
     const fxN = both ? [...pick.values()].filter(u => u.sec === FIXED).reduce((a, u) => a + u.text.length + 1, 0) : 0;
@@ -725,12 +726,12 @@
     if (!poolMode && rest.length && used + restN + fxN <= Math.min(INJ_MAX, (PATCH_MAX - 3000) / 2 - ansN) * 0.97) { for (const r of rest) { pick.set(r.id, r.u); secCost.add(r.u.sec); } used += restN; }
     const out = [], coreOf = k => ((String(k).match(/-\s*(.+?)\]?$/) || [])[1] || '').replace(/\s/g, ''), logCore = new Set([...pick.values()].filter(u => u.sec === '날짜로그' && u.key).map(u => coreOf(u.key)).filter(Boolean));
     for (const sec of secs) {
-      const b = itemBlocks(sec.body), parts = [], titles = [], spineSec = sec.key === '이정표' || sec.key === PAST;
+      const b = ib(sec), parts = [], titles = [], spineSec = sec.key === '이정표' || sec.key === PAST;
       const h = pick.get(sec.key + '|-1'); if (h) parts.push(h.text);
       b.items.forEach((it, i) => { const u = pick.get(sec.key + '|' + i); if (!u) return;
         if (spineSec && u.short) { if (sec.key !== '이정표' || !logCore.has(coreOf(it.key))) titles.push(u.text); } else parts.push(u.text); }); // 제목 줄: 같은 사건이 이번에 들어가면 빼요
       parts.splice(h ? 1 : 0, 0, ...titles); // 제목 줄은 본문 있는 항목보다 앞에(뒤에 두면 앞 항목의 줄처럼 읽혀요)
-      if (!b.items.length) secItems(sec).forEach((_, j) => { const u = pick.get(sec.key + '|L' + j); if (u) parts.push(u.text); }); // 줄 항목은 노트 순서대로
+      if (!b.items.length) si(sec).forEach((_, j) => { const u = pick.get(sec.key + '|L' + j); if (u) parts.push(u.text); }); // 줄 항목은 노트 순서대로
       if (parts.length) out.push({ key: sec.key, body: parts.join('\n') });
     }
     const memoryOut = joinSections(out);
@@ -3767,7 +3768,24 @@
     list.cut = !!cursor; // 최대 쪽수까지 읽고도 더 남음 = 앞부분이 빠짐
     return list;
   }
-  async function loadTurnMap(chatId, snap) {
+  // 정리 지점(upto = 노트의 N턴)을 기준으로 앞뒤 말풍선의 턴을 세요: 최신 쪽부터 정리 지점과 화면의 말풍선(need)이 다 나올 때까지만 읽어요
+  //   긴 방(수천 턴)을 열 때마다 대화 전체를 읽지 않게 · 정리 지점을 못 찾거나 화면 말풍선이 더 앞에 있으면 null(전체 읽기로)
+  async function anchorTurns(chatId, n, need) {
+    const out = [], ids = new Set(); let cursor = '', upPage = -1;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const { list, next } = await listPage(chatId, cursor); out.push(...list); for (const m of list) ids.add(msgId(m));
+      if (upPage < 0 && ids.has(n.upto)) upPage = page;
+      if (upPage >= 0 && (need.every(id => ids.has(id)) || page - upPage >= 6)) break; // 정리 지점보다 6쪽(300개) 더 앞까지만 찾아봐요
+      if (!(cursor = next)) break;
+    }
+    if (need.some(id => !ids.has(id))) return null;
+    const all = liveLine(sortOld(out)).filter(isChat), u = all.findIndex(m => msgId(m) === n.upto); if (u < 0) return null;
+    const base = new Map(), put = (m, t) => base.set(msgId(m), { turn: Math.max(0, t), role: msgRole(m) }); let t = n.turns;
+    for (let i = u; i >= 0; i--) { put(all[i], t); if (msgRole(all[i]) === 'user') t--; } // 뒤로: 유저 말을 지나면 한 턴 앞
+    t = n.turns; for (let i = u + 1; i < all.length; i++) { if (msgRole(all[i]) === 'user') t++; put(all[i], t); }
+    return new Map(all.map(m => [msgId(m), base.get(msgId(m))])); // 오래된 것부터(이어 세기가 이 순서를 써요)
+  }
+  async function loadTurnMap(chatId, snap, need = []) { // need: 화면에 있는데 번호가 없는 말풍선(위로 올려 본 옛 대화) → 거기까지 더 읽어요
     if (String(await getValue('badges', 'on')) === 'off') { turnMap = new Map(); turnBase = null; paintBadges(); return; }
     if (turnMapRoom === chatId && Date.now() - turnMapAt < 8000) return;
     if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; }
@@ -3784,8 +3802,11 @@
           base = new Map();
           for (const [id, v] of turnBase) { base.set(id, v); if (id === aid) break; } // 이음 자리 뒤는 버리고 다시 셉니다(리롤·삭제 반영)
           for (const m of page.slice(i + 1)) { if (msgRole(m) === 'user') t++; base.set(msgId(m), { turn: t, role: msgRole(m) }); }
+          if (need.some(id => !base.has(id))) base = null; // 화면에 번호 없는 옛 말풍선이 있으면(위로 올려 봄) 더 앞까지 읽어요
         }
       }
+      const n0 = snap?.note;
+      if (!base && n0?.upto && n0.turns > 0) base = await anchorTurns(chatId, n0, need); // 노트가 있으면 정리 지점에서 앞뒤로 세요(방 전체를 안 읽어요)
       if (!base) {
         const all = await readAll(chatId); let t = 0;
         base = new Map();
@@ -3803,14 +3824,14 @@
   }
   function paintBadges() {
     document.querySelectorAll('.memo-turn-badge').forEach(b => { const id = b.dataset.for; if (!turnMap.has(id)) b.remove(); });
-    const unknown = [];
+    const unknown = [], isMsg = new Set(); // isMsg: 메시지 번호가 붙은 말풍선(묶음 번호는 목록에 없어서 더 읽어도 못 찾아요)
     const SEL = '[data-message-id],[data-message-group-id]';
     document.querySelectorAll(SEL).forEach(el => {
       // 묶음 안에 말풍선이 또 있으면 바깥에만 하나 붙입니다 (번호 두 번 나오는 것 방지).
       if (el.parentElement?.closest(SEL)) { [...el.children].forEach(c => c.classList?.contains('memo-turn-badge') && c.remove()); return; }
       const id = el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id');
       const info = turnMap.get(id);
-      if (!info) { if (id) unknown.push(id); return; }
+      if (!info) { if (id) { unknown.push(id); if (el.hasAttribute('data-message-id')) isMsg.add(id); } return; }
       let b = [...el.children].find(c => c.classList?.contains('memo-turn-badge'));
       if (!b) { b = document.createElement('div'); b.className = 'memo-turn-badge'; el.prepend(b); }
       const done = info.turn <= noteTurns && noteTurns > 0;
@@ -3824,7 +3845,7 @@
     // 새 말풍선이 생겼는데 번호가 없으면 잠시 뒤 다시 셉니다.
     //   다시 읽어도 번호가 안 붙는 말풍선(묶음 ID 등)은 한 번만 시도해요. 안 그러면 10초마다 대화 전체를 계속 다시 읽어요.
     const miss = unknown.filter(id => !badgeMiss.has(id));
-    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(id => badgeMiss.add(id)); const id = chatIdFromPath(); if (id) loadTurnMap(id, snapshot); }
+    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(id => badgeMiss.add(id)); const id = chatIdFromPath(); if (id) loadTurnMap(id, snapshot, miss.filter(x => isMsg.has(x))); }
   }
   let badgeTimer = null;
   new MutationObserver(() => { if (!badgeTimer && turnMap.size) badgeTimer = setTimeout(() => { badgeTimer = null; paintBadges(); }, 400); })
