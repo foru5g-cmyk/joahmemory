@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.40
+// @version      5.8.41
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3647,9 +3647,11 @@
     theme.re = theme.on && theme.pen && alt.length ? new RegExp(alt.join('|'), 'g') : null;
     penAll = true; penPaint(); // 테마(색)를 바꾸면 전부 다시
   }
+  let penGenAt = 0; const penGenNow = () => penGenAt && Date.now() - penGenAt < 10000; // penGenAt: 크랙이 AI 답 조각을 마지막으로 보낸 때(답이 끝나면 0 · 신호를 놓쳐도 10초 뒤엔 풀려요)
   function penPaint() { // 대사 형광펜: AI 말풍선 글자에서 기호 사이를 찾아 칠해요 · 문단마다 글자 조각을 이어 붙여 찾아요(대사 안에 굵은 글씨·기울임이 섞여 조각이 나뉘어도 칠해지게)
     if (!MASK_OK) return; const out = [], all = penAll; penAll = false; penDirty = new Set();
-    if (theme.re) for (const box of document.querySelectorAll(TH_AI + ',' + TH_AIN)) {
+    const boxes = theme.re ? [...document.querySelectorAll(TH_AI + ',' + TH_AIN)] : [], live = penGenNow() ? boxes[boxes.length - 1] : null; // AI가 쓰는 중인 마지막 말풍선은 다 쓴 뒤에 칠해요(쓰는 중에 칠했다가 크랙이 말풍선을 새로 그리면 한 번 깜빡여요)
+    if (theme.re) for (const box of boxes) { if (live && (box === live || box.contains(live) || live.contains(box))) continue;
       const key = theme.re.source + '\u0000' + box.textContent, c = penBox.get(box); if (!all && c && c.k === key && c.rs.every(r => r.startContainer.isConnected && r.endContainer.isConnected)) { out.push(...c.rs); continue; } // 크랙이 글자 칸을 새로 만들었으면(글은 같아도) 다시 찾아요
       const from = out.length; penDirty.add(box);
       const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT); let txt = '', map = [], blk = null;
@@ -10586,10 +10588,15 @@
   root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq,.nf-help')) root.querySelectorAll('.pg-hq[open],.nf-help[open]').forEach(d => { d.open = false; }); if (!e.target.closest?.('.pg-hq')) nav.pcHelp = false; }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
   let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
+  // 자동 정리는 마지막 메시지를 보낸 기기만: 같은 방을 열어 둔 다른 기기까지 같이 정리하면 AI만 두 번 부르고 한쪽 결과는 버려져요 · 보내기를 못 잡는 환경(sendSeen.on 꺼짐)은 예전처럼
+  const sendSeen = { on: false, c: '', said: null }; // c: 이 기기가 마지막으로 보낸 방 · said: 그때 보낸 말(다시 생성은 null)
+  const sentHere = chatId => { if (!sendSeen.on) return true; if (sendSeen.c !== chatId) return false; if (sendSeen.said == null) return true;
+    const u = [...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user'); return !!u && stripBlocks(msgText(u)).trim() === sendSeen.said.trim(); };
   async function autoSum() {
     const chatId = chatIdFromPath();
     if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview' || freshTurns() < cycle) return;
     if (brRun.has(chatId)) return; // 분기 전 정리본을 찾는 중이면 기다려요(따라온 옛 노트 위에 정리하지 않게)
+    if (!sentHere(chatId)) return;
     if (autoSum.wait?.c === chatId && freshTurns() < autoSum.wait.n) return; // 방금 실패했으면 3턴 쉬어요(답마다 다시 불러 돈이 계속 나가지 않게)
     autoSumOn =String(await getValue('autoSum', 'on')) !== 'off'; if (!autoSumOn) return;
     { let hold = null; try { hold = JSON.parse(String(await getValue('autoHold:' + chatId, '') || 'null')); } catch (_) {} if (hold && hold.upto === snapshot.note?.upto && freshTurns() < hold.fresh + cycle) return; }
@@ -10672,18 +10679,21 @@
   (() => {
     const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window, WS = W.WebSocket;
     if (!WS?.prototype?.send) return;
-    const orig = WS.prototype.send, sendQ = new Map(); // sendQ: 방마다 보내기 순서
+    const orig = WS.prototype.send, sendQ = new Map(); sendSeen.on = true; // sendQ: 방마다 보내기 순서
     const parseFrame = raw => { if (typeof raw !== 'string') return null; const m = /^42(\/[^,]+,)?(\d*)(\[.*)$/s.exec(raw); if (!m) return null;
       try { const a = JSON.parse(m[3]); return Array.isArray(a) && typeof a[0] === 'string' ? { event: a[0], payload: a[1] } : null; } catch (_) { return null; } };
     const liveSock = new Map(); // 주소별로 지금 살아 있는 연결(핑 등 아무 프레임이나 보낼 때 기억)
-    const held = new Set(); // 기억을 넣느라 잡고 있는 메시지들
+    const held = new Set(), heard = new WeakSet(); // 기억을 넣느라 잡고 있는 메시지들 · heard: 받는 글을 듣고 있는 연결
     const flushHeld = () => { for (const j of [...held]) { if (j.sent) continue; j.sent = true; held.delete(j); if (j.ctl) j.ctl.dead = true; const to = j.sock.readyState === 1 ? j.sock : liveSock.get(j.sock.url)?.readyState === 1 ? liveSock.get(j.sock.url) : j.sock;
       try { orig.call(to, j.data); logErr('보내기', '화면을 떠나서 기억을 다 넣기 전에 바로 보냄(이번 턴은 지난 기억 그대로)'); } catch (_) {} } };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushHeld(); });
     window.addEventListener('pagehide', flushHeld);
     WS.prototype.send = function (data) {
       if (this.readyState === 1) liveSock.set(this.url, this);
-      const f = sceneOn && injectOn ? parseFrame(data) : null, chatId = chatIdFromPath();
+      if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return; // AI가 답을 쓰는 중인지(형광펜이 다 쓴 뒤에 칠하게)
+        if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); } else if (s.includes('"characterMessageGenerating"')) penGenAt = Date.now(); }); } catch (_) {} } // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
+      const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath();
+      if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; }
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
       if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / '); /* shortcut: 크랙 보내기 글자 한도를 몰라 합쳐서 2000자까지만 붙여요, 한도를 알게 되면 그 값으로 */ if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n\n[ ](# "MEMO_STY ' + st + '")' }]); } // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
