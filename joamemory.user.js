@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.35
+// @version      5.8.36
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10800,7 +10800,12 @@
         try { const [u, k] = unveil(c.gs).split('§'); if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(u) || !k) throw new Error('연결 글을 못 읽음'); await setValue('gsUrl', u); await setValue('gsKey', k); await gsCall({ action: 'ping' }); await gsLinkSet(); nav.gsOn = true; pageToast('다른 기기에서 연결한 구글 드라이브를 이 기기에도 연결했어요'); logErr('연동', '노트에 실린 드라이브 연결로 이 기기도 연결함'); }
         catch (e) { await setValue('gsUrl', ''); await setValue('gsKey', ''); await setValue('gsAutoFail', c.gs); logErr('연동', '노트에 실린 드라이브 연결이 안 돼서 안 씀 · ' + e.message); } } }
       { const c = snap.note, fx = m => splitSections(stripProof(m || '')).every(x => x.key === FIXED); // 정리 전(고정 설정만 든 노트): 가져올 전체 기억이 없으니 채팅 노트를 이 기기 사본으로 · 정리한 사본은 안 덮어요
-        if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && fx(c.memory) && (!fullNote || fx(fullNote.memory))) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); }
+        if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && fx(c.memory) && (!fullNote || fx(fullNote.memory))) await saveFull(chatId, c.upto, c.memory, c.turns, c.at);
+        /* 정리 시각이 같으면 같은 정리본: 노트를 다시 넣으며 정리 지점만 옮겨졌으면(지워진 메시지 등) 사본도 그 지점으로 · 글은 이 기기 사본 그대로 */
+        else if (c && !c.parked && c.at && fullNote?.memory && fullNote.at && fullNote.upto !== c.upto && Math.abs(Date.parse(c.at) - Date.parse(fullNote.at)) < 120e3) await saveFull(chatId, c.upto, fullNote.memory, c.turns || fullNote.turns, fullNote.at); }
+      { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
+        if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
+          refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
       { const c = snap.note, stale = memStale(c, fullNote, MEM_AT.get(chatId)); // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만 · stale: 정리 지점은 같아도 다른 기기가 나중에 고쳤으면 다시 받아요
         if (c?.sel && !c.parked && (stale || !(fullNote && fullNote.upto === c.upto)) && !gsTried.has(chatId + '|' + c.upto + '|' + (c.me || 0)) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto + '|' + (c.me || 0), nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
