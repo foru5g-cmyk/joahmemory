@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.39
+// @version      5.8.40
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3452,7 +3452,7 @@
   async function writeMessage(chatId, id, nextText) {
     const block = (nextText.match(V3_RE) || []).pop();
     { const h = block && block.match(/MEMO_NOTE v3 upto=(\S+) turns=(\d+) at=(\S+)/), o = snapshot?.note; // 정리 시각은 그대로인데 정리 지점·턴만 바뀌어 쓰이면 어느 길로 왔는지 오류 기록에(원인 못 찾은 노트 꼬임 추적용)
-      if (h && o && o.at === h[3] && (o.upto !== h[1] || String(o.turns || 0) !== h[2])) logErr('노트', `정리 시각 그대로 정리 지점·턴만 바뀜 · ${o.turns || 0}→${h[2]}턴 · ${o.upto.slice(-4)}→${h[1].slice(-4)} · ${String(new Error().stack || '').split('\n').slice(2, 7).map(s => (s.trim().match(/^at (?:async )?([\w$.]+)/) || [])[1]).filter(Boolean).join(' ← ')}`); }
+      if (h && o && chatIdFromPath() === chatId && o.at === h[3] && (o.upto !== h[1] || String(o.turns || 0) !== h[2])) logErr('노트', `정리 시각 그대로 정리 지점·턴만 바뀜 · ${o.turns || 0}→${h[2]}턴 · ${String(o.upto || '').slice(-4)}→${h[1].slice(-4)} · ${String(new Error().stack || '').split('\n').slice(1, 8).map(s => (s.trim().match(/^at (?:async )?([\w$.]+)/) || s.trim().match(/^(?:async\s+)?([\w$.]+)@/) || [])[1]).filter(x => x && x !== 'writeMessage').join(' ← ')}`); } // 크롬('at 이름')·사파리('이름@') 둘 다
     let list = []; try { list = (await listPage(chatId, '')).list; } catch (_) {} // 최신순
     if (!block) { // 노트 빼기·지우기: 이 노트의 뒷부분(다른 답변)도 같이 지워요
       await writeRaw(chatId, id, nextText);
@@ -6734,7 +6734,7 @@
       // 새 기기 자동 복원인데 채팅 노트와 같은 정리본이면 확인 화면 없이 명대사·ETC·기록만 채워요(노트는 이미 들어와 있어요)
       //   같은 정리본 = 정리 지점·턴 수·마지막으로 고친 때(me)가 모두 같을 때만. 하나라도 다르면 예전처럼 묻고 확인 화면을 거쳐요
       // 정리 전 방(백업 기억이 고정 설정뿐): 받아 올 기억이 없고 고정 설정은 채팅 노트에 이미 있어요 → 묻지 않고 명대사·ETC·기록만
-      if (auto && !splitSections(stripProof(d.memory || '')).some(x => x.key !== FIXED)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 정리 전(고정 설정뿐)이라 확인 없이 받음'); return; }
+      if (auto && now && !splitSections(stripProof(d.memory || '')).some(x => x.key !== FIXED)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 정리 전(고정 설정뿐)이라 확인 없이 받음'); return; }
       if (auto && now?.upto && d.upto === now.upto && (Number(d.turns) || 0) === (now.turns || 0) && (Number(d.me) || 0) === (now.me || 0)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 채팅 노트와 같은 정리본이라 확인 없이 받음'); return; }
       if (!two && !confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
       await importBackupText(r.data, true);
@@ -10686,7 +10686,7 @@
       const f = sceneOn && injectOn ? parseFrame(data) : null, chatId = chatIdFromPath();
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
-      if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines(); if (st.length) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n\n[ ](# "MEMO_STY ' + st.map(l => dq(l).replace(/"/g, '”')).join(' / ') + '")' }]); } // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
+      if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / '); /* shortcut: 크랙 보내기 글자 한도를 몰라 합쳐서 2000자까지만 붙여요, 한도를 알게 되면 그 값으로 */ if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n\n[ ](# "MEMO_STY ' + st + '")' }]); } // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
       const job = { sock, data, sent: false }; held.add(job); if (document.visibilityState === 'hidden') { flushHeld(); return; } // 이미 숨겨진 화면이면 잡지 않고 바로
       const slow = setTimeout(() => pageToast('기억 넣는 중… 곧 보내요'), 3000);
       const before = sendQ.get(chatId) || Promise.resolve();
