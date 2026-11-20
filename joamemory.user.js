@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.32
+// @version      5.8.33
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -380,7 +380,7 @@
   const memTouch = async (cid, t = Date.now()) => { if (!cid || !t) return; MEM_AT.set(cid, t); await setValue('memat:' + cid, String(t)); };
   const memStale = (c, full, myMe) => !!(c?.sel && !c.parked && full && full.upto === c.upto && (c.me || 0) > (myMe || 0)); // 정리 지점은 같은데 다른 기기가 나중에 고침
   // 분기한 방이 다른 방 사본을 물려받을 때: 그 사본이 이 방 채팅 노트(c.me)보다 나중에 고쳐졌으면 분기한 뒤에 바뀐 글이라 안 가져와요 · me가 없는 옛 노트는 그대로 가져와요
-  const memLater = (c, me, room) => { if (!(c?.me > 0) || !((me || 0) > c.me)) return false; const k = room + '|' + c.me; if (!(memLater.s ||= new Set()).has(k)) { memLater.s.add(k); logErr('분기', `다른 방(${String(room || '').slice(0, 8)}…) 기억은 분기한 뒤에 고쳐진 것이라 안 가져옴`); } return true; }; // 기록은 방마다 한 번만
+  const memLater = (c, me, room) => { if (!(c?.me > 0) || !((me || 0) > c.me)) return false; const k = room + '|' + c.me; if (!(memLater.s ||= new Set()).has(k)) { memLater.s.add(k); logErr('분기', `다른 방(${String(room || '').slice(0, 8)}…) 기억은 분기한 뒤에 고쳐진 것이라 그대로는 안 씀 · 분기 때 정리본을 찾아봄`); } return true; }; // 기록은 방마다 한 번만
   const memTake = (c, g, stale) => !!(g && (g.upto === c.upto || (g.turns && g.turns === c.turns && g.at && g.at === c.at)) && (!stale || (g.me || 0) >= (c.me || 0))); // 드라이브 사본을 받아도 되는지(같은 정리본 · 늦게 고친 걸 찾는 중이면 그만큼 새것)
   const fxRepair = new Set(); // 이 창에서 채팅 노트 고정 설정을 이미 다시 쓴 것(방|모양) · 같은 걸 되풀이해 쓰지 않게
   const fxNewer = (note, cid) => (note?.fx || 0) > (FX_AT.get(cid) || 0);
@@ -582,12 +582,13 @@
     //   낱말 끝 조사는 떼고 찾아요: '하비에게' → '하비' · 대화 '은반지를'에 제목 '은반지'가 들어 있으면 맞음
     //   제목은 ':' 앞까지만(인지 '정보: 설명' · 설명 속 '아니·않은' 같은 말로 떠올리지 않게)
     const common = injCommon();
-    const words = key => [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w)); // 숫자뿐인 건 빼요(날짜는 dayHit)
+    const WK = new Map(), BW = new Map(); // 이번 한 번 고르는 동안은 같은 제목·본문의 낱말을 한 번만 뽑아요(사건마다 두세 번씩 다시 뽑지 않게 · 결과는 읽기만 해요)
+    const words = key => { let r = WK.get(key); if (!r) WK.set(key, r = [...new Set((String(key).replace(/^\[?[^\]]*?\d\s*-\s*/, '').split(/[:：]/)[0].match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !/^\d+$/.test(w))); return r; }; // 숫자뿐인 건 빼요(날짜는 dayHit)
     // 본문 낱말(제목 줄 빼고): 제목엔 없어도 본문의 이름·물건·장소로 떠올려요(제목보다 약하게) · 'bdf' = 본문 낱말이 든 항목 수
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('피터')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
-    const bodyWords = (key, body) => { const tw = new Set(words(key)); return [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w)); }; // '백호랑이가' → '백호랑이' → 이름
+    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)); BW.set(id, r = [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
     const df = new Map(), bdf = new Map(); let nItems = 0;
     for (const sec of secs) for (const it of si(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
@@ -2129,7 +2130,7 @@
   // 고정 설정 묶음 이름('묶음｜제목')은 AI가 읽는 글에서 빼고 머리줄 grp=에 실어요 · 읽을 때 다시 붙여서(fxGrpBack) 기기 안 글은 예전 그대로
   //   뺀 제목이 다른 고정 항목과 같아지면 그 항목은 안 빼요(읽을 때 어느 묶음인지 못 가려서)
   const FX_HEAD = /^(▸\s*)(\[[^\]]+\]\s*)([^｜\n]+)｜\s*(\S.*)$/;
-  const fxH = k => { let x = 2166136261; for (const c of String(k)) x = Math.imul(x ^ c.codePointAt(0), 16777619) >>> 0; return x.toString(36); }, fxEnc = s => encodeURIComponent(s).replace(/[!'()*.~]/g, c => '%' + c.charCodeAt(0).toString(16));
+  const fxH = k => { k = String(k); let x = 2166136261; for (let i = 0; i < k.length; i++) { const c = k.codePointAt(i); if (c > 0xFFFF) i++; x = Math.imul(x ^ c, 16777619) >>> 0; } return x.toString(36); }, /* 글자를 자리로 훑어요(글자 하나씩 꺼내는 것보다 빨라요 · 값은 같아요) */ fxEnc = s => encodeURIComponent(s).replace(/[!'()*.~]/g, c => '%' + c.charCodeAt(0).toString(16));
   function fxGrpOut(lines) { const idx = [], n = new Map(); let inFx = false; // 머리줄엔 '묶음이름:제목표시.제목표시~묶음이름:…'(제목 표시는 짧은 숫자글자 · AI가 읽는 글자를 아끼려고)
     lines.forEach((l, i) => { if (/^\s*■/.test(l)) { inFx = /^\s*■\s*고정 설정\s*$/.test(l); return; } if (!inFx || !/^▸/.test(l)) return;
       const m = l.match(FX_HEAD), k = fxH(itemKey(m ? m[2] + m[4] : l.replace(/^▸\s*/, ''))); n.set(k, (n.get(k) || 0) + 1); if (m) idx.push([i, m, k]); });
@@ -6629,7 +6630,8 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && !memLater(c, Number(d.me) || 0, x.chat) && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, x.chat); await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(d.memory, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ const late = memLater(c, Number(d.me) || 0, x.chat), mem = late ? await branchPoint(x.chat, c, d.store?.hist) : d.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 */
+          await fxInheritOff(chatId, x.chat); if (!late) await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 드라이브에서 찾아 이어 붙였어요' : '분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
   // 모드 기록(임신·연애·문체 보정)은 방마다 작은 파일 하나('방ID-m')에 따로: 큰 백업(정리 기록 수백만 자)을 주고받지 않게 · 스크립트는 그대로(방 ID 자리에 '-m'만 붙여요)
@@ -10152,6 +10154,15 @@
     return out.join('');
   }
   // 분기한 방: 방 번호가 새것이라 정리 기록이 비어 있어요 → 다른 방 기록 중 대화 끝(마지막 유저 말 + 그 뒤 답)이 글자까지 같은 기억을 찾아 가져와요.
+  // 분기한 뒤에 바뀐 방에서 분기 때 기억 찾기: 그 방 정리 기록 중 이 노트와 같은 정리본(정리 지점·턴 수)의 '정리 직후 글' · 못 찾으면 null
+  //   이 기기 기록 → 드라이브 백업에 실린 기록(histJson) → 드라이브의 기록 파일 순서로 봐요
+  async function branchPoint(room, c, histJson = '') {
+    const pick = l => { const h = [...(Array.isArray(l) ? l : [])].reverse().find(x => x && x.after && x.afterUpto === c.upto && (!c.turns || x.to === c.turns)); return h ? h.after : null; };
+    let m = pick(await historyOf(room)); if (m) return m;
+    if (histJson) { try { m = pick(JSON.parse(histJson)); } catch (_) {} if (m) return m; }
+    if (await gsHistPull(room)) m = pick(await historyOf(room));
+    return m;
+  }
   function branchMatch(src, cur, upto) {
     const k = src.findIndex(m => msgId(m) === upto); if (k < 0) return null;
     const norm = m => cleanLog(msgText(m), msgRole(m) !== 'user').replace(/\s+/g, ''), upTo = src.slice(0, k + 1), turn = upTo.filter(m => msgRole(m) === 'user').length; if (!turn) return null;
@@ -10745,7 +10756,8 @@
           const keys = await listKeys();
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && !memLater(c, Number(await getValue('memat:' + k.slice(5), '0')) || 0, k.slice(5)) && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, k.slice(5)); await packInherit(chatId, k.slice(5)); await saveFull(chatId, c.upto, await withChatFixed(o.memory, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ const src = k.slice(5), late = memLater(c, Number(await getValue('memat:' + src, '0')) || 0, src), mem = late ? await branchPoint(src, c) : o.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 → 이 방 것은 안 써요 */
+              await fxInheritOff(chatId, src); if (!late) await packInherit(chatId, src); /* 분기 뒤에 간추린 표시는 안 물려받아요 */ await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 찾아 이 방에 이어 붙였어요' : '분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + src.slice(0, 8) + '… 방의 ' + (late ? '분기 때 정리본' : '전체 기억') + '(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
