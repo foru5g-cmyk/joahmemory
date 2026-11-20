@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.31
+// @version      5.8.32
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -557,6 +557,7 @@
       if (a != null && z != null) for (const x of lost) if (x.d >= a && x.d <= z) out.push(x.v); }
     sec.body = out.join('\n'); return joinSections(L);
   }
+  let embMem = { c: '', v: null }; // 지금 방의 뜻 검색 값(방 번호 · 사건 글 지문 → 값) · 방을 옮기면 그 방 것을 새로 읽어요
   let injPicking = false, injCtx = { text: '', sim: {} }, lastInj = null, sceneOn = false, injPins = new Set(), injSkip = new Map(); // injPins: 📌 늘 넣는 사건(방마다 저장) · injSkip: ✕ 이번 장면에서 뺀 기억(유저가 그 일을 다시 직접 말하면 돌아와요) // sceneOn: 웹 모드(설정) // injCtx.text: 최근 대화 · sim: 항목 키 → 의미 점수(0~1, 가장 비슷한 게 1)
   function secItems(sec) { // 칸의 항목: ▸·【】이 있으면 그것, 없으면 서사 고리는 고리 하나씩 · 그 밖은 '- ' 줄 하나씩(이어지는 줄 포함). key = ':' 앞 제목(서사 고리는 마지막 '·' 뒤)
     const b = itemBlocks(sec.body); if (b.items.length) return b.items;
@@ -741,9 +742,11 @@
     return memoryOut;
   }
   // 최근 대화로 장면을 잡고(이름·낱말), 제미나이 키가 있으면 의미 검색 점수도 매겨요. 사건 글의 임베딩은 이 기기에 저장해 두고 바뀐 것만 새로 받아요.
-  async function wholeOf(chatId, n) { let f = null; try { f = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {} if (!(f?.memory && f.upto === n.upto)) return null;
+  // 꺼내 둔 사본(f)이 이 노트(n)의 전체본이면 그 글 · 아니면 null
+  const wholeFrom = (f, n) => { if (!(f?.memory && f.upto === n.upto)) return null;
     if (!n.sel && f.memory.length < String(n.memory || '').length * 0.7) return null; // 사본이 채팅 전체본보다 훨씬 작음 = 사본이 망가짐 → 채팅 노트를 다시 저장하게
-    return f.memory; }
+    return f.memory; };
+  async function wholeOf(chatId, n) { let f = null; try { f = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {} return wholeFrom(f, n); }
   // Gemini 키가 없을 때 의미 검색 임베딩: Firebase(또는 Vertex) 키로 되는 주소를 한 번 시험해 이 기기에 기억해요
   //   처음엔 보내기를 늦추지 않게 뒤에서 시험만 하고(이번엔 낱말 검색) · 안 되면 오류 기록에 이유를 남기고 하루 동안 다시 안 해요
   const embProbe = {};
@@ -785,30 +788,32 @@
       const aiFail = async e => { if (/\b(40[1-4])\b/.test(String(e?.message))) { /* 401 키 틀림 · 402 크레딧·결제 없음 · 403 권한 · 404 모델 없음 = 다시 불러도 안 됨 → 하루 쉬어요 */ await setValue('injAiNo', aiUrl + '§' + Date.now()); logErr('연동', '기억 고르는 AI(' + INJ_AI_MODEL + ')가 이 키로 안 됨 · ' + String(e.message).slice(0, 120) + ' · 하루 동안 낱말·뜻 검색만 써요'); return true; } return false; };
       const embNo = Date.now() - Number(await getValue('embNo', '0')) < 864e5; // 뜻 검색이 막혀 하루 쉬는 중
       let embOne = null; if (!key && !embNo) for (const a of alts) if ((embOne = await embAltRoute(a))) break; // 되는 길이 나올 때까지(시험 중이면 이번엔 건너뜀)
-      if ((key || embOne) && !embNo) for (const sec of splitSections(stripProof(memory))) if (INJ_SEM.includes(sec.key)) for (const it of itemBlocks(sec.body).items) units.push({ k: itemKey(it.key), t: it.lines.join('\n').slice(0, 2000) });
+      if ((key || embOne) && !embNo) for (const sec of splitSections(stripProof(memory))) if (INJ_SEM.includes(sec.key)) for (const it of itemBlocks(sec.body).items) { const t = it.lines.join('\n').slice(0, 2000); units.push({ k: itemKey(it.key), t, h: hash(t) }); } // h: 글 지문은 사건마다 한 번만 계산해요
       if (units.length) {
-      let cache = {}; try { cache = JSON.parse(String(await getValue('emb:' + chatId, '') || '{}')) || {}; } catch (_) {}
+      // 뜻 검색 값은 이 방 것을 들고 있어요(사건 수백 개면 1MB가 넘는데 답마다 저장소에서 꺼내 풀지 않게) · 계산해 둔 값이라 옛것을 써도 결과는 같아요
+      let cache = embMem.c === chatId ? embMem.v : null; if (!cache) { cache = {}; try { cache = JSON.parse(String(await getValue('emb:' + chatId, '') || '{}')) || {}; } catch (_) {} embMem = { c: chatId, v: cache }; }
+      const had = Object.keys(cache).length;
       const url = verb => 'https://generativelanguage.googleapis.com/v1beta/models/' + EMB_MODEL + ':' + verb;
-      const need = units.filter(u => !cache[hash(u.t)]);
+      const need = units.filter(u => !cache[u.h]);
       const fetchDocs = async () => { if (embOne) { const todo = need.slice(0, 200); for (let i = 0; i < todo.length; i += 4) { const part = todo.slice(i, i + 4);
-          (await Promise.all(part.map(u => embOne(u.t, 'RETRIEVAL_DOCUMENT').catch(() => [])))).forEach((v, j) => { if (v.length) cache[hash(part[j].t)] = v.map(x => Math.round(x * 1000) / 1000); }); } return; }
+          (await Promise.all(part.map(u => embOne(u.t, 'RETRIEVAL_DOCUMENT').catch(() => [])))).forEach((v, j) => { if (v.length) cache[part[j].h] = v.map(x => Math.round(x * 1000) / 1000); }); } return; }
         for (let i = 0; i < need.length; i += 100) {
         const part = need.slice(i, i + 100);
         const r = await request('POST', url('batchEmbedContents'), { headers, timeout: 60000,
           body: { requests: part.map(u => ({ model: 'models/' + EMB_MODEL, content: { parts: [{ text: u.t }] }, taskType: 'RETRIEVAL_DOCUMENT', outputDimensionality: EMB_DIM })) } });
-        (r?.embeddings || []).forEach((e, j) => { if (e?.values?.length) cache[hash(part[j].t)] = e.values.map(v => Math.round(v * 1000) / 1000); });
+        (r?.embeddings || []).forEach((e, j) => { if (e?.values?.length) cache[part[j].h] = e.values.map(v => Math.round(v * 1000) / 1000); });
       } };
       const keep = {};
-      if (injCtx.said && need.length && !wait) { const c0 = cache; fetchDocs().then(async () => { const k = {}; for (const u of units) if (c0[hash(u.t)]) k[hash(u.t)] = c0[hash(u.t)]; await setValue('emb:' + chatId, JSON.stringify(k)); }).catch(() => {}); } // 보내는 중엔 기다리지 않아요(다음 번부터 써요)
-      else { await fetchDocs(); for (const u of units) if (cache[hash(u.t)]) keep[hash(u.t)] = cache[hash(u.t)]; await setValue('emb:' + chatId, JSON.stringify(keep)); } // 노트에서 빠진 사건의 임베딩은 지워요
-      for (const u of units) if (!keep[hash(u.t)] && cache[hash(u.t)]) keep[hash(u.t)] = cache[hash(u.t)];
+      if (injCtx.said && need.length && !wait) { const c0 = cache; fetchDocs().then(async () => { const k = {}; for (const u of units) if (c0[u.h]) k[u.h] = c0[u.h]; await setValue('emb:' + chatId, JSON.stringify(k)); }).catch(() => {}); } // 보내는 중엔 기다리지 않아요(다음 번부터 써요)
+      else { await fetchDocs(); for (const u of units) if (cache[u.h]) keep[u.h] = cache[u.h]; if (need.length || Object.keys(keep).length !== had) await setValue('emb:' + chatId, JSON.stringify(keep)); /* 새로 받았거나 빠진 사건이 있을 때만 저장해요(안 바뀌었는데 답마다 1MB를 다시 쓰지 않게) */ if (embMem.c === chatId) embMem.v = keep; } // 노트에서 빠진 사건의 임베딩은 지워요
+      for (const u of units) if (!keep[u.h] && cache[u.h]) keep[u.h] = cache[u.h];
       const qText = injCtx.said ? injCtx.said.slice(-1500) + '\n\n' + injCtx.text.slice(-800) : injCtx.text.slice(-3000);
       const q = embOne ? { embedding: { values: await embOne(qText, 'RETRIEVAL_QUERY', 2500).catch(() => []) } } : await request('POST', url('embedContent'), { headers, timeout: 2500,
         body: { model: 'models/' + EMB_MODEL, content: { parts: [{ text: injCtx.said ? injCtx.said.slice(-1500) + '\n\n' + injCtx.text.slice(-800) : injCtx.text.slice(-3000) }] }, taskType: 'RETRIEVAL_QUERY', outputDimensionality: EMB_DIM } }).catch(() => null); // 늦으면 의미 검색만 건너뛰고 AI 재검토는 해요
       const qv = q?.embedding?.values || [];
       if (qv.length) {
       const cos = (a, b) => { let d = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return x && y ? d / Math.sqrt(x * y) : 0; };
-      const sims = units.map(u => ({ k: u.k, c: keep[hash(u.t)] ? cos(qv, keep[hash(u.t)]) : 0 })), cs = sims.map(x => x.c);
+      const sims = units.map(u => ({ k: u.k, c: keep[u.h] ? cos(qv, keep[u.h]) : 0 })), cs = sims.map(x => x.c);
       // 점수는 상대값: 평균보다 얼마나 더 비슷한지(가장 비슷한 게 1). 다 비슷비슷하면 아무것도 안 올라가요.
       const mean = cs.reduce((a, b) => a + b, 0) / cs.length, top = Math.max(...cs);
       if (top - mean > 0.02) for (const x of sims) injCtx.sim[x.k] = Math.max(0, (x.c - mean) / (top - mean));
@@ -5409,6 +5414,7 @@
   const limTxt = () => NOTE_LIMIT === NO_LIMIT ? '제한 없음' : fmt(NOTE_LIMIT) + '자'; // 웹 모드는 숫자 대신 '제한 없음'
   const freshTurns = () => (snapshot ? snapshot.fresh.filter(m => msgRole(m) === 'user').length : 0);
   let lastSeenMap = {}; // 인물 → 마지막으로 나온 턴(이 기기에만 · 인물 화면 알약)
+  let fullGen = 0; // 이 창에서 전체 기억(full:)을 저장하거나 비운 횟수 · 방 읽기가 미리 꺼내 둔 사본이 그사이 낡았는지 알아봐요
   let fullNote = null; // { upto, memory } — 근거·번역까지 들어간 전체본
   let histList = []; // 회차별 바뀐 것 화면이 보는 기록(전부 · 그 화면들을 열 때만 채워요)
   let histLast = null, histN = 0; // 평소에 쓰는 것: 마지막 정리 기록 한 건 · 건수
@@ -5434,7 +5440,7 @@
     const old = new Map(fixItems(b).filter(it => it.head).map(it => [itemKey(it.head), it])), keepA = fixItems(a).map(it => { const o = it.head && old.get(itemKey(it.head)); return o && chatShape(o.text) === chatShape(it.text) ? o : it; }); // 글이 같은 항목은 원래 글(따옴표 그대로)
     const list = splitSections(mem), sec = list.find(x => x.key === FIXED), body = fixJoin(keepA.concat(offs)); if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await fxKeepSet(cid, body); return joinSections(list); }
   const sameAsChat = (full, chatMemory) => chatShape(stripProof(full)) === chatShape(chatMemory);
-  const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { memory = fxKeepApply(chatId, memory); const f = { upto, memory, turns, at }; if (chatId === chatIdFromPath()) fullNote = f; /* 화면의 전체 기억은 지금 연 방 것일 때만 바꿔요(늦게 끝난 다른 방 저장이 덮지 않게) · 저장은 그 방 자리에 그대로 */ return setValue('full:' + chatId, JSON.stringify(f)); };
+  const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { memory = fxKeepApply(chatId, memory); const f = { upto, memory, turns, at }; fullGen++; if (chatId === chatIdFromPath()) fullNote = f; /* 화면의 전체 기억은 지금 연 방 것일 때만 바꿔요(늦게 끝난 다른 방 저장이 덮지 않게) · 저장은 그 방 자리에 그대로 */ return setValue('full:' + chatId, JSON.stringify(f)); };
   let _secKey = null, _secVal = [];
   const sections = () => { if (!snapshot?.note) return []; const m = noteMemory(); if (m !== _secKey) { _secKey = m; _secVal = splitSections(m); } return _secVal; };
   const bodyOf = key => sections().find(s => s.key === key)?.body || '';
@@ -6032,7 +6038,7 @@
       if (msg) toast(msg, 'ok', 2000);
       if (nav.gsOn) gsSave(true); // 방 전체는 다시 안 읽어요(이 기기 사본은 위에서 이미 바뀜)
     } catch (e) {
-      if (!partOnly) { if (was.full) await saveFull(chatId, was.full.upto, was.full.memory, was.full.turns, was.full.at); else { fullNote = null; await setValue('full:' + chatId, ''); } } else snapshot.note = was.note;
+      if (!partOnly) { if (was.full) await saveFull(chatId, was.full.upto, was.full.memory, was.full.turns, was.full.at); else { fullNote = null; fullGen++; await setValue('full:' + chatId, ''); } } else snapshot.note = was.note;
       await fxTouch(chatId, fxWas); if (kWas != null) await fxKeepSet(chatId, kWas); toast('저장 실패 · ' + e.message, 'err'); keepY();
     }
   }
@@ -6789,7 +6795,7 @@
     const a = nav.devAsk, chatId = chatIdFromPath(); if (!a || a.chatId !== chatId || busyNow) return;
     busyNow = true; render();
     try {
-      if (!restore) { fullNote = null; await setValue('full:' + chatId, ''); nav.fullTried = ''; pageToast(`채팅에 있는 기억(1~${a.c.turns}턴)을 써요`); }
+      if (!restore) { fullNote = null; fullGen++; await setValue('full:' + chatId, ''); nav.fullTried = ''; pageToast(`채팅에 있는 기억(1~${a.c.turns}턴)을 써요`); }
       else {
         const snap = await readSinceLastNote(chatId), c = snap.note || a.c, mine = a.mine, carrier = pickCarrier(snap.all);
         if (!carrier) throw new Error('노트를 붙일 AI 답변을 찾지 못했어요.');
@@ -10313,7 +10319,7 @@
         <div class="pseg">${MODELS.map(([g]) => `<button type="button" data-act="prov" data-arg="${g.toLowerCase()}" aria-pressed="${g.toLowerCase() === prov}">${g}</button>`).join('')}</div>
         ${row('모델', `<select data-out="modelpick">${(MODELS.find(([g]) => g.toLowerCase() === prov)?.[1] || []).map(([id, label]) => `<option value="${id}"${id === curModel ? ' selected' : ''}>${label}</option>`).join('')}<option value=""${MODEL_IDS.includes(curModel) ? '' : ' selected'}>직접 입력</option></select>`)}
         <label class="srow" data-out="modelbox" hidden><div><b>모델 이름</b></div><input type="text" data-set="model" placeholder="${DEFAULT_MODEL}" autocomplete="off"></label>
-        ${row('ChatGPT 로그인', `<span class="keybox"><input type="text" data-out="gptback" value="${esc(nav.gptBack || '')}" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1…"><button type="button" data-act="gptlogin">로그인</button><button type="button" data-act="gptfinish">완료</button><button type="button" data-act="gptlogout">해제</button></span>`, '<span data-out="gptstate"></span>').replace('<label class="srow"', `<label class="srow" data-prov="chatgpt"${prov === 'chatgpt' ? '' : ' hidden'}`)}
+        ${row('ChatGPT 로그인', `<span class="keybox"><input type="text" data-out="gptback" value="${esc(nav.gptBack || '')}" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1…"><button type="button" data-act="gptlogin">로그인</button><button type="button" data-act="gptfinish">완료</button><button type="button" data-act="gptlogout">해제</button></span>`, '<span data-out="gptstate"></span> <button type="button" class="linkbtn" data-act="gptmodels">모델 새로고침</button>').replace('<label class="srow"', `<label class="srow" data-prov="chatgpt"${prov === 'chatgpt' ? '' : ' hidden'}`)}
         ${Object.entries(KEYS).filter(([p]) => p !== 'chatgpt').map(([p, [k, name, ph]]) => row(name, `<span class="keybox"><input type="password" data-set="${k}" autocomplete="off" spellcheck="false" placeholder="${ph}"><button type="button" data-act="peek">보기</button>${p === 'firebase' ? '<button type="button" data-act="fbpastetog">채우기</button>' : ''}</span>`).replace('<label class="srow"', `<label class="srow" data-prov="${p}"${p === prov ? '' : ' hidden'}`)).join('')}
         ${row('프로젝트 ID', `<input type="text" data-set="firebaseProject" autocomplete="off" spellcheck="false" placeholder="my-project-1234">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('앱 ID', `<input type="text" data-set="firebaseAppId" autocomplete="off" spellcheck="false" placeholder="1:…:web:… · [채우기]가 넣어 줘요">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}<!-- 앱 ID: App Check용 · 숨겨 두면 옛 값이 남아도 안 보여서 보이게 -->
@@ -10517,14 +10523,14 @@
     if (cleaned !== text) await writeMessage(chatId, id, cleaned);
   }
   let moving = false, injectOn = true; // injectOn=false: 어느 채팅방에도 노트를 넣거나 옮기지 않음(ETC만)
-  async function moveNote(chatId, snap) {
+  async function moveNote(chatId, snap, whole0) {
     const n = snap.note, carrier = pickCarrier(snap.all);
     if (!n || !carrier || msgId(carrier) === n.carrierId) return false;
     if (n.partial) { // 뒷부분이 지워졌고 이 기기 전체본도 없음: 반쪽을 옮기면 뒷부분이 영영 빠지니 그대로 둬요
       if (!moveNote.warned) { moveNote.warned = true; toast('노트 뒷부분이 든 답변이 지워졌어요. 전체본이 있는 기기에서 넣거나 다시 정리해 주세요.', 'err', 6000); }
       return false;
     }
-    let whole = await wholeOf(chatId, n);
+    let whole = whole0 !== undefined ? whole0 : await wholeOf(chatId, n); // whole0: 방 읽기가 방금 꺼내 둔 전체본(없으면 null) · 안 주면 여기서 꺼내요
     // 본판이 넣은 노트(전체)를 실험판이 처음 옮길 때: 고른 일부로 덮기 전에 전체를 이 기기에 먼저 저장해요
     if (!whole && !n.sel) { await saveFull(chatId, n.upto, n.memory, n.turns, n.at); whole = n.memory; }
     try { await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(whole || n.memory, n.upto, n.turns, n.at || undefined, n.by || '', n.sel && !whole)); }
@@ -10682,6 +10688,9 @@
     try {
       let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT;
       if (old()) return;
+      // 이 방 전체 기억은 한 번만 꺼내서 아래 기억 고르기·노트 옮기기·화면이 같이 써요(큰 방은 수십만 자라 서너 번 꺼내지 않게) · 그사이 이 창이 저장했으면(fullGen) 다시 꺼내요
+      let full0 = null, g0 = -1; const readFull = async () => { if (fullGen !== g0) { g0 = fullGen; full0 = null; try { full0 = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {} } return full0; };
+      await readFull(); if (old()) return;
       { // 웹 모드는 방을 따라가요: 이 방 선택 > (다른 기기가 더 나중에 정리했으면) 노트 표시 > 노트 표시 > 새 방 기본값
         let rs = null; try { rs = JSON.parse(String(await getValue('scene:' + chatId, '') || 'null')); } catch (_) {}
         const nn = snap.note, other = !!nn && !nn.parked && String(nn.by || '') !== DEVICE && (!rs || String(nn.at || '') > String(rs.at || ''));
@@ -10692,11 +10701,11 @@
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
       injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; relPillOn = String(await getValue('relPill', 'on')) !== 'off'; pregMode = String(await getValue('pregMode', 'on')) !== 'off'; { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; pregHasKey = !!String(await getValue(keyOf(m), '')).trim(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); }
-      if (injectOn && snap.note && !snap.note.parked && behind !== 0) { const t = Date.now(); await updateInjCtx(chatId, snap, undefined, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); rPick = Date.now() - t; } // 마지막 유저 말로 골라요
+      if (injectOn && snap.note && !snap.note.parked && behind !== 0) { const t = Date.now(); await updateInjCtx(chatId, snap, wholeFrom(await readFull(), snap.note) || snap.note.memory, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); rPick = Date.now() - t; } // 마지막 유저 말로 골라요
       if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && !(snap.note.web && !sceneOn) && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
         try {
-          const tm = Date.now(), moved = await moveNote(chatId, snap); rMove = Date.now() - tm;
+          const tm = Date.now(), moved = await moveNote(chatId, snap, wholeFrom(await readFull(), snap.note)); rMove = Date.now() - tm;
           if (moved) {
             snap = await readSinceLastNote(chatId);
             await setValue('moved:' + chatId, JSON.stringify({ at: Date.now(), from: behind }));
@@ -10707,8 +10716,7 @@
         finally { moving = false; }
       }
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
-      let full0 = null; try { full0 = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {}
-      if (old()) return;
+      await readFull(); if (old()) return;
       snapshot = snap; fullNote = full0; // 대화와 이 방 전체 기억을 같이 바꿔요(대화만 새 방 것이고 전체 기억은 앞 방 것인 틈이 없게)
       usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregRewind(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
@@ -11685,6 +11693,9 @@
         catch (err) { toast(err.message, 'err', 7000); }
         return; }
       case 'gptlogout': { e.preventDefault(); await gptLogout(); toast('ChatGPT 연결을 해제했어요.', 'ok', 3000); return render(); }
+      case 'gptmodels': { e.preventDefault(); // 로그인한 뒤에 새로 나온 모델이 목록에 안 뜰 때: 그 계정이 지금 쓸 수 있는 모델 목록을 다시 받아요
+        try { const l = await gptLoadModels(); toast(l.length ? `ChatGPT 모델 ${l.length}개를 새로 받았어요` : '받은 모델이 없어요 · 로그인을 확인해 주세요', l.length ? 'ok' : 'info', 3500); }
+        catch (err) { toast('모델 목록 받기 실패 · ' + errMsg(err), 'err', 5000); } return render(); }
       case 'trimmeasure': { // 미리 재기: AI를 부르지 않고, 다음 정리 때 보낼 노트 크기만 계산해요(노트는 안 바뀜)
         const base = noteMemory(), msgs = snapshot?.fresh || [], cut = trimLogForSummary(base, msgs), sent = dropProofLines(cut.memory);
         const n = msgs.filter(m => msgRole(m) === 'user').length, pct = base.length ? Math.round((1 - sent.length / base.length) * 100) : 0;
