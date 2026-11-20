@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.26
+// @version      5.8.27
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2999,7 +2999,8 @@
   }
   // 정리 말고 따로 만드는 것(명대사·폰)에 쓰는 AI 호출. 설정한 모델 그대로, 비용은 정리 기록에 함께 적어요.
   async function askModel(system, input, label, json = false) {
-    const model = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
+    const etc = !!etcModel && [...etcSys].some(s => system.startsWith(s)); // ETC 지침(withRules)으로 시작하는 호출만 ETC 모델로(뒤에 '이어서' 안내·다시 시도 문구가 붙어도) · 명대사·장기기억·간추리기는 정리 모델 그대로
+    const model = (etc && etcModel) || String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
     let out; const waits = [4, 10];
     for (let k = 0; ; k++) {
@@ -7330,7 +7331,8 @@
   //    말해도 랜덤이 되지 않아요. 주사위는 코드가 굴려야 합니다.)
   // 공통 규칙은 프롬프트 맨 끝이 아니라 [출력] 줄 바로 앞에 끼웁니다. JSON 스키마 뒤에 붙인 규칙은
   //   AI가 "여기서 끝"으로 읽고 흘려 버려서, 지키라고 써 둬도 지켜지지 않아요.
-  const withRules = (p, extra) => { const i = p.lastIndexOf('[출력]'); return i < 0 ? p + extra : p.slice(0, i) + extra.replace(/^\n+/, '') + '\n' + p.slice(i); };
+  const etcSys = new Set(); // withRules가 만든 지침 = ETC 호출 표시(askModel이 ETC 모델을 쓸지 알아봐요) · 최근 30개만
+  const withRules = (p, extra) => { const i = p.lastIndexOf('[출력]'), s = i < 0 ? p + extra : p.slice(0, i) + extra.replace(/^\n+/, '') + '\n' + p.slice(i); etcSys.add(s); if (etcSys.size > 30) etcSys.delete(etcSys.values().next().value); return s; };
   const dice = a => a[Math.floor(Math.random() * a.length)];
   // 📱 폰 주사위: 얼마나 쓰는지·어디를 털어 보면 재밌는지만 흔들어요(개수는 안 정함). AI한테 맡기면 폰마다 앱 구성이 비슷해져서.
   const MEMO_KINDS = ['일기 한 토막', '보낼까 하다 안 보낸 문자 초안', '누군가의 취향·생일·알레르기 기록', '업무·수업·작전 메모', '돈·물건 숫자 계산',
@@ -10250,6 +10252,7 @@
         ${row('앱 ID', `<input type="text" data-set="firebaseAppId" autocomplete="off" spellcheck="false" placeholder="1:…:web:… · [채우기]가 넣어 줘요">`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}<!-- 앱 ID: App Check용 · 숨겨 두면 옛 값이 남아도 안 보여서 보이게 -->
         ${row('App Check 디버그 토큰', `<span class="keybox"><input type="password" data-set="firebaseDebugToken" autocomplete="off" spellcheck="false" placeholder="콘솔 › App Check › 디버그 토큰 관리"><button type="button" data-act="peek">보기</button><button type="button" data-act="fbtest">확인</button></span>`).replace('<label class="srow"', `<label class="srow" data-prov="firebase"${prov === 'firebase' ? '' : ' hidden'}`)}
         ${row('AI 생각', `<select data-set="thinkLevel">${[['low', '적게 · 빠르고 쌈'], ['medium', '보통'], ['high', '깊게 · 느림']].map(([v, l]) => `<option value="${v}"${v === thinkLevel ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Gemini 3 이상 · 🔍 다시 확인은 늘 적게').replace('<label class="srow"', `<label class="srow" data-prov="gemini vertex firebase claude"${['gemini', 'vertex', 'firebase', 'claude'].includes(prov) ? '' : ' hidden'}`)}
+        ${row('ETC 모델', `<select data-set="etcModel"><option value="">정리와 같게</option>${MODELS.map(([g, l]) => `<optgroup label="${g}">${l.map(([id, label]) => `<option value="${id}"${id === etcModel ? ' selected' : ''}>${label.replace(/\s*\(기본\)$/, '')}</option>`).join('')}</optgroup>`).join('')}</select>`, '커뮤·폰·뉴스 같은 ETC에만 써요 · 다른 회사 모델이면 그 회사 키도 넣어 둬야 해요')}
         ${Object.entries({ gemini: 'Gemini 키는 Google AI Studio에서 무료로 받을 수 있어요(하루 쓸 수 있는 양 제한 있음).', claude: 'Claude 키는 Claude Console(console.anthropic.com)에서 받아요.', vertex: 'Vertex 키는 구글 클라우드 콘솔 › Vertex AI에서 만든 API 키(express 모드)를 넣어요.', firebase: 'Firebase 콘솔 › 프로젝트 설정에서 프로젝트 ID와 웹 API 키를 넣고, AI Logic을 Vertex AI Gemini API로 켜 두세요(구글 클라우드 크레딧으로 써요). App Check: ① 웹 앱은 하나만 ② [채우기]에 그 앱의 firebaseConfig ③ App Check › 그 앱 ⋮ › 디버그 토큰 관리에서 만든 토큰(저장까지) ④ [확인]으로 점검.', openai: 'OpenAI 키는 platform.openai.com에서 받아요 · 쓴 돈 계산은 안 돼요.' }).map(([p, t]) => `<p class="sfoot" data-prov="${p}"${p === prov ? '' : ' hidden'}>${t} 키는 이 브라우저에만 저장돼요.</p>`).join('')}
         </details>
         ${tidyToolsHtml()}${nav.etcSheet ? etcSheetHtml() : ''}
@@ -10597,7 +10600,8 @@
     try { repaintInline(); } catch (_) {}
   }
   let thinkLevel = 'low'; // 정리할 때 AI가 생각하는 양(설정) · Gemini 3 이상 · 기본 낮음(생각도 출력값이라 돈이 들어서)
-  let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
+  let curModel = DEFAULT_MODEL;
+  let etcModel = ''; // ETC(커뮤·폰·뉴스 등)만 따로 쓰는 모델 · 비어 있으면 정리 모델과 같게 // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
   let sceneGen = 0, loadingAt = 0; const gsTried = new Set(), gsRe = new Map(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
   const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
@@ -11311,6 +11315,7 @@
     for (const [k] of Object.values(KEYS)) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, cleanKey(el.value)); }
     { const mv = ui('[data-set="model"]').value.trim(); if (mv) { await setValue('model', mv); curModel = mv; } } // 칸이 아직 비어 있으면(불러오기 전) 모델은 그대로
     { const tl = ui('[data-set="thinkLevel"]')?.value; if (tl) { await setValue('thinkLevel', tl); thinkLevel = tl; } }
+    { const el = ui('[data-set="etcModel"]'); if (el) { etcModel = el.value; await setValue('etcModel', etcModel); } }
     await setValue('autoMove', ui('[data-set="autoMove"]').checked ? 'on' : 'off');
     await setValue('ltmAsk', ui('[data-set="ltmAsk"]').checked ? 'on' : 'off');
     if (!quiet || target?.dataset?.set === 'sceneMode') { const on = ui('[data-set="sceneMode"]').checked; // 웹 모드 스위치를 직접 눌렀을 때만 · 정리 주기·노트 크기도 그 모드 기본으로
@@ -12513,6 +12518,7 @@
     if (String(await getValue('sceneMode', 'off')) === 'on') { await setValue('sceneMode', 'off'); await setValue('cycle', '20'); await setValue('noteLimit', '50000'); return; } // 예전 '모든 방' 값 정리
     const c = Number(await getValue('cycle', '20')); if (CYCLES.includes(c)) cycle = c;
     curModel = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
+    etcModel = String(await getValue('etcModel', '')).trim();
     { let t = String(await getValue('thinkLevel', 'low')); // 한 번만: 예전 기본값 '보통'은 '낮음'으로(정리 비용) · '높음'은 일부러 고른 거라 그대로
       if (String(await getValue('thinkMig1', '')) !== '1') { if (t === 'medium') { t = 'low'; await setValue('thinkLevel', 'low'); } await setValue('thinkMig1', '1'); }
       if (['low', 'medium', 'high'].includes(t)) thinkLevel = t; }
