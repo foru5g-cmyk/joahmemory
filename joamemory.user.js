@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.30
+// @version      5.8.31
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -142,7 +142,7 @@
   const gmRequest0 = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest
     : (hasGM && GM.xmlHttpRequest ? opts => GM.xmlHttpRequest(opts) : null);
   // 요청이 살아 있는지 세요: netIn = 지금 오가는 요청 수 · netLast = 마지막으로 보내거나 받은 때(정리가 멈췄는지 아는 데 써요)
-  let netIn = 0, netLast = Date.now();
+  let netIn = 0, netLast = Date.now(), netQuiet = 5; // netQuiet: 지금 받는 요청이 몇 분 조용하면 끊기는지(진행 안내 문구용)
   const io = { gm: 0, n: 0, db: 0, dn: 0, net: 0, nn: 0 }; // 꺼내고 기다리는 데 쓴 시간·횟수(확장 프로그램 저장소 / 브라우저 DB / 확장 프로그램을 거친 요청) · 방 읽기가 느릴 때 오류 기록 '느림'에 같이 적어요
   const gmRequest = gmRequest0 && (opts => { netIn++; netLast = Date.now(); let done = false; const tN = netLast;
     const end = fn => function (...a) { if (!done) { done = true; netIn = Math.max(0, netIn - 1); io.net += Date.now() - tN; io.nn++; } netLast = Date.now(); return fn?.apply(this, a); };
@@ -289,7 +289,7 @@
       if (!gmRequest) { rej0(new Error('확장 프로그램이 외부 요청을 허용하지 않았어요.')); return; }
       // 아이폰은 화면이 꺼지거나 다른 앱에 갔다 오면 연결이 끊겨도 알려 주지 않아 '만드는 중'이 끝없이 갔어요 → 시계를 직접 봐요
       const t0 = Date.now(); let h = null, len = 0, last = t0; // len·last: 받던 글이 5분 넘게 안 늘면 끊긴 걸로 봐요(전체 시간까지 안 기다림)
-      const quiet = idle0 ? 600000 : 300000; // 생각하는 모델(Neon 등)은 생각 중에 글이 뜸하게 와서 10분까지 기다려요(살아 있는 답을 5분에 끊지 않게)
+      const quiet = idle0 ? 600000 : 300000; if (onProgress) netQuiet = quiet / 60000; /* AI 답을 받는 요청만(드라이브 요청이 끼어도 안내 숫자가 안 바뀌게) */ // 생각하는 모델(Neon 등)은 생각 중에 글이 뜸하게 와서 10분까지 기다려요(살아 있는 답을 5분에 끊지 않게)
       const tick = setInterval(() => { const idle = (len || idle0) && Date.now() - last > quiet; if (Date.now() - t0 < timeout && !idle) return; reject(new Error(idle ? `AI 답이 ${quiet / 60000}분 넘게 멈춰서 끊었어요. 다시 눌러 주세요. (받은 글 ${len.toLocaleString()}자 · 도중에 화면을 떠난 적 ${hid ? '있음' : '없음'})` : timeout >= 600000 ? `AI 답이 ${Math.round(timeout / 60000)}분 안에 끝나지 않아 끊었어요. 설정에서 AI 생각을 적게로 하거나 턴을 나눠 다시 해 주세요.` : '응답이 끊겼어요. 다시 눌러 주세요.')); try { h?.abort?.(); } catch (_) {} }, 1000);
       let hid = document.hidden; const vis = () => { if (document.hidden) hid = true; }; document.addEventListener('visibilitychange', vis); // 끊긴 까닭 가르기: 도중에 화면을 떠났으면(다른 앱·화면 꺼짐) 폰이 연결을 끊은 쪽
       const resolve = v => { clearInterval(tick); document.removeEventListener('visibilitychange', vis); res0(v); }, reject = e => { clearInterval(tick); document.removeEventListener('visibilitychange', vis); rej0(e); };
@@ -379,6 +379,8 @@
   const MEM_AT = new Map(), ME_SEEN = new Map();
   const memTouch = async (cid, t = Date.now()) => { if (!cid || !t) return; MEM_AT.set(cid, t); await setValue('memat:' + cid, String(t)); };
   const memStale = (c, full, myMe) => !!(c?.sel && !c.parked && full && full.upto === c.upto && (c.me || 0) > (myMe || 0)); // 정리 지점은 같은데 다른 기기가 나중에 고침
+  // 분기한 방이 다른 방 사본을 물려받을 때: 그 사본이 이 방 채팅 노트(c.me)보다 나중에 고쳐졌으면 분기한 뒤에 바뀐 글이라 안 가져와요 · me가 없는 옛 노트는 그대로 가져와요
+  const memLater = (c, me, room) => { if (!(c?.me > 0) || !((me || 0) > c.me)) return false; const k = room + '|' + c.me; if (!(memLater.s ||= new Set()).has(k)) { memLater.s.add(k); logErr('분기', `다른 방(${String(room || '').slice(0, 8)}…) 기억은 분기한 뒤에 고쳐진 것이라 안 가져옴`); } return true; }; // 기록은 방마다 한 번만
   const memTake = (c, g, stale) => !!(g && (g.upto === c.upto || (g.turns && g.turns === c.turns && g.at && g.at === c.at)) && (!stale || (g.me || 0) >= (c.me || 0))); // 드라이브 사본을 받아도 되는지(같은 정리본 · 늦게 고친 걸 찾는 중이면 그만큼 새것)
   const fxRepair = new Set(); // 이 창에서 채팅 노트 고정 설정을 이미 다시 쓴 것(방|모양) · 같은 걸 되풀이해 쓰지 않게
   const fxNewer = (note, cid) => (note?.fx || 0) > (FX_AT.get(cid) || 0);
@@ -1047,19 +1049,37 @@
   const P_EN = Object.fromEntries('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ').map((w, i) => [w, i + 1]).concat([['thirty', 30], ['forty', 40]]));
   const koNum = s => { if (/^\d+$/.test(s)) return +s; const i = s.indexOf('십'); if (i < 0) return P_KO[s] || null; return (i ? P_KO[s.slice(0, i)] || 0 : 1) * 10 + (P_KO[s.slice(i + 1)] || 0); };
   const enNum = s => s.split('-').reduce((a, w) => a + (P_EN[w] || (/^\d+$/.test(w) ? +w : 0)), 0) || null;
-  function pregWeeksSaid(t) {
+  // 그 주수가 누구 것인지: 주수 앞에서 가장 가까운 '이름 + 가·이·는·은·의·도·】'가 다른 인물이면 그 사람(NPC) 주수라 안 읽어요
+  const pregOwn = (mem, who) => { const me = who ? personAlias(who) : [], npc = pPeople(mem).map(p => p.name).filter(n => !me.includes(n) && !(who && sameName(n, who))).flatMap(n => personAlias(n)).filter(a => !me.includes(a)); return { me, npc }; };
+  const pregOther = (t, at, own) => { const b = t.slice(Math.max(0, at - 80), at), last = list => Math.max(-1, ...list.map(n => { let best = -1; for (let i = b.indexOf(n); n && i >= 0; i = b.indexOf(n, i + 1)) if (/^(?:가|이|는|은|의|도|】|\s*[:：,])/.test(b.slice(i + n.length))) best = i; return best; })); return last(own.npc) > last(own.me); };
+  function pregWeeksSaid(t, own = null, weak = true) { // own: pregOwn() · 주면 다른 인물의 주수는 건너뛰어요 · weak: '임신 N주'(지금이라는 말 없이)까지 받을지
     t = String(t || '');
-    const k = t.match(/(?:임신|태아|아기|지금|벌써|이제)[^\n.!?]{0,12}?(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)/) || t.match(/(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)(?:예요|에요|네요|입니다|래|야|군요|쯤|정도)/);
+    // 순서: '지금·현재·벌써·이제 N주'(차·째 없어도 · "실종 당시 4주였고 지금 9주 정도"는 9주) → 'N주 차·째' → '임신 N주'(지난 일 '4주였'은 빼고)
+    //   차·째 없이 읽는 건 숫자로 쓴 것만('사주' 같은 낱말이 안 걸리게) · 임신 얘기가 있는 글에서만('지금 6주 과정 듣는 중'이 안 걸리게)
+    //   기간을 말한 것(3주 전·2주 동안·8주 남았어)은 주수가 아니라서 안 읽어요 · 4~42주만 받아요
+    const DUR = /^\s*(?:전|뒤|후|간|동안|만에|만의|일|년|치|연속|남았|남은|남아|[가이나]\s*지나|[가이나]\s*지났)/, PAST = /^\s*(?:였|이었)/, talk = /임신|태아|아기|애기|입덧|주수|산부인과|초음파|예정일/.test(t);
+    const k = [...(talk ? [[/(?:지금|현재|벌써|이제)[^\n.!?]{0,12}?(\d{1,2})\s*주/g, DUR]] : []),
+      [/(?:임신|태아|아기|지금|벌써|이제)[^\n.!?]{0,12}?(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)/g], [/(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)(?:예요|에요|네요|입니다|래|야|군요|쯤|정도)/g],
+      ...(weak ? [[/(?:임신|태아)[^\n.!?]{0,8}?(\d{1,2})\s*주/g, DUR, PAST]] : [])]
+      .map(([re, ...no]) => [...t.matchAll(re)].find(m => { const w = koNum(m[1]), rest = t.slice(m.index + m[0].length); return w >= 4 && w <= 42 && !no.some(x => x.test(rest)) && !(own && pregOther(t, m.index + m[0].lastIndexOf(m[1]), own)); })).find(Boolean);
     const e = t.toLowerCase().match(/\b(\d{1,2}|(?:twenty|thirty|forty)(?:-[a-z]+)?|[a-z]+teen|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\s+(?:along|pregnant)/);
     const w = k ? koNum(k[1]) : e ? enNum(e[1]) : null;
     return w >= 4 && w <= 42 ? w : null;
   }
+  function pregWeeksNote(mem, day, who) { // 노트에 적힌 임신 주수: 임신한 사람 이름이 든 줄에서만 · d = 그 줄(없으면 그 줄이 든 날짜로그 사건)의 날짜, 그것도 없으면 지금
+    if (!who || /^(임신한 사람|유저 캐릭터)$/.test(who)) return null; // 이름을 모르면 노트에서 안 찾아요(다른 인물의 주수를 가져오지 않게)
+    const own = pregOwn(mem, who), ok = d => d != null && d <= day && day - d < 300; let ev = null, strong = null, soft = null;
+    for (const l of String(mem || '').split('\n')) { if (/^\s*■/.test(l)) ev = null; else if (/^\s*▸/.test(l)) ev = P_DAY2(l);
+      const s = P_SYN(l); if (!/임신|태아/.test(s) || !own.me.some(n => l.includes(n))) continue;
+      const d0 = P_DAY2(l), d = ok(d0) ? d0 : ok(ev) ? ev : day, a = pregWeeksSaid(s, own, false), b = a || pregWeeksSaid(s, own);
+      if (a) strong = { w: a, d }; else if (b) soft = { w: b, d }; } // 뒤에 나온 줄이 앞 줄을 덮어요(최근 것)
+    return strong || soft; } // '지금 N주'·'N주차'로 적힌 줄이 먼저 · 없으면 '임신 N주'
   function pregSync(day, snap) {
     let at = day; // 그 말이 나온 때의 날짜(그 뒤에 넘어간 시간은 빼요)
     for (const m of [...(snap?.fresh || [])].filter(isChat).reverse()) {
       if (preg.fixId && msgId(m) === preg.fixId) return; // 주수를 직접 고쳤으면 그 전 대화의 'N주'는 안 따라요
       if (msgRole(m) !== 'user') { at -= pSkip(stripBlocks(msgText(m))); continue; } // AI가 쓴 'N주'는 안 따라요(주수는 우리가 넣어 준 것이라 다르면 AI가 틀린 것) · 유저가 쓴 말만
-      const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t); if (!w) { at -= pSkip(t); continue; }
+      const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t, pregOwn(noteMemory() || '', preg.who)); if (!w) { at -= pSkip(t); continue; } // 다른 인물의 주수("유라는 지금 20주래")는 안 따라요
       if (Math.floor((at - preg.start) / 7) !== w) { preg.start = at - w * 7; preg.why = `대화에서 '${w}주'라고 나와서 맞췄어요`; preg.w0 = Math.min(preg.w0 ?? w, w); pregSave(); }
       return;
     }
@@ -1398,13 +1418,15 @@
   //   누군지: 현재상태 줄 앞 이름 → 그 사건·대화에 나온 유저 캐릭터 → 나온 여자 인물 → 유저 캐릭터
   function pregEnsure(mem, snap = snapshot) {
     if (preg.userOff && !preg.on) return false; // 직접 끄거나 기록을 지웠으면 대화에서 임신 얘기가 나와도 다시 안 켜요(직접 켤 때까지)
+    if (preg.start != null && !preg.wkFix && /관계 미상이라/.test(preg.why || '')) { preg.wkFix = 1; const day = pregDay(mem, snap), sn = !preg.fixId && day != null ? pregWeeksNote(mem, day, preg.who) : null; // 주수를 못 찾아 5주로 어림했던 방: 노트에 주수가 적혀 있으면 한 번만 그걸로 맞춰요(직접 고친 주수는 안 건드림)
+      if (sn && Math.floor((sn.d - preg.start) / 7) !== sn.w) { preg.start = sn.d - sn.w * 7; preg.w0 = Math.min(preg.w0 ?? sn.w, sn.w); preg.why = `노트에 '${sn.w}주'라고 적혀 있어서 맞췄어요`; } pregSave(); }
     if (preg.start != null) { if (preg.father == null || preg.dadV !== 3) { const first = preg.dadV !== 3; preg.dadV = 3; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; } // dadV: 아빠 찾는 방식이 바뀌면 한 번 다시 찾아요
     if (pregMaleNo(mem)) return false; // 유저 캐릭터가 남자면 이야기·주사위로는 안 켜요(직접 시작·작가 설정만)
     // 임신 시작: 정리 AI가 알려 주거나(%%임신시작), 대화에 임신을 밝힌 말이 나오면 AI에 한 번 물어서(pregGate) · 노트 낱말로는 안 찾아요
     { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(P_SYN(stripBlocks(msgText(m)))); } // 유저 말 + AI 답(유저 캐릭터가 보낸 문자·대사로 나오기도 해요)
       const tell = preg.aiSaid || told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
       const unaware = !!tell && P_AUTHOR.test(tell) && P_UNAWARE.test(tell);
-      if (tell && day != null) return pregGate(tell, () => { const said = pregWeeksSaid(tell), rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? day - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)), ws = pregWhoDefault(mem); if (w > 42) return false; preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
+      if (tell && day != null) return pregGate(tell, () => { const ws = pregWhoDefault(mem), own = pregOwn(mem, ws.name), sn = pregWeeksSaid(tell, own) ? null : pregWeeksNote(mem, day, ws.name), said = pregWeeksSaid(tell, own) || sn?.w, rel = pregKitRel(mem), relOk = !said && rel && rel.d <= day && day - rel.d <= 280 && (preg.after == null || rel.d > preg.after), st = said ? (sn ? sn.d : day) - said * 7 : relOk ? rel.d - 14 : day - 35, w = Math.max(3, Math.floor((day - st) / 7)); /* 밝힌 말에 주수가 없으면 노트에 적힌 주수(sn)로 */ if (w > 42) return false; preg.on = true; if (unaware) { preg.unaware = true; preg.forceRel = rel?.d; preg.tests = {}; } // 작가 메모: 본인은 모름 → 임테기를 다시 긁으면 두 줄
         Object.assign(preg, { who: ws.name || '임신한 사람', me: ws.me, start: st, w0: w, why: unaware ? `작가 메모로 임신(본인은 아직 모름)${relOk ? ` · 마지막 관계 ${P_STR(rel.d)} 기준` : ''}` : said ? `이야기에서 '${said}주'라고 했어요` : relOk ? `이야기에서 임신을 밝혔어요 · 마지막 관계 ${P_STR(rel.d)} 기준으로 셌어요` : '이야기에서 임신을 밝혔어요 · 관계 미상이라 지금을 5주로 셌어요', seed: preg.seed || (pSeed()), at: Date.now() }); return true; }); }
     // 임테기를 안 긁어도: 10일 넘게 지난 관계에 임테기와 같은 주사위(pregConceive)가 맞으면 몰래 임신(본인 모름 · pregForce와 같은 상태) → 증상이 생기고 병원·임테기에서 알게 돼요
     { const day = pregDay(mem, snap); if (day != null) { if (!preg.seed) { preg.seed = pSeed(); pregSave(); } const { hit } = pregConceive(mem, day), w0 = hit?.sure ? Math.max(2, Math.floor((day - hit.d + 14) / 7)) : 99;
@@ -5391,7 +5413,7 @@
     const old = new Map(fixItems(b).filter(it => it.head).map(it => [itemKey(it.head), it])), keepA = fixItems(a).map(it => { const o = it.head && old.get(itemKey(it.head)); return o && chatShape(o.text) === chatShape(it.text) ? o : it; }); // 글이 같은 항목은 원래 글(따옴표 그대로)
     const list = splitSections(mem), sec = list.find(x => x.key === FIXED), body = fixJoin(keepA.concat(offs)); if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await fxKeepSet(cid, body); return joinSections(list); }
   const sameAsChat = (full, chatMemory) => chatShape(stripProof(full)) === chatShape(chatMemory);
-  const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { memory = fxKeepApply(chatId, memory); fullNote = { upto, memory, turns, at }; return setValue('full:' + chatId, JSON.stringify(fullNote)); };
+  const saveFull = (chatId, upto, memory, turns = 0, at = new Date().toISOString()) => { memory = fxKeepApply(chatId, memory); const f = { upto, memory, turns, at }; if (chatId === chatIdFromPath()) fullNote = f; /* 화면의 전체 기억은 지금 연 방 것일 때만 바꿔요(늦게 끝난 다른 방 저장이 덮지 않게) · 저장은 그 방 자리에 그대로 */ return setValue('full:' + chatId, JSON.stringify(f)); };
   let _secKey = null, _secVal = [];
   const sections = () => { if (!snapshot?.note) return []; const m = noteMemory(); if (m !== _secKey) { _secKey = m; _secVal = splitSections(m); } return _secVal; };
   const bodyOf = key => sections().find(s => s.key === key)?.body || '';
@@ -6156,10 +6178,10 @@
     const dash = `<section class="wd${injPicking ? ' picking' : ''}">
       <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
       ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<section class="nf"><details class="nf-help"><summary><b>이 기기엔 전체 기억이 없어요</b><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more"><p>웹 모드는 전체 기억을 <b>정리한 기기</b>(예: 폰)에만 저장하고, 채팅엔 장면에 맞게 고른 일부만 넣어요. 그래서 다른 기기에선 전체 기억을 가져와야 이어서 정리할 수 있어요.</p><p><b>구글 드라이브</b> · 정리할 때마다 자동으로 올라가고, 다른 기기에서 이 방을 열면 알아서 받아 와요. 정리한 기기와 이 기기 <b>둘 다</b> 같은 주소·비밀번호로 연결해 주세요. 드라이브에 이 방이 없으면 정리한 기기에서 설정 › 백업 › 지금 올리기를 한 번 눌러요.</p><p><b>백업 파일</b> · 정리한 기기에서 설정 › 백업 › 백업 파일 받기 → 그 파일을 여기서 불러와요. 그 뒤 거기서 또 정리하면 다시 옮겨야 해요.</p></div></details><p class="nf-sub">다른 기기에서 정리한 방이에요 · 둘 중 하나로 가져와 주세요</p><div class="nf-opts"><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">☁️</span><b>구글 드라이브</b><em class="nf-tag">추천</em><small>정리할 때마다 자동 백업 · 기기끼리 알아서 맞춰요</small></div>${nav.gsOn ? `<button class="btn pri" data-act="gspick"${busyNow ? ' disabled' : ''}>드라이브에서 찾기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">💾</span><b>백업 파일</b><small>지금 한 번만 · 정리한 기기에서 받은 파일로</small></div><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>${nav.gsPick ? `<div class="nf-pick"><small>${nav.gsPickAll ? '드라이브의 다른 방 백업 · 턴 수가 같아야 가져올 수 있어요' : '이 방과 제목·턴 수가 같은 백업'}</small>${nav.gsPick.length ? nav.gsPick.map(x => `<button class="nf-pi" data-act="gspickgo" data-arg="${esc(x.chat)}"><b>${esc(x.title)}</b><small>${esc(x.note)} · ${esc(x.when)}</small></button>`).join('') : `<small>맞는 방이 없어요 · 정리한 기기에서 그 방을 드라이브에 올렸는지 확인해 주세요</small>`}${nav.gsPickAll ? '' : '<button class="linkbtn" data-act="gspick" data-arg="all">제목 다른 방도 보기</button>'}</div>` : ''}<p class="nf-foot">둘 다 안 되면 <button class="linkbtn" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button> · 시간·돈이 많이 들어요</p></section>` : ''}
-      <div class="wd-tiles">
-        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${(busyNow && genProg?.kind !== 'pack' && !nav.packWork) || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (busyNow ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
-          <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${busyNow || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${busyNow ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
+      ${chunkLine()}<div class="wd-tiles">
+        <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${spin || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (spin || autoBusy ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
+          <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${spin || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${spin || autoBusy ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
@@ -6580,7 +6602,7 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, x.chat); await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(d.memory, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && !memLater(c, Number(d.me) || 0, x.chat) && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, x.chat); await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(d.memory, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
   // 모드 기록(임신·연애·문체 보정)은 방마다 작은 파일 하나('방ID-m')에 따로: 큰 백업(정리 기록 수백만 자)을 주고받지 않게 · 스크립트는 그대로(방 ID 자리에 '-m'만 붙여요)
@@ -7504,13 +7526,18 @@
     genTick = setInterval(() => { if (!busyNow || !genProg) { clearInterval(genTick); genProg = null; return; } paintGen(); }, 500);
   }
   function updateProg(raw) {
-    const g = genProg; if (!g || Date.now() - g.last < 300) return; g.last = Date.now();
-    if (String(raw).length > g.recv) g.recvAt = Date.now(); // recvAt: 마지막으로 글이 온 때
-    g.recv = String(raw).length; let text = '';
-    for (const line of String(raw).split('\n')) { if (!line.startsWith('data:')) continue;
+    const g = genProg; if (!g || Date.now() - g.last < 300) return; g.last = Date.now(); raw = String(raw);
+    if (raw.length > g.recv) g.recvAt = Date.now(); // recvAt: 마지막으로 글이 온 때
+    g.recv = raw.length; let text = '';
+    // 새로 받은 줄만 읽어요(0.3초마다 받은 글 전체를 다시 훑으면 긴 답에서 폰이 버거워요) · pos: 다 읽은 자리 · 받은 글이 줄었으면 새 요청(다시 시도)이라 처음부터
+    if (raw.length < (g.pos || 0)) { g.pos = 0; g.text = ''; g.chars = 0; }
+    const end = raw.lastIndexOf('\n'); if (end < (g.pos || 0)) return;
+    const part = raw.slice(g.pos || 0, end); g.pos = end + 1;
+    for (const line of part.split('\n')) { if (!line.startsWith('data:')) continue;
       try { const j = JSON.parse(line.slice(5)); for (const p of j.candidates?.[0]?.content?.parts || []) if (!p.thought && p.text) text += p.text;
         if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text; text += j.choices?.[0]?.delta?.content || ''; if (j.type === 'response.output_text.delta') text += j.delta || ''; } catch (_) {} }
-    g.chars = text.length; g.posts = (text.match(/"board"\s*:/g) || []).length; g.comments = (text.match(/"text"\s*:/g) || []).length;
+    if (g.kind === 'board' || g.kind === 'more') { g.text = (g.text || '') + text; g.chars = g.text.length; g.posts = (g.text.match(/"board"\s*:/g) || []).length; g.comments = (g.text.match(/"text"\s*:/g) || []).length; } // 글·댓글 수를 세는 화면만 글을 모아 둬요
+    else g.chars += text.length;
   }
   function genView() {
     const g = genProg, s = Math.floor((Date.now() - g.t0) / 1000), tm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -7518,7 +7545,7 @@
     const board = g.kind === 'board' || g.kind === 'more'; let info;
     // 글이 안 오는 시간 안내: 받다가 2분 넘게 멈춤 / 3분 넘게 첫 글자도 안 옴
     const dead = netIn === 0 && Date.now() - netLast > 30000, deadLeft = Math.max(1, Math.ceil((180000 - (Date.now() - netLast)) / 60000));
-    const q = Math.floor((Date.now() - (g.recvAt || g.t0)) / 60000), stall = dead ? `AI 연결이 끊긴 것 같아요 · ${deadLeft}분 안에 저절로 풀고 알려 줘요` : g.recvAt ? (q >= 2 ? `AI 답이 ${q}분째 멈춰 있어요 · 5분이 되면 끊고 알려 줘요` : '') : q >= 3 ? `${q}분째 첫 글자를 기다리는 중 · AI 생각이 깊으면 오래 걸려요` : '';
+    const q = Math.floor((Date.now() - (g.recvAt || g.t0)) / 60000), stall = dead ? `AI 연결이 끊긴 것 같아요 · ${deadLeft}분 안에 저절로 풀고 알려 줘요` : g.recvAt ? (q >= 2 ? `AI 답이 ${q}분째 멈춰 있어요 · ${netQuiet}분이 되면 끊고 알려 줘요` : '') : q >= 3 ? `${q}분째 첫 글자를 기다리는 중 · AI 생각이 깊으면 오래 걸려요` : '';
     if (g.kind === 'summary') { // 정리: 읽는 중 → 쓰는 중(글자 수 · 지난 정리 대비 %)
       info = !g.chars ? (s < 8 ? 'AI에게 대화와 기억 노트를 보내는 중…' : s < 30 ? 'AI가 대화를 읽고 정리하는 중…' : 'AI가 정리하는 중이에요 · 대화가 길면 첫 글자까지 1분 넘게 걸려요')
         : `AI가 쓰는 중 · ${fmt(g.chars)}자`;
@@ -8382,6 +8409,9 @@
   const ltmGo = async () => { if ((ltmBy || (nav.ltmHasKey === false ? 'file' : 'api')) !== 'file') return ltmAdd(); await setValue('ltmq:' + chatIdFromPath(), JSON.stringify(ltmQ)); render(); out('main').scrollTop = 0; toast('위 ① 요청 복사부터 해 주세요', 'info', 3500); };
   async function ltmAdd(given = '') {
     const chatId = chatIdFromPath(); if (!chatId || busyNow || !ltmQ?.cands?.length) return;
+    // AI를 부르기 전에 크랙이 카드를 더 받는지 먼저 봐요(꽉 찼으면 AI 값만 나가고 HTTP 400으로 끝나요) · 확인이 안 되면 그냥 진행
+    try { const d = (await crack('GET', ltmUrl(chatId) + '?limit=1&type=longTerm&orderBy=newest&filter=all'))?.data;
+      if (d && d.isCreatable === false) { toast(`크랙 장기기억에 카드를 더 만들 수 없어요${d.userCreatedCount ? ` (직접 추가한 카드 ${d.userCreatedCount}개)` : ''} · 크랙에서 '추가' 카드를 지우거나 합친 뒤 다시 눌러 주세요 · 노트는 그대로예요`, 'err', 8000); logErr('장기기억', '크랙이 카드를 더 안 받음(isCreatable=false) · 옮기지 않음'); return; } } catch (_) {}
     if (ltmQ.cands.length > LTM_BATCH) { // 묶음이 크면 앞 12개만 먼저, 나머지는 큐에 남겨 이어서
       const rest = ltmQ.cands.slice(LTM_BATCH); ltmQ = { ...ltmQ, cands: ltmQ.cands.slice(0, LTM_BATCH) }; ltmAdd.rest = rest;
     } else ltmAdd.rest = null;
@@ -8410,14 +8440,16 @@
             if (o && n > [...o.summary].length && n <= LTM_S) o.summary = t; } } catch (_) {} // 채우기가 실패해도 짧은 카드 그대로 넣어요
       }
       const have = new Set((ltmData?.items || []).map(x => x.title + '\u0000' + x.summary)), posted = [];
-      for (const c of cards) { if (!have.has(c.title + '\u0000' + c.summary)) await crack('POST', ltmUrl(chatId), { type: 'longTerm', title: c.title, summary: c.summary }); posted.push(c); }
+      let postErr = null; // 중간에 크랙이 막아도(카드 수 한도 등) 이미 생긴 카드는 아래에서 확인해 그 사건만 노트에서 빼요(다시 누를 때 같은 사건 카드가 또 생기지 않게)
+      for (const c of cards) { try { if (!have.has(c.title + '\u0000' + c.summary)) await crack('POST', ltmUrl(chatId), { type: 'longTerm', title: c.title, summary: c.summary }); posted.push(c); } catch (e) { postErr = e; break; } }
+      if (postErr && !posted.length) throw postErr;
       // 확인: 크랙 목록을 다시 읽어 제목이 실제로 있는 카드만 인정해요
       await ltmLoad(); // 목록을 비우지 않고 다시 읽어요(화면이 "불러오는 중"으로 깜빡이지 않게)
       const now = new Set((ltmData?.items || []).map(x => x.title)), ok = posted.filter(c => now.has(c.title));
       if (!ok.length) throw new Error('크랙 장기기억에 카드가 생기지 않았어요. 노트는 그대로 뒀어요');
       // AI가 keys를 못 맞춘 사건은 카드가 전부 확인됐을 때만 같이 빼요
       const total = batch.length, okKeys = [...new Set(ok.flatMap(c => c.keys))];
-      const keysAll = ok.length === posted.length ? [...new Set([...okKeys, ...batch.map(c => c.key)])] : okKeys;
+      const keysAll = ok.length === posted.length && !postErr ? [...new Set([...okKeys, ...batch.map(c => c.key)])] : okKeys;
       ltmDone = [...new Set([...ltmDone, ...keysAll])].slice(-400); await setValue('ltmdone:' + chatId, JSON.stringify(ltmDone));
       const leftover = batch.filter(c => !keysAll.includes(c.key));
       ltmQ = leftover.length ? { turns: turnsQ, cands: leftover, kind: 'move' } : null; await setValue('ltmq:' + chatId, ltmQ ? JSON.stringify(ltmQ) : ''); ltmGroups = null; nav.ltmSel = null;
@@ -8433,9 +8465,10 @@
       }
       toast('사건 ' + total + '개 → 장기기억 카드 ' + ok.length + '장 🧠' + (dropped ? ' · 노트에서 ' + dropped + '개 뺐어요' : '') + (ok.length < posted.length ? ' · ' + (posted.length - ok.length) + '장은 안 생겨서 그 사건은 노트에 뒀어요' : ''), ok.length < posted.length ? 'err' : 'ok', 4500);
       if (dropped) { await refresh(); if (nav.gsOn) gsSave(true); }
+      if (postErr) throw postErr; // 못 옮긴 사건은 아래 catch가 대기 줄에 그대로 둬요
       if (ltmAdd.rest?.length) { ltmQ = { turns: snapshot?.note?.turns || 0, cands: ltmAdd.rest, kind: 'move' }; await setValue('ltmq:' + chatId, JSON.stringify(ltmQ));
         if (given) { const ta = ui('[data-out="ltmpaste"]'); if (ta) ta.value = ''; toast('남은 사건 ' + ltmAdd.rest.length + '개는 ① 요청 복사부터 한 번 더 해 주세요', 'info', 6000); } else { busyNow = false; await ltmAdd(); return; } }
-    } catch (e) { if (ltmAdd.rest?.length || !ltmQ) { ltmQ = { turns: turnsQ, cands: [...(ltmQ?.cands || batch), ...(ltmAdd.rest || [])], kind: 'move' }; await setValue('ltmq:' + chatId, JSON.stringify(ltmQ)); } toast('장기기억 옮기기 실패 · ' + errMsg(e), 'err'); }
+    } catch (e) { if (ltmAdd.rest?.length || !ltmQ) { const cands = [...(ltmQ?.cands || batch), ...(ltmAdd.rest || [])].filter(c => !ltmDone.includes(c.key)); /* 이미 카드가 된 사건은 다시 줄 세우지 않아요 */ ltmQ = cands.length ? { turns: turnsQ, cands, kind: 'move' } : null; await setValue('ltmq:' + chatId, ltmQ ? JSON.stringify(ltmQ) : ''); } toast('장기기억 옮기기 실패 · ' + errMsg(e), 'err'); }
     finally { busyNow = false; render(); }
   }
   async function ltmDropFromNote(chatId, keys) {
@@ -8723,6 +8756,7 @@
     if (autoBusy) return toast('자동 정리가 도는 중이에요 · 끝난 뒤에 간추리기를 눌러 주세요', 'info', 3500); // 정리와 같이 돌면 서로 노트를 덮어요
     const mem = noteMemory(), targets = packTargets(mem, false, level), SYS = level === 2 ? PACK_PROMPT2 : PACK_PROMPT; if (!targets.length) return toast('더 간추릴 오래된 사건이 없어요 · 새 사건이 쌓이면 다시 생겨요.', 'info', 3500);
     const left = packLeft(), leftN = level === 2 ? left.n2 : left.n;
+    logErr('간추리기', `시작 · ${level === 2 ? '2차' : '1차'} · 사건 ${targets.length}개 · 노트 1~${snapshot.note.turns}턴`, cid);
     busyNow = true; startGen('pack', Math.round(targets.reduce((a, it) => a + packBody(it).join('\n').length, 0) * (level === 2 ? 0.25 : 0.75))); render(); out('main').scrollTop = 0; toast(`${level === 2 ? '2차 · 아주 오래된 사건' : '아직 안 줄인 오래된 사건'} ${leftN}개 중 ${targets.length}개를 간추리는 중이에요… (1~2분)`, 'info', 6000);
     try { const names = namesIn(mem), text = it => [it.lines[0], ...packBody(it)].join('\n'), ask = (list, sys) => askModel(sys, '[사건]\n' + list.join('\n'), '🗜간추리기');
       let rows = packCheck(targets, await ask(targets.map(text), SYS), names, personAlias, level);
@@ -8745,6 +8779,7 @@
       const orig = it.lines.join('\n'); if (!origMap[r.k] || origMap[r.k].length < orig.length) origMap[r.k] = orig; it.lines = r.lines; packSig[r.k] = (p.level === 2 ? '2:' : '') + fxH(r.lines.join('\n')); n++; }
     if (!n) { toast('그 사이 노트가 바뀌어서 적용하지 않았어요.', 'info', 3000); return render(); }
     sec.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); const memory = joinSections(list.filter(x => x.body.trim()));
+    logErr('간추리기', `적용 · ${p.level === 2 ? '2차' : '1차'} · 사건 ${n}개 · 노트 1~${snapshot.note.turns}턴`, cid); // 어느 방에 적용했는지 남겨요
     nav.packWork = '적용하는 중'; busyNow = true; render();
     try { await setValue('orig:' + cid, JSON.stringify(origMap)); await setValue('pack:' + cid, JSON.stringify(packSig)); // 원문부터 보관함에 넣고 나서 노트를 바꿔요
       await rewriteNote(cid, memory); toast(`사건 ${n}개를 간추렸어요 · 원문은 보관함에 있어요`, 'ok', 3000); await refresh(); if (nav.gsOn) gsSave(true); }
@@ -8756,6 +8791,7 @@
     for (const it of b.items) { const k = itemKey(it.key); if (it.del || !origMap[k] || !packIs(k, it.lines)) continue; it.lines = origMap[k].split('\n'); delete packSig[k]; n++; }
     if (!n) return toast('되돌릴 간추린 사건이 없어요.', 'info', 3000);
     sec.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim(); const memory = joinSections(list.filter(x => x.body.trim()));
+    logErr('간추리기', `되돌리기 · 사건 ${n}개 · 노트 1~${snapshot.note.turns}턴`, cid);
     nav.packWork = '되돌리는 중'; busyNow = true; render();
     try { await rewriteNote(cid, memory); await setValue('pack:' + cid, JSON.stringify(packSig)); toast(`사건 ${n}개를 원문으로 되돌렸어요`, 'ok', 3000); await refresh(); if (nav.gsOn) gsSave(true); }
     catch (e) { toast('되돌리기 실패 · ' + errMsg(e), 'err'); } finally { nav.packWork = ''; busyNow = false; render(); } }
@@ -10610,8 +10646,8 @@
     try { repaintInline(); } catch (_) {}
   }
   let thinkLevel = 'low'; // 정리할 때 AI가 생각하는 양(설정) · Gemini 3 이상 · 기본 낮음(생각도 출력값이라 돈이 들어서)
-  let curModel = DEFAULT_MODEL;
-  let etcModel = ''; // ETC(커뮤·폰·뉴스 등)만 따로 쓰는 모델 · 비어 있으면 정리 모델과 같게 // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
+  let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
+  let etcModel = ''; // ETC(커뮤·폰·뉴스 등)만 따로 쓰는 모델 · 비어 있으면 정리 모델과 같게
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
   let sceneGen = 0, loadingAt = 0; const gsTried = new Set(), gsRe = new Map(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
   const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
@@ -10619,10 +10655,12 @@
     const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
+    // 읽는 사이 방을 옮겼거나 새 읽기가 시작됐으면 이 읽기는 그만둬요: 늦게 끝난 앞 방 읽기가 지금 방에 앞 방 기억을 덮지 않게(분기방끼리는 메시지 번호가 같아서 정리 지점 확인을 통과해요)
+    const my = refresh.n = (refresh.n || 0) + 1, old = () => refresh.n !== my || chatIdFromPath() !== chatId;
     loading = true; loadingAt = Date.now(); const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
     try {
       let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT;
-      if (chatIdFromPath() !== chatId) return;
+      if (old()) return;
       { // 웹 모드는 방을 따라가요: 이 방 선택 > (다른 기기가 더 나중에 정리했으면) 노트 표시 > 노트 표시 > 새 방 기본값
         let rs = null; try { rs = JSON.parse(String(await getValue('scene:' + chatId, '') || 'null')); } catch (_) {}
         const nn = snap.note, other = !!nn && !nn.parked && String(nn.by || '') !== DEVICE && (!rs || String(nn.at || '') > String(rs.at || ''));
@@ -10648,12 +10686,14 @@
         finally { moving = false; }
       }
       const was = snapshot?.note; // 이 화면이 보던 노트(다른 기기 노트 확인에 씀)
-      snapshot = snap;
+      let full0 = null; try { full0 = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {}
+      if (old()) return;
+      snapshot = snap; fullNote = full0; // 대화와 이 방 전체 기억을 같이 바꿔요(대화만 새 방 것이고 전체 기억은 앞 방 것인 틈이 없게)
       usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
       phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregRewind(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); if (histList.length || ['changes', 'pick'].includes(nav.view)) await histFull(chatId); else await histLight(chatId); /* 기록 화면을 보고 있을 때만 전부 */
       if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
-      try { fullNote = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) { fullNote = null; }
+      if (old()) return; // 전체 기억은 위에서 대화와 같이 읽었어요(큰 방은 이 글이 수십만 자라 두 번 안 꺼내요)
       try { NO_INJ = new Set(JSON.parse(String(await getValue('noinj:' + chatId, '[]')) || '[]')); } catch (_) { NO_INJ = new Set(); } FX_AT.set(chatId, Number(await getValue('fxat:' + chatId, '0')) || 0); MEM_AT.set(chatId, Number(await getValue('memat:' + chatId, '0')) || 0); await styLoad(chatId); { let v = null; try { v = JSON.parse(String(await getValue('fixkeep:' + chatId, '') || 'null')); } catch (_) {} if (v && typeof v.b === 'string') FX_KEEP.set(chatId, v.b); else FX_KEEP.delete(chatId); } // 아래 고정 설정 맞추기보다 먼저(전 방 것으로 비교하면 끈 설정이 지워져요)
       for (const [c, f] of [...fxPend, ...fxOps]) if (c === chatId) f(); // 읽는 중에 누른 넣기/빼기는 저장 전이라 다시 얹어요(안 그러면 스위치가 저절로 돌아가요)
       { const c = snap.note; // 다른 기기가 이 기기보다 나중에 고정 설정을 고쳤을 때만(fx 시각) 이 기기 전체 사본도 그걸로 · 아니면 이 기기에 쓴 글 그대로
@@ -10676,13 +10716,13 @@
           const keys = await listKeys();
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, k.slice(5)); await packInherit(chatId, k.slice(5)); await saveFull(chatId, c.upto, await withChatFixed(o.memory, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && !memLater(c, Number(await getValue('memat:' + k.slice(5), '0')) || 0, k.slice(5)) && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ await fxInheritOff(chatId, k.slice(5)); await packInherit(chatId, k.slice(5)); await saveFull(chatId, c.upto, await withChatFixed(o.memory, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast('분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + k.slice(5, 13) + '… 방의 전체 기억(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
         //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
-        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !String(await getValue('brchk:' + chatId, '')) && !(await historyOf(chatId)).length) { // 한 번 본 방(brchk)은 정리 기록을 안 꺼내요: 기록은 건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요 await setValue('brchk:' + chatId, '1');
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !String(await getValue('brchk:' + chatId, ''))) { await setValue('brchk:' + chatId, '1'); // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
           const ct = c?.turns || 0;
           branchFind(chatId).then(async list => { const x = list[0]; if (!x || x.turn === ct || chatIdFromPath() !== chatId || busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
             const anc = branchAnc(await readAll(chatId), chatId); if (!ct && !anc.length) return; if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return; } // 다른 방 정리본은 대화가 같아도 안 써요
@@ -10697,7 +10737,7 @@
           const k = chatId + '|' + c.upto + '|' + (c.me || 0), nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
           const pull = async () => { // 드라이브에서 받기(큰 백업이라 5초쯤 걸려요)
           let g = null, why = ''; try { const r = await gsCall({ action: 'load', chat: chatId }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, me: Number(d.me) || 0, hist: d.store?.hist || '', orig: d.store?.orig || '', pack: d.store?.pack || '' }; } catch (e) { why = e.message || String(e); }
-          // memTake: 분기하면 크랙이 메시지 번호를 새로 매겨서 정리 지점 번호만 달라요 → 정리 시각·턴 수가 같으면 같은 정리본
+          // memTake: 크랙은 분기할 때 메시지 번호를 그대로 복사해요(원래 방과 정리 지점 번호가 같음) → 방은 번호로만 가려요(load가 이 방 백업만 줌) · 정리 지점이 같거나 정리 시각·턴 수가 같으면 같은 정리본
           if (memTake(c, g, stale) && chatIdFromPath() === chatId) { await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); await packTake(chatId, g.orig, g.pack); pageToast(stale ? '다른 기기에서 고친 기억을 구글 드라이브에서 받아 왔어요' : '구글 드라이브에서 이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
             if (g.hist && !(await historyOf(chatId)).length) { await setValue('hist:' + chatId, g.hist); logErr('연동', '구글 드라이브에서 이 방 정리 기록도 받음(회귀·분기·되돌리기용)'); }
             else if (!g.hist) gsHistPull(chatId).catch(() => {}); } /* 새 판은 정리 기록을 따로 올려서 그 파일에서 */ // 이 기기에 정리 기록이 없을 때만
@@ -10712,12 +10752,12 @@
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); } // 사본이 망가졌으면 채팅 전체본으로
       if (!gsTried.has('sync|' + chatId)) { gsTried.add('sync|' + chatId); gsPullStore(chatId); }
       try { injLog = JSON.parse(String(await getValue('injlog:' + chatId, '[]')) || '[]'); } catch (_) { injLog = []; }
-      try { origMap = JSON.parse(String(await getValue('orig:' + chatId, '') || '{}')) || {}; } catch (_) { origMap = {}; }
-      try { packSig = JSON.parse(String(await getValue('pack:' + chatId, '') || '{}')) || {}; } catch (_) { packSig = {}; }
+      { let o = {}, p = {}; try { o = JSON.parse(String(await getValue('orig:' + chatId, '') || '{}')) || {}; } catch (_) {} try { p = JSON.parse(String(await getValue('pack:' + chatId, '') || '{}')) || {}; } catch (_) {}
+        if (old()) return; origMap = o; packSig = p; } // 원문 보관함·간추린 표시도 이 방 것만(앞 방 것을 들고 있다가 이 방 보관함에 합쳐 쓰지 않게)
       if (!String(await getValue('origfill:' + chatId, ''))) { await setValue('origfill:' + chatId, '1'); await origKeep(chatId, (await historyOf(chatId)).filter(h => !isRg(h)).map(h => [h.before, h.after])); } // 처음 한 번: 정리 기록(최근 30번)의 줄기 전 노트에서 원문을 되살려요 · 회귀 기록은 빼요
       try { injSet = { secs: {}, recent: 8, recall: 12, ...(JSON.parse(String(await getValue('injset:' + chatId, '') || '{}')) || {}) }; } catch (_) { injSet = { secs: {}, recent: 8, recall: 12 }; }
       injSet.recent = 8; injSet.recall = 12; // 최근 사건 8개·떠올릴 기억 12개로 고정(예전에 고른 값은 안 봐요)
-      try { injPins = new Set(JSON.parse(String(await getValue('pins:' + chatId, '[]')) || '[]')); } catch (_) { injPins = new Set(); }
+      { let p = new Set(); try { p = new Set(JSON.parse(String(await getValue('pins:' + chatId, '[]')) || '[]')); } catch (_) {} if (old()) return; injPins = p; }
       try { if (snap.note) selectInjection(noteMemory()); else lastInj = null; } catch (_) {}
       try { lastSeenMap = JSON.parse(String(await getValue('lastseen:' + chatId, '') || '{}')) || {}; } catch (_) { lastSeenMap = {}; }
       if (ltmData?.chatId !== chatId) { try { ltmData = JSON.parse(String(await getValue('ltmcache:' + chatId, '') || 'null')); } catch (_) { ltmData = null; } }
@@ -10795,7 +10835,7 @@
         movedInfo = mv ? `${new Date(mv.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${mv.from}개 전에서 옮김` : '';
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
-    finally { loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
+    finally { if (refresh.n !== my) return; /* 더 새 읽기가 도는 중이면 그쪽이 끝낼 때 풀어요 */ loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
       const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번) · 요청 ${s(io.net - io0.net)}초(${io.nn - io0.nn}번)`, chatId); }
   }
 
@@ -12591,6 +12631,7 @@
     lastPath = nowChat; autoAttend(); // 방을 옮길 때도 출석 확인(하루 한 번만 실제로 보내요)
     openSheet(false);
     snapshot = null; draft = null; nav = fresh(); histList = []; histLast = null; histN = 0;
+    fullNote = null; origMap = {}; packSig = {}; injPins = new Set(); refresh.n = (refresh.n || 0) + 1; loading = false; // 앞 방 기억·원문 보관함·고정 사건도 비워요 · 돌던 앞 방 읽기는 그만두게(새 방 읽기가 곧 다시 채워요)
     inlineBtn.remove(); capBtn.remove(); if (cap.on) capOff();
     placeInlineButton();
     render();
