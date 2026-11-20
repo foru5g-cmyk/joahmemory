@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.33
+// @version      5.8.34
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1399,7 +1399,7 @@
     return { turn: at, j: JSON.stringify({ on: last.kind !== '출산', world: p.world, peek: p.peek, maleOk: p.maleOk, books: keep, history: (p.history || []).filter(l => !drop.some(b => b.line === l)), ...(end != null ? { after: end } : {}), afterV2: true, afterTurn: Math.max(...last.log.map(x => x.at).filter(num)) }) }; }
   // 분기 확인: 이 방 대화와 분기해 온 방 대화를 이 페이지에서 방마다 한 번만 읽어요 · null = 분기한 방 아님 · undefined = 읽기 실패(다음에 다시)
   const branchCtxMemo = new Map();
-  const branchCtx = chatId => { if (!branchCtxMemo.has(chatId)) branchCtxMemo.set(chatId, (async () => { const cur = await readAll(chatId), from = branchSrc(cur, chatId); if (!from) return null; const at = sameTurns(await readAll(from), cur), U = cur.filter(m => msgRole(m) === 'user').length; return { from, at: at - (msgRole([...cur].reverse().find(isChat)) === 'user' && U === at ? 1 : 0) }; /* 원래 방에 있던 유저 말에서 분기했으면(그 턴 AI 답이 안 따라옴) 한 턴 앞 · 분기한 뒤 새로 쓴 유저 말이면 그대로 */ })().catch(() => { branchCtxMemo.delete(chatId); return undefined; })); return branchCtxMemo.get(chatId); };
+  const branchCtx = chatId => { if (!branchCtxMemo.has(chatId)) branchCtxMemo.set(chatId, (async () => { const cur = await readAllB(chatId), from = branchSrc(cur, chatId); if (!from) return null; const at = sameTurns(await readAllB(from), cur), U = cur.filter(m => msgRole(m) === 'user').length; return { from, at: at - (msgRole([...cur].reverse().find(isChat)) === 'user' && U === at ? 1 : 0) }; /* 원래 방에 있던 유저 말에서 분기했으면(그 턴 AI 답이 안 따라옴) 한 턴 앞 · 분기한 뒤 새로 쓴 유저 말이면 그대로 */ })().catch(() => { branchCtxMemo.delete(chatId); return undefined; })); return branchCtxMemo.get(chatId); };
   const chkDone = v => !!v && !(/^w\d+$/.test(v) && Date.now() - Number(v.slice(1)) > 216e5); // 분기 확인 표시: 'w시각' = 드라이브에도 없었음(6시간 뒤 다시 봐요)
   async function pregBranch(chatId) {
     if (pregBranchSeen.has(chatId)) return false; pregBranchSeen.add(chatId);
@@ -3399,6 +3399,12 @@
     catch (_) { throw new Error('전송 불가'); }
     if (!r.ok) { let t = ''; try { t = await r.text(); } catch (_) {} throw httpWhy(r.status, t); }
   }
+  let pagePatchOff = false;
+  async function pagePatch(url, text, u16) { // u16: UTF-16LE로 보낼지(writeRaw가 정한 대로)
+    const tk = await waitToken(), h = { Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' }, ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
+    try { const r = await fetch(url, u16 ? { method: 'PATCH', signal: ac.signal, body: utf16Blob(patchJson(text)), headers: { ...h, 'Content-Type': 'application/json; charset=utf-16le' } } : { method: 'PATCH', signal: ac.signal, body: patchJson(text), headers: { ...h, 'Content-Type': 'application/json' } });
+      if (!r.ok) { let b = ''; try { b = await r.text(); } catch (_) {} throw httpWhy(r.status, b); } } finally { clearTimeout(t); }
+  }
   // 줄바꿈 표기(\r\n·\r)만 다른 건 같은 글로 봅니다(서버가 바꿔 저장해도 UTF-16LE를 끄지 않게).
   const sameText = (a, b) => a.replace(/\r\n?/g, '\n') === b.replace(/\r\n?/g, '\n');
   const savedAs = async (chatId, id, text) => { try { return sameText(msgText(await readMessage(chatId, id)), text); } catch (_) { return false; } };
@@ -3407,6 +3413,9 @@
     const best = utf16On ? Math.min(u8, u16) : u8;
     if (best > PATCH_MAX) throw new Error(utf16On ? `답변+노트가 너무 커서 넣을 수 없어요 (${Math.round(best / 1024)}KB / 100KB). 설정에서 노트 크기를 줄이고 다시 정리해 주세요.`
       : `아까 전송이 한 번 실패해서 이 페이지에선 큰 노트를 못 보내요 (${Math.round(best / 1024)}KB / 100KB). 새로고침한 뒤 다시 넣어 주세요.`);
+    // 빠른 길 먼저: 페이지에서 크랙 주소로 바로 써요(0.1초쯤 · 크랙 사이트가 자기 API를 부르는 것과 같은 길) · 확장 프로그램을 거치면 한 번 쓰는 데 몇 초씩 걸려요
+    //   저장된 글이 보낸 글과 같을 때만 끝내요 · 서버가 거절했거나 글이 다르면 아래 예전 길이 그대로 다시 해요 · 전송 자체가 막힌 환경이면 이 페이지에선 예전 길만
+    if (!pagePatchOff) try { await pagePatch(editUrls(chatId, id)[1], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
     let lastError = null;
     for (const url of editUrls(chatId, id)) {
       if (utf16On && u16 < u8) {
@@ -3774,18 +3783,20 @@
     list.cut = !!cursor; // 최대 쪽수까지 읽고도 더 남음 = 앞부분이 빠짐
     return list;
   }
-  // 정리 지점(upto = 노트의 N턴)을 기준으로 앞뒤 말풍선의 턴을 세요: 최신 쪽부터 정리 지점과 화면의 말풍선(need)이 다 나올 때까지만 읽어요
-  //   긴 방(수천 턴)을 열 때마다 대화 전체를 읽지 않게 · 정리 지점을 못 찾거나 화면 말풍선이 더 앞에 있으면 null(전체 읽기로)
-  async function anchorTurns(chatId, n, need) {
-    const out = [], ids = new Set(); let cursor = '', upPage = -1;
+  // 정리 지점(upto = 노트의 N턴)을 기준으로 앞뒤 말풍선의 턴을 세요: 최신 쪽부터 정리 지점이 나오고 거기서 turnDepth쪽 더 앞까지만 읽어요
+  //   긴 방(수천 턴)을 열 때마다 대화 전체를 읽지 않게 · 정리 지점을 못 찾으면 null(전체 읽기로)
+  //   turnDepth: 정리 지점보다 몇 쪽(50개씩) 더 앞까지 세어 둘지 · 위로 올려 번호 없는 말풍선이 보이면 늘려서 다시 세요 · turnSeen: 읽은 메시지 번호(리롤로 죽은 것 포함) · turnTop: 대화 맨 처음까지 읽었음
+  let turnDepth = 2, turnSeen = new Set(), turnTop = false;
+  async function anchorTurns(chatId, n) {
+    const out = [], ids = new Set(); let cursor = '', upPage = -1, top = false;
     for (let page = 0; page < MAX_PAGES; page++) {
       const { list, next } = await listPage(chatId, cursor); out.push(...list); for (const m of list) ids.add(msgId(m));
       if (upPage < 0 && ids.has(n.upto)) upPage = page;
-      if (upPage >= 0 && (need.every(id => ids.has(id)) || page - upPage >= 6)) break; // 정리 지점보다 6쪽(300개) 더 앞까지만 찾아봐요
-      if (!(cursor = next)) break;
+      if (upPage >= 0 && page - upPage >= turnDepth) break;
+      if (!(cursor = next)) { top = true; break; }
     }
-    if (need.some(id => !ids.has(id))) return null;
     const all = liveLine(sortOld(out)).filter(isChat), u = all.findIndex(m => msgId(m) === n.upto); if (u < 0) return null;
+    turnSeen = ids; turnTop = top;
     const base = new Map(), put = (m, t) => base.set(msgId(m), { turn: Math.max(0, t), role: msgRole(m) }); let t = n.turns;
     for (let i = u; i >= 0; i--) { put(all[i], t); if (msgRole(all[i]) === 'user') t--; } // 뒤로: 유저 말을 지나면 한 턴 앞
     t = n.turns; for (let i = u + 1; i < all.length; i++) { if (msgRole(all[i]) === 'user') t++; put(all[i], t); }
@@ -3794,7 +3805,8 @@
   async function loadTurnMap(chatId, snap, need = []) { // need: 화면에 있는데 번호가 없는 말풍선(위로 올려 본 옛 대화) → 거기까지 더 읽어요
     if (String(await getValue('badges', 'on')) === 'off') { turnMap = new Map(); turnBase = null; paintBadges(); return; }
     if (turnMapRoom === chatId && Date.now() - turnMapAt < 8000) return;
-    if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; }
+    if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; turnDepth = 2; turnSeen = new Set(); turnTop = false; }
+    if (need.some(id => !turnSeen.has(id)) && !turnTop) turnDepth = Math.min(MAX_PAGES, turnDepth * 2 + 6); // 아직 안 읽은 앞쪽 말풍선이 보임 → 더 앞까지(읽었는데 번호가 없는 건 리롤로 죽은 답이라 안 늘려요)
     turnMapRoom = chatId; turnMapAt = Date.now();
     try {
       // 같은 방은 최신 한 쪽만 읽어, 이미 센 메시지 뒤부터 이어 셉니다(답마다 방 전체를 다시 읽지 않게). 이을 자리를 못 찾으면 전체를 다시 읽어요.
@@ -3812,7 +3824,7 @@
         }
       }
       const n0 = snap?.note;
-      if (!base && n0?.upto && n0.turns > 0) base = await anchorTurns(chatId, n0, need); // 노트가 있으면 정리 지점에서 앞뒤로 세요(방 전체를 안 읽어요)
+      if (!base && n0?.upto && n0.turns > 0) base = await anchorTurns(chatId, n0); // 노트가 있으면 정리 지점에서 앞뒤로 세요(방 전체를 안 읽어요)
       if (!base) {
         const all = await readAll(chatId); let t = 0;
         base = new Map();
@@ -3830,14 +3842,14 @@
   }
   function paintBadges() {
     document.querySelectorAll('.memo-turn-badge').forEach(b => { const id = b.dataset.for; if (!turnMap.has(id)) b.remove(); });
-    const unknown = [], isMsg = new Set(); // isMsg: 메시지 번호가 붙은 말풍선(묶음 번호는 목록에 없어서 더 읽어도 못 찾아요)
+    const unknown = [];
     const SEL = '[data-message-id],[data-message-group-id]';
     document.querySelectorAll(SEL).forEach(el => {
       // 묶음 안에 말풍선이 또 있으면 바깥에만 하나 붙입니다 (번호 두 번 나오는 것 방지).
       if (el.parentElement?.closest(SEL)) { [...el.children].forEach(c => c.classList?.contains('memo-turn-badge') && c.remove()); return; }
       const id = el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id');
       const info = turnMap.get(id);
-      if (!info) { if (id) { unknown.push(id); if (el.hasAttribute('data-message-id')) isMsg.add(id); } return; }
+      if (!info) { if (id) unknown.push(id); return; }
       let b = [...el.children].find(c => c.classList?.contains('memo-turn-badge'));
       if (!b) { b = document.createElement('div'); b.className = 'memo-turn-badge'; el.prepend(b); }
       const done = info.turn <= noteTurns && noteTurns > 0;
@@ -3851,7 +3863,7 @@
     // 새 말풍선이 생겼는데 번호가 없으면 잠시 뒤 다시 셉니다.
     //   다시 읽어도 번호가 안 붙는 말풍선(묶음 ID 등)은 한 번만 시도해요. 안 그러면 10초마다 대화 전체를 계속 다시 읽어요.
     const miss = unknown.filter(id => !badgeMiss.has(id));
-    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(id => badgeMiss.add(id)); const id = chatIdFromPath(); if (id) loadTurnMap(id, snapshot, miss.filter(x => isMsg.has(x))); }
+    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(id => badgeMiss.add(id)); const id = chatIdFromPath(); if (id) loadTurnMap(id, snapshot, miss); }
   }
   let badgeTimer = null;
   new MutationObserver(() => { if (!badgeTimer && turnMap.size) badgeTimer = setTimeout(() => { badgeTimer = null; paintBadges(); }, 400); })
@@ -6205,7 +6217,7 @@
     const rr = 15, rc = 2 * Math.PI * rr, injPc = lastInj ? Math.min(100, Math.round(lastInj.chars / INJ_MAX * 100)) : 0;
     const dash = `<section class="wd${injPicking ? ' picking' : ''}">
       <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
-      ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<section class="nf"><details class="nf-help"><summary><b>이 기기엔 전체 기억이 없어요</b><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more"><p>웹 모드는 전체 기억을 <b>정리한 기기</b>(예: 폰)에만 저장하고, 채팅엔 장면에 맞게 고른 일부만 넣어요. 그래서 다른 기기에선 전체 기억을 가져와야 이어서 정리할 수 있어요.</p><p><b>구글 드라이브</b> · 정리할 때마다 자동으로 올라가고, 다른 기기에서 이 방을 열면 알아서 받아 와요. 정리한 기기와 이 기기 <b>둘 다</b> 같은 주소·비밀번호로 연결해 주세요. 드라이브에 이 방이 없으면 정리한 기기에서 설정 › 백업 › 지금 올리기를 한 번 눌러요.</p><p><b>백업 파일</b> · 정리한 기기에서 설정 › 백업 › 백업 파일 받기 → 그 파일을 여기서 불러와요. 그 뒤 거기서 또 정리하면 다시 옮겨야 해요.</p></div></details><p class="nf-sub">다른 기기에서 정리한 방이에요 · 둘 중 하나로 가져와 주세요</p><div class="nf-opts"><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">☁️</span><b>구글 드라이브</b><em class="nf-tag">추천</em><small>정리할 때마다 자동 백업 · 기기끼리 알아서 맞춰요</small></div>${nav.gsOn ? `<button class="btn pri" data-act="gspick"${busyNow ? ' disabled' : ''}>드라이브에서 찾기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">💾</span><b>백업 파일</b><small>지금 한 번만 · 정리한 기기에서 받은 파일로</small></div><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>${nav.gsPick ? `<div class="nf-pick"><small>${nav.gsPickAll ? '드라이브의 다른 방 백업 · 턴 수가 같아야 가져올 수 있어요' : '이 방과 제목·턴 수가 같은 백업'}</small>${nav.gsPick.length ? nav.gsPick.map(x => `<button class="nf-pi" data-act="gspickgo" data-arg="${esc(x.chat)}"><b>${esc(x.title)}</b><small>${esc(x.note)} · ${esc(x.when)}</small></button>`).join('') : `<small>맞는 방이 없어요 · 정리한 기기에서 그 방을 드라이브에 올렸는지 확인해 주세요</small>`}${nav.gsPickAll ? '' : '<button class="linkbtn" data-act="gspick" data-arg="all">제목 다른 방도 보기</button>'}</div>` : ''}<p class="nf-foot">둘 다 안 되면 <button class="linkbtn" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button> · 시간·돈이 많이 들어요</p></section>` : ''}
+      ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<section class="nf"><details class="nf-help"><summary><b>${brRun.has(chatIdFromPath()) ? '분기하기 전 방의 정리본을 찾는 중이에요…' : nav.gsOn && (gsRe.get(chatIdFromPath() + '|' + n.upto + '|' + (n.me || 0)) || 0) < 3 ? '전체 기억을 드라이브에서 받는 중이에요…' : '이 기기엔 전체 기억이 없어요'}</b><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more"><p>웹 모드는 전체 기억을 <b>정리한 기기</b>(예: 폰)에만 저장하고, 채팅엔 장면에 맞게 고른 일부만 넣어요. 그래서 다른 기기에선 전체 기억을 가져와야 이어서 정리할 수 있어요.</p><p><b>구글 드라이브</b> · 정리할 때마다 자동으로 올라가고, 다른 기기에서 이 방을 열면 알아서 받아 와요. 정리한 기기와 이 기기 <b>둘 다</b> 같은 주소·비밀번호로 연결해 주세요. 드라이브에 이 방이 없으면 정리한 기기에서 설정 › 백업 › 지금 올리기를 한 번 눌러요.</p><p><b>백업 파일</b> · 정리한 기기에서 설정 › 백업 › 백업 파일 받기 → 그 파일을 여기서 불러와요. 그 뒤 거기서 또 정리하면 다시 옮겨야 해요.</p></div></details><p class="nf-sub">다른 기기에서 정리한 방이에요 · 둘 중 하나로 가져와 주세요</p><div class="nf-opts"><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">☁️</span><b>구글 드라이브</b><em class="nf-tag">추천</em><small>정리할 때마다 자동 백업 · 기기끼리 알아서 맞춰요</small></div>${nav.gsOn ? `<button class="btn pri" data-act="gspick"${busyNow ? ' disabled' : ''}>드라이브에서 찾기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">💾</span><b>백업 파일</b><small>지금 한 번만 · 정리한 기기에서 받은 파일로</small></div><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>${nav.gsPick ? `<div class="nf-pick"><small>${nav.gsPickAll ? '드라이브의 다른 방 백업 · 턴 수가 같아야 가져올 수 있어요' : '이 방과 제목·턴 수가 같은 백업'}</small>${nav.gsPick.length ? nav.gsPick.map(x => `<button class="nf-pi" data-act="gspickgo" data-arg="${esc(x.chat)}"><b>${esc(x.title)}</b><small>${esc(x.note)} · ${esc(x.when)}</small></button>`).join('') : `<small>맞는 방이 없어요 · 정리한 기기에서 그 방을 드라이브에 올렸는지 확인해 주세요</small>`}${nav.gsPickAll ? '' : '<button class="linkbtn" data-act="gspick" data-arg="all">제목 다른 방도 보기</button>'}</div>` : ''}<p class="nf-foot">둘 다 안 되면 <button class="linkbtn" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button> · 시간·돈이 많이 들어요</p></section>` : ''}
       ${chunkLine()}<div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${spin || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (spin || autoBusy ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${spin || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
@@ -6630,7 +6642,7 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAll(x.chat), await readAll(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ const late = memLater(c, Number(d.me) || 0, x.chat), mem = late ? await branchPoint(x.chat, c, d.store?.hist) : d.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 */
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAllB(x.chat), await readAllB(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ const late = memLater(c, Number(d.me) || 0, x.chat), mem = late ? await branchPoint(x.chat, c, d.store?.hist) : d.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 */
           await fxInheritOff(chatId, x.chat); if (!late) await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 드라이브에서 찾아 이어 붙였어요' : '분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
@@ -10171,9 +10183,12 @@
     const mine = cur.slice(at, at + tail.length); if (mine.length !== tail.length || !tail.every((m, i) => msgRole(m) === msgRole(mine[i]) && norm(m) === norm(mine[i]))) return null;
     return { turn, uptoId: msgId(mine[mine.length - 1]) };
   }
-  async function branchFind(chatId, tick = () => {}) {
-    const cur = await readAll(chatId), found = [], anc = branchAnc(cur, chatId), from = anc[0] || '';
-    for (const a of anc) await gsHistPull(a); // 분기해 온 방을 다른 기기에서 정리했으면 그 방 정리 기록을 드라이브에서
+  async function branchFind(chatId, tick = () => {}, lap = () => {}) { // lap: 단계마다 걸린 시간 남기기(콘솔)
+    const cur = await readAllB(chatId), found = [], anc = branchAnc(cur, chatId), from = anc[0] || ''; lap('이 방 대화 읽기');
+    anc.forEach(a => readAllB(a).then(() => lap('원래 방 대화 읽기')).catch(() => {})); // 원래 방 대화 읽기를 드라이브 기록 받기와 같이 시작해요(차례로 하면 그만큼 늦어요)
+    // 드라이브 기록은 이 기기 기록이 뒤처졌을 때만 받아요(받는 데 10초쯤 걸려요): 원래 방의 최신 노트 턴까지 이 기기 정리 기록에 있으면 안 받아요 · 모르겠으면 받아요
+    const behind = async a => { try { const nt = ([...(await readAllB(a))].reverse().map(m => parseNote(m)).find(Boolean) || {}).turns || 0, t = await histTail(a); return !(t.last && (t.last.to || 0) >= nt); } catch (_) { return true; } };
+    await Promise.all(anc.map(async a => { if (await behind(a)) await gsHistPull(a); })); lap('드라이브 정리 기록 받기'); // 분기해 온 방을 다른 기기에서 정리했으면 그 방 정리 기록을 드라이브에서
     // ponytail: 최근 기록이 있는 방 12개만 읽어요(방마다 대화 전체를 읽어서). 더 오래된 방은 백업 파일로 · 분기해 온 방을 알면 그 방 정리 기록만 꺼내요(방마다 기록을 다 꺼내면 느려요)
     const keys = anc.length ? anc.map(a => 'hist:' + a) : await listKeys();
     const rooms = []; for (const k of keys) { if (!/^hist:/.test(k) || k === 'hist:' + chatId) continue; const hl = await historyOf(k.slice(5)); if (hl.length) rooms.push({ room: k.slice(5), hl, at: hl[hl.length - 1].at || 0 }); }
@@ -10181,7 +10196,7 @@
     const pick = mine.length ? mine : rooms.sort((a, b) => b.at - a.at).slice(0, 12); // 분기해 온 방을 알면 그 방 하나만 읽어요(방마다 대화 전체를 읽어서 12개면 1분 넘게 걸려요)
     for (const [i, { room, hl }] of pick.entries()) {
       tick(i + 1, pick.length);
-      let src; try { src = await readAll(room); } catch (_) { continue; }
+      let src; try { src = await readAllB(room); } catch (_) { continue; }
       const seen = new Set();
       for (const [hi, h] of [...hl.entries()].reverse()) for (const [memory, upto, at, pj, lj] of [[h.after, h.afterUpto, h.at, h.pregA, h.loveA], [h.before, h.beforeUpto, h.at, hl[hi - 1]?.pregA, hl[hi - 1]?.loveA]]) {
         if (!memory || !upto || seen.has(upto)) continue; seen.add(upto);
@@ -10189,8 +10204,12 @@
       }
     }
     const src = from; // 크랙은 분기할 때 메시지를 원래 방 번호(chatId) 그대로 복사해요 → 분기해 온 방을 정확히 알아요
-    return found.sort((a, b) => (b.room === src) - (a.room === src) || b.turn - a.turn || b.at - a.at); // 분기해 온 방 정리본이 먼저 · 그다음 턴이 큰 것
+    const list = found.sort((a, b) => (b.room === src) - (a.room === src) || b.turn - a.turn || b.at - a.at); // 분기해 온 방 정리본이 먼저 · 그다음 턴이 큰 것
+    list.cur = cur; list.anc = anc; return list; // cur·anc: 부른 쪽이 이 방 대화를 다시 읽지 않게 같이 줘요
   }
+  // 분기 확인용 대화 읽기: 정리본 찾기·임신·연애 확인이 같은 두 방 대화를 거의 동시에 통째로 읽어요 → 1분 안에는 한 번 읽은 걸 같이 써요
+  //   대화 앞부분이 같은지 견주는 곳에서만 써요(읽기만 · 1분 사이 새 답이 와도 앞부분은 안 바뀌어요)
+  const readAllB = id => { const h = readAllB.m ||= new Map(), c = h.get(id); if (c && Date.now() - c.t < 60000) return c.p; const p = readAll(id); h.set(id, { t: Date.now(), p }); p.catch(() => h.delete(id)); return p; };
   // 분기해 온 방: 이 방 메시지 중 다른 방 번호가 붙은 것(분기 전 대화) · 없으면 ''
   //   분기한 방을 또 분기하면 앞쪽 메시지엔 맨 처음 방, 뒤쪽엔 중간 방 번호가 붙어요 → 가장 뒤에 나온 다른 방 = 바로 위 방
   function branchSrc(cur, chatId) {
@@ -10199,11 +10218,12 @@
   // 거슬러 올라가는 방들(바로 위 방부터): 정리본은 이 방들 것만 써요
   const branchAnc = (cur, chatId) => [...new Set([...(cur || [])].reverse().map(m => String(m?.chatId || '')).filter(x => x && x !== String(chatId)))];
   // 고른 다른 방 기억을 미리보기로(넣기는 미리보기에서) · 연애 기록도 이 방에 없으면 같이
-  async function branchUse(x) {
+  async function branchUse(x, quiet = false) { // quiet: 확인 화면을 안 띄워요(방을 열 때 알아서 넣는 길 · 넣기·버리기 버튼이 잠깐 보였다 사라지지 않게)
     try { await Promise.race([Promise.all([pregBranch.p, loveBranch.p]), new Promise(r => setTimeout(r, 8000))]); } catch (_) {} // 턴 사본 복사가 아직 도는 중이면 끝나길 기다려요(최대 8초)
     { const cid = chatIdFromPath(); if (cid && loveThin(await loveOf(cid))) { loveBranch.seen?.delete(cid); if (await loveBranch(cid) && loveChat === cid) await loveLoad(cid); } } // 연애 기록도 갈라진 턴 것으로(최신 것을 통째로 가져오면 그 뒤 싸움·이별이 섞여요)
     const cid0 = chatIdFromPath(), pb = x.pj && cid0 && pregEmpty(await getValue('preg:' + cid0, '')) && pregChat === cid0 ? x.pj : null, lb = x.lj && cid0 && loveThin(await loveOf(cid0)) ? x.lj : null; // 턴 사본이 못 맞췄을 때만
     draft = { sections: splitSections(x.memory), uptoId: x.uptoId, turns: x.turn, evidence: { ok: 0, bad: 0 }, kept: [], lost: [], restore: true, pregBack: pb, loveBack: lb, sub: `대화 끝이 이 방과 같은 1~${x.turn}턴 기억이에요. 넣으면 다음 정리 때 그 뒤 대화를 이어서 정리해요.` };
+    if (quiet) return;
     nav.view = 'preview'; render(); out('main').scrollTop = 0;
   }
   // 두 방 대화가 처음부터 글자까지 같은 유저 말 수 = 갈라진 턴
@@ -10428,7 +10448,7 @@
     // 머리
     const tabName = nav.tab === 'settings' ? '설정' : '조아메모리ෆ';
     const inSettings = nav.tab === 'settings' && !nav.view;
-    let title = tabName, sub = inSettings ? '바꾸면 바로 저장돼요' : n ? `1~${n.turns}턴 기억 · ${turns > cycle ? `정리할 때예요 (+${turns - cycle}턴)` : turns === cycle ? '정리할 때예요' : `다음 정리까지 ${cycle - turns}턴`}` : '아직 정리 전';
+    let title = tabName, sub = inSettings ? '바꾸면 바로 저장돼요' : brRun.has(chatIdFromPath()) ? '분기하기 전 방의 정리본을 찾는 중이에요…' /* 따라온 옛 노트를 맞는 기억처럼 보여 주지 않아요 */ : n ? `1~${n.turns}턴 기억 · ${turns > cycle ? `정리할 때예요 (+${turns - cycle}턴)` : turns === cycle ? '정리할 때예요' : `다음 정리까지 ${cycle - turns}턴`}` : '아직 정리 전';
     const baseTitle = title, baseSub = sub; // 보기 화면에서도 머리는 앱 제목 그대로(뒤로는 메뉴 바로 아래 줄에)
     if (nav.view === 'person') { title = '인물'; sub = '이 사람에 관한 자료 모아 보기'; }
     if (nav.view === 'graph') { title = '전체 관계도'; sub = '확대해서 한눈에'; }
@@ -10565,6 +10585,7 @@
   async function autoSum() {
     const chatId = chatIdFromPath();
     if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview' || freshTurns() < cycle) return;
+    if (brRun.has(chatId)) return; // 분기 전 정리본을 찾는 중이면 기다려요(따라온 옛 노트 위에 정리하지 않게)
     if (autoSum.wait?.c === chatId && freshTurns() < autoSum.wait.n) return; // 방금 실패했으면 3턴 쉬어요(답마다 다시 불러 돈이 계속 나가지 않게)
     autoSumOn =String(await getValue('autoSum', 'on')) !== 'off'; if (!autoSumOn) return;
     { let hold = null; try { hold = JSON.parse(String(await getValue('autoHold:' + chatId, '') || 'null')); } catch (_) {} if (hold && hold.upto === snapshot.note?.upto && freshTurns() < hold.fresh + cycle) return; }
@@ -10687,6 +10708,7 @@
   let curModel = DEFAULT_MODEL; // 설정 화면 모델 목록이 처음부터 이걸 골라 둬요(목록 맨 위가 잠깐 보이지 않게)
   let etcModel = ''; // ETC(커뮤·폰·뉴스 등)만 따로 쓰는 모델 · 비어 있으면 정리 모델과 같게
   let injKind = ''; // 지금 고르는 게 보내기(send)·다시 생성(reroll)인지
+  const brRun = Object.assign(new Set(), { n: new Map() }); // 분기 전 정리본을 찾는 중인 방 · n: 이 창에서 방마다 찾아본 횟수
   let sceneGen = 0, loadingAt = 0; const gsTried = new Set(), gsRe = new Map(); // gsTried: 드라이브에서 전체 기억을 받아 보려고 한 방|정리 지점
   const stuckLoad = () => loading && Date.now() - loadingAt > 30000; // 30초 넘게 안 끝난 읽기 = 걸림
   async function refresh() {
@@ -10756,20 +10778,24 @@
           const keys = await listKeys();
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAll(k.slice(5)), await readAll(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ const src = k.slice(5), late = memLater(c, Number(await getValue('memat:' + src, '0')) || 0, src), mem = late ? await branchPoint(src, c) : o.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 → 이 방 것은 안 써요 */
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAllB(k.slice(5)), await readAllB(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ const src = k.slice(5), late = memLater(c, Number(await getValue('memat:' + src, '0')) || 0, src), mem = late ? await branchPoint(src, c) : o.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 → 이 방 것은 안 써요 */
               await fxInheritOff(chatId, src); if (!late) await packInherit(chatId, src); /* 분기 뒤에 간추린 표시는 안 물려받아요 */ await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 찾아 이 방에 이어 붙였어요' : '분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + src.slice(0, 8) + '… 방의 ' + (late ? '분기 때 정리본' : '전체 기억') + '(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
         //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
-        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !String(await getValue('brchk:' + chatId, ''))) { await setValue('brchk:' + chatId, '1'); // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
-          const ct = c?.turns || 0;
-          branchFind(chatId).then(async list => { const x = list[0]; if (!x || x.turn === ct || chatIdFromPath() !== chatId || busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
-            const anc = branchAnc(await readAll(chatId), chatId); if (!ct && !anc.length) return; if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return; } // 다른 방 정리본은 대화가 같아도 안 써요
-            if (ct && x.turn < ct && sameTurns(await readAll(x.room), await readAll(chatId)) >= ct) return; // 앞선 노트인데 원래 방과 노트 턴까지 같으면 노트가 맞아요(그 방 정리 기록이 이 기기에 덜 남았을 뿐)
-            nav.branchList = list; await branchUse(x); await apply(); pageToast(!ct ? `분기하기 전 방의 1~${x.turn}턴 정리본을 넣었어요` : x.turn < ct ? `분기한 턴보다 앞선 노트(1~${ct}턴)라 1~${x.turn}턴 정리본으로 바꿨어요` : `따라온 노트(1~${ct}턴)보다 가까운 1~${x.turn}턴 정리본을 넣었어요`); logErr('분기', `노트 ${ct ? '1~' + ct + '턴' : '없음'} → ${x.room.slice(0, 8)}… 방의 1~${x.turn}턴 정리본`); })
-            .catch(e => logErr('분기', '분기 전 정리본 찾기 실패 · ' + e.message)); } }
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !brRun.has(chatId) && (brRun.n.get(chatId) || 0) < 3 && !String(await getValue('brchk:' + chatId, ''))) { // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
+          // 찾는 동안(brRun): 홈에 '찾는 중'을 보여 주고 자동 정리를 멈춰요 · '확인함' 표시(brchk)는 끝까지 확인했을 때만 찍어요(찾는 중에 다른 작업이 돌거나 방을 옮겨 그만두면 다음 읽기 때 다시 · 이 창에서 세 번까지)
+          brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); render();
+          const ct = c?.turns || 0, done = () => setValue('brchk:' + chatId, '1'), bT = Date.now(), bLap = w => console.info('[조아메모리] 분기 · ' + w + ' ' + ((Date.now() - bT) / 1000).toFixed(1) + '초'); // 어디서 오래 걸리는지 콘솔에 남겨요
+          branchFind(chatId, () => {}, bLap).then(async list => { const x = list[0]; bLap('정리본 찾기 끝'); if (chatIdFromPath() !== chatId) return; if (!x || x.turn === ct) return done(); if (busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
+            const anc = list.anc; if (!ct && !anc.length) return done(); if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return done(); } // 다른 방 정리본은 대화가 같아도 안 써요
+            if (ct && x.turn < ct && sameTurns(await readAllB(x.room), list.cur) >= ct) return done(); // 앞선 노트인데 원래 방과 노트 턴까지 같으면 노트가 맞아요(그 방 정리 기록이 이 기기에 덜 남았을 뿐)
+            nav.branchList = list; await branchUse(x, true); bLap('임신·연애 맞추기 끝'); await apply(); bLap('넣기 끝');
+            if (draft) { nav.view = 'preview'; render(); logErr('분기', `1~${x.turn}턴 정리본을 찾았는데 넣지 못해 확인 화면에 둠`); return; } // 넣기가 중간에 그만뒀으면 직접 넣을 수 있게 확인 화면을 보여 줘요
+            await done(); pageToast(!ct ? `분기하기 전 방의 1~${x.turn}턴 정리본을 넣었어요` : x.turn < ct ? `분기한 턴보다 앞선 노트(1~${ct}턴)라 1~${x.turn}턴 정리본으로 바꿨어요` : `따라온 노트(1~${ct}턴)보다 가까운 1~${x.turn}턴 정리본을 넣었어요`); logErr('분기', `노트 ${ct ? '1~' + ct + '턴' : '없음'} → ${x.room.slice(0, 8)}… 방의 1~${x.turn}턴 정리본`); })
+            .catch(e => logErr('분기', '분기 전 정리본 찾기 실패 · ' + e.message)).finally(() => { brRun.delete(chatId); if (chatIdFromPath() === chatId) render(); }); } }
       { const c = snap.note; if (c?.gs && !String(await getValue('gsUrl', '')).trim() && String(await getValue('gsAuto', '')) !== 'off' && String(await getValue('gsAutoFail', '')) !== c.gs) { // 다른 기기에서 연결한 드라이브를 이 기기에도
         try { const [u, k] = unveil(c.gs).split('§'); if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(u) || !k) throw new Error('연결 글을 못 읽음'); await setValue('gsUrl', u); await setValue('gsKey', k); await gsCall({ action: 'ping' }); await gsLinkSet(); nav.gsOn = true; pageToast('다른 기기에서 연결한 구글 드라이브를 이 기기에도 연결했어요'); logErr('연동', '노트에 실린 드라이브 연결로 이 기기도 연결함'); }
         catch (e) { await setValue('gsUrl', ''); await setValue('gsKey', ''); await setValue('gsAutoFail', c.gs); logErr('연동', '노트에 실린 드라이브 연결이 안 돼서 안 씀 · ' + e.message); } } }
@@ -11254,7 +11280,7 @@
     const chatId = chatIdFromPath();
     if (!chatId || !draft || busyNow) return;
     if (draft.chat && draft.chat !== chatId) { logErr('정리', '다른 방에서 만든 정리라 넣지 않음 · ' + draft.chat, chatId); toast('정리하던 방이 아니라서 넣지 않았어요 · 그 방에서 다시 정리해 주세요', 'err', 4000); draft = null; nav.view = null; render(); return; }
-    const memory = joinSections(draft.sections), cleanOld = !!ui('[data-opt="clean"]')?.checked;
+    const memory = joinSections(draft.sections), cleanBox = ui('[data-opt="clean"]'), cleanOld = cleanBox ? !!cleanBox.checked : true; // 확인 화면 없이 넣는 길(분기 정리본 알아서 넣기)은 체크 칸이 없어요 → 기본값대로 예전 노트를 지워요(안 지우면 노트가 두 개 남아 옛 노트가 먼저 읽혀요)
     if (draft.fromFile && chatId) { const fk = fxKeepOf(memory); if (fk || !FX_KEEP.get(chatId)) await fxKeepSet(chatId, fk); } /* 파일에 고정 설정이 없으면(옛 백업) 지금 것을 둬요 */ // 백업 파일을 직접 불러와 넣는 거라 그 파일 고정 설정으로
     busyNow = true; render(); toast('채팅에 넣는 중…'); let nextStep = false;
     const t0 = Date.now(), laps = [], lap = w => { const s = w + ' ' + ((Date.now() - t0) / 1000).toFixed(1) + '초'; laps.push(s); console.info('[조아메모리] 넣기 · ' + s); };
@@ -11302,9 +11328,11 @@
       if (draft.before && !draft.restore) await pushHistory(chatId, { at: Date.now(), from: draft.before.turns, to: draft.turns, before: draft.before.memory, beforeUpto: draft.before.upto, after: memory, afterUpto: draft.uptoId, ...(draft.carry?.mode === 'rback' ? { rg: 1, preg: pregWas, love: loveWas } : {}), ...(preg && pregChat === chatId ? { pregA: JSON.stringify(preg) } : {}), ...(love && loveChat === chatId && (love.who || love.log?.length) ? { loveA: JSON.stringify(love) } : {}) });
       await setValue('edited:' + chatId, '[]');
       const oldId = now.note?.carrierId;
-      if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) (async () => { // 예전 노트 지우기는 뒤에서(기다리지 않아요)
+      if (cleanOld && !parked && oldId && oldId !== msgId(carrier)) { const drop = (async () => { // 예전 노트 지우기는 뒤에서(기다리지 않아요)
         try { await dropOldNote(chatId, oldId, msgText(now.all.find(m => msgId(m) === oldId))); } catch (_) { /* 예전 노트 정리가 실패해도 새 노트는 이미 들어감 */ }
       })();
+        // 예전 노트가 새 노트보다 뒤 답에 실려 있으면(분기할 때 앞선 노트가 따라온 경우) 그게 먼저 읽혀요 → 이때만 지우고 나서 넘어가요
+        if (now.all.findIndex(m => msgId(m) === oldId) > now.all.findIndex(m => msgId(m) === msgId(carrier))) await drop; }
       const ltmNew = draft.before && !draft.restore && !draft.carry && String(await getValue('ltmAsk', 'on')) !== 'off' ? await ltmQueue(chatId, draft.before.memory, memory, draft.turns) : 0;
       if (draft.pinMove?.length) { for (const [a, b] of draft.pinMove) { injPins.delete(a); injPins.add(b); } await setValue('pins:' + chatId, JSON.stringify([...injPins])); } // 합친 사건으로 📌 고정 옮김
       const step = draft.step, back = draft.back; draft = null; nav = { ...fresh(), ...(back || {}) }; // 파일에서 불러와 넣었으면 불러온 화면으로 돌아가 이어서 해요
