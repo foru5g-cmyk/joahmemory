@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.43
+// @version      5.8.44
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10696,7 +10696,7 @@
       if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; }
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
-      if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / '); /* shortcut: 크랙 보내기 글자 한도를 몰라 합쳐서 2000자까지만 붙여요, 한도를 알게 되면 그 값으로 */ if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '[ ](# "MEMO_STY ' + st + '")' }]); } /* 줄을 띄우면 말풍선 아래에 빈 줄이 생겨서 바로 붙여요 */ // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
+      if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / '); /* shortcut: 크랙 보내기 글자 한도를 몰라 합쳐서 2000자까지만 붙여요, 한도를 알게 되면 그 값으로 */ if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n[ ](# "MEMO_STY ' + st + '")' }]); } /* 줄을 띄우면 말풍선 아래에 빈 줄이 생겨서 바로 붙여요 */ // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
       const job = { sock, data, sent: false }; held.add(job); if (document.visibilityState === 'hidden') { flushHeld(); return; } // 이미 숨겨진 화면이면 잡지 않고 바로
       const slow = setTimeout(() => pageToast('기억 넣는 중… 곧 보내요'), 3000);
       const before = sendQ.get(chatId) || Promise.resolve();
