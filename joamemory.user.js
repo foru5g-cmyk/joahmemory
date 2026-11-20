@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.36
+// @version      5.8.37
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6791,12 +6791,12 @@
         try {
           if (chatIdFromPath() !== chatId) return;
           const snap = await readSinceLastNote(chatId); if (snap.note) return;
-          const ai = snap.all.filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)), carrier = [ai[ai.length - 3], ai[ai.length - 4], ai[ai.length - 2]][i] || pickCarrier(snap.all); if (!carrier) return;
+          const ai = snap.all.filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)), carrier = l.fxOnly ? pickCarrier(snap.all) : [ai[ai.length - 3], ai[ai.length - 4], ai[ai.length - 2]][i] || pickCarrier(snap.all); if (!carrier) return; // 고정 설정뿐이면 처음 넣을 때와 같은 자리
           const cur = msgText(carrier) ? carrier : await readMessage(chatId, msgId(carrier)), body = stripBlocks(msgText(cur)).trimEnd();
           if (!body) throw new Error('붙일 답변 글을 못 읽었어요');
           // 앱 방식은 노트 전체를 넣어서, 웹 모드로 키운 큰 기억(5만 자 넘음)은 채팅 두 칸에 안 들어가요 → 이 방을 웹 모드로
           if (!sceneOn && stripProof(l.memory).length > 50000) { await applyScene(true, chatId, true); pageToast('웹 모드에서 키운 큰 기억이라 이 방도 웹 모드로 켰어요'); }
-          await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.turns || 1, l.at || undefined, l.by || ''));
+          await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.fxOnly ? 0 : l.turns || 1, l.at || undefined, l.by || ''));
           await saveFull(chatId, l.upto, l.memory, l.turns, l.at);
           if (nav.gsOn) gsSave(true);
           setTimeout(() => refresh().catch(() => {}), 300);
@@ -10888,13 +10888,15 @@
           if (x.before && x.beforeUpto) cands.push({ src: 'hist', memory: x.before, upto: x.beforeUpto, turns: x.from, at: t, by: DEVICE, savedAt: t, savedBy: DEVICE, old: true }); }
         if (nav.gsOn) { const g = await gsPeek(chatId, resetAt); if (g) cands.push(g); }
         const chat = snap.all.filter(isChat), alive = new Set(snap.all.map(msgId));
-        for (const c of cands) if (!c.turns) { const k = chat.findIndex(m => msgId(m) === c.upto); if (k >= 0) c.turns = chat.slice(0, k + 1).filter(m => msgRole(m) === 'user').length; }
+        for (const c of cands) if (c.turns === 0 && /^■ 고정 설정\n/.test(String(c.memory)) && !/\n■ /.test(String(c.memory))) c.fxOnly = true; // 정리 전 방의 고정 설정 노트
+        for (const c of cands) if (!c.turns && !c.fxOnly) { const k = chat.findIndex(m => msgId(m) === c.upto); if (k >= 0) c.turns = chat.slice(0, k + 1).filter(m => msgRole(m) === 'user').length; }
         // 같은 정리본이면 근거까지 든 이 기기 정리본(full)을 먼저
         const ok = cands.filter(c => c.memory && tOf(c) > resetAt), by = (a, b) => (b.turns || 0) - (a.turns || 0) || tOf(b) - tOf(a) || (a.src === 'full' ? -1 : 1);
         const chatTurns = chat.filter(m => msgRole(m) === 'user').length, top = ok.slice().sort(by)[0] || null, fit = ok.filter(c => alive.has(c.upto)).sort(by)[0] || null;
         // 끝 메시지가 남아 있는 기억이 지금 대화와 10턴 안이면 그걸로 되돌려요(되감기). 아니면 정리한 걸 잃지 않게 가장 최신 기억을 넣고 턴 수만 남은 대화에 맞춰요.
         let local = fit && (fit === top || chatTurns - (fit.turns || 0) <= 10) ? fit : top;
-        if (local && !alive.has(local.upto) && chat.length) local = { ...local, upto: msgId(chat[chat.length - 1]), turns: chatTurns };
+        if (local?.fxOnly && chat.length) local = { ...local, upto: msgId(chat[0]), turns: 0 }; // 고정 설정뿐: 정리 지점은 첫 대화 그대로(마지막 채팅·생성 중 답을 정리 지점으로 쓰지 않아요)
+        else if (local && !alive.has(local.upto) && chat.length) local = { ...local, upto: msgId(chat[chat.length - 1]), turns: chatTurns };
         if (local) await lostPut(chatId, local);
       }
       loadTurnMap(chatId, snap);
