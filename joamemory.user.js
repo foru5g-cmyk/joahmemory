@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.29
+// @version      5.8.30
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3549,6 +3549,7 @@
       html.push(`<i style="left:${b.left}px;top:${b.top}px;width:${b.width}px;height:${b.height}px;font-size:${Math.round(b.height * 0.8)}px">${esc(mask.emoji)}</i>`); }
     maskEmo.innerHTML = html.join('');
   }
+  let maskLT = 0; const maskLater = () => { if (!(mask.on || mask.cap)) return; clearTimeout(maskLT); maskLT = setTimeout(maskLay, 200); }; // 글은 그대로인데 자리만 밀렸을 때(그림이 늦게 뜸·접힌 칸 펼침·창 크기 바뀜): 찾아 둔 이름 자리에 가림 상자만 다시 놓아요
   const maskSoon = () => { if (!(mask.on || mask.cap) || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
   new MutationObserver(ms => { if (!chatIdFromPath() && document.documentElement.classList.contains('jm-hidehead')) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
     { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
@@ -3640,8 +3641,9 @@
         : B.map((b, i) => Math.min(255, Math.round(P[i] * 255 / Math.max(1, b))));
       if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
       box.style.isolation = 'isolate'; // 상자를 말풍선 안 층에 가둬요(z-index를 주면 스크롤할 때 아래 입력창 위로 올라와 보였어요)
-      let l = box.querySelector(':scope>.' + PEN_L); if (l && !all && !penDirty.has(box)) continue; // 글이 그대로인 말풍선은 상자도 그대로
-      if (!l) { l = document.createElement('div'); l.className = PEN_L; box.appendChild(l); }
+      const g = box.clientWidth + 'x' + box.clientHeight; // 말풍선 크기: 글은 그대로인데 크기가 바뀌었으면(그림이 늦게 뜸·접힌 칸 펼침 등) 글자가 밀린 거라 상자를 다시 놓아요
+      let l = box.querySelector(':scope>.' + PEN_L); if (l && !all && !penDirty.has(box) && l.__g === g) continue; // 글도 크기도 그대로인 말풍선은 상자도 그대로
+      if (!l) { l = document.createElement('div'); l.className = PEN_L; box.appendChild(l); } l.__g = g;
       l.style.mixBlendMode = dark ? 'screen' : 'multiply';
       const R0 = box.getBoundingClientRect(), o = { left: R0.left + box.clientLeft, top: R0.top + box.clientTop }, html = [];
       for (const r of rs) for (const q of r.getClientRects()) if (q.width >= 2) html.push(`<i style="left:${q.left - o.left}px;top:${q.top - o.top}px;width:${q.width}px;height:${q.height}px;background:rgb(${O.join(',')})"></i>`);
@@ -3649,8 +3651,11 @@
   }
   const penSoon = () => { if (!theme.re || theme.t) return; theme.t = setTimeout(() => { theme.t = 0; penPaint(); }, 150); };
   let penLT = 0; const penLater = () => { if (!theme.re) return; clearTimeout(penLT); penLT = setTimeout(penSoon, 200); };
-  addEventListener('resize', () => { if (PEN_OV) { penAll = true; penLater(); } });
+  addEventListener('resize', () => { if (PEN_OV) { penAll = true; penLater(); } maskLater(); });
   addEventListener('scroll', penLater, { capture: true, passive: true }); // 스크롤이 멈춘 뒤 한 번만
+  // 글은 그대로인데 글자가 밀리는 때: 그림이 늦게 뜸 · 접힌 칸(details)을 펼치거나 접음 → 형광펜·이름 가리기 상자 자리를 다시 확인해요
+  const boxShift = e => { if (e.type === 'load' && e.target?.tagName !== 'IMG') return; if (PEN_OV) penLater(); maskLater(); };
+  addEventListener('load', boxShift, true); addEventListener('toggle', boxShift, true);
   let thQ = Promise.resolve();
   const themeSet = (k, v, keep) => (thQ = thQ.then(() => themeSet0(k, v, keep)).catch(e => logErr('테마', e.message)));
   async function themeSet0(k, v, keep) { await setValue(k, v); if (k !== 'thOn' && v !== 'off') await setValue('thOn', 'on'); await themeLoad(); const o = ui('.thbox'); if (!o) return; // 테마 화면만 다시 그려요(위 스위치가 움찔하지 않게)
@@ -7067,7 +7072,7 @@
   }
   // 폰·컴퓨터용 AI 호출: 연결이 끊기면 한 번 더, 답이 길어 잘리면 받은 만큼으로 이어서 씁니다.
   const SOFT_RETRY = '\n\n[이번 한 번만] 방금 안전 필터에 걸렸다. 말투·수위·드립은 그대로 두되, 성적인 말은 노골적인 단어 대신 암시·돌려 말하기·초성으로만 쓴다.';
-  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·고유명사·상태창(HUD)·형식 기호 · 그 인물의 정해진 말버릇·고유 말투([인물 설정]에 있거나 그 인물 대사에 거의 늘 붙는 것 — 캐릭터성이라 바꾸면 안 됨).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구, 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
+  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·고유명사·상태창(HUD)·형식 기호 · 그 인물의 정해진 말버릇·고유 말투(그 인물 대사에 거의 늘 붙는 것 — 캐릭터성이라 바꾸면 안 됨).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구, 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
   // 횟수는 코드가 셉니다(AI가 말한 횟수는 안 믿어요) · 어미는 문장 끝에서, 문두는 문장 맨 앞에서, 나머지는 글자 그대로
   function styCount(texts, kind, pat) { const p = String(pat || '').replace(/^[~…·\s]+/, '').trim(); if (p.length < 1) return 0; const all = texts.join('\n');
     const sents = all.split(/(?<=[.!?。…])\s+|\n+/).map(x => x.replace(/^[\s*"“❝_]+/, '').trim()).filter(Boolean);
@@ -7080,8 +7085,7 @@
     if (ans.length < 5) { if (!auto) toast('AI 답이 5개는 있어야 점검할 수 있어요.', 'info', 3000); return; }
     if (!auto) { busyNow = true; nav.styBusy = true; render(); toast('문체 점검 중이에요… (20~40초)'); }
     try {
-      const ppl = (() => { try { const m = noteMemory(), sec = k => (splitSections(m).find(x => x.key === k)?.body || ''); return [sec(FIXED), sec('인물').split('\n').filter(l => /^\s*【/.test(l) || /말버릇|말투|어미/.test(l)).join('\n')].join('\n').trim().slice(0, 4000); } catch (_) { return ''; } })();
-      const raw = await askModelRetry(STY_PROMPT, (ppl ? '[인물 설정 — 여기 있는 말버릇·말투는 반복으로 치지 않음]\n' + ppl + '\n\n' : '') + ans.map((t, i) => `[최근 답 ${i + 1}]\n${t.slice(0, 3000)}`).join('\n\n'), '✍문체 점검');
+      const raw = await askModelRetry(STY_PROMPT, ans.map((t, i) => `[최근 답 ${i + 1}]\n${t.slice(0, 3000)}`).join('\n\n'), '✍문체 점검');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요'); }
       const items = (data?.items || []).filter(it => it?.pat)
         .map(it => { const kind = String(it.kind || '').replace(/[^가-힣]/g, '').slice(0, 3), ai = /^(되풀이|틀|구조)$/.test(kind); return { kind, ex: (Array.isArray(it.ex) ? it.ex : [it.ex]).filter(Boolean).slice(0, 2).map(x => String(x).replace(/["“”]/g, '').trim().slice(0, 60)), pat: String(it.pat).replace(/["“”]/g, '').replace(/[.。]s*$/, '').trim().slice(0, ai ? 30 : 25), n: ai ? Math.min(ans.length, Math.max(0, parseInt(it.n, 10) || 0)) : styCount(ans, kind, it.pat) }; })
