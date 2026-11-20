@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.37
+// @version      5.8.38
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -61,7 +61,8 @@
   //       (노트 뒷부분)
   //       MEMO_NOTE_MORE_END"
   const MORE_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE_MORE[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_MORE_END(?:"\)|"|-->)/g;
-  const stripBlocks = t => String(t || '').replace(MORE_RE, '').replace(V3_RE, '').replace(V2_RE, '').replace(V1_RE, '').replace(/\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[\s\S]*$/, '');
+  const STY_RE = /\n*\[ \]\(# "MEMO_STY [^"\n]*"\)/g; // 웹 모드 문체 보정: 보내는 유저 메시지 끝에 숨겨 붙여요(화면엔 안 보이고 AI는 읽어요)
+  const stripBlocks = t => String(t || '').replace(STY_RE, '').replace(MORE_RE, '').replace(V3_RE, '').replace(V2_RE, '').replace(V1_RE, '').replace(/\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[\s\S]*$/, '');
   const EXT_BLOCK_RE = /(?:\\|\?)?(?:<|&lt;)!--(RP_CONTEXT_MANAGER|W\x49SH_SESSION_SETUP)_START\b[\s\S]*?\1_END--(?:>|&gt;)/gi;
   const EXT_BLOCK_CUT = /(?:\\|\?)?(?:<|&lt;)!--(?:RP_CONTEXT_MANAGER|W\x49SH_SESSION_SETUP)_START\b[\s\S]*$/i;
   const stripExtBlocks = t => String(t || '').replace(EXT_BLOCK_RE, '').replace(EXT_BLOCK_CUT, '').replace(/\n{3,}/g, '\n\n');
@@ -406,7 +407,7 @@
     const d = { ...(d0 || {}), items: live ? d0.items.filter(it => styStill(d0, it)) : [] }; if (!d.items.length && !styAutoOn) return [];
     const day = d.items.length ? '(' + new Date(d.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) + ')' : '';
     const kinds = [...new Set(d.items.map(it => it.kind || '반복'))], cnt = it => /^(되풀이|틀|구조)$/.test(it.kind) ? '답 ' + (it.n || '여러') + '개' : (it.n ? it.n + '회' : '여러 번');
-        return [`※ 문체 보정${day}: 문체 기준은 최근 답이 아니라 프롬프트 원문의 묘사 지침 · 쓰기 전에 최근 5턴${d.items.length ? '과 아래 목록' : ''}을 보고 다시 나오는 어미·문두·구조·단어·한 말을 스스로 찾음 · 대사·묘사·행동 모두 직전 답과 같은 단어·표현·문장 모양을 다시 쓰지 않음 · 목록 항목은 프롬프트·캐릭터 설정과 대조해 프롬프트가 정한 것이면 그대로 두고 아닌 반복만 고침 · 고칠 방향도 프롬프트 지침 안에서 스스로 정함(정해진 형식·말투·말버릇·이름·호칭은 그대로) · 답의 흐름·구성은 정해진 순서 없이 장면에 맞게 · 이미 한 말·행동·감정은 되풀이하지 않고 이야기를 진전시킴 · 점검 내용은 출력 안 함`,
+        return [`※ 문체 보정${day}: 문체 기준은 최근 답이 아니라 프롬프트 원문의 묘사 지침 · 쓰기 전에 최근 5턴${d.items.length ? '과 아래 목록' : ''}을 보고 다시 나오는 어미·문두·구조·단어·한 말을 스스로 찾음 · 대사·묘사·행동 모두 직전 답과 같은 단어·표현·문장 모양을 다시 쓰지 않음 · 목록 항목은 프롬프트·캐릭터 설정과 대조해 프롬프트가 정한 것이면 그대로 두고 아닌 반복만 고침 · 고칠 방향도 프롬프트 지침 안에서 스스로 정함(정해진 형식·이름·호칭은 그대로 · 말버릇·말투는 살리되 매 답 똑같이 되풀이하지 않음) · 답의 흐름·구성은 정해진 순서 없이 장면에 맞게 · 이미 한 말·행동·감정은 되풀이하지 않고 이야기를 진전시킴 · 점검 내용은 출력 안 함`,
       ...kinds.map(k => `※ - ${k} ` + d.items.filter(it => (it.kind || '반복') === k).map(it => (/^(되풀이|틀|구조)$/.test(k) ? it.pat : '“' + it.pat + '”') + '(' + cnt(it) + ')').join(' · '))]; };
   const FX_KEEP = new Map(), fxKeepOf = m => (splitSections(m || '').find(x => x.key === FIXED)?.body || '').trim();
   const fxKeepSet = async (cid, body) => { if (!cid) return; body = String(body || '').trim(); FX_KEEP.set(cid, body); await setValue('fixkeep:' + cid, JSON.stringify({ b: body })); };
@@ -1763,7 +1764,7 @@
   // 임신 기능 전체 하트(초록 켜짐 · 빨강 꺼짐) · 카드 첫 줄 오른쪽에(따로 줄을 차지하지 않게)
   const pregLive = () => pregMode && !(preg?.start != null ? !preg.on : preg?.userOff && !preg?.on);
   // ── 모드 공통 부품: 새 모드도 반드시 modeHeart·modeQ·modeCard로 만들어요(하트·물음표·카드 모양이 모드마다 달라지지 않게) ──
-  const modeHeart = (act, on, what, help = null) => `<span class="pg-hw"><button data-act="${act}" aria-pressed="${on}" aria-label="${what} ${on ? '끄기' : '켜기'}" style="border:0;background:none;padding:2px;cursor:pointer;line-height:0;filter:drop-shadow(0 2px 5px ${on ? 'rgba(47,179,107,.45)' : 'rgba(229,72,77,.45)'})"><svg width="24" height="24" viewBox="0 0 30 30"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z" fill="${on ? '#2FB36B' : '#E5484D'}"/></svg></button>${help ? `<details class="pg-hq"><summary class="nf-q" data-act="mdhelp" aria-label="하트 설명">?</summary><div class="pg-hb"><b>하트 = ${what} 기능 켜고 끄기</b><p>💚 켜짐 · ${help[0]}</p><p>❤️ 꺼짐 · ${help[1]}</p></div></details>` : ''}</span>`;
+  const modeHeart = (act, on, what, help = null) => `<span class="pg-hw"><button data-act="${act}" aria-pressed="${on}" aria-label="${what} ${on ? '끄기' : '켜기'}" style="border:0;background:none;padding:2px;cursor:pointer;line-height:0;filter:drop-shadow(0 2px 5px ${on ? 'rgba(47,179,107,.45)' : 'rgba(229,72,77,.45)'})"><svg width="24" height="24" viewBox="0 0 30 30"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z" fill="${on ? '#2FB36B' : '#E5484D'}"/></svg></button>${help ? `<details class="pg-hq"><summary class="nf-q" data-act="mdhelp" aria-label="하트 설명">?</summary><div class="pg-hb"><b>하트 = ${what} 기능 켜고 끄기</b><p>💚 켜짐 · ${help[0]}</p><p>❤️ 꺼짐 · ${help[1]}</p>${help[2] ? `<p>${help[2]}</p>` : ''}</div></details>` : ''}</span>`;
   const modeQ = t => `<details class="nf-help lv-help"><summary data-act="mdhelp"><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more">${t}</div></details>`; // summary에 data-act: 카드 안에서 눌러도 카드로 안 넘어가요
   // open: 누르면 들어갈 화면(모드 목록 카드) · sub: 제목 밑 작은 글 · body: 카드 안 나머지
   const modeCard = ({ ic, title, help = '', heart = '', sub = '', chips = '', open = '', body = '' }) => `<div class="pg-card${open ? ' md-card' : ''}"${open ? ` data-act="modesub" data-arg="${open}" role="button"` : ''}><div class="pg-mode"><span class="pg-ic">${ic}</span><div style="flex:1;min-width:0"><b>${title}</b>${help ? modeQ(help) : ''}${sub ? `<small>${sub}</small>` : ''}</div>${heart}${open ? '<i class="md-go">›</i>' : ''}</div>${chips ? `<div class="pg-chips">${chips}</div>` : ''}${body}</div>`;
@@ -2148,7 +2149,7 @@
     // 빈 줄이 있으면 덩어리가 끊기고, 곧은 큰따옴표는 덩어리를 닫아 버려서 둥근 따옴표로 바꿉니다.
     const clean = l => dq(l).replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”').replace(/--+>/g, '—>'); // '-->'는 HTML 주석을 닫아 버려서 바꿔요
     const lines = fxLast(stripProof(memory)).split('\n').map(l => clean(l.trimEnd())).filter(l => l.trim())
-      .flatMap(l => /^\s*■\s*고정 설정\s*$/.test(l) ? [l, '※ 이 칸은 사용자가 직접 쓴 설정·지시(NPC·지침·세계관) · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 늘 그대로 지킴 · 그 인물이 나오면 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 되풀이해도 됨)'] : [l]); // 고정 칸이 전으로 따로 내려가도 안내가 같이 가게
+      .flatMap(l => /^\s*■\s*고정 설정\s*$/.test(l) ? [l, '※ 이 칸은 사용자가 직접 쓴 설정·지시(NPC·지침·세계관) · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 늘 그대로 지킴 · 그 인물이 나오면 적힌 말버릇·호칭·생김새를 살려 씀(말버릇은 살리되 매 답 똑같이 되풀이하지 않음)'] : [l]); // 고정 칸이 전으로 따로 내려가도 안내가 같이 가게
     // 웹 모드: 날짜로그 사건마다 지금 이야기 날짜에서 며칠 전인지 한 줄(※ 줄이라 노트로 다시 읽을 땐 빠져요 · 앱 모드는 정리 때만 다시 써서 숫자가 낡으니 안 붙여요)
     if (sceneOn) { const today = pregDay(whole, snapshot); let inLog = false, first = true;
       if (today != null) for (let i = 0; i < lines.length; i++) { const l = lines[i]; if (/^\s*■/.test(l)) { inLog = /^\s*■\s*날짜로그\s*$/.test(l); continue; }
@@ -2171,7 +2172,7 @@
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`]),
 
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...((k, extra) => k < 0 ? [...lines, ...extra] : [...lines.slice(0, k), ...extra, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l)), [...pregOut, ...(onceChat === chatIdFromPath() ? onceOut.map(clean) : []), ...(loveChat === chatIdFromPath() ? loveOut.map(clean) : []), ...styLines().map(clean)]), '※ 여기까지 숨은 참고 자료 · 답변에는 이 노트를 다시 쓰지 않고 평소 RP 형식으로 이야기만 이어 씀', 'MEMO_NOTE_END")'].map(l => '    ' + l),
+        ...((k, extra) => k < 0 ? [...lines, ...extra] : [...lines.slice(0, k), ...extra, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l)), [...pregOut, ...(onceChat === chatIdFromPath() ? onceOut.map(clean) : []), ...(loveChat === chatIdFromPath() ? loveOut.map(clean) : []), ...(sceneOn ? [] : styLines().map(clean))]), '※ 여기까지 숨은 참고 자료 · 답변에는 이 노트를 다시 쓰지 않고 평소 RP 형식으로 이야기만 이어 씀', 'MEMO_NOTE_END")'].map(l => '    ' + l),
     ].join('\n');
   }
   // 옮겨 가는 동안(2026년까지): 새 꼴 노트 뒤에 예전 꼴([//]: # "…") 사본을 같이 붙여요 · 옛 판(5.9.4 이하)도 노트를 알아보게(정리 전으로 착각해 처음부터 다시 정리하지 않게)
@@ -7135,7 +7136,7 @@
   }
   // 폰·컴퓨터용 AI 호출: 연결이 끊기면 한 번 더, 답이 길어 잘리면 받은 만큼으로 이어서 씁니다.
   const SOFT_RETRY = '\n\n[이번 한 번만] 방금 안전 필터에 걸렸다. 말투·수위·드립은 그대로 두되, 성적인 말은 노골적인 단어 대신 암시·돌려 말하기·초성으로만 쓴다.';
-  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·고유명사·상태창(HUD)·형식 기호 · 그 인물의 정해진 말버릇·고유 말투(그 인물 대사에 거의 늘 붙는 것 — 캐릭터성이라 바꾸면 안 됨).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구, 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
+  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·고유명사·상태창(HUD)·형식 기호.\n인물의 말버릇·말투도 답마다 똑같이 되풀이되면 찾는다(어미·구절 등 맞는 kind로).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구, 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
   // 횟수는 코드가 셉니다(AI가 말한 횟수는 안 믿어요) · 어미는 문장 끝에서, 문두는 문장 맨 앞에서, 나머지는 글자 그대로
   function styCount(texts, kind, pat) { const p = String(pat || '').replace(/^[~…·\s]+/, '').trim(); if (p.length < 1) return 0; const all = texts.join('\n');
     const sents = all.split(/(?<=[.!?。…])\s+|\n+/).map(x => x.replace(/^[\s*"“❝_]+/, '').trim()).filter(Boolean);
@@ -7163,7 +7164,7 @@
     } catch (e) { if (!auto) toast('문체 점검 실패 · ' + errMsg(e), 'err'); logErr('문체 점검', e.message); }
     finally { if (!auto) { busyNow = false; nav.styBusy = false; render(); } }
   }
-  const styHeart = () => modeHeart('styauto', styAutoOn, '문체 보정 자동 점검', ['정리할 때마다 같이 점검해요', '점검 버튼을 누를 때만 해요']);
+  const styHeart = () => modeHeart('styauto', styAutoOn, '문체 보정 자동 점검', ['정리할 때마다 같이 점검해요', '점검 버튼을 누를 때만 해요', '✍ 찾은 반복 안내는 웹 모드에선 내가 보내는 메시지 맨 아래에 숨겨서 들어가요(화면엔 안 보이고 AI만 읽어요) · 앱 모드에선 노트에 들어가요']);
   const styHtml = () => { const d = styFix.c === chatIdFromPath() && !styFix.d?.cleared ? styFix.d : null, left = styLeft(d), n = d?.items?.length || 0, G = nav.styG || {};
     const cnt = it => /^(되풀이|틀|구조)$/.test(it.kind) ? (it.n || '?') + '/' + (d.of || 5) : (it.n ? it.n + '회' : '여러 번');
     const stats = d ? `<div class="sty-stats"><div class="sty-stat${n ? ' hot' : ''}"><b>${n}</b><span>굳은 반복</span></div><div class="sty-stat"><b>${!n ? '-' : left === Infinity ? '계속' : left ? left + '턴' : '끝남'}</b><span>${!n || !left ? '넣는 중 아님' : '더 넣어요'}</span></div><div class="sty-stat"><b>${d.of || 5}개</b><span>본 답</span></div></div>` : '';
@@ -10654,7 +10655,7 @@
     if (!carrier) return 'no-carrier';
     // 같은 자리에 같은 내용이면 저장하지 않고 바로 보내요(5만 자 노트는 두 답변에 나뉘어 있어 글 전체 대신 고른 내용으로 비교)
     const picked = selectInjection(whole);
-    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(styLines(), (msgText(carrier).match(V3_RE) || []).pop() || ''); // 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
+    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(sceneOn ? [] : styLines(),(msgText(carrier).match(V3_RE) || []).pop() || ''); // 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
     if (styOk && !pregNew && !n.moreLost && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
     const cur = msgId(carrier) === n.carrierId && !msgText(carrier) ? await readMessage(chatId, msgId(carrier)) : carrier; // 목록에 글이 있으면 다시 안 읽어요
     const next = stripBlocks(msgText(cur)).trimEnd() + buildBlock(whole, n.upto, n.turns, n.at || undefined, n.by || '');
@@ -10682,6 +10683,7 @@
       const f = sceneOn && injectOn ? parseFrame(data) : null, chatId = chatIdFromPath();
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
+      if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines(); if (st.length) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n\n[ ](# "MEMO_STY ' + st.map(l => dq(l).replace(/"/g, '”')).join(' / ') + '")' }]); } // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
       const job = { sock, data, sent: false }; held.add(job); if (document.visibilityState === 'hidden') { flushHeld(); return; } // 이미 숨겨진 화면이면 잡지 않고 바로
       const slow = setTimeout(() => pageToast('기억 넣는 중… 곧 보내요'), 3000);
       const before = sendQ.get(chatId) || Promise.resolve();
@@ -10801,8 +10803,8 @@
         catch (e) { await setValue('gsUrl', ''); await setValue('gsKey', ''); await setValue('gsAutoFail', c.gs); logErr('연동', '노트에 실린 드라이브 연결이 안 돼서 안 씀 · ' + e.message); } } }
       { const c = snap.note, fx = m => splitSections(stripProof(m || '')).every(x => x.key === FIXED); // 정리 전(고정 설정만 든 노트): 가져올 전체 기억이 없으니 채팅 노트를 이 기기 사본으로 · 정리한 사본은 안 덮어요
         if (c?.sel && !c.parked && !(fullNote && fullNote.upto === c.upto) && fx(c.memory) && (!fullNote || fx(fullNote.memory))) await saveFull(chatId, c.upto, c.memory, c.turns, c.at);
-        /* 정리 시각이 같으면 같은 정리본: 노트를 다시 넣으며 정리 지점만 옮겨졌으면(지워진 메시지 등) 사본도 그 지점으로 · 글은 이 기기 사본 그대로 */
-        else if (c && !c.parked && c.at && fullNote?.memory && fullNote.at && fullNote.upto !== c.upto && Math.abs(Date.parse(c.at) - Date.parse(fullNote.at)) < 120e3) await saveFull(chatId, c.upto, fullNote.memory, c.turns || fullNote.turns, fullNote.at); }
+        /* 정리 시각이 똑같으면 같은 정리본(2분 안 같은 느슨한 비교는 나눠서 정리처럼 잇따라 생긴 다른 정리본을 같은 것으로 봐요): 노트를 다시 넣으며 정리 지점만 옮겨졌으면(지워진 메시지 등) 사본도 그 지점으로 · 글은 이 기기 사본 그대로 */
+        else if (c && !c.parked && c.at && fullNote?.memory && fullNote.at && fullNote.upto !== c.upto && c.at === fullNote.at) await saveFull(chatId, c.upto, fullNote.memory, c.turns || fullNote.turns, fullNote.at); }
       { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
