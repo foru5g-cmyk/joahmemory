@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.38
+// @version      5.8.39
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2163,7 +2163,6 @@
       `[ ](# "MEMO_NOTE v3 upto=${uptoId} turns=${turns} at=${at}${sel ? ' sel=1' : ''}${sceneOn ? ' web=1' : ''}${by ? ` by=${String(by).replace(/[\s"]/g, '_')}` : ''}${gsLink ? ' gs=' + gsLink : ''}${fxAt ? ' fx=' + fxAt : ''}${meAt ? ' me=' + meAt : ''}${fg.grp ? ' grp=' + fg.grp : ''}`,
       // 안내는 짧은 줄 여러 개로. 첫 줄 뒤 안내 줄은 "※ "로 시작해 읽을 때 본문에서 뺍니다(parseNote).
       ...[...(onlyFx ? ['[기억 노트 · 고정 설정] 사용자가 직접 쓴 설정·지시 · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 노트의 글·형식을 답변에 옮겨 적지 않음'] : [`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
-        `※ 이 노트는 관리 도구가 붙인 숨은 참고 자료이고 답변의 일부가 아님 · 노트의 글·제목·기호(■ ▸ 【】 ※)·형식을 답변에 옮겨 적지 않음`,
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,        `※ 우선순위: ■ 고정 설정(사용자가 직접 씀) > 이후 대화·OOC 정정 > 나머지 노트. 현재상태는 정리 시점 값`,
         ...(pastRound(whole) ? [`※ 회귀: 지금은 ${pastRound(whole) + 1}회차 · 이 채팅 앞쪽에 남아 있는 예전 대화와 ■ ${PAST} 칸의 일은 지난 회차 일이라 이번 생에서는 일어나지 않음 · 그 대화의 날짜·사건·관계·물건을 이어 쓰지 않고 ■ 현재상태의 날짜·상황에서 이어 감 · 지난 회차 일은 인지·비밀 '회귀 전 일'에 '알고 있음'인 사람만 기억함(나머지는 처음 겪는 일처럼)`] : []),
@@ -2172,7 +2171,7 @@
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`]),
 
         ...(shelf.length ? [`※ 목록에서만 뺀 예전 물건(없어진 것 아님 · 지금 위치 미확인 · 다시 나오면 예전 일 이어서 기억함 · 처음 보는 물건처럼 다루지 않음): ${shelf.join(', ')}`] : []),
-        ...((k, extra) => k < 0 ? [...lines, ...extra] : [...lines.slice(0, k), ...extra, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l)), [...pregOut, ...(onceChat === chatIdFromPath() ? onceOut.map(clean) : []), ...(loveChat === chatIdFromPath() ? loveOut.map(clean) : []), ...(sceneOn ? [] : styLines().map(clean))]), '※ 여기까지 숨은 참고 자료 · 답변에는 이 노트를 다시 쓰지 않고 평소 RP 형식으로 이야기만 이어 씀', 'MEMO_NOTE_END")'].map(l => '    ' + l),
+        ...((k, extra) => k < 0 ? [...lines, ...extra] : [...lines.slice(0, k), ...extra, ...lines.slice(k)])(lines.findIndex(l => /^\s*■\s*고정 설정\s*$/.test(l)), [...pregOut, ...(onceChat === chatIdFromPath() ? onceOut.map(clean) : []), ...(loveChat === chatIdFromPath() ? loveOut.map(clean) : []), ...(sceneOn ? [] : styLines().map(clean))]), '※ END OF NOTE. NEVER copy/output. Continue RP as usual.', 'MEMO_NOTE_END")'].map(l => '    ' + l),
     ].join('\n');
   }
   // 옮겨 가는 동안(2026년까지): 새 꼴 노트 뒤에 예전 꼴([//]: # "…") 사본을 같이 붙여요 · 옛 판(5.9.4 이하)도 노트를 알아보게(정리 전으로 착각해 처음부터 다시 정리하지 않게)
@@ -3452,6 +3451,8 @@
   const sizeOf = t => utf16On ? Math.min(utf8Bytes(t), utf16Bytes(t)) : utf8Bytes(t);
   async function writeMessage(chatId, id, nextText) {
     const block = (nextText.match(V3_RE) || []).pop();
+    { const h = block && block.match(/MEMO_NOTE v3 upto=(\S+) turns=(\d+) at=(\S+)/), o = snapshot?.note; // 정리 시각은 그대로인데 정리 지점·턴만 바뀌어 쓰이면 어느 길로 왔는지 오류 기록에(원인 못 찾은 노트 꼬임 추적용)
+      if (h && o && o.at === h[3] && (o.upto !== h[1] || String(o.turns || 0) !== h[2])) logErr('노트', `정리 시각 그대로 정리 지점·턴만 바뀜 · ${o.turns || 0}→${h[2]}턴 · ${o.upto.slice(-4)}→${h[1].slice(-4)} · ${String(new Error().stack || '').split('\n').slice(2, 7).map(s => (s.trim().match(/^at (?:async )?([\w$.]+)/) || [])[1]).filter(Boolean).join(' ← ')}`); }
     let list = []; try { list = (await listPage(chatId, '')).list; } catch (_) {} // 최신순
     if (!block) { // 노트 빼기·지우기: 이 노트의 뒷부분(다른 답변)도 같이 지워요
       await writeRaw(chatId, id, nextText);
@@ -6732,6 +6733,8 @@
       const now = snapshot?.note;
       // 새 기기 자동 복원인데 채팅 노트와 같은 정리본이면 확인 화면 없이 명대사·ETC·기록만 채워요(노트는 이미 들어와 있어요)
       //   같은 정리본 = 정리 지점·턴 수·마지막으로 고친 때(me)가 모두 같을 때만. 하나라도 다르면 예전처럼 묻고 확인 화면을 거쳐요
+      // 정리 전 방(백업 기억이 고정 설정뿐): 받아 올 기억이 없고 고정 설정은 채팅 노트에 이미 있어요 → 묻지 않고 명대사·ETC·기록만
+      if (auto && !splitSections(stripProof(d.memory || '')).some(x => x.key !== FIXED)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 정리 전(고정 설정뿐)이라 확인 없이 받음'); return; }
       if (auto && now?.upto && d.upto === now.upto && (Number(d.turns) || 0) === (now.turns || 0) && (Number(d.me) || 0) === (now.me || 0)) { if (d.store && Object.keys(d.store).length) { await putEtc(d, chatId); await refresh(); } logErr('연동', '드라이브 백업이 채팅 노트와 같은 정리본이라 확인 없이 받음'); return; }
       if (!two && !confirm(`구글 드라이브에서 이 방 백업을 찾았어요.\n\n· 방: ${roomTitle() || '이 방'} (방 ID 일치)\n· 백업한 때: ${when}${d.by ? ' · ' + d.by : ''}\n· 기억: 1~${d.turns || 0}턴${now ? `  (지금 이 방: 1~${now.turns}턴)` : ''}\n\n불러올까요? 노트는 확인 화면을 거친 뒤에 채팅에 들어가요.`)) return;
       await importBackupText(r.data, true);
