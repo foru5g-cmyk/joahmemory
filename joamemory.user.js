@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.50
+// @version      5.8.51
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -395,7 +395,9 @@
   const styLoad = async c => { let d = null; try { d = JSON.parse(String(await getValue('styfix:' + c, '') || 'null')); } catch (_) {} styFix = { c, d }; styAutoOn = String(await getValue('styAuto', 'off')) === 'on'; };
   const styLeft = d => { if (!d) return 0; const k = d.keep ?? 10; if (!k) return Infinity; return Math.max(0, k - Math.max(0, (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0))); }; // 0 = 끝남 · Infinity = 계속
   const styPersist = (cid, d) => { clearTimeout(styPersist.t); styPersist.t = setTimeout(() => { styPersist.q = (styPersist.q || Promise.resolve()).then(async () => { await setValue('styfix:' + cid, JSON.stringify(d)); if (nav.gsOn) gsModeSoon(cid); if (snapshot?.note && chatIdFromPath() === cid) await rewriteNote(cid, noteMemory()); }).catch(e => logErr('문체 보정', e.message)); }, 600); };
-  const styAns = (n, list = snapshot?.all) => (list || []).filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)).map(m => stripBlocks(msgText(m)).replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/```[\s\S]*?```/g, '').trim()).filter(Boolean).slice(-n); // 빈 답(그림·코드 칸뿐)을 먼저 빼고 최근 n개
+  // 최근 답 n개(빈 답 = 그림·코드 칸뿐인 답은 건너뜀) · 맨 뒤에서부터 n개만 다듬어요(방 전체 답을 매번 다듬으면 긴 방에서 화면이 멈춰요)
+  const styAns = (n, list = snapshot?.all) => { const out = []; list = list || []; for (let i = list.length - 1; i >= 0 && out.length < n; i--) { const m = list[i]; if (msgRole(m) !== 'assistant' || isErrMsg(m)) continue;
+    const t = stripBlocks(msgText(m)).replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/```[\s\S]*?```/g, '').trim(); if (t) out.unshift(t); } return out; };
   // 점검 뒤에 쓴 답에서 그 반복이 아직 나오는지 코드가 세요(AI 안 씀) · { hit: 나온 답 수, of: 본 답 수, before: 점검 때 나온 답 수, bOf } · 셀 수 없는 종류는 null
   const styAfter = (d, it, a) => { if (!a.length) return null; if (STY_END[it.pat]) return { hit: a.filter(t => STY_END[it.pat][0].test(styLast(t))).length, of: a.length, before: it.n, bOf: d.of || 5 };
     if (!/^(어미|문두|단어|구절)$/.test(it.kind)) return null; return { hit: a.filter(t => styCount([t], it.kind, it.pat)).length, of: a.length, before: it.na ?? it.n, bOf: d.of || 5 }; };
@@ -2674,6 +2676,7 @@
     const newestFirst = [], pk = await parkedOf(chatId);
     let cursor = '', note = null, reachedStart = false, hitUpto = false;
     for (let page = 0; page < maxPages; page++) {
+      if (page === 4 || (page && page % 20 === 0)) crumbOn('read', '방 읽기(노트 찾기) ' + page + '쪽째(1쪽 50개)');
       const { list, next } = await listPage(chatId, cursor);
       // 노트는 리롤로 밀려난 답에 있어도 찾습니다(직전 답을 리롤하면 노트가 거기 남아요). 다음에 최신 답으로 옮겨져요.
       for (const m of list) { newestFirst.push(m); if (!note) note = parseNote(m); }
@@ -2683,6 +2686,7 @@
       cursor = next;
       if (!cursor) { reachedStart = true; break; }
     }
+    crumbOff('read');
     if (!note) note = pk;
     // 노트 뒷부분이 다음 답변(전)에 따로 있으면 이어 붙여 하나의 노트로 읽어요.
     if (note && !note.parked) {
@@ -3795,11 +3799,12 @@
   let turnBase = null; // 보정 전 턴 번호(메시지 ID → 턴). 같은 방에서 이어 셀 때 써요
   async function readAll(chatId, maxPages = MAX_PAGES) {
     const out = []; let cursor = '';
-    for (let page = 0; page < maxPages; page++) {
+    try { for (let page = 0; page < maxPages; page++) {
+      if (page === 4 || (page && page % 20 === 0)) crumbOn('all', '대화 전체 읽기 ' + page + '쪽째(1쪽 50개)');
       const { list, next } = await listPage(chatId, cursor);
       out.push(...list);
       if (!(cursor = next)) break;
-    }
+    } } finally { crumbOff('all'); }
     const list = liveLine(sortOld(out)).filter(isChat);
     list.cut = !!cursor; // 최대 쪽수까지 읽고도 더 남음 = 앞부분이 빠짐
     return list;
@@ -3807,15 +3812,17 @@
   // 정리 지점(upto = 노트의 N턴)을 기준으로 앞뒤 말풍선의 턴을 세요: 최신 쪽부터 정리 지점이 나오고 거기서 turnDepth쪽 더 앞까지만 읽어요
   //   긴 방(수천 턴)을 열 때마다 대화 전체를 읽지 않게 · 정리 지점을 못 찾으면 null(전체 읽기로)
   //   turnDepth: 정리 지점보다 몇 쪽(50개씩) 더 앞까지 세어 둘지 · 위로 올려 번호 없는 말풍선이 보이면 늘려서 다시 세요 · turnSeen: 읽은 메시지 번호(리롤로 죽은 것 포함) · turnTop: 대화 맨 처음까지 읽었음
-  let turnDepth = 2, turnSeen = new Set(), turnTop = false;
+  const TURN_STEP = 1, TURN_CAP = 10; // 위로 올려 볼 때 한 번에 한 쪽(50개)씩만 더 · 많아야 정리 지점에서 10쪽(500개) 앞까지(그보다 옛 말풍선은 번호 없이 둬요 · 폰이 버티게)
+  let turnDepth = 0, turnSeen = new Set(), turnTop = false;
   async function anchorTurns(chatId, n) {
     const out = [], ids = new Set(); let cursor = '', upPage = -1, top = false;
-    for (let page = 0; page < MAX_PAGES; page++) {
+    try { for (let page = 0; page < MAX_PAGES; page++) {
+      if (page === 4 || (page && page % 20 === 0)) crumbOn('turn', '턴 번호 세기 ' + page + '쪽째(깊이 ' + turnDepth + ')');
       const { list, next } = await listPage(chatId, cursor); out.push(...list); for (const m of list) ids.add(msgId(m));
       if (upPage < 0 && ids.has(n.upto)) upPage = page;
       if (upPage >= 0 && page - upPage >= turnDepth) break;
       if (!(cursor = next)) { top = true; break; }
-    }
+    } } finally { crumbOff('turn'); }
     const all = liveLine(sortOld(out)).filter(isChat), u = all.findIndex(m => msgId(m) === n.upto); if (u < 0) return null;
     turnSeen = ids; turnTop = top;
     const base = new Map(), put = (m, t) => base.set(msgId(m), { turn: Math.max(0, t), role: msgRole(m) }); let t = n.turns;
@@ -3823,11 +3830,13 @@
     t = n.turns; for (let i = u + 1; i < all.length; i++) { if (msgRole(all[i]) === 'user') t++; put(all[i], t); }
     return new Map(all.map(m => [msgId(m), base.get(msgId(m))])); // 오래된 것부터(이어 세기가 이 순서를 써요)
   }
-  async function loadTurnMap(chatId, snap, need = []) { // need: 화면에 있는데 번호가 없는 말풍선(위로 올려 본 옛 대화) → 거기까지 더 읽어요
+  async function loadTurnMap(chatId, snap, need = []) { // need: 번호 붙은 말풍선보다 '위'에 있는데 번호가 없는 말풍선(위로 올려 본 옛 대화)만 → 거기까지 더 읽어요
+    //   방금 보낸 말·쓰는 중인 답(맨 아래 · 서버 번호가 아직 없음)은 need에 안 넣어요: 넣으면 답마다 읽는 깊이가 2→10→26→58…쪽으로 불어나 긴 방에서 대화 전체를 계속 읽고 폰이 페이지를 꺼요
     if (String(await getValue('badges', 'on')) === 'off') { turnMap = new Map(); turnBase = null; paintBadges(); return; }
     if (turnMapRoom === chatId && Date.now() - turnMapAt < 8000) return;
-    if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; turnDepth = 2; turnSeen = new Set(); turnTop = false; }
-    if (need.some(id => !turnSeen.has(id)) && !turnTop) turnDepth = Math.min(MAX_PAGES, turnDepth * 2 + 6); // 아직 안 읽은 앞쪽 말풍선이 보임 → 더 앞까지(읽었는데 번호가 없는 건 리롤로 죽은 답이라 안 늘려요)
+    if (turnMapRoom !== chatId) { badgeMiss.clear(); turnBase = null; turnDepth = 0; turnSeen = new Set(); turnTop = false; }
+    const depthWas = turnDepth, grew = need.some(id => !turnSeen.has(id)) && !turnTop && turnDepth < TURN_CAP;
+    if (grew) turnDepth = Math.min(TURN_CAP, turnDepth + TURN_STEP); // 아직 안 읽은 앞쪽 말풍선이 보임 → 더 앞까지(읽었는데 번호가 없는 건 리롤로 죽은 답이라 안 늘려요)
     turnMapRoom = chatId; turnMapAt = Date.now();
     try {
       // 같은 방은 최신 한 쪽만 읽어, 이미 센 메시지 뒤부터 이어 셉니다(답마다 방 전체를 다시 읽지 않게). 이을 자리를 못 찾으면 전체를 다시 읽어요.
@@ -3845,7 +3854,8 @@
         }
       }
       const n0 = snap?.note;
-      if (!base && n0?.upto && n0.turns > 0) base = await anchorTurns(chatId, n0); // 노트가 있으면 정리 지점에서 앞뒤로 세요(방 전체를 안 읽어요)
+      if (!base && n0?.upto && n0.turns > 0) { base = await anchorTurns(chatId, n0); // 노트가 있으면 정리 지점에서 앞뒤로 세요(방 전체를 안 읽어요)
+        if (grew && base && !need.some(id => turnSeen.has(id))) turnDepth = depthWas; } // 더 깊이 읽었는데도 그 말풍선이 없으면(목록에 없는 번호) 깊이를 되돌려요 · 계속 불어나지 않게
       if (!base) {
         const all = await readAll(chatId); let t = 0;
         base = new Map();
@@ -3863,14 +3873,15 @@
   }
   function paintBadges() {
     document.querySelectorAll('.memo-turn-badge').forEach(b => { const id = b.dataset.for; if (!turnMap.has(id)) b.remove(); });
-    const unknown = [];
+    const unknown = [], known = [];
     const SEL = '[data-message-id],[data-message-group-id]';
     document.querySelectorAll(SEL).forEach(el => {
       // 묶음 안에 말풍선이 또 있으면 바깥에만 하나 붙입니다 (번호 두 번 나오는 것 방지).
       if (el.parentElement?.closest(SEL)) { [...el.children].forEach(c => c.classList?.contains('memo-turn-badge') && c.remove()); return; }
       const id = el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id');
       const info = turnMap.get(id);
-      if (!info) { if (id) unknown.push(id); return; }
+      if (!info) { if (id) unknown.push({ id, el }); return; }
+      known.push(el);
       let b = [...el.children].find(c => c.classList?.contains('memo-turn-badge'));
       if (!b) { b = document.createElement('div'); b.className = 'memo-turn-badge'; el.prepend(b); }
       const done = info.turn <= noteTurns && noteTurns > 0;
@@ -3883,8 +3894,11 @@
     });
     // 새 말풍선이 생겼는데 번호가 없으면 잠시 뒤 다시 셉니다.
     //   다시 읽어도 번호가 안 붙는 말풍선(묶음 ID 등)은 한 번만 시도해요. 안 그러면 10초마다 대화 전체를 계속 다시 읽어요.
-    const miss = unknown.filter(id => !badgeMiss.has(id));
-    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(id => badgeMiss.add(id)); const id = chatIdFromPath(); if (id) loadTurnMap(id, snapshot, miss); }
+    const miss = unknown.filter(x => !badgeMiss.has(x.id));
+    if (miss.length && turnMapRoom && Date.now() - turnMapAt > 10000) { miss.forEach(x => badgeMiss.add(x.id)); const id = chatIdFromPath();
+      // 더 앞까지 읽게 할 것은 번호 붙은 말풍선보다 화면 '위'에 있는 것(옛 대화)뿐 · 맨 아래 새 말풍선(방금 보낸 말·쓰는 중인 답)은 다음 읽기 때 번호가 붙어요
+      const low = known.length ? Math.max(...known.map(e => e.getBoundingClientRect().top)) : Infinity;
+      if (id) loadTurnMap(id, snapshot, miss.filter(x => x.el.getBoundingClientRect().top < low).map(x => x.id)); }
   }
   let badgeTimer = null;
   new MutationObserver(() => { if (!badgeTimer && turnMap.size) badgeTimer = setTimeout(() => { badgeTimer = null; paintBadges(); }, 400); })
@@ -5432,6 +5446,12 @@
   // 오류 기록: 빨간 알림(err)과 몰래 건너뛴 일(주입·검색 실패 등)을 남겨요. 방 id · 버전 · 무엇 · 왜
   let errLog = null;
   const errHere = () => { const id = chatIdFromPath(); return (errLog || []).filter(x => !id || x.room === id); }; // 지금 방에서 난 오류만(채팅 밖이면 전부)
+  // 튕김 추적: 무거운 읽기를 시작할 때 페이지 저장소에 표시하고 끝나면 지워요 · 페이지가 꺼졌다 다시 열렸는데 표시가 남아 있으면 그 일 도중에 꺼진 것 → 오류 기록에 남겨요
+  //   (폰 사파리는 메모리가 모자라면 페이지를 통째로 꺼서 다른 기록이 하나도 안 남아요) · 직접 닫거나 새로고침하면(pagehide) 표시를 지워서 헷갈리지 않게
+  const CRUMB = new Map(), crumbSave = () => { try { CRUMB.size ? localStorage.setItem('jm_crumb', JSON.stringify({ w: [...CRUMB.values()], at: Date.now() })) : localStorage.removeItem('jm_crumb'); } catch (_) {} };
+  const crumbOn = (k, text) => { if (CRUMB.get(k) === text) return; CRUMB.set(k, text); crumbSave(); }, crumbOff = k => { if (CRUMB.delete(k)) crumbSave(); };
+  addEventListener('pagehide', () => { try { localStorage.removeItem('jm_crumb'); } catch (_) {} });
+  let crumbSeen = false; const crumbCheck = () => { if (crumbSeen) return; crumbSeen = true; try { const c = JSON.parse(localStorage.getItem('jm_crumb') || 'null'); localStorage.removeItem('jm_crumb'); if (c?.w?.length && Date.now() - c.at < 6e5) logErr('튕김', '지난번에 페이지가 꺼질 때 하던 일: ' + c.w.join(' · ').slice(0, 200)); } catch (_) {} };
   async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
       const m = String(msg?.message || msg || '').slice(0, 300), last = errLog[errLog.length - 1];
@@ -10267,7 +10287,7 @@
   }
   // 분기 확인용 대화 읽기: 정리본 찾기·임신·연애 확인이 같은 두 방 대화를 거의 동시에 통째로 읽어요 → 1분 안에는 한 번 읽은 걸 같이 써요
   //   대화 앞부분이 같은지 견주는 곳에서만 써요(읽기만 · 1분 사이 새 답이 와도 앞부분은 안 바뀌어요)
-  const readAllB = id => { const h = readAllB.m ||= new Map(), c = h.get(id); if (c && Date.now() - c.t < 60000) return c.p; const p = readAll(id); h.set(id, { t: Date.now(), p }); p.catch(() => h.delete(id)); return p; };
+  const readAllB = id => { const h = readAllB.m ||= new Map(), c = h.get(id); if (c && Date.now() - c.t < 60000) return c.p; const p = readAll(id), e = { t: Date.now(), p }; h.set(id, e); p.catch(() => h.delete(id)); setTimeout(() => { if (h.get(id) === e) h.delete(id); }, 61000); return p; }; // 1분 지나면 버려요(안 버리면 방 대화 전체를 창을 닫을 때까지 메모리에 들고 있어요)
   // 분기해 온 방: 이 방 메시지 중 다른 방 번호가 붙은 것(분기 전 대화) · 없으면 ''
   //   분기한 방을 또 분기하면 앞쪽 메시지엔 맨 처음 방, 뒤쪽엔 중간 방 번호가 붙어요 → 가장 뒤에 나온 다른 방 = 바로 위 방
   function branchSrc(cur, chatId) {
@@ -10788,6 +10808,7 @@
     const gen0 = sceneGen;
     const chatId = chatIdFromPath();
     if (!chatId) return;
+    crumbCheck();
     // 읽는 사이 방을 옮겼거나 새 읽기가 시작됐으면 이 읽기는 그만둬요: 늦게 끝난 앞 방 읽기가 지금 방에 앞 방 기억을 덮지 않게(분기방끼리는 메시지 번호가 같아서 정리 지점 확인을 통과해요)
     const my = refresh.n = (refresh.n || 0) + 1, old = () => refresh.n !== my || chatIdFromPath() !== chatId;
     loading = true; loadingAt = Date.now(); const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
