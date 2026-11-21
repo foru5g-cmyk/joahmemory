@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.49
+// @version      5.8.50
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3453,8 +3453,13 @@
   //   전전·전 둘 다 AI가 끝까지 읽는 걸 크랙에서 확인(2026.10.27, 둘 합쳐 약 9만 자). 압축·장기기억은 그대로 돌고, 그래도 넘칠 때만 나눠요.
   //   쓰고 나면 예전에 나눠 넣은 뒷부분(다른 답변)은 지워서 두 벌이 남지 않게 합니다.
   const sizeOf = t => utf16On ? Math.min(utf8Bytes(t), utf16Bytes(t)) : utf8Bytes(t);
+  // 안전장치: 같은 답에 똑같은 노트를 1분 안에 이미 2번 썼으면 더 쓰지 않아요(검사 실수로 새로고침마다 큰 노트를 다시 쓰는 반복 막기) · 글이 조금이라도 다르면(진짜 고침) 그대로 써요
+  const WR_SAME = new Map(), wrHash = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); return (h >>> 0) + ':' + t.length; };
   async function writeMessage(chatId, id, nextText) {
     const block = (nextText.match(V3_RE) || []).pop();
+    const wk = chatId + '|' + id, wh = block ? wrHash(nextText) : '', wp = WR_SAME.get(wk), wNow = Date.now();
+    const wTimes = wp && wp.h === wh ? wp.t.filter(x => wNow - x < 60000) : [];
+    if (wh && wTimes.length >= 2) { if (!wp.logged) { wp.logged = true; logErr('노트', '같은 노트를 1분 안에 3번 넘게 다시 쓰려 해서 멈췄어요(노트는 이미 들어 있음) · ' + String(new Error().stack || '').split('\n').slice(2, 4).map(s => s.trim()).join(' ← ').slice(0, 200), chatId); } return true; }
     { const h = block && block.match(/MEMO_NOTE v3 upto=(\S+) turns=(\d+) at=(\S+)/), o = snapshot?.note; // 정리 시각은 그대로인데 정리 지점·턴만 바뀌어 쓰이면 어느 길로 왔는지 오류 기록에(원인 못 찾은 노트 꼬임 추적용)
       if (h && o && chatIdFromPath() === chatId && o.at === h[3] && (o.upto !== h[1] || String(o.turns || 0) !== h[2])) logErr('노트', `정리 시각 그대로 정리 지점·턴만 바뀜 · ${o.turns || 0}→${h[2]}턴 · ${String(o.upto || '').slice(-4)}→${h[1].slice(-4)} · ${String(new Error().stack || '').split('\n').slice(1, 8).map(s => (s.trim().match(/^at (?:async )?([\w$.]+)/) || s.trim().match(/^(?:async\s+)?([\w$.]+)@/) || [])[1]).filter(x => x && x !== 'writeMessage').join(' ← ')}`); } // 크롬('at 이름')·사파리('이름@') 둘 다
     let list = []; try { list = (await listPage(chatId, '')).list; } catch (_) {} // 최신순
@@ -3486,6 +3491,7 @@
       }
     }
     await writeRaw(chatId, id, main);
+    if (wh) WR_SAME.set(wk, { h: wh, t: [...wTimes, wNow] }); // 잘 쓴 것만 셉니다(실패하면 다음에 다시 써야 하니까)
     for (const m of list) if (msgId(m) !== id && msgId(m) !== moreId && /MEMO_NOTE_MORE/.test(msgText(m)))
       try { await writeRaw(chatId, msgId(m), stripBlocks(msgText(m)).trimEnd()); } catch (_) { /* 다음에 쓸 때 다시 지워요 */ }
     return true;
@@ -10717,7 +10723,7 @@
     if (!carrier) return 'no-carrier';
     // 같은 자리에 같은 내용이면 저장하지 않고 바로 보내요(5만 자 노트는 두 답변에 나뉘어 있어 글 전체 대신 고른 내용으로 비교)
     const picked = selectInjection(whole);
-    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(sceneOn ? [] : styLines(),(msgText(carrier).match(V3_RE) || []).pop() || ''); // 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
+    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(sceneOn ? [] : styLines(),((msgText(carrier).match(V3_RE) || []).pop() || '') + ((msgText((snapshot?.all || []).find(m => parseMore(m)?.of === msgId(carrier)) || {}).match(MORE_RE) || []).pop() || '')); // 노트가 커서 뒷부분(문체 보정 줄 포함)이 다음 답에 나뉘어 있으면 그것까지 봐요(안 보면 늘 다르다고 보고 새로고침마다 노트를 다시 씀) · 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
     if (styOk && !pregNew && !n.moreLost && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
     const cur = msgId(carrier) === n.carrierId && !msgText(carrier) ? await readMessage(chatId, msgId(carrier)) : carrier; // 목록에 글이 있으면 다시 안 읽어요
     const next = stripBlocks(msgText(cur)).trimEnd() + buildBlock(whole, n.upto, n.turns, n.at || undefined, n.by || '');
