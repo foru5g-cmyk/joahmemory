@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.57
+// @version      5.8.58
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6735,14 +6735,14 @@
   // 다른 기기의 임신·연애·문체 보정을 드라이브에서 한 번에 받아요 · 방을 열 때 + 폰·탭을 다시 볼 때(다른 기기에서 고친 게 새로고침 없이 와요)
   async function gsPullStore(chatId) {
     if (!chatId || !String(await getValue('gsUrl', '')).trim() || gsPullStore.busy) return; gsPullStore.busy = true;
-    try { let d = await gsModeFetch(chatId); if (!d && !gsPullStore.big?.has(chatId)) { (gsPullStore.big ||= new Set()).add(chatId); if (Date.now() - (Number(await getValue('gsbig:' + chatId, '0')) || 0) > 36e5) { d = await gsFetch(chatId); await setValue('gsbig:' + chatId, String(Date.now())); } } /* 큰 백업(옛 판이 넣어 둔 모드 기록)은 방마다 한 시간에 한 번만 열어 봐요 */ if (!d?.store || chatIdFromPath() !== chatId) return; const got = [], J = v => { try { return JSON.parse(v || 'null'); } catch (_) { return null; } };
+    crumbOn('gspull', '드라이브에서 임신·연애·문체 기록 받기'); try { let d = await gsModeFetch(chatId); if (!d && !IS_STAY && !gsPullStore.big?.has(chatId)) { (gsPullStore.big ||= new Set()).add(chatId); if (Date.now() - (Number(await getValue('gsbig:' + chatId, '0')) || 0) > 216e5) { await setValue('gsbig:' + chatId, String(Date.now())); crumbOn('gsbig', '드라이브 큰 백업 받기'); try { d = await gsFetch(chatId); } finally { crumbOff('gsbig'); } } } /* 받기 '전에' 시각을 남겨요: 받다가 폰이 페이지를 끄면 다시 열 때마다 큰 백업을 또 받다 꺼지는 반복이 생겨서 · 6시간에 한 번 */ /* 큰 백업(옛 판이 넣어 둔 모드 기록)은 방마다 한 시간에 한 번만 열어 봐요 */ if (!d?.store || chatIdFromPath() !== chatId) return; const got = [], J = v => { try { return JSON.parse(v || 'null'); } catch (_) { return null; } };
       { const r = J(d.store.preg), base = pregSave.base?.c === chatId ? pregSave.base.s : (preg?.saved || 0), body = x => JSON.stringify({ ...x, saved: 0 });
         if (r && pregChat === chatId && (!preg || ((r.saved || 0) > base && body(r) !== body(preg)))) { await setValue('preg:' + chatId, JSON.stringify(r)); if (chatIdFromPath() === chatId) await pregLoad(chatId); got.push('임신'); } } // 저장 시각으로(개수로 견주면 출산 뒤 짧아진 기록을 덮어요) · 둘 다 고쳤으면 다른 기기 것 // 저장 시각이 늦은 쪽만(개수로 견주면 출산 뒤 짧아진 기록을 덮어요)
       { const r = J(d.store.love), mine = await loveOf(chatId); if (r) { const next = mine ? loveMerge(mine, r) : r; if (!mine || !loveAll(next, mine)) { await setValue('love:' + chatId, JSON.stringify(next)); if (loveChat === chatId && chatIdFromPath() === chatId) await loveLoad(chatId); if (!mine || !loveSame(next, mine)) got.push('연애'); else render(); } } } /* 요즘 일·기분처럼 작은 것도 전부 받아요(loveAll) · 알림은 사건·상대가 바뀌었을 때만 */ // 연애는 합쳐요(안 풀린 일·지나온 일까지)
       { const r = J(d.store.styfix), mine = styFix.c === chatId ? styFix.d : J(await getValue('styfix:' + chatId, '')), t = x => x?.saved || x?.at || 0; if (r && t(r) > t(mine)) { await setValue('styfix:' + chatId, JSON.stringify(r)); if (chatIdFromPath() === chatId) { styFix = { c: chatId, d: r }; if (snapshot?.note) await rewriteNote(chatId, noteMemory()); } if (!r.cleared) got.push('문체 보정'); } }
       for (const k of ['pregsnap', 'lovesnap']) { const next = snapMerge(String(await getValue(k + ':' + chatId, '') || ''), d.store[k]); if (next) await setValue(k + ':' + chatId, next); } // 다른 기기에서 지나온 턴의 사본도(분기용)
       if (got.length) { pageToast('다른 기기 ' + got.join('·') + ' 기록을 받아 왔어요'); render(); }
-    } catch (e) { logErr('연동', '임신·연애 받기 실패 · ' + e.message); } finally { gsPullStore.busy = false; }
+    } catch (e) { logErr('연동', '임신·연애 받기 실패 · ' + e.message); } finally { gsPullStore.busy = false; crumbOff('gspull'); }
   }
   const gsBack = () => { if (document.visibilityState !== 'visible' || Date.now() - (gsBack.at || 0) < 30000) return; gsBack.at = Date.now(); gsPullStore(chatIdFromPath()); };
   document.addEventListener('visibilitychange', gsBack); window.addEventListener('focus', gsBack);
