@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.45
+// @version      5.8.46
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -7141,7 +7141,7 @@
   }
   // 폰·컴퓨터용 AI 호출: 연결이 끊기면 한 번 더, 답이 길어 잘리면 받은 만큼으로 이어서 씁니다.
   const SOFT_RETRY = '\n\n[이번 한 번만] 방금 안전 필터에 걸렸다. 말투·수위·드립은 그대로 두되, 성적인 말은 노골적인 단어 대신 암시·돌려 말하기·초성으로만 쓴다.';
-  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기 · 장면을 넘기는 문장을 매번 같은 꼴로 쓰기('같은 시각, ○○ 최상층…')).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·상태창(HUD)·형식 기호. 장소·건물·배경 이름은 빼지 않는다.\n인물의 말버릇·말투도 답마다 똑같이 되풀이되면 찾는다(어미·구절 등 맞는 kind로).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구, 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
+  const STY_PROMPT = "너는 RP 답 문체 점검기다. [최근 답]은 같은 AI가 이어서 쓴 최근 RP 답들이다. 여러 답에 걸쳐 굳어진 반복을 찾는다. 찾는 순서(앞일수록 중요):\n1. 되풀이: 같은 사실·감정·설정을 말만 조금 바꿔 다시 말함(예: 한 답에서 '피아노를 좋아했다' 뒤에 '하루 종일 피아노를 좋아했던'처럼 이미 한 말을 또 함 · 답마다 같은 설명을 반복함).\n2. 틀: 대사나 지문을 매번 같은 틀로 짬(예: 대사마다 '감탄 + 이름 부르기 + 제안'으로 짜기 · 행동 묘사를 매번 같은 순서의 문장으로 쓰기 · 장면을 넘기는 문장을 매번 같은 꼴로 쓰기('같은 시각, ○○ 최상층…')).\n3. 구조: 답을 매번 같은 방식으로 시작하거나 끝냄(예: 답 끝을 양자택일·제안 질문으로 닫음).\n4. 어미·문두: 같은 문장 끝이나 문장 첫 낱말이 계속 나옴.\n5. 단어·구절: 같은 단어나 구절이 여러 답에 계속 나옴.\n빼는 것: 인물 이름·호칭·상태창(HUD)·형식 기호. 장소·건물·배경 이름은 빼지 않는다. 백틱(`)으로 감싼 줄(채팅창·알림창 같은 형식 칸)은 내용도 배치도 찾지 않는다.\n찾는 방법(지문을 가장 먼저 본다 · 답들을 나란히 놓고 같은 자리끼리 견준다):\n① 답의 뼈대: 문단 종류(지문·대사)의 순서가 답마다 같은지.\n② 답의 첫 지문 첫 문장끼리: 여는 꼴(예: 늘 날씨·시간·장소로 엶).\n③ 지문 문단의 끝 문장끼리: 닫는 꼴(예: 늘 미소·시선·수치로 닫음).\n④ 같은 인물이 나오는 문장끼리: 매번 같은 자리·같은 동작·같은 꾸밈말로 등장하는지.\n⑤ 대사끼리: 여는 말·닫는 말·짜임.\n⑥ 답 3개 이상에 나오는 소품·신체 부위·장소·꾸밈말·동작 표현 가운데 없어도 되는데 버릇처럼 붙는 것.\n찾지 않는 것: 그 장면의 소재라서 나올 수밖에 없는 말(장면이 병원이면 '의사') · 한 답에만 나온 것 · 뜻만 비슷하고 글의 꼴은 다른 것.\n인물의 말버릇·말투도 답마다 똑같이 되풀이되면 찾는다(어미·구절 등 맞는 kind로).\n항목마다: kind(되풀이|틀|구조|어미|문두|단어|구절) · pat(되풀이·틀·구조는 무엇이 반복되는지 20자 안팎 명사구 · 글에서 보이는 꼴로 적음('○○한 태도 반복'처럼 뜻만 적지 않음), 어미·문두·단어·구절은 답에 나온 글 그대로) · n(그 반복이 나온 답 개수) · ex(실제 답에서 그대로 옮긴 짧은 예 1~2개, 40자 안팎). 같은 반복을 여러 항목으로 나누지 않음. 중요한 것부터 최대 8개.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"items\":[{\"kind\":\"되풀이\",\"pat\":\"…\",\"n\":0,\"ex\":[\"…\"]}]}";
   // 횟수는 코드가 셉니다(AI가 말한 횟수는 안 믿어요) · 어미는 문장 끝에서, 문두는 문장 맨 앞에서, 나머지는 글자 그대로
   function styCount(texts, kind, pat) { const p = String(pat || '').replace(/^[~…·\s]+/, '').trim(); if (p.length < 1) return 0; const all = texts.join('\n');
     const sents = all.split(/(?<=[.!?。…])\s+|\n+/).map(x => x.replace(/^[\s*"“❝_]+/, '').trim()).filter(Boolean);
@@ -10612,7 +10612,12 @@
       draft = null; await run('new');
       if (!draft) autoSum.wait = { c: chatId, n: freshTurns() + 3 }; // run은 실패를 알림만 띄우고 끝내서, 결과가 없으면 여기서 3턴 쉬어요
       // 자동 정리는 확인 화면에서 멈추지 않고 바로 넣어요(멈추면 다음 자동 정리도 줄줄이 멈춰서) · 걸리는 게 있으면 알림 + 오류 기록에 남겨요 · 정리 기록에서 되돌릴 수 있어요
-      if (draft && nav.view === 'preview') { const w = [(draft.lost || []).length && '빠진 인물 ' + draft.lost.slice(0, 3).join('·'), (draft.dropped || []).length && '빠진 줄 ' + draft.dropped.length + '개', (draft.gone || []).length && '빠진 소지품·고리 ' + draft.gone.length + '개', (draft.askNames || []).length && '같은 사람인지 헷갈리는 이름 ' + draft.askNames.length + '쌍'].filter(Boolean);
+      if (draft && nav.view === 'preview') {
+        for (const x of draft.dropped || []) { if (x.done) continue; // 확인 화면이 없어서 빠진 줄은 묻지 않고 그 항목 끝에 되살려요(dropback과 같은 방식)
+          const s = draft.sections.find(z => z.key === x.sec); if (!s) continue; const b = itemBlocks(s.body);
+          const it = b.items.find(y => itemKey(y.key) === itemKey(x.key) || (x.sec === '인물' && sameName(y.key, x.key))); if (!it) continue;
+          it.lines.push(...x.lines.filter(l => !it.lines.includes(l))); s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim(); x.done = true; }
+        const w = [(draft.lost || []).length && '빠진 인물 ' + draft.lost.slice(0, 3).join('·'), (draft.dropped || []).length && '빠진 줄 ' + draft.dropped.length + '개' + (draft.dropped.every(x => x.done) ? '는 되살림' : ''), (draft.gone || []).length && '빠진 소지품·고리 ' + draft.gone.length + '개', (draft.askNames || []).length && '같은 사람인지 헷갈리는 이름 ' + draft.askNames.length + '쌍'].filter(Boolean);
         apply.auto = true; try { await apply(); } finally { apply.auto = false; }
         if (draft && nav.view === 'preview') logErr('자동 정리', '정리는 됐는데 채팅에 못 넣어서 확인 화면에 남김 · 열어서 [채팅에 넣기]나 [버리기]를 눌러 주세요', chatId); // 넣기가 중간에 멈추면 이유를 남겨요
         else if (w.length) { logErr('자동 정리', '그대로 넣음 · ' + w.join(' · '), chatId); pageToast('기억을 갱신했어요 · ' + w.join(' · ') + ' · 이상하면 설정 › 기록 › 정리 기록에서 되돌려요'); } }
