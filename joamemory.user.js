@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.54
+// @version      5.8.55
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5450,8 +5450,14 @@
   // 튕김 추적: 무거운 읽기를 시작할 때 페이지 저장소에 표시하고 끝나면 지워요 · 페이지가 꺼졌다 다시 열렸는데 표시가 남아 있으면 그 일 도중에 꺼진 것 → 오류 기록에 남겨요
   //   (폰 사파리는 메모리가 모자라면 페이지를 통째로 꺼서 다른 기록이 하나도 안 남아요) · 직접 닫거나 새로고침하면(pagehide) 표시를 지워서 헷갈리지 않게
   const CRUMB = new Map(), crumbSave = () => { try { CRUMB.size ? localStorage.setItem('jm_crumb', JSON.stringify({ w: [...CRUMB.values()], at: Date.now() })) : localStorage.removeItem('jm_crumb'); } catch (_) {} };
-  const crumbOn = (k, text) => { if (CRUMB.get(k) === text) return; CRUMB.set(k, text); crumbSave(); }, crumbOff = k => { if (CRUMB.delete(k)) crumbSave(); };
+  const lastAct = text => { try { localStorage.setItem('jm_last', JSON.stringify({ t: text, at: Date.now() })); } catch (_) {} }; // 마지막으로 한 일(끝나도 안 지워요) · 다시 열렸을 때 직전에 뭘 했는지
+  const crumbOn = (k, text) => { lastAct(text); if (CRUMB.get(k) === text) return; CRUMB.set(k, text); crumbSave(); }, crumbOff = k => { if (CRUMB.delete(k)) crumbSave(); };
   addEventListener('pagehide', () => { try { localStorage.removeItem('jm_crumb'); } catch (_) {} });
+  // 다시 열림 기록: 3분 안에 페이지가 또 열렸으면 몇 초 만인지 · 어떻게 열렸는지(reload = 페이지가 스스로 다시 불림 · navigate = 주소로 새로 엶) · 직전에 한 일을 오류 기록에 남겨요
+  { try { const now = Date.now(), prev = Number(localStorage.getItem('jm_open')) || 0, nav0 = performance.getEntriesByType?.('navigation')?.[0]?.type || '?', la = JSON.parse(localStorage.getItem('jm_last') || 'null');
+      localStorage.setItem('jm_open', String(now));
+      if (prev && now - prev < 18e4 && location.pathname.includes('/episodes/')) setTimeout(() => logErr('다시 열림', Math.round((now - prev) / 1000) + '초 만에 다시 열림 · 열린 방식 ' + nav0 + (la?.t ? ' · 직전에 한 일: ' + la.t + ' (' + Math.round((now - la.at) / 1000) + '초 전)' : ' · 직전에 한 일 없음')), 3000);
+    } catch (_) {} }
   let crumbSeen = false; const crumbCheck = () => { if (crumbSeen) return; crumbSeen = true; try { const c = JSON.parse(localStorage.getItem('jm_crumb') || 'null'); localStorage.removeItem('jm_crumb'); if (c?.w?.length && Date.now() - c.at < 6e5) logErr('튕김', '지난번에 페이지가 꺼질 때 하던 일: ' + c.w.join(' · ').slice(0, 200)); } catch (_) {} };
   async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
