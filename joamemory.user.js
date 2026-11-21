@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.46
+// @version      5.8.47
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6178,7 +6178,7 @@
       return `<li><span class="ij-t">${pill ? `<span class="tl-date"${pillStyle}>${esc(pill)}</span> ` : ''}<b>${esc(t)}</b></span><small>${pinned ? '📌 고정 · 늘 들어가요' : esc(r.why)}</small><span class="inj-acts">${r.sec === '날짜로그' || pinned ? `<button class="ia${pinned ? ' on' : ''}" data-act="pin" data-arg="${esc(r.key)}" title="${pinned ? '고정 풀기' : '고정 · 늘 넣기'}" aria-label="${pinned ? '고정 풀기' : '고정'}">📌</button>` : ''}${pinned ? '' : `<button class="ia" data-act="injskip" data-arg="${esc(r.key)}" title="이번 장면에선 빼기" aria-label="이번 장면에선 빼기">✕</button>`}</span></li>`; };
     const injLine = !lastInj || !(sceneOn || !lastInj.all) ? '' : lastInj.all
       ? `<p class="muted" style="margin:8px 2px 0;font-size:12.5px">🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 · 기억이 아직 적어서 전부 들어가요 <small>(채팅엔 장면에 맞는 것만 최대 ${fmt(INJ_MAX)}자 · 노트는 제한 없음)</small></p>`
-      : `<details class="inj-card"${nav.injOpen !== false ? ' open' : ''}><summary data-act="injopen">${sceneOn ? `<b>이번 장면의 기억</b> <small>📌 고정 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>` : `🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 <small>/ 전체 ${fmt(lastInj.total)}자 · 📌 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>`}</summary>
+      : `<details class="inj-card"${nav.injOpen !== false ? ' open' : ''}><summary data-act="injopen">${sceneOn ? `<b>이번 장면의 기억</b> <small>📌 고정 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>` : `🌐 채팅에 넣는 기억 <b>${fmt(lastInj.chars)}</b>자 <small>/ ${lastInj.total !== injected ? '원문 포함' : '전체'} ${fmt(lastInj.total)}자 · 📌 ${lastInj.pinned.length} · 떠올림 ${lastInj.recalled.length}</small>`}</summary>
         <p class="muted" style="margin:6px 0">필수 기억은 항상 넣고, 옛 일은 방금 쓴 말에 맞춰 골라요</p>
         ${lastInj.pinned.length ? `<h5>📌 고정한 사건</h5><ul class="inj-list">${lastInj.pinned.map(r => injRow(r, true)).join('')}</ul>` : ''}
         <h5>떠올린 기억</h5>${lastInj.recalled.length ? `<ul class="inj-list">${lastInj.recalled.map(r => injRow(r, false)).join('')}</ul>` : '<p class="muted" style="margin:4px 0">지금 대화와 맞는 옛 기억이 없어요. 옛 일을 꺼내면 보낼 때 찾아서 넣어요.</p>'}
@@ -6227,7 +6227,7 @@
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${spin || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
           <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${spin || autoBusy ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
-          <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">전체 ${fmt(lastInj?.total || injected)}자 중</small></div></div>
+          <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">${lastInj?.total && lastInj.total !== injected ? '원문 포함' : '전체'} ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
       ${injLine}
       <div class="wd-foot"><span class="muted" style="font-size:12px">1~${n.turns}턴 기억</span><span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button></div>
