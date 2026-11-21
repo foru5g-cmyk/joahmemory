@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.52
+// @version      5.8.53
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3416,7 +3416,8 @@
   // 줄바꿈 표기(\r\n·\r)만 다른 건 같은 글로 봅니다(서버가 바꿔 저장해도 UTF-16LE를 끄지 않게).
   const sameText = (a, b) => a.replace(/\r\n?/g, '\n') === b.replace(/\r\n?/g, '\n');
   const savedAs = async (chatId, id, text) => { try { return sameText(msgText(await readMessage(chatId, id)), text); } catch (_) { return false; } };
-  async function writeRaw(chatId, id, nextText) {
+  async function writeRaw(chatId, id, nextText) { const wk = 'wr' + id; crumbOn(wk, '노트 쓰기 ' + Math.round(nextText.length / 1000) + '천 자' + (pagePatchOff ? '' : ' · 빠른 길')); try { return await writeRaw0(chatId, id, nextText); } finally { crumbOff(wk); } }
+  async function writeRaw0(chatId, id, nextText) {
     const u8 = utf8Bytes(nextText), u16 = utf16Bytes(nextText);
     const best = utf16On ? Math.min(u8, u16) : u8;
     if (best > PATCH_MAX) throw new Error(utf16On ? `답변+노트가 너무 커서 넣을 수 없어요 (${Math.round(best / 1024)}KB / 100KB). 설정에서 노트 크기를 줄이고 다시 정리해 주세요.`
@@ -10888,9 +10889,9 @@
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
         //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
-        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !brRun.has(chatId) && (brRun.n.get(chatId) || 0) < 3 && !String(await getValue('brchk:' + chatId, '')) && (Number(await getValue('brtry:' + chatId, '0')) || 0) < 3) { // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !brRun.has(chatId) && (brRun.n.get(chatId) || 0) < 3 && !String(await getValue('brchk:' + chatId, '')) && (Number(await getValue('brtry:' + chatId, '0')) || 0) < 2) { // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
           // 찾는 동안(brRun): 홈에 '찾는 중'을 보여 주고 자동 정리를 멈춰요 · '확인함' 표시(brchk)는 끝까지 확인했을 때만 찍어요(찾는 중에 다른 작업이 돌거나 방을 옮겨 그만두면 다음 읽기 때 다시 · 이 창에서 세 번까지)
-          brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); await setValue('brtry:' + chatId, String((Number(await getValue('brtry:' + chatId, '0')) || 0) + 1)); render(); // brtry: 이 기기에서 찾아본 횟수(페이지가 꺼져도 남아요 · 3번 해도 못 끝내면 그만 찾아요)
+          brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); await setValue('brtry:' + chatId, String((Number(await getValue('brtry:' + chatId, '0')) || 0) + 1)); render(); // brtry: 이 기기에서 찾아본 횟수(페이지가 꺼져도 남아요 · 처음 한 번 + 한 번 더 해도 못 끝내면 그만 찾아요)
           const ct = c?.turns || 0, done = () => setValue('brchk:' + chatId, '1'), bT = Date.now(), bLap = w => console.info('[조아메모리] 분기 · ' + w + ' ' + ((Date.now() - bT) / 1000).toFixed(1) + '초'); // 어디서 오래 걸리는지 콘솔에 남겨요
           branchFind(chatId, () => {}, bLap).then(async list => { const x = list[0]; bLap('정리본 찾기 끝'); if (chatIdFromPath() !== chatId) return; if (!x || x.turn === ct) return done(); if (busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
             const anc = list.anc; if (!ct && !anc.length) return done(); if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return done(); } // 다른 방 정리본은 대화가 같아도 안 써요
