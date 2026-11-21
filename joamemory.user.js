@@ -3407,7 +3407,10 @@
     catch (_) { throw new Error('전송 불가'); }
     if (!r.ok) { let t = ''; try { t = await r.text(); } catch (_) {} throw httpWhy(r.status, t); }
   }
-  let pagePatchOff = false; const PAGE_PATCH_MAX = 70000; // 빠른 길(페이지에서 크랙 주소로 바로 쓰기 · 5.8.34)은 7만 자 아래 노트만: 노트가 큰 방(한도에 꽉 찬 방)은 5.8.34부터 폰에서 1분 안에 페이지가 다시 열려서 예전 길(확장 프로그램)로
+  // 어떤 확장 프로그램에서 도는지: 템퍼몽키·Stay 모두 GM_info.scriptHandler에 이름을 적어 줘요 · 이름이 없는데 아이폰·아이패드면 Stay로 봐요(템퍼몽키는 늘 이름을 적어요)
+  const HANDLER = (() => { try { return String((typeof GM_info !== 'undefined' ? GM_info : GM.info)?.scriptHandler || ''); } catch (_) { return ''; } })();
+  const IS_STAY = /stay/i.test(HANDLER) || (!HANDLER && /iPhone|iPad|iPod/.test(navigator.userAgent));
+  let pagePatchOff = IS_STAY; const PAGE_PATCH_MAX = Infinity; // 빠른 길(페이지에서 크랙 주소로 바로 쓰기 · 5.8.34)은 Stay에선 꺼요: Stay 쓰는 사람만 5.8.34부터 1분 안에 페이지가 다시 열림(템퍼몽키는 3천 턴도 멀쩡) · Stay는 5.8.33처럼 확장 프로그램 전송으로
   async function pagePatch(url, text, u16) { // u16: UTF-16LE로 보낼지(writeRaw가 정한 대로)
     const tk = await waitToken(), h = { Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' }, ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
     try { const r = await fetch(url, u16 ? { method: 'PATCH', signal: ac.signal, body: utf16Blob(patchJson(text)), headers: { ...h, 'Content-Type': 'application/json; charset=utf-16le' } } : { method: 'PATCH', signal: ac.signal, body: patchJson(text), headers: { ...h, 'Content-Type': 'application/json' } });
@@ -5456,7 +5459,7 @@
   // 다시 열림 기록: 3분 안에 페이지가 또 열렸으면 몇 초 만인지 · 어떻게 열렸는지(reload = 페이지가 스스로 다시 불림 · navigate = 주소로 새로 엶) · 직전에 한 일을 오류 기록에 남겨요
   { try { const now = Date.now(), prev = Number(localStorage.getItem('jm_open')) || 0, nav0 = performance.getEntriesByType?.('navigation')?.[0]?.type || '?', la = JSON.parse(localStorage.getItem('jm_last') || 'null');
       localStorage.setItem('jm_open', String(now));
-      if (prev && now - prev < 18e4 && location.pathname.includes('/episodes/')) setTimeout(() => logErr('다시 열림', Math.round((now - prev) / 1000) + '초 만에 다시 열림 · 열린 방식 ' + nav0 + (la?.t ? ' · 직전에 한 일: ' + la.t + ' (' + Math.round((now - la.at) / 1000) + '초 전)' : ' · 직전에 한 일 없음')), 3000);
+      if (prev && now - prev < 18e4 && location.pathname.includes('/episodes/')) setTimeout(() => logErr('다시 열림', Math.round((now - prev) / 1000) + '초 만에 다시 열림 · 열린 방식 ' + nav0 + ' · ' + (HANDLER || '이름 없음') + (pagePatchOff ? ' · 빠른 쓰기 꺼짐' : '') + (la?.t ? ' · 직전에 한 일: ' + la.t + ' (' + Math.round((now - la.at) / 1000) + '초 전)' : ' · 직전에 한 일 없음')), 3000);
     } catch (_) {} }
   let crumbSeen = false; const crumbCheck = () => { if (crumbSeen) return; crumbSeen = true; try { const c = JSON.parse(localStorage.getItem('jm_crumb') || 'null'); localStorage.removeItem('jm_crumb'); if (c?.w?.length && Date.now() - c.at < 6e5) logErr('튕김', '지난번에 페이지가 꺼질 때 하던 일: ' + c.w.join(' · ').slice(0, 200)); } catch (_) {} };
   async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
@@ -11946,7 +11949,7 @@
         nav.storeSize = mb(all); logErr('저장', `전체 ${mb(all)}(${keys.length}개) · 이 방 ${mb(here)} · 큰 순서: ${top}`); toast(`이 기기 저장 ${mb(all)} · 이 방 ${mb(here)} · 자세한 건 오류 기록에 적었어요`, 'info', 6000); return render(); }
       case 'errlog': { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } } nav.prevView = nav.view; nav.view = 'errlog'; render(); out('main').scrollTop = 0; return; }
       case 'errcopy': { const t = [...errHere()].reverse().map(x => `[${new Date(x.at).toLocaleString('ko-KR')}] ${x.where} · ${x.msg}${x.room ? ' · 방 ' + x.room : ''}`).join('\n');
-        const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
+        const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' · ' + (HANDLER || '이름 없음') + (IS_STAY ? ' · Stay로 봄(빠른 쓰기 꺼짐)' : '') + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
       case 'errclear': { if (!confirm('이 방의 오류 기록을 지울까요?')) return; const id = chatIdFromPath(); errLog = (errLog || []).filter(x => id && x.room !== id); await setValue('errlog', JSON.stringify(errLog)); return render(); }
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
       case 'changes': await histFull(chatIdFromPath()); histDrive(chatIdFromPath()); if (nav.branchRoom !== chatIdFromPath()) nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
