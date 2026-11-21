@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.56
+// @version      5.8.57
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -383,7 +383,9 @@
   // 분기한 방이 다른 방 사본을 물려받을 때: 그 사본이 이 방 채팅 노트(c.me)보다 나중에 고쳐졌으면 분기한 뒤에 바뀐 글이라 안 가져와요 · me가 없는 옛 노트는 그대로 가져와요
   const memLater = (c, me, room) => { if (!(c?.me > 0) || !((me || 0) > c.me)) return false; const k = room + '|' + c.me; if (!(memLater.s ||= new Set()).has(k)) { memLater.s.add(k); logErr('분기', `다른 방(${String(room || '').slice(0, 8)}…) 기억은 분기한 뒤에 고쳐진 것이라 그대로는 안 씀 · 분기 때 정리본을 찾아봄`); } return true; }; // 기록은 방마다 한 번만
   const memTake = (c, g, stale) => !!(g && (g.upto === c.upto || (g.turns && g.turns === c.turns && g.at && g.at === c.at)) && (!stale || (g.me || 0) >= (c.me || 0))); // 드라이브 사본을 받아도 되는지(같은 정리본 · 늦게 고친 걸 찾는 중이면 그만큼 새것)
-  const fxRepair = new Set(); // 이 창에서 채팅 노트 고정 설정을 이미 다시 쓴 것(방|모양) · 같은 걸 되풀이해 쓰지 않게
+  // 채팅 노트 고정 설정을 이미 다시 쓴 것(방|모양) · 같은 걸 되풀이해 쓰지 않게 · 페이지가 다시 열려도 기억해요(창마다 세면 열릴 때마다 큰 노트를 통째로 다시 써서 폰이 페이지를 꺼요)
+  const fxRepair = (() => { let d = {}; try { d = JSON.parse(localStorage.getItem('jm_fxrep') || '{}') || {}; } catch (_) {} const now = Date.now(); for (const k in d) if (now - d[k] > 864e5) delete d[k];
+    return { has: k => !!d[k], add: k => { d[k] = Date.now(); try { localStorage.setItem('jm_fxrep', JSON.stringify(d)); } catch (_) {} } }; })(); // 하루 지나면 잊어요
   const fxNewer = (note, cid) => (note?.fx || 0) > (FX_AT.get(cid) || 0);
   // 내가 쓴 고정 설정(방마다 · 'fixkeep:방' = {b: 글}): 고정 설정은 사용자가 직접 쓴 글이라 노트를 다시 쓰는 어떤 길도 덮지 못하게 저장 출구(saveFull·buildBlock)에서 늘 이 글로 맞춰요
   //   바뀌는 때: 내가 쓰거나 지울 때 · 다른 기기가 더 나중에 고친 게 들어올 때 · 백업 파일을 불러와 넣을 때 · 기억 초기화 · 아직 없으면 이 기기 전체 사본에서 한 번 만들어요
@@ -3409,8 +3411,8 @@
   }
   // 어떤 확장 프로그램에서 도는지: 템퍼몽키·Stay 모두 GM_info.scriptHandler에 이름을 적어 줘요 · 이름이 없는데 아이폰·아이패드면 Stay로 봐요(템퍼몽키는 늘 이름을 적어요)
   const HANDLER = (() => { try { return String((typeof GM_info !== 'undefined' ? GM_info : GM.info)?.scriptHandler || ''); } catch (_) { return ''; } })();
-  const IS_STAY = /stay/i.test(HANDLER) || (!HANDLER && /iPhone|iPad|iPod/.test(navigator.userAgent));
-  let pagePatchOff = false; const PAGE_PATCH_MAX = Infinity; // 빠른 길(페이지에서 크랙 주소로 바로 쓰기 · 5.8.34)은 다시 켬: 5.8.54에서 큰 노트(그 방 99KB)는 꺼져 있었는데도 Stay에서 똑같이 튕겨서 원인이 아님 · HANDLER·IS_STAY는 오류 기록에 남기려고 둬요
+  const IS_STAY = /stay/i.test(HANDLER) || /iPhone|iPad|iPod/.test(navigator.userAgent); // 아이폰·아이패드는 모두(Stay가 이름을 tamp로 적어서 이름으로는 못 가려요)
+  let pagePatchOff = IS_STAY; const PAGE_PATCH_MAX = Infinity; // 빠른 길(페이지에서 크랙 주소로 바로 쓰기 · 5.8.34)은 아이폰에선 꺼요: 5.8.54는 큰 노트를 나눠 쓴 조각(49천 자)이 7만 자 아래라 빠른 길을 그대로 탔고, 그 뒤 24초 만에 페이지가 꺼졌어요(오류 기록) · 아이폰은 5.8.33처럼 확장 프로그램 전송으로
   async function pagePatch(url, text, u16) { // u16: UTF-16LE로 보낼지(writeRaw가 정한 대로)
     const tk = await waitToken(), h = { Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' }, ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
     try { const r = await fetch(url, u16 ? { method: 'PATCH', signal: ac.signal, body: utf16Blob(patchJson(text)), headers: { ...h, 'Content-Type': 'application/json; charset=utf-16le' } } : { method: 'PATCH', signal: ac.signal, body: patchJson(text), headers: { ...h, 'Content-Type': 'application/json' } });
@@ -11949,7 +11951,7 @@
         nav.storeSize = mb(all); logErr('저장', `전체 ${mb(all)}(${keys.length}개) · 이 방 ${mb(here)} · 큰 순서: ${top}`); toast(`이 기기 저장 ${mb(all)} · 이 방 ${mb(here)} · 자세한 건 오류 기록에 적었어요`, 'info', 6000); return render(); }
       case 'errlog': { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } } nav.prevView = nav.view; nav.view = 'errlog'; render(); out('main').scrollTop = 0; return; }
       case 'errcopy': { const t = [...errHere()].reverse().map(x => `[${new Date(x.at).toLocaleString('ko-KR')}] ${x.where} · ${x.msg}${x.room ? ' · 방 ' + x.room : ''}`).join('\n');
-        const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' · ' + (HANDLER || '이름 없음') + (IS_STAY ? ' · Stay로 봄' : '') + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
+        const v = typeof GM_info !== 'undefined' ? GM_info.script?.version || '' : ''; try { await navigator.clipboard.writeText('조아메모리 ' + v + ' · ' + (HANDLER || '이름 없음') + (IS_STAY ? ' · 아이폰(빠른 쓰기 꺼짐)' : '') + ' 오류 기록\n' + (t || '(없음)')); toast('복사했어요 · 그대로 붙여 넣어 보내 주세요', 'ok', 3000); } catch (_) { toast('복사가 막혔어요. 화면을 길게 눌러 복사해 주세요.', 'info', 4000); } return; }
       case 'errclear': { if (!confirm('이 방의 오류 기록을 지울까요?')) return; const id = chatIdFromPath(); errLog = (errLog || []).filter(x => id && x.room !== id); await setValue('errlog', JSON.stringify(errLog)); return render(); }
       case 'history': nav.view = 'history'; render(); out('main').scrollTop = 0; return;
       case 'changes': await histFull(chatIdFromPath()); histDrive(chatIdFromPath()); if (nav.branchRoom !== chatIdFromPath()) nav.branchList = null; nav.view = 'changes'; nav.key = null; render(); out('main').scrollTop = 0; return;
