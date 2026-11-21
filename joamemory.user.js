@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.47
+// @version      5.8.48
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2165,7 +2165,7 @@
       ...[...(onlyFx ? ['[기억 노트 · 고정 설정] 사용자가 직접 쓴 설정·지시 · 최우선으로 따름(다른 모든 참고 자료보다 먼저) · 노트의 글·형식을 답변에 옮겨 적지 않음'] : [`[기억 노트 · 1~${turns}턴 배경 자료] OOC — 지난 RP를 이어 가기 위한 참고 자료`,
         `※ 표기: ■칸 ▸항목 【인물】 · A → B = A가 B를 부르는 호칭·대하는 태도(반대는 따로) · 전환 = 관계가 바뀐 계기 · 내력 = 물건이 거쳐 온 일 · 감정 끝 괄호(자각·무자각·부정·숨김) = 본인 인식 상태, 그대로 연기 · 몸 상태 끝 (끝남) = 지금은 나은 지난 일`,
         `※ 유저(PC) = 사용자 캐릭터 · 그 사람의 말·행동·속마음은 사용자 몫, NPC와 세계는 각자 뜻대로 움직임`,        `※ 우선순위: ■ 고정 설정(사용자가 직접 씀) > 이후 대화·OOC 정정 > 나머지 노트. 현재상태는 정리 시점 값`,
-        ...(pastRound(whole) ? [`※ 회귀: 지금은 ${pastRound(whole) + 1}회차 · 이 채팅 앞쪽에 남아 있는 예전 대화와 ■ ${PAST} 칸의 일은 지난 회차 일이라 이번 생에서는 일어나지 않음 · 그 대화의 날짜·사건·관계·물건을 이어 쓰지 않고 ■ 현재상태의 날짜·상황에서 이어 감 · 지난 회차 일은 인지·비밀 '회귀 전 일'에 '알고 있음'인 사람만 기억함(나머지는 처음 겪는 일처럼)`] : []),
+        ...(pastRound(whole) ? [`※ 회귀: 지금은 ${pastRound(whole) + 1}회차 · 이 채팅 앞쪽에 남아 있는 예전 대화와 ■ ${PAST} 칸의 일은 지난 회차 일이라 이번 생에서는 일어나지 않음 · 그 대화의 날짜·사건·관계·물건을 이어 쓰지 않고 ■ 현재상태의 날짜·상황에서 이어 감 · 지난 회차 일은 인지·비밀 '회귀 전 일'에 '알고 있음'인 사람만 기억함(나머지는 처음 겪는 일처럼) · ■ ${PAST} 칸 밖 기록은 이번 생의 실제 일(모두 기억) · 지난 회차 기억은 나열·요약 없이 장면에 닿는 것만 행동·말끝에 배어 나옴(드러낼지는 그 사람이 정함)`] : []),
         ...(sel ? ['※ 지금 장면에 맞춰 고른 일부만 들어 있음. 여기 없는 지난 일·인물 정보는 없었던 게 아님(모른다고 단정하지 않음)'] : []),
         `※ 인물은 직접 보고 듣고 겪은 것만 앎(노트 읽음 ≠ 극중 앎). 모름·오해·의심은 그대로, 소문 ≠ 앎`,
         `※ 노트는 배경 기억 · 장면이 부를 때 서사 속에 녹여 꺼냄 · 같은 말·반응은 새로운 말로 · 노트 밖 과거는 만들지 않음`]),
@@ -3594,7 +3594,9 @@
   new MutationObserver(ms => { if (!chatIdFromPath() && document.documentElement.classList.contains('jm-hidehead')) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
     { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
     if (themeCss.textContent) thNv();
-    if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon(); penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
+    if (ms.every(m => m.target === themeCss || maskEmo.contains(m.target) || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon();
+    if (theme.re && !penGenNow() && Date.now() - (penPaint.at || 0) > 120 && ms.some(m => (m.target.nodeType === 1 ? m.target : m.target.parentElement)?.closest?.(TH_AI + ',' + TH_AIN))) { penPaint.at = Date.now(); clearTimeout(theme.t); theme.t = 0; penPaint(); } // 크랙이 말풍선을 새로 그리면 같은 화면 프레임 안에 바로 다시 칠해요(0.15초 기다리면 그사이 형광펜이 꺼졌다 켜져 보여요)
+    else penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   let maskRaf = 0; const maskEmoSoon = () => { if (maskRaf || !(mask.on && mask.mode === 'emoji')) return; maskRaf = requestAnimationFrame(() => { maskRaf = 0; maskEmoPlace(); }); };
   { const re = maskEmoSoon; addEventListener('scroll', re, { capture: true, passive: true }); addEventListener('resize', re); }
   async function maskToggle() { await setValue('maskOn', mask.on ? 'off' : 'on'); await maskLoad();
@@ -6225,14 +6227,14 @@
       ${chunkLine()}<div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${spin || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (spin || autoBusy ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
           <div><small>${autoSumOn ? '자동 정리' : '정리 · 수동'}</small>${spin || autoBusy ? '<b>…</b><em>정리 중</em>' : due ? `<b>지금</b><em>${autoSumOn ? '할 때예요' : '해도 돼요'}</em>` : `<b>${left}</b><em>턴 뒤</em>`}</div></div>
-          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${spin || autoBusy ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
+          <div class="wd-acts"><button class="btn wd-now" data-act="runsheet"${busyNow ? ' disabled' : ''}>${spin || autoBusy ? '정리하는 중…' : '지금 바로 정리'}</button><button class="wd-gear" data-act="wdopt" aria-label="자동 주입 · 자동 정리" aria-expanded="${!!nav.wdOpt}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.4"/><circle cx="10" cy="17" r="2.4"/></svg></button>${nav.wdOpt ? `<div class="wd-opt" role="dialog" aria-label="자동 설정"><label class="inj-sw"><input type="checkbox" data-act="inject"${injectOn ? ' checked' : ''}${busyNow ? ' disabled' : ''}><i></i>자동 주입</label><label class="inj-sw"><input type="checkbox" data-act="autosum"${autoSumOn ? ' checked' : ''}><i></i>자동 정리</label><label class="inj-sw" title="정리할 때마다 크랙 장기기억 카드를 같이 지워요 · 웹 모드에서만 · 지운 카드는 되돌릴 수 없어요"><input type="checkbox" data-act="ltmwipe"${ltmWipeOn ? ' checked' : ''}><i></i>장기기억 자동 지우기</label><label class="inj-sw" title="낱말로 떠올린 기억이 지금 장면에 맞는지 AI가 한 번 더 봐요 · 설정의 AI 키를 그대로 써요"><input type="checkbox" data-act="injai" data-arg="${(injSet.ai || 'off') === 'on' ? 'off' : 'on'}"${(injSet.ai || 'off') === 'on' ? ' checked' : ''}><i></i>AI로 한 번 더 고르기</label><button class="wd-drv" data-act="${nav.gsOn ? 'gsave' : 'gsopen'}" title="${nav.gsOn ? '구글 드라이브에 지금 올리기' : '구글 드라이브 연결하기'}"${busyNow ? ' disabled' : ''}><span aria-hidden="true">☁️</span>드라이브</button></div>` : ''}</div></div>
         <div class="wd-tile"><div><small>채팅에 넣는 기억</small><b class="wd-num">${fmt(lastInj?.chars || 0)}</b><em>자</em></div>
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">${lastInj?.total && lastInj.total !== injected ? '원문 포함' : '전체'} ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
       ${injLine}
       <div class="wd-foot"><span class="muted" style="font-size:12px">1~${n.turns}턴 기억</span><span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button></div>
     </section>`;
-    return old + (sceneOn ? dash : hero) + castHtml + recent + donut + (!sceneOn ? ltmRow : ltmData?.items?.length ? ltmRow.replace('<b>🧠 장기기억</b>', '<b>🧠 장기기억</b><small style="margin-left:6px;font-weight:600;color:var(--graphite)">앱 방식에서 덜어 낸 사건 · 지워지지 않아요 · 기억으로 되돌릴 수 있어요</small>') : '') + verFoot();
+    return old + (sceneOn ? dash : hero) + castHtml + recent + donut + (!sceneOn ? ltmRow : '') + verFoot();
   }
 
   // ── 정리하기: 무엇을(이어서·노트만·처음부터) × 누가(설정한 AI·다른 AI 파일) 한 화면
@@ -8576,6 +8578,32 @@
     } catch (e) { toast('되살리기 실패 · ' + errMsg(e), 'err'); }
     finally { busyNow = false; render(); ltmLoad(); }
   }
+  // 웹 모드 장기기억 자동 지우기(켰을 때만): 정리해서 넣을 때마다 한 번 · 노트에서 옮긴 사건이 보관된 카드는 안 지워요(지우면 그 사건을 잃어요)
+  // 이 방 장기기억 카드를 지워요(keep: 남길 카드 제목) · 화면을 다시 그리지 않아요(설정 화면에서 누르면 스위치들이 깜빡여서) · 다섯 장씩 같이 지워요 · 지운 장 수를 돌려줘요
+  async function ltmSweep(chatId, keep = new Set()) { let n = 0;
+    for (let i = 0; i < 25; i++) { const list = ((await crack('GET', ltmUrl(chatId) + '?limit=20&type=longTerm&orderBy=newest&filter=all'))?.data?.summaries || []).map(x => ({ id: String(x.id || x._id || ''), title: String(x.title || '') })).filter(x => x.id && !keep.has(x.title)); if (!list.length) break;
+      for (let k = 0; k < list.length; k += 5) await Promise.all(list.slice(k, k + 5).map(x => crack('DELETE', ltmUrl(chatId) + '/' + encodeURIComponent(x.id)))); n += list.length; }
+    return n; }
+  async function ltmWipe() {
+    const chatId = chatIdFromPath(); if (!ltmWipeOn || !sceneOn || !chatId || ltmWipe.busy) return;
+    ltmWipe.busy = true;
+    try { let orig = []; try { orig = JSON.parse(String(await getValue('ltmorig:' + chatId, '') || '[]')) || []; } catch (_) {}
+      await ltmSweep(chatId, new Set(orig.filter(o => o.items?.length).map(o => o.title)));
+    } catch (e) { logErr('장기기억', '자동 지우기 실패 · ' + e.message, chatId); } finally { ltmWipe.busy = false; }
+  }
+  // 설정 › 편의 › 장기기억 모두 지우기: 전부 지우고, 노트에서 옮겼던 사건이 보관돼 있으면 노트에 되살려요(카드가 다 없어지니 사건을 잃지 않게)
+  async function ltmWipeAll() {
+    const chatId = chatIdFromPath(); if (!chatId || busyNow || ltmWipe.busy) return;
+    const items = ltmOrig.flatMap(o => o.items || []), ok = confirm('이 방의 크랙 장기기억 카드를 전부 지울까요?\n\n· 지운 카드는 되돌릴 수 없어요' + (items.length ? '\n· 노트에서 옮겼던 사건 ' + items.length + '개는 노트(날짜로그)에 되살려요' : ''));
+    backAt = Date.now(); if (!ok) return; // 확인 창이 닫히면 '돌아옴'으로 쳐서 방을 다시 읽고 화면을 새로 그려요 → 설정 스위치들이 껐다 켜지는 것처럼 보여서 이번 한 번은 건너뛰어요
+    ltmWipe.busy = true; toast('장기기억 카드를 지우는 중이에요…');
+    try { const n = await ltmSweep(chatId);
+      if (items.length) { await ltmRestore(chatId, items); ltmDone = ltmDone.filter(k => !items.some(x => x.key === k)); await setValue('ltmdone:' + chatId, JSON.stringify(ltmDone)); }
+      if (ltmOrig.length) { ltmOrig = []; await setValue('ltmorig:' + chatId, '[]'); } ltmData = null; ltmGroups = null;
+      toast(n ? n + '장 지웠어요' + (items.length ? ' · 사건 ' + items.length + '개를 노트에 되살렸어요' : '') : '지울 카드가 없어요', n ? 'ok' : 'info', 3500);
+      if (items.length) { await refresh(); if (nav.gsOn) gsSave(true); }
+    } catch (e) { toast('지우기 실패 · ' + errMsg(e), 'err'); logErr('장기기억', '모두 지우기 실패 · ' + e.message, chatId); } finally { ltmWipe.busy = false; }
+  }
   // 사건 제목 → [날짜, 제목]: "[2019.07.14-오두막에서 …]" · "[1년차 03.14-…]" · "[2026.03.01~2026.03.05-…]"
   const ltmSplit = c => { const t = String(c.name || c.key).replace(/^\[|\]$/g, ''), i = t.indexOf('-'); return i > 0 && i <= 24 && /\d/.test(t.slice(0, i)) ? [t.slice(0, i).trim(), t.slice(i + 1).trim()] : ['', t]; };
   const ltmDay = d => { let m = String(d).match(/(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/); if (m) return +m[1] * 372 + +m[2] * 31 + +m[3];
@@ -10379,6 +10407,7 @@
         ${row('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
         ${row('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
+        ${sceneOn ? `<button type="button" class="srow throw" data-act="ltmdelall"${busyNow ? ' disabled' : ''}><div><b>장기기억 모두 지우기</b><small>이 방의 크랙 장기기억 카드를 전부 지워요 · 웹 모드 · 못 되돌려요</small></div><span class="thmini">›</span></button>` : ''}
         ${row('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}`)
       + box('도구', '들어간 노트 · 기록 · 턴 번호', `<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${spotOf(snapshot) || '직전 답변'}</span></button>
@@ -10587,7 +10616,7 @@
     const dx = r.left < box.left + m ? box.left + m - r.left : r.right > box.right - m ? box.right - m - r.right : 0; if (dx) { b.style.translate = dx + 'px 0'; b.style.setProperty('--dx', -dx + 'px'); } }, true);
   root.addEventListener('click', e => { if (!e.target.closest?.('.pg-hq,.nf-help')) root.querySelectorAll('.pg-hq[open],.nf-help[open]').forEach(d => { d.open = false; }); if (!e.target.closest?.('.pg-hq')) nav.pcHelp = false; }); // 하트 설명 말풍선: 다른 데를 누르면 닫혀요
   root.addEventListener('click', e => { if (nav.wdOpt && !e.target.closest?.('.wd-opt,.wd-gear')) setTimeout(() => { if (nav.wdOpt) { nav.wdOpt = false; render(); } }, 0); });
-  let autoBusy = false, autoSumOn = true; // autoSumOn: 이 기기에서 자동 정리 켬
+  let autoBusy = false, autoSumOn = true, ltmWipeOn = false; // autoSumOn: 이 기기에서 자동 정리 켬 · ltmWipeOn: 웹 모드에서 정리할 때 크랙 장기기억 카드도 지움
   // 자동 정리는 마지막 메시지를 보낸 기기만: 같은 방을 열어 둔 다른 기기까지 같이 정리하면 AI만 두 번 부르고 한쪽 결과는 버려져요 · 보내기를 못 잡는 환경(sendSeen.on 꺼짐)은 예전처럼
   const sendSeen = { on: false, c: '', said: null }; // c: 이 기기가 마지막으로 보낸 방 · said: 그때 보낸 말(다시 생성은 null)
   const sentHere = chatId => { if (!sendSeen.on) return true; if (sendSeen.c !== chatId) return false; if (sendSeen.said == null) return true;
@@ -10753,7 +10782,7 @@
       const behind = behindOf(snap);
       // 노트가 직전 AI 답변에 없으면 옮깁니다. 정리 범위(1~N턴·upto)는 그대로라 다음 정리 턴 수는 안 바뀌어요.
       // behind가 null이면 노트가 리롤로 밀려난 답에 있는 것 → 이때도 옮깁니다.
-      injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; relPillOn = String(await getValue('relPill', 'on')) !== 'off'; pregMode = String(await getValue('pregMode', 'on')) !== 'off'; { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; pregHasKey = !!String(await getValue(keyOf(m), '')).trim(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); }
+      injectOn = String(await getValue('inject', 'on')) !== 'off'; autoSumOn = String(await getValue('autoSum', 'on')) !== 'off'; ltmWipeOn = String(await getValue('ltmWipe', 'off')) === 'on'; relPillOn = String(await getValue('relPill', 'on')) !== 'off'; pregMode = String(await getValue('pregMode', 'on')) !== 'off'; { const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; pregHasKey = !!String(await getValue(keyOf(m), '')).trim(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); }
       if (injectOn && snap.note && !snap.note.parked && behind !== 0) { const t = Date.now(); await updateInjCtx(chatId, snap, wholeFrom(await readFull(), snap.note) || snap.note.memory, stripBlocks(msgText([...snap.all].reverse().find(m => msgRole(m) === 'user') || {}))); rPick = Date.now() - t; } // 마지막 유저 말로 골라요
       if (injectOn && !moving && !busyNow && snap.note && !snap.note.parked && !(snap.note.web && !sceneOn) && behind !== 0 && String(await getValue('autoMove', 'on')) !== 'off') {
         moving = true;
@@ -11350,7 +11379,7 @@
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId; lap('채팅에 쓰기');
       if (sceneOn && draft.before?.memory && !draft.restore && !draft.carry) await origKeep(chatId, [[draft.before.memory, memory]]); // 이번 정리로 줄거나 묶인 사건의 원문을 보관함에
-      await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt); if (styAutoOn) setTimeout(() => styleCheck(true).catch(() => {}), 8000); // 정리할 때마다 문체 점검(켰을 때)
+      await saveFull(chatId, draft.uptoId, memory, draft.turns, savedAt); ltmWipe(); if (styAutoOn) setTimeout(() => styleCheck(true).catch(() => {}), 8000); // 정리할 때마다 문체 점검(켰을 때)
       if (draft.lastSeen) { lastSeenMap = draft.lastSeen; await setValue('lastseen:' + chatId, JSON.stringify(lastSeenMap)); }
       // 되돌린 노트는 뒤에 밀린 턴이 이미 쌓여 있어서 자동 정리가 바로 다시 돌아 버려요 → 되돌린 뒤 새로 10턴이 쌓일 때까지 자동 정리를 쉬어요
       if (draft.restore) { const k = now.all.findIndex(m => msgId(m) === draft.uptoId); await setValue('autoHold:' + chatId, JSON.stringify({ upto: draft.uptoId, fresh: k < 0 ? cycle : now.all.slice(k + 1).filter(m => isChat(m) && msgRole(m) === 'user').length })); }
@@ -11722,6 +11751,8 @@
         await setValue('injset:' + cid, JSON.stringify(injSet)); keepScroll(render); return reinject(cid); }
       case 'wdopt': nav.wdOpt = !nav.wdOpt; return render();
       case 'relpill': relPillOn = !relPillOn; await setValue('relPill', relPillOn ? 'on' : 'off'); render.keepGraph = true; return keepScroll(render);
+      case 'ltmwipe': if (el.checked && !confirm('정리할 때마다 크랙 장기기억 카드를 같이 지울까요?\n\n· 이 방에 지금 있는 카드도 지워져요\n· 지운 카드는 되돌릴 수 없어요\n· 웹 모드인 방에서만 지워요')) { el.checked = false; return; }
+        ltmWipeOn = !!el.checked; await setValue('ltmWipe', ltmWipeOn ? 'on' : 'off'); toast(ltmWipeOn ? '장기기억 자동 지우기를 켰어요' : '장기기억 자동 지우기를 껐어요', 'ok', 3000); render(); if (ltmWipeOn) ltmWipe(); return;
       case 'autosum': autoSumOn = !!el.checked; await setValue('autoSum', autoSumOn ? 'on' : 'off');
         toast(autoSumOn ? '자동 정리를 켰어요 · 10턴마다 알아서 정리해요' : '자동 정리를 껐어요 · 이 기기에선 \'지금 바로 정리\'를 누를 때만 정리해요 · 기억 넣기는 그대로', 'ok', 4000); render(); if (autoSumOn) autoSum(); return;
       case 'scenemode': { const on = !!el.checked; if (on === sceneOn) return; const hadNote = !!snapshot?.note?.turns; await applyScene(on, chatIdFromPath(), true); fixTab(); render();
@@ -11803,6 +11834,7 @@
       case 'ltmsave': return ltmSave(arg);
       case 'ltmdel': return ltmDel(arg);
       case 'ltmback': return ltmDel(arg, true);
+      case 'ltmdelall': return ltmWipeAll();
       case 'ltmbacksel': nav.ltmBack = nav.ltmBack ? null : []; return keepScroll(render);
       case 'ltmtick': { const cur = nav.ltmBack || []; nav.ltmBack = cur.includes(arg) ? cur.filter(x => x !== arg) : [...cur, arg]; return keepScroll(render); }
       case 'ltmtickall': { const all = (ltmData?.items || []).filter(x => x.id && ltmOrig.some(o => o.title === x.title && o.items?.length)).map(x => x.id); nav.ltmBack = (nav.ltmBack || []).filter(id => all.includes(id)).length === all.length ? [] : all; return keepScroll(render); }
