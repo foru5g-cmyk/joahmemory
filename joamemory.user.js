@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.48
+// @version      5.8.49
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
-// @description  랙시들의 RP정리🚀
+// @description  랙시들의 RP정리🚀🚀
 // @license      All Rights Reserved
 // @icon         https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/icon.png
 // @match        https://crack.wrtn.ai/*
@@ -395,7 +395,11 @@
   const styLoad = async c => { let d = null; try { d = JSON.parse(String(await getValue('styfix:' + c, '') || 'null')); } catch (_) {} styFix = { c, d }; styAutoOn = String(await getValue('styAuto', 'off')) === 'on'; };
   const styLeft = d => { if (!d) return 0; const k = d.keep ?? 10; if (!k) return Infinity; return Math.max(0, k - Math.max(0, (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0))); }; // 0 = 끝남 · Infinity = 계속
   const styPersist = (cid, d) => { clearTimeout(styPersist.t); styPersist.t = setTimeout(() => { styPersist.q = (styPersist.q || Promise.resolve()).then(async () => { await setValue('styfix:' + cid, JSON.stringify(d)); if (nav.gsOn) gsModeSoon(cid); if (snapshot?.note && chatIdFromPath() === cid) await rewriteNote(cid, noteMemory()); }).catch(e => logErr('문체 보정', e.message)); }, 600); };
-  const styAns = n => (snapshot?.all || []).filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)).slice(-n).map(m => stripBlocks(msgText(m)).replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/```[\s\S]*?```/g, '').trim()).filter(Boolean);
+  const styAns = (n, list = snapshot?.all) => (list || []).filter(m => msgRole(m) === 'assistant' && !isErrMsg(m)).map(m => stripBlocks(msgText(m)).replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/```[\s\S]*?```/g, '').trim()).filter(Boolean).slice(-n); // 빈 답(그림·코드 칸뿐)을 먼저 빼고 최근 n개
+  // 점검 뒤에 쓴 답에서 그 반복이 아직 나오는지 코드가 세요(AI 안 씀) · { hit: 나온 답 수, of: 본 답 수, before: 점검 때 나온 답 수, bOf } · 셀 수 없는 종류는 null
+  const styAfter = (d, it, a) => { if (!a.length) return null; if (STY_END[it.pat]) return { hit: a.filter(t => STY_END[it.pat][0].test(styLast(t))).length, of: a.length, before: it.n, bOf: d.of || 5 };
+    if (!/^(어미|문두|단어|구절)$/.test(it.kind)) return null; return { hit: a.filter(t => styCount([t], it.kind, it.pat)).length, of: a.length, before: it.na ?? it.n, bOf: d.of || 5 }; };
+  const styNewAns = d => { if (!d) return []; const fresh = (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0); return fresh > 0 ? styAns(Math.min(fresh, 5)) : []; }; // 점검 뒤 새로 쓴 답(최대 5개)
   const styLast = t => t.split('\n').map(x => x.trim()).filter(Boolean).pop() || '';
   const STY_END = { '답을 늘 대사로 끝냄': [/^[\s*_]*[“"「『❝]|[”"」』❞][\s*_.]*$/, 0.8], '답 끝을 늘 질문·양자택일로 닫음': [/\?[\s”"」』❞*_.]*$/, 0.6] }; // 코드가 세는 끝맺음 · [모양, 넘으면 굳은 것]
   const styStill = (d, it) => { const fresh = (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0); if (fresh < 5) return true; // 점검 뒤 새 답 5개가 쌓이기 전엔 그대로
@@ -5353,6 +5357,9 @@
     .sty-n{font-size:11.5px;font-weight:700;color:var(--acc,#7B61D9);background:#EFEAFD;border-radius:999px;padding:2px 8px;flex:none}
     .sty-x{border:0;background:none;color:#6E6A78;font-size:16px;line-height:1;padding:2px 2px 2px 6px;cursor:pointer}
     .sty-bar{height:4px;background:var(--rule);border-radius:4px;margin-top:8px;overflow:hidden}.sty-bar i{display:block;height:100%;background:var(--acc,#7B61D9);border-radius:4px}
+    .sty-ok{font-size:11.5px;font-weight:700;color:#1F8A5B;background:#DDF5E8;border-radius:999px;padding:2px 8px;flex:none}
+    .sty-left{font-size:11.5px;font-weight:700;color:#B4532A;background:#FCE9DF;border-radius:999px;padding:2px 8px;flex:none}.sty-left.less{color:#8A6D1F;background:#FBF1D2}
+    .sty-af{margin:6px 0 0;font-size:12px;color:var(--ink2)}
     .sty-ex{margin:8px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.5;padding-left:10px;border-left:3px solid #EFEAFD}
     .sty-note{background:#fff;border:1px solid var(--rule);border-radius:18px;margin:10px 0 0}
     .sty-note>summary{list-style:none;display:flex;justify-content:space-between;padding:14px 16px;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2)}
@@ -7156,9 +7163,11 @@
     if (kind === '문두') return sents.filter(x => x.startsWith(p)).length;
     if (kind === '어미') { const q = p.replace(/[.!?。…\s"”❞*]+$/, ''); return q ? sents.filter(x => x.replace(/[.!?。…\s"”❞*_]+$/, '').endsWith(q)).length : 0; }
     let n = 0; for (let i = all.indexOf(p); i >= 0; i = all.indexOf(p, i + p.length)) n++; return n; }
-  async function styleCheck(auto = false) {
-    const cid = chatIdFromPath(); if (!cid || !snapshot || busyNow) { if (!auto) toast(busyNow ? '다른 작업이 끝난 뒤 다시 눌러 주세요' : '대화를 아직 못 읽었어요 · 잠시 뒤 다시 눌러 주세요', 'info', 3000); return; }
-    const ans = styAns(5); // 최근 답 5개로 고정
+  async function styleCheck(auto = false, tries = 0) {
+    const cid = chatIdFromPath(); if (!cid || !snapshot || busyNow) { if (auto && cid && tries < 20) { setTimeout(() => { if (chatIdFromPath() === cid) styleCheck(true, tries + 1).catch(() => {}); }, 15000); return; } // 자동 정리가 이어서 도는 중이면 끝날 때까지 15초마다 다시(최대 5분)
+      if (!auto) toast(busyNow ? '다른 작업이 끝난 뒤 다시 눌러 주세요' : '대화를 아직 못 읽었어요 · 잠시 뒤 다시 눌러 주세요', 'info', 3000); return; }
+    let ans = styAns(5); // 최근 답 5개로 고정
+    if (ans.length < 5) { try { ans = styAns(5, liveLine(sortOld((await listPage(cid, '')).list))); } catch (e) { logErr('문체 점검', '최근 대화 받기 실패 · ' + e.message); } } // 정리 직후: 노트 뒤 대화만 있어서
     if (ans.length < 5) { if (!auto) toast('AI 답이 5개는 있어야 점검할 수 있어요.', 'info', 3000); return; }
     if (!auto) { busyNow = true; nav.styBusy = true; render(); toast('문체 점검 중이에요… (20~40초)'); }
     try {
@@ -7173,7 +7182,7 @@
       if (endQ / ans.length >= 0.6) items.unshift({ kind: '구조', pat: '답 끝을 늘 질문·양자택일로 닫음', n: endQ, ex: [] });
       const d = { at: Date.now(), saved: Date.now(), items, of: ans.length, turn: (snapshot?.note?.turns || 0) + freshTurns(), keep: styFix.c === cid && styFix.d?.keep != null && !styFix.d.cleared ? styFix.d.keep : Number(await getValue('styKeep', '10')) }; await setValue('styfix:' + cid, JSON.stringify(d)); if (chatIdFromPath() === cid) styFix = { c: cid, d };
       if (snapshot?.note && chatIdFromPath() === cid) await rewriteNote(cid, noteMemory()); // 다음 답부터 바로 들어가게
-      if (!auto) toast(items.length ? `반복 ${items.length}개를 찾아 노트에 넣었어요` : '굳어진 반복이 없어요', 'ok', 3000);
+      if (!auto) toast(items.length ? `반복 ${items.length}개를 찾아 노트에 넣었어요` : '굳어진 반복이 없어요', 'ok', 3000); else if (chatIdFromPath() === cid) render(); // 자동 점검도 문체 보정 화면에 바로 보이게
     } catch (e) { if (!auto) toast('문체 점검 실패 · ' + errMsg(e), 'err'); logErr('문체 점검', e.message); }
     finally { if (!auto) { busyNow = false; nav.styBusy = false; render(); } }
   }
@@ -7185,9 +7194,12 @@
       <div class="sty-acts"><button class="go" data-act="stylecheck"${busyNow ? ' disabled' : ''}>${d ? '다시 점검' : '점검'}</button>${n ? '<button class="off" data-act="styclear">전부 지우기</button>' : ''}</div>${nav.styBusy ? '<p class="lv-scan" style="margin:12px 0 0"><i></i>최근 답 5개를 보는 중… (20~40초)</p>' : ''}</div>`;
     if (!d) return hero;
     if (!n) return hero + '<p class="lv-note">굳어진 반복이 없어요</p>';
-    const kinds = [...new Set(d.items.map(it => it.kind || '반복'))];
-    const grp = k => `<details class="sty-grp"${G[k] ? ' open' : ''}><summary data-act="stygrp" data-arg="${esc(k)}"><span class="sty-k k-${esc(k)}">${esc(k)}</span>${d.items.filter(it => (it.kind || '반복') === k).length}개<i>▾</i></summary>${d.items.map((it, i) => (it.kind || '반복') !== k ? '' : `<div class="sty-it"><div class="sty-row"><span>${/^(되풀이|틀|구조)$/.test(k) ? esc(it.pat) : '“' + esc(it.pat) + '”'}</span><b class="sty-n">${cnt(it)}</b><button class="sty-x" data-act="styrm" data-arg="${i}" aria-label="이 항목 빼기">×</button></div>${/^(되풀이|틀|구조)$/.test(k) && it.n ? `<div class="sty-bar"><i style="width:${Math.min(100, Math.round(it.n / (d.of || 5) * 100))}%"></i></div>` : ''}${(it.ex || []).length ? `<p class="sty-ex">${esc(it.ex[0])}</p>` : ''}</div>`).join('')}</details>`;
-    return hero + `<div class="sty-h"><b>찾은 반복</b><div class="sty-seg">${[5, 10, 0].map(k => `<button data-act="stykeep" data-arg="${k}" aria-pressed="${(d.keep ?? 10) === k}">${k ? k + '턴' : '계속'}</button>`).join('')}</div></div>${kinds.map(grp).join('')}
+    const kinds = [...new Set(d.items.map(it => it.kind || '반복'))], na = styNewAns(d), af = d.items.map(it => styAfter(d, it, na)), chk = af.filter(Boolean), fixed = chk.filter(x => !x.hit).length;
+    const afHtml = x => !x ? '' : !x.hit ? '<b class="sty-ok">✓ 고쳐짐</b>' : `<b class="sty-left${x.hit / x.of < x.before / x.bOf ? ' less' : ''}">${x.hit}/${x.of}</b>`;
+    const afLine = x => !x ? '' : `<p class="sty-af">점검 때 답 ${x.bOf}개 중 ${x.before}개 → 그 뒤 답 ${x.of}개 중 ${x.hit}개${!x.hit ? ' · 고쳐졌어요' : x.hit / x.of < x.before / x.bOf ? ' · 줄었어요' : ' · 아직 그대로예요'}</p>`;
+    const grp = k => `<details class="sty-grp"${G[k] ? ' open' : ''}><summary data-act="stygrp" data-arg="${esc(k)}"><span class="sty-k k-${esc(k)}">${esc(k)}</span>${d.items.filter(it => (it.kind || '반복') === k).length}개<i>▾</i></summary>${d.items.map((it, i) => (it.kind || '반복') !== k ? '' : `<div class="sty-it"><div class="sty-row"><span>${/^(되풀이|틀|구조)$/.test(k) ? esc(it.pat) : '“' + esc(it.pat) + '”'}</span><b class="sty-n">${cnt(it)}</b>${afHtml(af[i])}<button class="sty-x" data-act="styrm" data-arg="${i}" aria-label="이 항목 빼기">×</button></div>${/^(되풀이|틀|구조)$/.test(k) && it.n ? `<div class="sty-bar"><i style="width:${Math.min(100, Math.round(it.n / (d.of || 5) * 100))}%"></i></div>` : ''}${(it.ex || []).length ? `<p class="sty-ex">${esc(it.ex[0])}</p>` : ''}${afLine(af[i])}</div>`).join('')}</details>`;
+    const sum = !na.length ? '<p class="sty-af" style="margin:10px 2px 0">새 답이 오면 고쳐졌는지 여기서 바로 보여 드려요(AI 안 써요)</p>' : chk.length ? `<p class="sty-af" style="margin:10px 2px 0">점검 뒤 답 ${na.length}개 · 고쳐짐 <b>${fixed}</b> / ${chk.length}${chk.length < n ? ` · 되풀이·틀·구조 ${n - chk.length}개는 코드로 못 세요` : ''}</p>` : '';
+    return hero + sum + `<div class="sty-h"><b>찾은 반복</b><div class="sty-seg">${[5, 10, 0].map(k => `<button data-act="stykeep" data-arg="${k}" aria-pressed="${(d.keep ?? 10) === k}">${k ? k + '턴' : '계속'}</button>`).join('')}</div></div>${kinds.map(grp).join('')}
       <details class="sty-note"><summary>📝 노트에 들어가는 글<span>▾</span></summary><pre>${esc(styLines().join('\n'))}</pre></details>`; };
   async function askModelRetry(system, input, label) {
     askModelRetry.last = [system, input, label];
