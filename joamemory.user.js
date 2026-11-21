@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.51
+// @version      5.8.52
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6687,7 +6687,7 @@
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
       for (const x of items) { const r = await gsCall({ action: 'load', chat: x.chat }); let d = null; try { d = JSON.parse(r.data); } catch (_) {}
-        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && branchMatch(await readAllB(x.chat), await readAllB(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ const late = memLater(c, Number(d.me) || 0, x.chat), mem = late ? await branchPoint(x.chat, c, d.store?.hist) : d.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 */
+        if (d?.memory && (d.noteAt || d.at) === c.at && d.turns === c.turns && chatIdFromPath() === chatId && !(refresh.brNo ||= new Set()).has(chatId + '|' + x.chat + '|' + c.at) && branchMatch(await readAllB(x.chat), await readAllB(chatId), d.upto)) { /* 대화 끝까지 같은 방만 */ const late = memLater(c, Number(d.me) || 0, x.chat), mem = late ? await branchPoint(x.chat, c, d.store?.hist) : d.memory; if (!mem) { refresh.brNo.add(chatId + '|' + x.chat + '|' + c.at); continue; } /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 */
           await fxInheritOff(chatId, x.chat); if (!late) await packInherit(chatId, x.chat, d.store); await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 드라이브에서 찾아 이어 붙였어요' : '분기하기 전 방의 전체 기억을 드라이브에서 찾아 이어 붙였어요'); return true; } } }
     catch (e) { logErr('연동', '드라이브에서 분기 전 방 찾기 실패 · ' + e.message); } return false;
   }
@@ -10287,7 +10287,14 @@
   }
   // 분기 확인용 대화 읽기: 정리본 찾기·임신·연애 확인이 같은 두 방 대화를 거의 동시에 통째로 읽어요 → 1분 안에는 한 번 읽은 걸 같이 써요
   //   대화 앞부분이 같은지 견주는 곳에서만 써요(읽기만 · 1분 사이 새 답이 와도 앞부분은 안 바뀌어요)
-  const readAllB = id => { const h = readAllB.m ||= new Map(), c = h.get(id); if (c && Date.now() - c.t < 60000) return c.p; const p = readAll(id), e = { t: Date.now(), p }; h.set(id, e); p.catch(() => h.delete(id)); setTimeout(() => { if (h.get(id) === e) h.delete(id); }, 61000); return p; }; // 1분 지나면 버려요(안 버리면 방 대화 전체를 창을 닫을 때까지 메모리에 들고 있어요)
+  //   읽기 시작할 때 페이지 저장소에 표시(jm_rab:방)하고 끝나면 지워요 · 표시가 남아 있으면 지난번에 읽다가 페이지가 꺼진 것 → 6시간 쉬어요(방을 열 때마다 대화 전체를 읽다 또 꺼지는 반복을 끊어요) · 직접 닫으면(pagehide) 표시를 지워요
+  const RAB_ON = new Set(), rabKey = id => 'jm_rab:' + id; addEventListener('pagehide', () => { for (const id of RAB_ON) try { localStorage.removeItem(rabKey(id)); } catch (_) {} });
+  const readAllB = id => { const h = readAllB.m ||= new Map(), c = h.get(id); if (c && Date.now() - c.t < 60000) return c.p;
+    let dead = 0; try { dead = Number(localStorage.getItem(rabKey(id))) || 0; } catch (_) {}
+    if (dead && Date.now() - dead < 216e5 && !RAB_ON.has(id)) { if (!(readAllB.w ||= new Set()).has(id)) { readAllB.w.add(id); logErr('튕김', '지난번에 대화 전체를 읽다가 페이지가 꺼져서 분기 확인을 6시간 쉬어요 · 방 ' + String(id).slice(0, 8) + '…'); } return Promise.reject(new Error('대화 전체 읽기를 쉬는 중(지난번에 읽다 꺼짐)')); }
+    RAB_ON.add(id); try { localStorage.setItem(rabKey(id), String(Date.now())); } catch (_) {}
+    const end = () => { RAB_ON.delete(id); try { localStorage.removeItem(rabKey(id)); } catch (_) {} };
+    const p = readAll(id), e = { t: Date.now(), p }; h.set(id, e); p.then(end, () => { end(); h.delete(id); }); setTimeout(() => { if (h.get(id) === e) h.delete(id); }, 61000); return p; }; // 1분 지나면 버려요(안 버리면 방 대화 전체를 창을 닫을 때까지 메모리에 들고 있어요)
   // 분기해 온 방: 이 방 메시지 중 다른 방 번호가 붙은 것(분기 전 대화) · 없으면 ''
   //   분기한 방을 또 분기하면 앞쪽 메시지엔 맨 처음 방, 뒤쪽엔 중간 방 번호가 붙어요 → 가장 뒤에 나온 다른 방 = 바로 위 방
   function branchSrc(cur, chatId) {
@@ -10713,7 +10720,8 @@
       injLog = list.slice(-40); await setValue('injlog:' + chatId, JSON.stringify(injLog));
     } catch (_) {}
   }
-  async function prepareSend(chatId, said, kind, ctl = {}) { // ctl.dead: 이미 보낸 뒤라 쓰지 않음(20초 넘김·화면 떠남)
+  async function prepareSend(chatId, said, kind, ctl = {}) { crumbOn('send', '보내기 전 기억 고르기·노트 쓰기'); try { return await prepareSend0(chatId, said, kind, ctl); } finally { crumbOff('send'); } }
+  async function prepareSend0(chatId, said, kind, ctl = {}) { // ctl.dead: 이미 보낸 뒤라 쓰지 않음(20초 넘김·화면 떠남)
     if (busyNow || autoBusy) return 'busy';
     if (kind === 'send' && said) for (const [k, title] of [...injSkip]) { // 뺀 사건을 유저가 다시 꺼내면 빼기를 풀어요(이름·숫자 낱말로 봐요, '작업'·'유진' 같은 두 글자 말은 빼고)
       const ws = (title.replace(/^\[?[^\]]*?\d\s*-\s*/, '').match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(w => w.length > 2 && /[가-힣]$/.test(w) ? w.slice(0, -1) : w).filter(w => w.length >= 3 || /^[0-9]/.test(w));
@@ -10812,8 +10820,9 @@
     // 읽는 사이 방을 옮겼거나 새 읽기가 시작됐으면 이 읽기는 그만둬요: 늦게 끝난 앞 방 읽기가 지금 방에 앞 방 기억을 덮지 않게(분기방끼리는 메시지 번호가 같아서 정리 지점 확인을 통과해요)
     const my = refresh.n = (refresh.n || 0) + 1, old = () => refresh.n !== my || chatIdFromPath() !== chatId;
     loading = true; loadingAt = Date.now(); const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0; // rT·rRead: 오래 걸리면 어디서 걸렸는지 오류 기록에 남겨요
+    const ck = 'rf' + my; crumbOn(ck, '방 읽기 · 대화 읽기');
     try {
-      let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT;
+      let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT; crumbOn(ck, '방 읽기 · 전체 기억 꺼내기·기억 고르기·노트 옮기기');
       if (old()) return;
       // 이 방 전체 기억은 한 번만 꺼내서 아래 기억 고르기·노트 옮기기·화면이 같이 써요(큰 방은 수십만 자라 서너 번 꺼내지 않게) · 그사이 이 창이 저장했으면(fullGen) 다시 꺼내요
       let full0 = null, g0 = -1; const readFull = async () => { if (fullGen !== g0) { g0 = fullGen; full0 = null; try { full0 = JSON.parse(String(await getValue('full:' + chatId, '') || 'null')); } catch (_) {} } return full0; };
@@ -10872,16 +10881,16 @@
           const keys = await listKeys();
           for (const k of keys) { if (!String(k).startsWith('full:') || k === 'full:' + chatId) continue;
             let o = null; try { o = JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) {}
-            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && branchMatch(await readAllB(k.slice(5)), await readAllB(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ const src = k.slice(5), late = memLater(c, Number(await getValue('memat:' + src, '0')) || 0, src), mem = late ? await branchPoint(src, c) : o.memory; if (!mem) continue; /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 → 이 방 것은 안 써요 */
+            if (o?.memory && o.at === c.at && (!c.turns || o.turns === c.turns) && chatIdFromPath() === chatId && !(refresh.brNo ||= new Set()).has(chatId + '|' + k.slice(5) + '|' + c.at) && branchMatch(await readAllB(k.slice(5)), await readAllB(chatId), o.upto)) { /* 대화 끝까지 같은 방만 */ const src = k.slice(5), late = memLater(c, Number(await getValue('memat:' + src, '0')) || 0, src), mem = late ? await branchPoint(src, c) : o.memory; if (!mem) { refresh.brNo.add(chatId + '|' + src + '|' + c.at); continue; } /* 분기한 뒤에 바뀐 방인데 분기 때 정리본을 못 찾음 → 이 방 것은 안 써요 */
               await fxInheritOff(chatId, src); if (!late) await packInherit(chatId, src); /* 분기 뒤에 간추린 표시는 안 물려받아요 */ await saveFull(chatId, c.upto, await withChatFixed(mem, c, chatId), c.turns || o.turns, c.at); await memTouch(chatId, c.me); pageToast(late ? '분기하기 전 방 기억이 그 뒤에 바뀌어서, 분기할 때의 정리본을 찾아 이 방에 이어 붙였어요' : '분기하기 전 방의 전체 기억을 찾아서 이 방에 이어 붙였어요'); logErr('연동', '분기한 방 · ' + src.slice(0, 8) + '… 방의 ' + (late ? '분기 때 정리본' : '전체 기억') + '(1~' + (o.turns || '?') + '턴)을 가져옴'); break; } }
         } catch (e) { logErr('연동', '분기 전 방 기억 찾기 실패 · ' + e.message); } } }
       { const c = snap.note; // 분기한 방: 따라온 노트가 갈라진 턴과 안 맞으면 → 원래 방 정리 기록에서 갈라진 턴까지 중 가장 가까운 정리본을 찾아 바로 넣어요 · 방마다 한 번 · 정리 기록에서 되돌릴 수 있어요
         //   앞선 노트: 앱 모드는 크랙이 유저노트를 통째로 복사해 와요(38턴에서 분기했는데 40턴 정리본)
         //   뒤처진 노트: 웹 모드는 노트가 채팅 메시지에 실려 있어서, 최신 노트가 실린 메시지보다 앞에서 분기하면 훨씬 옛날 노트가 따라와요(534턴에서 분기했는데 1~180턴 노트 → 354턴을 다시 정리해야 함)
         //   노트가 아예 없음: 노트가 실린 답보다 앞에서 분기하면 웹 모드는 노트가 하나도 안 따라와요 → 분기해 온 방이 확실할 때만(대화 앞부분이 같은 다른 방 것은 안 써요)
-        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !brRun.has(chatId) && (brRun.n.get(chatId) || 0) < 3 && !String(await getValue('brchk:' + chatId, ''))) { // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
+        if ((c?.turns || (!c && freshTurns() >= 3)) && !c?.parked && !busyNow && !histN && !brRun.has(chatId) && (brRun.n.get(chatId) || 0) < 3 && !String(await getValue('brchk:' + chatId, '')) && (Number(await getValue('brtry:' + chatId, '0')) || 0) < 3) { // histN: 위 histLight가 센 정리 기록 건수 · 여기서 기록을 통째로 꺼내지 않아요(건마다 노트가 통째라 답마다 다 꺼내면 폰 사파리가 탭을 꺼요)
           // 찾는 동안(brRun): 홈에 '찾는 중'을 보여 주고 자동 정리를 멈춰요 · '확인함' 표시(brchk)는 끝까지 확인했을 때만 찍어요(찾는 중에 다른 작업이 돌거나 방을 옮겨 그만두면 다음 읽기 때 다시 · 이 창에서 세 번까지)
-          brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); render();
+          brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); await setValue('brtry:' + chatId, String((Number(await getValue('brtry:' + chatId, '0')) || 0) + 1)); render(); // brtry: 이 기기에서 찾아본 횟수(페이지가 꺼져도 남아요 · 3번 해도 못 끝내면 그만 찾아요)
           const ct = c?.turns || 0, done = () => setValue('brchk:' + chatId, '1'), bT = Date.now(), bLap = w => console.info('[조아메모리] 분기 · ' + w + ' ' + ((Date.now() - bT) / 1000).toFixed(1) + '초'); // 어디서 오래 걸리는지 콘솔에 남겨요
           branchFind(chatId, () => {}, bLap).then(async list => { const x = list[0]; bLap('정리본 찾기 끝'); if (chatIdFromPath() !== chatId) return; if (!x || x.turn === ct) return done(); if (busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
             const anc = list.anc; if (!ct && !anc.length) return done(); if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return done(); } // 다른 방 정리본은 대화가 같아도 안 써요
@@ -10954,6 +10963,7 @@
         const hk = chatId + '|' + (c?.carrierId || ''); if (gsLink && c && !c.parked && c.gs !== gsLink && !busyNow && !(refresh.gsHead ||= new Set()).has(hk)) { refresh.gsHead.add(hk);
           const m = (snap.all || []).find(x => msgId(x) === c.carrierId), t = msgText(m || {}), t2 = t.replace(/((?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*?)(?: gs=\S+)?(\n)/, (_, x, y) => x + ' gs=' + gsLink + y);
           if (m && t2 !== t) writeRaw(chatId, c.carrierId, t2).catch(e => logErr('연동', '노트에 드라이브 연결 싣기 실패 · ' + e.message)); } }
+      crumbOn(ck, '방 읽기 · 사본 남기기·연동·분기 확인');
       // ① 사본: 이 기기가 채팅 노트를 볼 때마다(정리를 안 했어도) 최신 노트 사본을 이 브라우저에 남겨요. 언제·어느 기기가 저장했는지도 같이.
       if (snap.note && !snap.note.parked) {
         const n = snap.note, k = n.upto + '|' + n.at + '|' + n.memory.length; let old = null;
@@ -11005,7 +11015,7 @@
         movedInfo = mv ? `${new Date(mv.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${mv.from}개 전에서 옮김` : '';
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
-    finally { if (refresh.n !== my) return; /* 더 새 읽기가 도는 중이면 그쪽이 끝낼 때 풀어요 */ loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
+    finally { crumbOff(ck); if (refresh.n !== my) return; /* 더 새 읽기가 도는 중이면 그쪽이 끝낼 때 풀어요 */ loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
       const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번) · 요청 ${s(io.net - io0.net)}초(${io.nn - io0.nn}번)`, chatId); }
   }
 
