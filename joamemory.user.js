@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.53
+// @version      5.8.54
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3407,7 +3407,7 @@
     catch (_) { throw new Error('전송 불가'); }
     if (!r.ok) { let t = ''; try { t = await r.text(); } catch (_) {} throw httpWhy(r.status, t); }
   }
-  let pagePatchOff = false;
+  let pagePatchOff = false; const PAGE_PATCH_MAX = 70000; // 빠른 길(페이지에서 크랙 주소로 바로 쓰기 · 5.8.34)은 7만 자 아래 노트만: 노트가 큰 방(한도에 꽉 찬 방)은 5.8.34부터 폰에서 1분 안에 페이지가 다시 열려서 예전 길(확장 프로그램)로
   async function pagePatch(url, text, u16) { // u16: UTF-16LE로 보낼지(writeRaw가 정한 대로)
     const tk = await waitToken(), h = { Accept: 'application/json', Authorization: 'Bearer ' + tk, platform: 'web' }, ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
     try { const r = await fetch(url, u16 ? { method: 'PATCH', signal: ac.signal, body: utf16Blob(patchJson(text)), headers: { ...h, 'Content-Type': 'application/json; charset=utf-16le' } } : { method: 'PATCH', signal: ac.signal, body: patchJson(text), headers: { ...h, 'Content-Type': 'application/json' } });
@@ -3416,7 +3416,7 @@
   // 줄바꿈 표기(\r\n·\r)만 다른 건 같은 글로 봅니다(서버가 바꿔 저장해도 UTF-16LE를 끄지 않게).
   const sameText = (a, b) => a.replace(/\r\n?/g, '\n') === b.replace(/\r\n?/g, '\n');
   const savedAs = async (chatId, id, text) => { try { return sameText(msgText(await readMessage(chatId, id)), text); } catch (_) { return false; } };
-  async function writeRaw(chatId, id, nextText) { const wk = 'wr' + id; crumbOn(wk, '노트 쓰기 ' + Math.round(nextText.length / 1000) + '천 자' + (pagePatchOff ? '' : ' · 빠른 길')); try { return await writeRaw0(chatId, id, nextText); } finally { crumbOff(wk); } }
+  async function writeRaw(chatId, id, nextText) { const wk = 'wr' + id; crumbOn(wk, '노트 쓰기 ' + Math.round(nextText.length / 1000) + '천 자' + (pagePatchOff || nextText.length > PAGE_PATCH_MAX ? '' : ' · 빠른 길')); try { return await writeRaw0(chatId, id, nextText); } finally { crumbOff(wk); } }
   async function writeRaw0(chatId, id, nextText) {
     const u8 = utf8Bytes(nextText), u16 = utf16Bytes(nextText);
     const best = utf16On ? Math.min(u8, u16) : u8;
@@ -3424,7 +3424,7 @@
       : `아까 전송이 한 번 실패해서 이 페이지에선 큰 노트를 못 보내요 (${Math.round(best / 1024)}KB / 100KB). 새로고침한 뒤 다시 넣어 주세요.`);
     // 빠른 길 먼저: 페이지에서 크랙 주소로 바로 써요(0.1초쯤 · 크랙 사이트가 자기 API를 부르는 것과 같은 길) · 확장 프로그램을 거치면 한 번 쓰는 데 몇 초씩 걸려요
     //   저장된 글이 보낸 글과 같을 때만 끝내요 · 서버가 거절했거나 글이 다르면 아래 예전 길이 그대로 다시 해요 · 전송 자체가 막힌 환경이면 이 페이지에선 예전 길만
-    if (!pagePatchOff) try { await pagePatch(editUrls(chatId, id)[1], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
+    if (!pagePatchOff && nextText.length <= PAGE_PATCH_MAX) try { await pagePatch(editUrls(chatId, id)[1], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
     let lastError = null;
     for (const url of editUrls(chatId, id)) {
       if (utf16On && u16 < u8) {
