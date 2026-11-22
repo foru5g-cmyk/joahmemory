@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.65
+// @version      5.8.66
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1101,11 +1101,11 @@
     }
   }
   const P_NOYEAR = 2900;
-  const P_DAY2 = s => { s = String(s || ''); { const n = P_DAY(s); if (n != null && /년차/.test(s)) return n; } const m = s.match(/(\d{4})\s*(?:[.\-/]|년)\s*(\d{1,2})\s*(?:[.\-/]|월)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
-    const md = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
+  const P_DAY2 = s => { s = String(s || ''); { const n = P_DAY(s); if (n != null && /년차/.test(s)) return n; } const m = s.match(/(\d{4})\s*(?:[.\-/·]|[년年]\s*·?)\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
+    const md = s.match(/(\d{1,2})\s*[월月]\s*·?\s*(\d{1,2})\s*[일日]/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)); let x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
-      const noYr = x != null && !/년차|\d{4}\s*(?:[.\-/]|년)/.test(t.slice(0, 400)); // 년도가 적힌 날짜는 그대로(반년 넘게 건너뛴 이야기를 작년으로 착각하지 않게)
+      const noYr = x != null && !/년차|\d{4}\s*(?:[.\-/·]|[년年])/.test(t.slice(0, 400)); // 년도가 적힌 날짜는 그대로(반년 넘게 건너뛴 이야기를 작년으로 착각하지 않게)
       if (noYr) { const md = new Date(x * 864e5), at = (y => Math.round(Date.UTC(y, md.getUTCMonth(), md.getUTCDate()) / 864e5)), y0 = new Date(cur * 864e5).getUTCFullYear(); // 년도 없는 머리말('09월 22일')은 지금 노트의 해(2년차·2026년 등)에 맞춰 읽어요
         x = at(y0); if (x < cur - 180) x = at(y0 + 1); // 12월→1월로 넘어가면 다음 해
         else if (x > cur + 180) x = at(y0 - 1); } // 1월에 '12월 31일'(회상 등)이 나오면 지난해 · 1년 건너뛰지 않게
@@ -3069,11 +3069,19 @@
     return delta ? answer : dropLogProof(dropPeopleProof(answer)); // 바뀐 것만 받는 답은 mergeNote가 합치면서 빼요((삭제) 줄의 이유를 읽어야 해서)
   }
   // 정리 말고 따로 만드는 것(명대사·폰)에 쓰는 AI 호출. 설정한 모델 그대로, 비용은 정리 기록에 함께 적어요.
+  // 뒤에서 도는 확인(임신·관계·핏줄·연애 기록·문체 점검)은 한 번에 하나씩: 동시에 부르면 1분 한도에 걸려 줄줄이 429가 나요 · 앞의 것이 2분 넘게 안 끝나면 기다리지 않고 넘어가요
+  const AI_BG = /^(🍼|💞|✍)/;
   async function askModel(system, input, label, json = false) {
+    if (!AI_BG.test(label || '')) return askModel1(system, input, label, json, false);
+    const prev = askModel.q || Promise.resolve(); let free; const mine = new Promise(r => { free = r; }); askModel.q = prev.then(() => mine);
+    await Promise.race([prev, new Promise(r => setTimeout(r, 120000))]);
+    try { return await askModel1(system, input, label, json, true); } finally { free(); }
+  }
+  async function askModel1(system, input, label, json, bg) {
     const etc = !!etcModel && [...etcSys].some(s => system.startsWith(s)); // ETC 지침(withRules)으로 시작하는 호출만 ETC 모델로(뒤에 '이어서' 안내·다시 시도 문구가 붙어도) · 명대사·장기기억·간추리기는 정리 모델 그대로
     const model = (etc && etcModel) || String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     // 503(수요 폭주)·429·5xx처럼 잠깐 뒤 되는 오류는 자동으로 두 번까지 다시 시도합니다
-    let out; const waits = [4, 10];
+    let out; const waits = bg ? [15, 40] : [4, 10]; // 뒤에서 도는 확인은 1분 한도가 풀리게 길게 쉬어요 · 직접 누른 건 짧게
     for (let k = 0; ; k++) {
       try { out = await askAny(model, system, input, json, thinkLevel, true).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, input, json, '', true) : Promise.reject(e)); break; } // 설정 › AI 생각(적게·보통·깊게)을 ETC·점검에도 그대로 · 그 값을 못 받는 모델이면 값 없이 한 번 더
       catch (e) {
@@ -10912,7 +10920,7 @@
       await readFull(); if (old()) return;
       snapshot = snap; fullNote = full0; // 대화와 이 방 전체 기억을 같이 바꿔요(대화만 새 방 것이고 전체 기억은 앞 방 것인 틈이 없게)
       crumbOn(ck, '방 읽기 · ETC·폰·게시판 자료 꺼내기'); usage = await usageOf(chatId); try { pickUse = JSON.parse(String(await getValue('usepick:' + chatId, '') || 'null')); } catch (_) { pickUse = null; }
-      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregRewind(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
+      phoneData = await phones(chatId); pcData = await pcs(chatId); boardData = await boardOf(chatId); scrubBoardUser(boardData); newsData = await newsOf(chatId); wikiData = await wikiOf(chatId); liveData = await liveOf(chatId); betData = await betOf(chatId); ifData = await ifOf(chatId); talkData = await talkOf(chatId); gcData = await gcOf(chatId); await pregLoad(chatId); await pregRewind(chatId); pregSnapNow(chatId); (pregBranch.p = pregBranch(chatId)).then(async ok => { if (ok && chatIdFromPath() === chatId) { await pregLoad(chatId); pageToast('분기하기 전 방의 임신 기록을 이 방에 복사했어요'); render(); } }).catch(e => logErr('연동', '분기 전 방 임신 기록 찾기 실패 · ' + e.message)); (loveBranch.p = loveBranch(chatId)).then(async ok => { if (chatIdFromPath() !== chatId) return; if (ok) { await loveLoad(chatId); pageToast('분기하기 전 방의 연애 기록을 이 방에 복사했어요'); render(); } else if (loveMode && love?.who && loveChat === chatId) loveScan(chatId); }).catch(e => logErr('연동', '분기 전 방 연애 기록 찾기 실패 · ' + e.message)); await loveLoad(chatId); fxChain = fxChain.then(async () => { if (chatIdFromPath() !== chatId) return; await pregAppSync(chatId); await loveAppSync(chatId); await onceAppSync(chatId); }).catch(e => logErr('노트', '뒤에서 노트 고쳐 쓰기 실패 · ' + e.message)); /* 화면 먼저 · 노트 고쳐 쓰기는 뒤에서(아이폰은 한 번에 3초쯤 걸려서) · 주입 동그라미 저장과 같은 줄에서 차례로 */ if (loveMode && love?.who) loveScan(chatId); settleBets(); // 노트가 새로 들어왔으면 닫힌 고리 베팅을 바로 정산
       try { etcNames = JSON.parse(String(await getValue('etcnames:' + chatId, '[]')) || '[]'); } catch (_) { etcNames = []; } quoteStore = String(await getValue('quotes:' + chatId, '') || ''); nav.bdNick = String(await getValue('bdNick', '') || ''); if (histList.length || ['changes', 'pick'].includes(nav.view)) await histFull(chatId); else await histLight(chatId); /* 기록 화면을 보고 있을 때만 전부 */
       if (relMemoChat !== chatId) { try { relMemo = JSON.parse(String(await getValue('relkind:' + chatId, '')) || '{}') || {}; } catch (_) { relMemo = {}; } relMemoChat = chatId; }
       if (old()) return; // 전체 기억은 위에서 대화와 같이 읽었어요(큰 방은 이 글이 수십만 자라 두 번 안 꺼내요)
@@ -10949,7 +10957,7 @@
           // 찾는 동안(brRun): 홈에 '찾는 중'을 보여 주고 자동 정리를 멈춰요 · '확인함' 표시(brchk)는 끝까지 확인했을 때만 찍어요(찾는 중에 다른 작업이 돌거나 방을 옮겨 그만두면 다음 읽기 때 다시 · 이 창에서 세 번까지)
           brRun.add(chatId); brRun.n.set(chatId, (brRun.n.get(chatId) || 0) + 1); await setValue('brtry:' + chatId, String((Number(await getValue('brtry:' + chatId, '0')) || 0) + 1)); render(); // brtry: 이 기기에서 찾아본 횟수(페이지가 꺼져도 남아요 · 처음 한 번 + 한 번 더 해도 못 끝내면 그만 찾아요)
           const ct = c?.turns || 0, done = () => setValue('brchk:' + chatId, '1'), bT = Date.now(), bLap = w => console.info('[조아메모리] 분기 · ' + w + ' ' + ((Date.now() - bT) / 1000).toFixed(1) + '초'); // 어디서 오래 걸리는지 콘솔에 남겨요
-          branchFind(chatId, () => {}, bLap).then(async list => { const x = list[0]; bLap('정리본 찾기 끝'); if (chatIdFromPath() !== chatId) return; if (!x || x.turn === ct) return done(); if (busyNow) return; // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
+          branchFind(chatId, () => {}, bLap).then(async list => { const x = list[0]; bLap('정리본 찾기 끝'); if (chatIdFromPath() !== chatId) return; if (!x || x.turn === ct) return done(); if (busyNow) return; if (ct && c.upto && list.cur.some(m => msgId(m) === c.upto)) return done(); // 따라온 노트의 정리 지점 메시지가 이 방에 있으면 분기 뒤 일이 아니에요(원래 방 대화가 그 뒤에 바뀌어도 그대로 둬요) // list[0]: 분기해 온 방 정리본 중 턴이 가장 큰 것(갈라진 턴보다 뒤 것은 안 맞아서 안 나와요)
             const anc = list.anc; if (!ct && !anc.length) return done(); if (anc.length && !anc.includes(x.room)) { const src = anc[0]; logErr('분기', `분기해 온 방(${src.slice(0, 8)}…) 정리 기록이 이 기기에 없어 노트를 안 바꿈 · 그 방을 이 기기에서 한 번 열어 주세요`); return done(); } // 다른 방 정리본은 대화가 같아도 안 써요
             if (ct && x.turn < ct && sameTurns(await readAllB(x.room), list.cur) >= ct) return done(); // 앞선 노트인데 원래 방과 노트 턴까지 같으면 노트가 맞아요(그 방 정리 기록이 이 기기에 덜 남았을 뿐)
             nav.branchList = list; await branchUse(x, true); bLap('임신·연애 맞추기 끝'); await apply(); bLap('넣기 끝');
