@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.59
+// @version      5.8.60
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2209,6 +2209,11 @@
   buildBlock = (...a) => { const b = buildBlockNew(...a); if (b.length > 24000 || Date.now() > Date.UTC(2027, 0, 1)) return b;
     const old = b.replace('[ ](# "MEMO_NOTE v3', '[//]: # "MEMO_NOTE v3').replace(/MEMO_NOTE_END"\)$/, 'MEMO_NOTE_END"'); return old === b ? b : b + old; };
 
+  // 칸 이름 맞추기: AI가 '날짜 로그'·'**날짜로그**'·'날짜로그 (새 사건)'처럼 살짝 다르게 써도 원래 칸으로(안 그러면 새 칸이 따로 생겨 타임라인·상태가 멈춰 보여요) · 이미 따로 생긴 칸도 읽을 때 원래 칸으로 모여요
+  const secKey = name => { const raw = String(name).replace(/\*+/g, '').replace(/\s*[(（][^)）]*[)）]\s*$/, '').trim(), sq = raw.replace(/\s+/g, '');
+    if (ALIAS[raw]) return ALIAS[raw]; const hit = [...SECTIONS.map(x => x.key), FIXED, SHELF, PAST, '직전 장면', '메모'].find(k => k.replace(/\s+/g, '') === sq);
+    if (hit && hit !== name && !(secKey.seen ||= new Set()).has(name)) { secKey.seen.add(name); setTimeout(() => logErr('칸 이름', `칸 이름 맞춤: '${name}' → ${hit}${summarize.last?.model ? ' · 정리 모델 ' + summarize.last.model : ''}`).catch(() => {}), 0); } // 얼마나 자주·어느 모델에서 생기는지 보려고(이름마다 한 번)
+    return hit || ALIAS[name] || name; };
   // "## 칸" 단위로 나눕니다. "### 소제목"은 칸 본문 안에 그대로 둡니다.
   function splitSections(memory) {
     const out = [];
@@ -2216,15 +2221,18 @@
     for (const line of String(memory || '').split('\n')) {
       const h = line.match(/^(?:##(?!#)|■)\s*(.+?)\s*$/);
       if (h) {
-        const key = ALIAS[h[1]] || h[1];
+        const key = secKey(h[1]);
         cur = out.find(s => s.key === key);
-        if (!cur) { cur = { key, lines: [] }; out.push(cur); }
+        if (!cur) { cur = { key, lines: [] }; out.push(cur); } else cur.twice = true;
         continue;
       }
       if (!cur) { cur = { key: '메모', lines: [] }; out.push(cur); }
       cur.lines.push(line);
     }
-    return out.map(s => ({ key: s.key, body: s.lines.join('\n').trim() }));
+    // 같은 칸이 두 번 나왔으면(따로 생긴 칸을 모음) 같은 제목 항목은 하나만: 현재상태는 나중 것(지금 값) · 다른 칸은 긴 글(내용이 줄지 않게) · 다른 사건은 모두 그대로 따로
+    return out.map(s => { const body = s.lines.join('\n').trim(); if (!s.twice) return { key: s.key, body };
+      const b = itemBlocks(body), keep = new Map(); b.items.forEach((it, i) => { const k = itemKey(it.key), j = keep.get(k); if (j == null || s.key === '현재상태' || it.lines.join('\n').length > b.items[j].lines.join('\n').length) keep.set(k, i); });
+      return { key: s.key, body: [...b.head, ...b.items.filter((it, i) => keep.get(itemKey(it.key)) === i).flatMap(it => it.lines)].join('\n').trim() }; });
   }
   const joinSections = list => list.map(s => `■ ${s.key}\n${s.body.trim() || '- 없음'}`).join('\n');
 
