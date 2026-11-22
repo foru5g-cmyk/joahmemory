@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.67
+// @version      5.8.68
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2133,10 +2133,10 @@
     const L = src.slice().sort((p, q) => (q.d ?? -1e9) - (p.d ?? -1e9));
     const byYear = (list, y0 = null) => { let y = y0; return list.map(x => (yOf(x) !== y ? `<li class="lv-yr"><i>${esc(y = yOf(x))}</i></li>` : '') + `<li><em>${lab(x)}</em><span>${esc(x.t)}${x.open ? '<i class="lv-tag">안 풀림</i>' : x.solved ? '<i class="lv-tag lv-ok">풀림</i>' : ''}</span></li>`).join(''); };
     const card3 = love.who ? `<details class="lv-sec lv-fold"${nav.lvLogFold ? '' : ' open'}><summary data-act="lvlogfold">📖 지나온 일${L.length ? ' ' + L.length : ''}${!ai && L.length ? '<em>노트에서</em>' : ''}</summary>${L.length ? `<ul class="lv-log">${byYear(L.slice(0, 5))}</ul>${L.length > 5 ? `<details class="lv-more"><summary>이전 ${L.length - 5}개 보기</summary><ul class="lv-log">${byYear(L.slice(5), yOf(L[4]))}</ul></details>` : ''}` : '<p class="lv-note" style="text-align:left">정리할 때 두 사람 관계가 흔들리거나 바뀐 일만 여기 적혀요.</p>'}</details>` : '';
-    const rels = (() => { try { const { rel, me } = loveCtx(); if (!me || !love.who) return ''; const sp = pairs('호칭·말투'), fl = feelings().filter(f => f.steps.length);
-      const row = (x, y) => { const r = rel.find(q => q.from === x && q.to === y), s1 = sp.find(q => q.from === x && q.to === y), fe = fl.find(q => q.from === x && q.to === y);
-        const addr = s1 ? speechChips(s1.text).chips.flatMap(c => c.addr)[0] || '' : '', v = r ? relView(r.text, false).text : '', feel = fe ? fe.steps[fe.steps.length - 1].feel : '';
-        return v || addr || feel ? `<li><em>${esc(x)} → ${esc(y)}</em><span>${addr ? `<b class="lv-addr">「${esc(addr)}」</b> ` : ''}${esc(v)}${feel ? ` <i class="lv-feel">💓 ${esc(feel)}</i>` : ''}</span></li>` : ''; };
+    const rels = (() => { try { const { rel, me } = loveCtx(); if (!me || !love.who) return ''; const sp = pairs('호칭·말투');
+      const row = (x, y) => { const r = rel.find(q => q.from === x && q.to === y), s1 = sp.find(q => q.from === x && q.to === y);
+        const addr = s1 ? speechChips(s1.text).chips.flatMap(c => c.addr)[0] || '' : '', v = r ? relView(r.text, false).text : '';
+        return v || addr ? `<li><em>${esc(x)} → ${esc(y)}</em><span>${addr ? `<b class="lv-addr">「${esc(addr)}」</b> ` : ''}${esc(v)}</span></li>` : ''; };
       const L2 = [row(love.who, me), row(me, love.who)].filter(Boolean); return L2.length ? `<section class="lv-sec"><h5>💗 지금 사이</h5><ul class="lv-log lv-rel">${L2.join('')}</ul></section>` : ''; } catch (_) { return ''; } })();
     const ann = !broke && n ? (() => { const M = [[100, '100일'], [200, '200일'], [300, '300일'], [366, '1주년'], [500, '500일'], [731, '2주년'], [1000, '1000일'], [1096, '3주년']], nx = M.find(([m]) => m >= n); return nx ? `<section class="lv-sec"><h5>🎂 다음 기념일</h5><p class="lv-ann"><b>${nx[1]}</b><span>${nx[0] === n ? '오늘이에요!' : 'D-' + (nx[0] - n)} · ${esc(P_STR(love.start + nx[0] - 1))}</span></p></section>` : ''; })() : '';
     const cy = love.cycles || [], card4 = cy.length ? `<details class="lv-sec lv-fold"${nav.lvCycOpen ? ' open' : ''}><summary data-act="lvcycfold">📚 지난 연애 기록 ${cy.length}개</summary><ul class="lv-log">${cy.map((c, k) => `<li><span>${esc(c)}</span><button class="pg-link" data-act="lovecycdel" data-arg="${k}" aria-label="이 기록 지우기">×</button></li>`).reverse().join('')}</ul></details>` : '';
@@ -2304,7 +2304,7 @@
   function droppedLines(oldMem, newMem) {
     const out = [], sec = (m, k) => splitSections(m).find(x => x.key === k)?.body || '', sq = t => String(t).replace(/\s+/g, '');
     const SUB = /^\s*-\s*(?:전환|근거|번역)\s*[:：]/, tgt = l => !SUB.test(l) && (l.match(/^\s*-\s*.+?\s*(?:→|->)\s*(.+?)\s*[:：]/) || [])[1];
-    for (const k of ['인물', '감정선']) {
+    for (const k of ['인물']) {
       const nItems = itemBlocks(sec(newMem, k)).items;
       for (const o of itemBlocks(sec(oldMem, k)).items) {
         if (o.del) continue;
@@ -2320,19 +2320,6 @@
       }
     }
     return out;
-  }
-  // 감정선 ★ 줄(관계가 크게 꺾인 순간)은 AI가 항목을 고쳐 쓰다 빼먹어도 지울 이유가 없어서 묻지 않고 되살려요 · 날짜 순서에 맞는 자리에 끼워요
-  //   인물 관계 줄은 끝난 관계일 수 있어서 지금처럼 미리보기에서 물어요(droppedLines)
-  function keepStars(oldMem, newMem) {
-    const back = droppedLines(oldMem, newMem).filter(x => x.sec === '감정선'); if (!back.length) return { memory: newMem, n: 0 };
-    const list = splitSections(newMem), s = list.find(z => z.key === '감정선'); if (!s) return { memory: newMem, n: 0 };
-    const b = itemBlocks(s.body), day = l => { const m = /^\s*-?\s*근거/.test(l) ? null : String(l).match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? +m[1] * 1e4 + +m[2] * 100 + +m[3] : null; };
-    let n = 0;
-    for (const x of back) { const it = b.items.find(y => itemKey(y.key) === itemKey(x.key)); if (!it) continue;
-      for (const l of x.lines) { if (it.lines.includes(l)) continue; const d = day(l), j = d == null ? -1 : it.lines.findIndex((y, k) => k > 0 && day(y) != null && day(y) > d);
-        if (j > 0) it.lines.splice(j, 0, l); else it.lines.push(l); n++; } }
-    s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim();
-    return { memory: joinSections(list), n };
   }
   // 정리 뒤 빠진 핵심: 예전 노트엔 있었는데 새 노트에서 이유 없이 사라진 것만(닫힌 서사 고리처럼 끝난 건 빼요).
   //   AI가 제목을 살짝 바꿔 쓰는 일이 있어서 같은 칸 안에 그 말(또는 같은 날짜)이 있으면 남은 것으로 봐요.
@@ -2361,14 +2348,6 @@
       const m = l.match(/^\[열림\]\s*(.+?)[:：]/); if (!m) continue;
       const t = m[1].split('·').pop().trim(), whole = l.replace(/^\[열림\]\s*[^·:：]*·\s*/, ''); // 이름을 다르게 지어도 누가·언제까지·무엇이 같으면 같은 고리
       if (t && !hooks.includes(core(t)) && !alike(whole, hookLines, 0.45) && !sameWords(whole, hookLines)) out.push('서사 고리(열림): ' + t);
-    }
-    const nowFeel = blocksOf(sec(newMem, '감정선'));
-    for (const b of blocksOf(sec(oldMem, '감정선'))) {
-      const nb = nowFeel.find(x => sq(x.title) === sq(b.title)), txt = nb ? nb.lines.join(' ') : '';
-      for (const l of b.lines) {
-        const d = /★/.test(l) && (l.match(DATE) || [])[0];
-        if (d && !txt.includes(d)) out.push(`감정선 ★: ${b.title} ${d}`);
-      }
     }
     // 소지품·장소: 이름째 사라진 항목. 다 쓴 소모품·이사한 예전 집은 지침대로 지운 것이지만, 잘못 지운 건 아닌지 미리보기에서 보게 합니다.
     for (const k of ['소지품', '장소·조직']) {
@@ -10124,9 +10103,9 @@
   const personKeyOf = name => (itemBlocks(bodyOf('인물')).items.find(x => sameName(String(x.key).trim(), name)) || {}).key || '';
   function personHtml(name) {
     const ppl = people(), rel = relAll(ppl), sp = pairs('호칭·말투'), pr = PROF.get(name) || {};
-    // 상대마다 관계·마음(감정선 마지막 단계)·부르는 말을 한 묶음으로
-    const fl = feelings().filter(f => f.steps.length), mine = r => r.from === name || r.to === name;
-    const others = [...new Set([...rel, ...sp, ...fl].filter(mine).map(r => (r.from === name ? r.to : r.from)))];
+    // 상대마다 관계·부르는 말을 한 묶음으로(옛 감정선은 더 안 바뀌어서 마음 줄은 안 보여요)
+    const mine = r => r.from === name || r.to === name;
+    const others = [...new Set([...rel, ...sp].filter(mine).map(r => (r.from === name ? r.to : r.from)))];
     const side = (a, b) => {
       const pick = list => list.filter(r => r.from === a && r.to === b);
       // 이모지 이름표를 위에, 내용은 아래로 (왼쪽 여백 없이)
@@ -10134,7 +10113,6 @@
       const rows = [
         ...pick(rel).map(r => { const v = relView(r.text, (r.turns || []).length > 0);
           return row('관계', esc(v.text) + v.pill + v.change + (r.turns || []).map(t => `<p class="pnt"><i>전환</i>${esc(t)}</p>`).join('') + quoteHtml(r.quote, r.tr)); }),
-        ...pick(fl).map(f => { const s = f.steps[f.steps.length - 1]; return row('마음', `<b class="hl">${esc(s.feel)}</b>${s.why ? ` <span class="pdim">· ${esc(s.why)}</span>` : ''}`); }),
         ...pick(sp).map(r => { const c = speechChips(r.text); const a0 = c.chips.flatMap(x => x.addr); return row('호칭', (a0.length ? a0.map(x => `<span class="addr">「${esc(x)}」</span>`).join(' ') : NO_CALL) + regTag(c)); }),
       ];
       // 이 화면 주인이 보는 쪽만 그리니 "누가 → 누구" 이름표 없이, 왼쪽 색 줄 하나로 묶습니다
@@ -10481,8 +10459,9 @@
       ${(() => { if (!draft.before || draft.restore) return '';
         const after = joinSections(draft.sections), ch = changesOf(draft.before.memory, after), n = changeCount(ch);
         const bad = draft.source ? [...ch.feels.flatMap(f => f.added.map(a => a.quote)), ...ch.rels.map(r => r.quote)].filter(q => !q || !evFound(q, draft.source)).length : 0;
-        const shrink = draft.before.memory.length > 2000 && after.length < draft.before.memory.length * 0.6
-          ? `<div class="hidebox" style="margin:0 0 10px">노트가 정리 전보다 많이 짧아졌어요(${fmt(draft.before.memory.length)}자 → ${fmt(after.length)}자). 빠진 내용이 없는지 아래에서 확인해 주세요.</div>` : '';
+        const bl = joinSections(splitSections(draft.before.memory).filter(x => x.key !== '감정선')).length; // 감정선은 정리 때 일부러 빼서 비교에서 빼요
+        const shrink = bl > 2000 && after.length < bl * 0.6
+          ? `<div class="hidebox" style="margin:0 0 10px">노트가 정리 전보다 많이 짧아졌어요(${fmt(bl)}자 → ${fmt(after.length)}자). 빠진 내용이 없는지 아래에서 확인해 주세요.</div>` : '';
         return shrink + `<details class="fold" open><summary><span class="fold-t"><b>✨ 이번에 바뀐 것 ${n}가지</b><small>감정 ${ch.feels.length} · 관계 ${ch.rels.length} · 새 인물 ${ch.people.length}${bad ? ` · ⚠ 근거 확인 필요 ${bad}` : ''}</small></span></summary><div class="fold-b">${changesHtml(ch, draft.source || '')}</div></details>`; })()}
       <div class="list">${draft.sections.map(s => {
         const d = diffCount(old.get(s.key) || '', s.body), info = secInfo(s.key);
@@ -11362,7 +11341,8 @@
       const keep = keepMissingPeople(dropUserQuotes(fixTrQuotes(raw, whole), msgs), prev);
       try { NAME_PAIRS = JSON.parse(String(await getValue('names:' + chatId, '') || 'null')) || { same: [], diff: [] }; } catch (_) { NAME_PAIRS = { same: [], diff: [] }; }
       const dup = mergeDupPeople(keep.memory, prev); let memory = dup.memory.replace(/^(\s*-\s*)([^:：\n]{1,12}?)\s*[:：]\s*\2\s*[:：]\s*/gm, '$1$2: '); // 같은 라벨 두 번 → 한 번
-      for (const k of [SHELF, '감정선', PAST]) { const oldSh = (k === PAST ? oldList : splitSections(prev || '')).find(x => x.key === k); if (oldSh) memory = joinSections([...splitSections(memory).filter(x => x.key !== k), oldSh]); } // 처음부터 다시 정리해도 먼지 쌓인 곳은 그대로 · 회귀 전 칸은 처음부터 나눠서 다시 정리해도 지금 노트 것을 지켜요
+      memory = joinSections(splitSections(memory).filter(x => x.key !== '감정선')); // 옛 감정선은 더 안 쓰여서 정리할 때 노트에서 빼요
+      for (const k of [SHELF, PAST]) { const oldSh = (k === PAST ? oldList : splitSections(prev || '')).find(x => x.key === k); if (oldSh) memory = joinSections([...splitSections(memory).filter(x => x.key !== k), oldSh]); } // 처음부터 다시 정리해도 먼지 쌓인 곳은 그대로 · 회귀 전 칸은 처음부터 나눠서 다시 정리해도 지금 노트 것을 지켜요
       const stale = base && !reviewIn ? expireItems(memory, msgs.map(m => stripBlocks(msgText(m))).join('\n'), turns, lastSeenMap) : { seen: {}, expired: [] };
       if (base && !reviewIn) memory = stale.memory;
       { const back = dropShelfDups(memory); if (back.moved.length) { memory = back.memory; toast('먼지쌓인곳에서 다시 나온 물건 ' + back.moved.length + '개는 소지품으로 합쳤어요 · ' + back.moved.join(', '), 'info', 5000); } }
@@ -11378,7 +11358,6 @@
         if (carried.items || carried.facts) memory = joinSections(N.filter(x => x.body.trim()));
         if (carried.items || carried.facts) toast([carried.items ? '빠진 소지품 ' + carried.items + '개는 먼지쌓인곳으로' : '', carried.facts ? '빠진 인지 정보 ' + carried.facts + '개는 예전 글로 지켰어요' : ''].filter(Boolean).join(' · '), 'info', 5000); }
       let strongFixed = 0, strongChanges = [];
-      if (snapshot.note && mode !== 'rebuild') { const ks = keepStars(baseMem, memory); if (ks.n) { memory = ks.memory; toast(`AI가 빼먹은 감정선 ★ ${ks.n}줄을 되살렸어요`, 'info', 4000); } }
       if (dup.merged.length) toast(`같은 사람으로 보이는 인물을 하나로 합쳤어요 · ${dup.merged.join(', ')}`, 'info', 5000);
       if (summarize.last) { await recordUsage(chatId, { at: Date.now(), from, to: turns, chars: memory.length, ...summarize.last, ...(reviewIn ? { label: '🔍 기억 다시 확인' } : {}) }); usage = await usageOf(chatId); }
       const off = await offSections();
