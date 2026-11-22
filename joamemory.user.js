@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.66
+// @version      5.8.67
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3116,13 +3116,30 @@
     }
     return { ...h, 'X-Firebase-AppCheck': fbCheck.t };
   }
-  async function askGemini(model, system, input, json = false, think = '', plain = false) { // think: AI 생각 정도(low·medium·high)
+  // 버텍스 간편 모드는 지역을 안 적으면 구글이 가까운 지역(한국은 asia-southeast1)으로 보내요 → 새 모델이 거기 없으면 404
+  //   그때만 오류 글의 프로젝트 번호로 global 주소를 한 번 더 · 되면 번호를 기억해서 다음부터 바로 global(vertexProj) · global도 안 되면 'x:번호'로 남겨 다시 안 해 봐요
+  const VX_TIP = ' · 이 모델은 버텍스에서 아직 쓸 수 없어요(지역에 없음) · Firebase나 Gemini 키로 골라 주세요';
+  async function askGemini(model, system, input, json = false, think = '', plain = false) {
+    try { return await askGemini0(model, system, input, json, think, plain, ''); }
+    catch (e) {
+      const msg = String(e?.message || ''); if (provOf(model) !== 'vertex' || !/HTTP 40[134]\b/.test(msg)) throw e;
+      const set = String(await getValue('vertexProj', '')).trim();
+      if (/^\d+$/.test(set)) { if (/HTTP 40[13]\b/.test(msg)) await setValue('vertexProj', ''); return askGemini0(model, system, input, json, think, plain, 'express'); } // global에 없거나(404) 키가 바뀌었으면(401·403) 원래 길로 한 번
+      const m = msg.match(/projects\/(\d+)\/locations\/([a-z0-9-]+)/); if (!/HTTP 404\b/.test(msg) || !m || m[2] === 'global') throw e;
+      if (set === 'x:' + m[1]) { e.message = msg + VX_TIP; throw e; }
+      await setValue('vertexProj', m[1]);
+      try { const out = await askGemini0(model, system, input, json, think, plain, ''); logErr('연동', '버텍스: ' + m[2] + ' 지역에 없는 모델이라 global 주소로 부름(다음부터 바로)'); return out; }
+      catch (e2) { if (/HTTP 40[134]\b/.test(String(e2?.message))) { await setValue('vertexProj', 'x:' + m[1]); e2.message = String(e2.message) + VX_TIP; } throw e2; }
+    }
+  }
+  async function askGemini0(model, system, input, json = false, think = '', plain = false, vx = '') { // think: AI 생각 정도(low·medium·high) · vx: 'express'면 기억한 global 대신 원래 주소로
     const pv = provOf(model), id = model.replace(/^(vertex|firebase):/, ''), tk = /^gemini-(2\.5|3|4)/.test(id) && !json && !plain; // ETC(JSON으로 받는 것)는 5.8.5 때처럼: 생각 요약 안 받고 · 10분 · 첫 글자 전엔 안 끊어요(5.8.6부터 느려지고 다시 시도가 나서) // tk: 생각하는모델 · 생각 요약을 받아 살아 있는지 봐요(글엔 안 넣어요) // Vertex express·Firebase AI Logic: 같은 요청 모양, 주소·키만 달라요
     const key = String(await getValue(KEYS[pv][0], '')).trim(), proj = pv === 'firebase' ? String(await getValue('firebaseProject', '')).trim() : '';
     if (!key) throw new Error(`설정에서 ${KEYS[pv][1]}를 먼저 넣어 주세요.`);
     if (pv === 'firebase' && !proj) throw new Error('설정에서 Firebase 프로젝트 ID를 먼저 넣어 주세요.');
+    const vxp = pv === 'vertex' && vx !== 'express' ? String(await getValue('vertexProj', '')).trim() : '';
     const raw = await requestRaw('POST', pv === 'vertex'
-      ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
+      ? (/^\d+$/.test(vxp) ? `https://aiplatform.googleapis.com/v1/projects/${vxp}/locations/global/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse` : `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`)
       : pv === 'firebase' ? `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(proj)}/locations/global/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
       : `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`,
       { headers: pv === 'firebase' ? await fbHeaders(key, proj) : { 'x-goog-api-key': key }, timeout: tk ? 1800000 : 600000, idle0: tk, onProgress: raw => updateProg(raw), // 생각하는 모델은 30분까지 · 헛도는 건 5분 조용하면 끊어요(생각 요약이 오는 동안은 살아 있는 것)
