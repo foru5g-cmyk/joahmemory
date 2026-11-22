@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.63
+// @version      5.8.64
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6778,8 +6778,8 @@
   async function gsSave(quiet = false) {
     try {
       const pc = chatIdFromPath(); await gsPullStore(pc); // 올리기 전에 다른 기기의 더 새 임신·연애·문체 보정부터 받아요(이 기기의 옛것으로 드라이브를 덮지 않게)
-      const hOk = await gsHistSave(pc); // 정리 기록은 따로(바뀌었을 때만) · 자동 올리기는 그게 올라가 있을 때만 큰 백업에서 빼요(직접 누른 백업은 늘 전부)
-      const data = await backupData(quiet && hOk); if (!data) { if (!quiet) toast('올릴 게 없어요.', 'info', 2500); return; }
+      const hOk = await gsHistSave(pc); // 정리 기록은 따로(바뀌었을 때만) · 그게 올라가 있으면 큰 백업에서 빼요(큰 방은 통째로 보내면 아이폰에서 60초 안에 못 끝내요)
+      const data = await backupData(hOk); if (!data) { if (!quiet) toast('올릴 게 없어요.', 'info', 2500); return; }
       // 드라이브의 좋은 백업을 덮지 않게: 이 기기에 전체 기억이 없으면(웹 모드 채팅엔 고른 일부만) 안 올리고, 기억이 비었으면 자동으로는 안 올려요(기억이 날아간 기기가 덮어쓰는 것 방지)
       const n = snapshot?.note; if (n?.sel && !(fullNote && fullNote.upto === n.upto)) { await gsModeSave(data.chat, data.chat === pc);
         if (!quiet) toast('이 기기엔 전체 기억이 없어서 안 올렸어요. 드라이브 백업을 덮어쓰지 않게요. 정리한 기기에서 올려 주세요.', 'info', 5000); return; }
