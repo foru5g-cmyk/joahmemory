@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.62
+// @version      5.8.63
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -9716,9 +9716,10 @@
   // 노트 관계 줄 고치기(a↔b 두 방향 줄): 꼬리표 〔 〕는 빼고 · to=''이면 연인 말(연인·애인·남친·여친·사귀는 사이·교제 중)을 '썸'으로 · to가 있으면 연인 말을 그 글로(없으면 관계 부분 끝에 덧붙임) · 반환: 고친 줄 수(-1 = 이 기기엔 전체 기억 없음)
   async function relNoteSet(cid, a, b, to) { const n = snapshot?.note; if (!n) return 0; if (n.sel && !(fullNote && fullNote.upto === n.upto)) return -1;
     const list = splitSections(noteMemory()), sec = list.find(x => x.key === '인물'); if (!sec) return 0; let hit = 0; const LOVE = /사귀는\s*(?:사이|중)|교제\s*중|연인(?!\s*직전)|애인|남친|여친|남자\s*친구|여자\s*친구/;
-    sec.body = sec.body.split('\n').map(l => { const m = l.match(/^(\s*-?\s*)(.+?)(\s*(?:→|->)\s*)(.+?)(\s*[:：]\s*)(.*)$/); if (!m || /[:：]/.test(m[2]) || [...m[2]].length > 24) return l;
-      const f = m[2].trim(), t = m[4].trim(); if (!((sameName(f, a) && sameName(t, b)) || (sameName(f, b) && sameName(t, a)))) return l;
-      let r = m[6].replace(/\s*〔[^〔〕]{1,10}〕/g, ''); if (!to) r = r.split(/s+·s+/).filter(p => !LOVE.test(p)).join(' · '); // 없애기: 썸인지 뭔지 모르니 지어내지 않고 연인 말이 든 구절만 빼요 else r = LOVE.test(r) ? r.replace(new RegExp(LOVE.source, 'g'), to) : r.trimEnd() + ' · ' + to; if (to) r = r.trimEnd() + ' 〔' + to.slice(0, 10) + '〕'; // 알약 글자(채팅엔 안 들어가요)
+    let who = ''; sec.body = sec.body.split('\n').map(l => { const hd = l.match(/^\s*【([^】]+)】/); if (hd) { who = hd[1].trim(); return l; }
+      const m = l.match(/^(\s*-?\s*)(.*?)(\s*(?:→|->)\s*)(.+?)(\s*[:：]\s*)(.*)$/); if (!m || /[:：]/.test(m[2]) || [...m[2]].length > 24) return l;
+      const f = m[2].trim() || who, t = m[4].trim(); // 앞 이름이 없는 예전 꼴은 블록 주인 if (!((sameName(f, a) && sameName(t, b)) || (sameName(f, b) && sameName(t, a)))) return l;
+      let r = m[6].replace(/\s*〔[^〔〕]{1,10}〕/g, ''); if (!to) r = r.split(/s+·s+/).filter(p => !LOVE.test(p)).join(' · ').trimEnd(); // 없애기: 썸인지 뭔지 모르니 지어내지 않고 연인 말이 든 구절만 빼요 else r = LOVE.test(r) ? r.replace(new RegExp(LOVE.source, 'g'), to) : r.trimEnd() + ' · ' + to; if (to) r = r.trimEnd() + ' 〔' + to.slice(0, 10) + '〕'; // 알약 글자(채팅엔 안 들어가요)
       if (r === m[6]) return l; hit++; return m[1] + m[2] + m[3] + m[4] + m[5] + r; }).join('\n');
     if (hit) { const mem = joinSections(list); if (fullNote && fullNote.upto === n.upto) fullNote = { ...fullNote, memory: mem }; else snapshot.note = { ...n, memory: mem }; nav.relPick = null; nav.relEdit = false; render.keepGraph = true; render(); // 알약은 바로 바뀌어요
       await memTouch(cid); await rewriteNote(cid, mem); if (nav.gsOn) gsSave(true); } return hit; } // memTouch: 화면 사본을 먼저 바꿔서 rewriteNote가 '안 바뀜'으로 볼 수 있어 고친 시각은 여기서 남겨요(다른 기기가 받아 가게)
@@ -10119,8 +10120,8 @@
     const addrOf = (a, b) => { const r = sp.find(x => x.from === a && x.to === b); return r ? speechChips(r.text).chips.flatMap(x => x.addr)[0] || '' : ''; };
     const relRows = others.filter(o => side(name, o)).map((o, i) => { const to = addrOf(name, o);
       const pid = [name, o].sort().join('\u0000'), pk = pairKind(rel, name, o), pick = nav.relPick === pid;
-      const pillBtn = !pk ? '' : `<button class="rp-btn" data-act="relpick" data-arg="${encodeURIComponent(pid)}" title="눌러서 사이 고르기" style="margin-left:auto">${relPill(pk)}</button>`;
-      const chips = pick ? relPickHtml(pid) : '';
+      const pillBtn = relPill(pk, 'margin-left:auto'); // 인물 카드는 보여 주기만 · 고치기는 관계도에서
+      const chips = '';
       return `<div class="pgrp">${fold(`${avB(o)}<b>${esc(o)}</b>${to ? `<small>${esc(`「${to}」`)}</small>` : ''}${pillBtn}`, '', side(name, o), i === 0)}${chips}</div>`; });
     // 칸 제목 앞에 이모지 하나, 칸 사이는 얇은 선
     const cat = (emo, t, rows) => rows.length ? `<section class="pcat">${t ? `<h5>${emo ? emo + ' ' : ''}${t}</h5>` : ''}${rows.join('')}</section>` : '';
