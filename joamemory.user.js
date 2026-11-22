@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.64
+// @version      5.8.65
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1523,7 +1523,7 @@
   // 남자 유저 캐릭터는 자동 임신을 막아요 · 유저 인물 카드의 '남성 임신' 버튼을 켜면(preg.maleOk · 방마다) 풀려요
   const pregMaleNo = mem => pregWhoDefault(mem).male && !preg?.maleOk;
   const pregWhoDefault = mem => pPeople(mem).find(p => p.me) || { name: '유저 캐릭터', me: true }; // 유저 캐릭터(페르소나)만
-  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|합궁|승은|성은을\s*입|운우|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|합궁|승은|성은을\s*입|운우|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|야스\s*(?:보고서|했|함|하고|하던|한\s*(?:뒤|후))|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
   // 관계 장면 줄 중 임신할 사람(페르소나) 것만: 그 사람 이름이 있거나 아무 인물 이름도 없는 줄 · 다른 인물끼리(그남과 내연녀 등)는 빼요
   function pRelMine(mem) {
     const who = preg?.who || pregWhoDefault(mem).name, has = nameIn;
@@ -1559,7 +1559,7 @@
       const r = parseJsonLoose(await askModel(P_REL_PROMPT, `[유저 캐릭터] ${who}\n\n` + todo.map((x, i) => `[${i}] ${x.src.slice(0, 1500)}`).join('\n\n'), '🍼관계 확인', true));
       const list = r?.rels; if (!preg || pregChat !== cid || !Array.isArray(list)) return;
       preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0 }; }
-      for (const x of todo) if (!preg.relAi[x.k]) preg.relAi[x.k] = { mine: false }; // 답에 빠진 사건은 본인 관계가 아니라고 봐요(다시 안 물음)
+      for (const x of todo) if (!preg.relAi[x.k]) (pregRelAsk.failed ||= new Set()).add(x.k); // 답에 빠진 사건은 굳히지 않고 다음 접속에 다시 물어요
       pregSave(); if (isOpen()) render();
     } catch (e) { logErr('관계 확인', e.message); for (const x of todo) (pregRelAsk.failed ||= new Set()).add(x.k); } finally { pregRelAsk.busy = false; } // 실패한 사건은 이번 접속 동안 다시 안 물어요(화면 그릴 때마다 AI를 부르지 않게)
   }
@@ -1676,7 +1676,6 @@
     const { hit, testable, recent, k, last } = pregConceive(mem, day, true), tl = testable[testable.length - 1], rl = recent[recent.length - 1];
     const rel = hit || tl || recent[0] || last, since = rel ? Math.max(0, day - rel.d) : null, done = (preg.tests || {})[day];
     const declared = !!(preg.unaware || preg.start != null); // 이야기·작가가 이미 임신으로 정함 → 주사위 말고 두 줄
-    { const tested = Object.entries(preg.tests || {}).filter(([, v]) => v !== 'faint').map(([d]) => Number(d)), fd = Object.entries(preg.tests || {}).filter(([, v]) => v === 'faint').map(([d]) => Number(d)).pop(); if (!declared && !done && fd != null && day < fd + 2) return ''; if (!declared && !done && !testable.some(r => !tested.some(t => t >= r.d + 14))) return ''; } // 관계마다 2주 지난 날에만 한 번 떠요(이미 긁어 본 관계는 다시 안 뜸)
     const res = declared && done !== 'pos' ? 'pos' : done || (!last ? 'neg' : hit ? 'pos' : tl ? 'neg' : 'early');
     const faint = kw === 'modern' && !declared && !done && (res === 'pos' || res === 'neg') && !Object.values(preg.tests || {}).includes('faint') && (hit || tl) && day - (hit || tl).d <= 15 && pR('faint' + day) < 0.35; // 흐린 줄 · 이틀 뒤 다시 긁으면 진짜 결과
     const pill = r => r ? ` <span class="pg-odds" title="${esc(kitOdds(r.t)[1].join(' · '))}">🍼 ${Math.round(kitChance(r.t) * 100)}% · ${kitKind(r.t)}</span>` : '';
