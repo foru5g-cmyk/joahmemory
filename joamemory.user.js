@@ -10119,7 +10119,7 @@
     const addrOf = (a, b) => { const r = sp.find(x => x.from === a && x.to === b); return r ? speechChips(r.text).chips.flatMap(x => x.addr)[0] || '' : ''; };
     const relRows = others.filter(o => side(name, o)).map((o, i) => { const to = addrOf(name, o);
       const pid = [name, o].sort().join('\u0000'), pk = pairKind(rel, name, o), pick = nav.relPick === pid;
-      const pillBtn = `<button class="rp-btn" data-act="relpick" data-arg="${encodeURIComponent(pid)}" title="눌러서 사이 고르기" style="margin-left:auto">${relPill(pk) || '<span class="rpill" style="background:#F1EFF8;color:#9A95AD">사이</span>'}</button>`;
+      const pillBtn = !pk ? '' : `<button class="rp-btn" data-act="relpick" data-arg="${encodeURIComponent(pid)}" title="눌러서 사이 고르기" style="margin-left:auto">${relPill(pk)}</button>`;
       const chips = pick ? relPickHtml(pid) : '';
       return `<div class="pgrp">${fold(`${avB(o)}<b>${esc(o)}</b>${to ? `<small>${esc(`「${to}」`)}</small>` : ''}${pillBtn}`, '', side(name, o), i === 0)}${chips}</div>`; });
     // 칸 제목 앞에 이모지 하나, 칸 사이는 얇은 선
