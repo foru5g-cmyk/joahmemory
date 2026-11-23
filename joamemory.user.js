@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.72
+// @version      5.8.73
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1523,17 +1523,21 @@
   // 남자 유저 캐릭터는 자동 임신을 막아요 · 유저 인물 카드의 '남성 임신' 버튼을 켜면(preg.maleOk · 방마다) 풀려요
   const pregMaleNo = mem => pregWhoDefault(mem).male && !preg?.maleOk;
   const pregWhoDefault = mem => pPeople(mem).find(p => p.me) || { name: '유저 캐릭터', me: true }; // 유저 캐릭터(페르소나)만
-  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|합궁|승은|성은을\s*입|운우|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|야스\s*(?:보고서|했|함|하고|하던|한\s*(?:뒤|후))|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이/;
+  const P_SEX = /쿠퍼액|프리컴|정액|질외\s*사정|밖에\s*(?:다\s*(?:가\s*)?)?(?:쌌|사정|싸\s*버렸)|밖으로\s*(?:쌌|사정|싸\s*버렸)|첫날밤|합방|합궁|승은|성은을\s*입|운우|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나|\s*후)|살을\s*섞|몸을\s*겹|삽입|질내|사정했|콘돔|피임\s*없이|노콘|성관계|관계를\s*(?:가졌|가짐|가진|맺)|밤을\s*(?:함께\s*)?(?:보냈|보냄|보낸)|잠자리|동침|섹스|야스\s*(?:보고서|했|함|하고|하던|한\s*(?:뒤|후))|사랑을\s*(?:나눴|나눔|나눈)|몸을\s*섞|한\s*몸이|(?:안|속)에\s*(?:다\s*)?(?:싸|쌌|쏟)|(?:안|속)에[^.!?\n]{0,14}쏟아\s*(?:냈|부었|넣)|하나가\s*(?:되었|됐|된)|절정에\s*(?:다다|올|이르)|가득\s*채웠|허리를\s*(?:깊이\s*)?(?:밀어\s*넣|쳐\s*올)/;
+  // 세기용(엄격): AI 없이 이 낱말만으로 '관계했다'고 셀 때 · 헷갈리는 말(잠자리에 들다·관계를 맺다·합방·USB 삽입·사정사정·콘돔이 있었다·정액제)은 빼고 확실한 꼴만
+  //   '쌌다'는 짐 싸기와 못 가려서 안 세요(돌려 말한 건 키가 있으면 AI가, 없으면 정리 뒤 날짜로그로 잡혀요)
+  //   P_SEX는 AI에 물어볼 후보 고르기(헐렁해도 AI가 걸러요) · 키가 없거나 AI 답이 오기 전엔 이걸로만 세요(이상한 게 관계로 들어가지 않게)
+  const P_SEX_SURE = /쿠퍼액|프리컴|정액(?!제)|질외\s*사정|질내|노콘|성관계|섹스|합궁|운우지정|피임\s*없이|(?:안|속|밖|입|배|몸\s*위|위)에(?:다)?\s*(?:다\s*)?사정|밖으로\s*사정|관계를\s*(?:가졌|가짐|가진)|콘돔(?:을|이)?\s*(?:끼|꼈|쓰|썼|없이|찢어|빠졌)|(?:살|몸)을\s*섞(?:었|은\s*(?:뒤|후))|몸을\s*겹(?:쳤|친\s*(?:뒤|후))|사랑을\s*나(?:눴|눈\s*(?:뒤|후))|잠자리를\s*(?:가졌|가짐|가진|같이\s*했|함께\s*했)|동침(?:했|함|한\s*(?:뒤|후)|하고)|첫날밤을\s*(?:보냈|치렀|치른|보낸\s*(?:뒤|후))|정사(?:를\s*(?:나누|나눴|나눈|치르|치렀|치른|가졌|가진)|가\s*끝나)|승은을\s*입(?:었|은\s*(?:뒤|후|날))|한\s*몸이\s*(?:되었|됐|된\s*(?:채|뒤|후))|야스\s*(?:했|함|하고|하던|한\s*(?:뒤|후))/;
   // 관계 장면 줄 중 임신할 사람(페르소나) 것만: 그 사람 이름이 있거나 아무 인물 이름도 없는 줄 · 다른 인물끼리(그남과 내연녀 등)는 빼요
   function pRelMine(mem) {
     const who = preg?.who || pregWhoDefault(mem).name, has = nameIn;
     const others = pPeople(mem).map(p => p.name).filter(n => n && !(who && (n === who || has(who, n) || has(n, who))));
-    return t => String(t).split(/\n+|(?<=[.!?。])\s+/).filter(l => P_SEX.test(l) && ((who && has(l, who)) || !others.some(n => has(l, n)))).join('\n');
+    return t => String(t).split(/\n+|(?<=[.!?。])\s+/).filter(l => P_SEX_SURE.test(l) && ((who && has(l, who)) || !others.some(n => has(l, n)))).join('\n');
   }
   const P_PAST = /지난\s*(?:번|밤|주|날)|며칠\s*전|\d+\s*일\s*전|일주일\s*전|\d+\s*주\s*전|전날|그날\s*(?:밤\s*)?(?:이후|뒤|의)|떠올|기억|생각나|이후로|뒤로/;
   // 날짜로그 관계 사건은 키가 있으면 AI가 읽어요: 유저 캐릭터 본인이 했는지 · 상대 · 피임 · 횟수(사건마다 한 번만 묻고 preg.relAi에 둬요)
   //   낱말로만 보면 남의 관계(그남과 내연녀)·이름 없는 문장·다른 문장의 콘돔을 잘못 세요 · 답이 오기 전엔 낱말로 봐요
-  const P_REL_PROMPT = '롤플레이 날짜로그 사건마다 [유저 캐릭터] 본인이 그 사건에서 실제로 성관계를 했는지 판단한다. 다른 인물끼리 한 관계, 남의 관계를 알게 되거나 목격한 것, 떠올리거나 말로 꺼낸 지난 관계, 하려다 멈춘 것은 false. 했으면 상대 이름(사건에 쓰인 이름 그대로)·피임·횟수·그중 질내사정 횟수를 원문대로. JSON 하나만: {"rels":[{"i":번호,"mine":true,"with":"상대 이름","prot":"콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름","times":1,"in":0}]}';
+  const P_REL_PROMPT = '롤플레이 날짜로그 사건이나 대화 원문마다(원문은 [유저 캐릭터]를 너·당신으로 부르기도 한다) [유저 캐릭터] 본인이 그 사건에서 실제로 성관계를 했는지 판단한다. 다른 인물끼리 한 관계, 남의 관계를 알게 되거나 목격한 것, 떠올리거나 말로 꺼낸 지난 관계, 하려다 멈춘 것은 false. 했으면 상대 이름(사건에 쓰인 이름 그대로)·피임·횟수·그중 질내사정 횟수를 원문대로. JSON 하나만: {"rels":[{"i":번호,"mine":true,"with":"상대 이름","prot":"콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름","times":1,"in":0}]}';
   const P_REL_TXT = { 콘돔: '콘돔을 끼고', '콘돔 찢어짐': '콘돔이 찢어짐', 피임약: '피임약을 먹음', 사후피임약: '사후피임약', 질외사정: '질외 사정', 질내사정: '피임 없이 질내 사정', '피임 안 함': '피임 없이' };
   // 관계 상대: 'X와 관계'로 적힌 이름 · 없으면 글에 나온 (유저 캐릭터가 아닌) 인물 한 명 · 모르면 ''
   const pRelWho = (t, mem) => { const w = (String(t).match(/^([^\n·]+?)와 관계/) || [])[1]?.trim(); if (w) return w; if (pRelWho.m !== mem) { pRelWho.m = mem; pRelWho.p = pPeople(mem).filter(p => !p.me); } return (pRelWho.p.find(p => nameIn(t, p.name)) || {}).name || ''; }; // 인물 목록은 노트가 바뀔 때만 다시 만들어요(큰 노트에서 관계마다 노트 전체를 다시 쪼개지 않게 · 아이폰 느려짐 방지)
@@ -1574,15 +1578,20 @@
       if (preg?.rels?.some(r => r.d === d)) continue; // 정리 AI가 그날 관계를 이미 적어 줬어요(아래에서 넣어요) · 다시 안 물어요
       if (pregHasKey && P_SEX.test(src) && preg && !pregRelAsk.failed?.has(pKey(src))) { todo.push({ k: pKey(src), src }); continue; } // 키가 있으면 낱말로 안 세요(남의 관계·옛 관계가 섞여서) · AI 답이 오면 그걸로
       const t = mine(src); if (t) out.push({ d, t }); }
-    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name);
     for (const r of preg?.rels || []) { const o = out.find(y => y.d === r.d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(r.t, mem) })); if (!o) out.push({ ...r, sure: 1 }); else { if (!o.sure) o.t = r.t; o.sure = 1; } } // 정리 AI가 따로 적어 준 관계 · 같은 날이어도 상대가 다르면 따로
     if (preg?.rels?.length) out.sort((a, b) => a.d - b.d);
     const noteDay = P_DAY(splitSections(mem).find(x => x.key === '현재상태')?.body); let cur = noteDay;
     for (const m of (snapshot?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null;
       if (x != null) cur = x;
+      // 키가 있으면 관계 낱말이 든 아직 정리 안 된 말풍선도 AI가 읽어요(날짜로그 사건과 같은 요청에 · 말풍선마다 한 번 · 유저 캐릭터 본인 관계만)
+      //   낱말로만 보면 '단테가 그녀 안에…'처럼 엄마가 '그녀·너'로 나온 문장을 남의 관계로 버려서, 정리 전엔 최근 관계를 못 잡고 예전 사건만 떴어요 · 답이 오기 전엔 낱말 그대로
+      if (pregHasKey && preg && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k];
+        if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) { const tt = relAiText(ai, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { same.t += '\n' + tt; same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } continue; } // AI가 아니라면 낱말로도 안 세요 · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
+        if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src }); }
       for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
         if (x == null && cur != null) cur += pSkip(p);
         const st = mine(p.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(y => y.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
+    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name);
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
@@ -3135,6 +3144,8 @@
   }
   // 답이 출력 한도에서 잘림 → run()이 범위를 반으로 줄여 한 번 더 해요.
   const cutError = () => Object.assign(new Error('정리 결과가 너무 길어서 잘렸어요. 노트 크기를 줄여 주세요.'), { cut: true });
+  // 한도에 걸렸는데 답 글이 짧음 = 생각이 한도를 다 먹음: 턴을 반으로 줄여도 또 걸려서 정리는 다시 안 보내요(think) · 기타처럼 받은 만큼 보여 주는 곳은 partial을 그대로 써요
+  const thinkCut = partial => Object.assign(new Error('AI가 생각하느라 답 한도를 다 써서 정리 글을 못 냈어요. 설정 › AI 생각을 "낮음"으로 바꾸거나 다른 모델로 해 주세요. (턴을 줄여도 똑같아서 다시 보내지 않았어요)'), { cut: true, think: true, partial });
   // 한 번에 받으면 긴 정리에서 서버가 3분쯤에 끊는 일이 있어 스트리밍(SSE)으로 끝까지 받습니다. 끝맺음 표시 없이 끝나면 실패로 봅니다.
   const askAny = (model, system, input, json = false, think = '', plain = false) => ({ claude: askClaude, openai: askOpenAI, chatgpt: askChatGPT }[provOf(model)] || askGemini)(model, system, input, json, think, plain); // plain: 정리 말고 나머지(ETC·점검·간추리기) — Gemini에서 생각 요약을 안 받고 첫 글자 전엔 안 끊어요
   // Firebase App Check(2026-11-02부터 AI Logic에 강제): 콘솔에 등록한 디버그 토큰을 1시간짜리 App Check 토큰으로 바꿔 요청에 붙여요.
@@ -3180,7 +3191,7 @@
       ? (/^\d+$/.test(vxp) ? `https://aiplatform.googleapis.com/v1/projects/${vxp}/locations/global/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse` : `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`)
       : pv === 'firebase' ? `https://firebasevertexai.googleapis.com/v1beta/projects/${encodeURIComponent(proj)}/locations/global/publishers/google/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`
       : `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(id)}:streamGenerateContent?alt=sse`,
-      { headers: pv === 'firebase' ? await fbHeaders(key, proj) : { 'x-goog-api-key': key }, timeout: tk ? 1800000 : 600000, idle0: tk, onProgress: raw => updateProg(raw), // 생각하는 모델은 30분까지 · 헛도는 건 5분 조용하면 끊어요(생각 요약이 오는 동안은 살아 있는 것)
+      { headers: pv === 'firebase' ? await fbHeaders(key, proj) : { 'x-goog-api-key': key }, timeout: tk ? 3600000 : 600000, idle0: tk, onProgress: raw => updateProg(raw), // 생각하는 모델은 60분까지(살아서 오는 답을 끊으면 값만 나가요) · 헛도는 건 5분 조용하면 끊어요(생각 요약이 오는 동안은 살아 있는 것)
         body: { systemInstruction: { parts: [{ text: system }] },
                 contents: [{ role: 'user', parts: [{ text: input }] }],
                 // 창작 RP 정리라 조절 가능한 필터는 끔(공식 설정). 끌 수 없는 금지 항목은 그대로 막혀요.
@@ -3202,7 +3213,7 @@
       if (j.promptFeedback?.blockReason) finish = j.promptFeedback.blockReason;
       if (j.error && !finish) throw new Error(`구글이 답 도중 오류를 보냈어요(${j.error.status || j.error.code || ''} · ${j.error.message || ''}). 잠시 뒤 다시 해 주세요.`); // 과부하·한도 같은 오류가 끊김으로 보이지 않게
     }
-    if (/MAX_TOKENS/i.test(finish)) throw Object.assign(cutError(), { partial: text.trim() });
+    if (/MAX_TOKENS/i.test(finish)) { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude와 같게)
     if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw new Error(`AI 안전 필터가 막았어요(${finish}). 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.`);
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.promptTokenCount) || 0, outTok: (Number(u.candidatesTokenCount) || 0) + (Number(u.thoughtsTokenCount) || 0), thinkTok: Number(u.thoughtsTokenCount) || 0, cached: Number(u.cachedContentTokenCount) || 0 }; // thinkTok: 출력 중 AI가 생각한 양 · cached: 구글이 알아서 캐시한 앞부분(입력에 포함)
@@ -3213,34 +3224,40 @@
     const key = String(await getValue('claudeKey', '')).trim();
     if (!key) throw new Error('설정에서 Claude API 키를 먼저 넣어 주세요.');
     const fallback = /^claude-(fable|opus-5|sonnet-5-5)/.test(model); // 거절되면 서버가 다른 모델로(Sonnet 5.5는 'default'만 돼요)
+    // 5세대(Fable·Opus 5·Sonnet 5·Haiku 5.5): 답 한도 128K(생각도 이 안에 세요) · 생각은 늘 켜져 있는데 기본은 빈 칸으로 와서 오래 생각하면 스트림이 조용해요
+    //   → 생각 요약을 받아요(summarized · 값은 같아요): 요약이 오는 동안은 살아 있는 것이라 5분 조용하면 끊는 데 안 걸려요 · 생각 정도는 effort로(설정 › AI 생각)
+    const gen5 = /^claude-(fable|mythos|opus-5|sonnet-5|haiku-5)/.test(model);
     // 긴 정리는 몇 분 걸려서 한 번에 받으면 연결이 끊기기 쉬워요. Gemini처럼 스트리밍(SSE)으로 끝까지 받습니다.
     const raw = await requestRaw('POST', 'https://api.anthropic.com/v1/messages', {
-      timeout: 1800000, onProgress: raw => updateProg(raw), // Claude는 깊게 생각하면 10분을 넘겨요 · 멈춘 건 requestRaw가 5분 만에 끊어요
+      timeout: 3600000, onProgress: raw => updateProg(raw), // Claude는 깊게 생각하면 10분을 넘겨요(Fable은 30분도 넘겨서 60분까지 · 살아서 오는 답을 끊으면 값만 나가요) · 멈춘 건 requestRaw가 5분 만에 끊어요
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true',
                  ...(fallback ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}) },
-      body: { model, max_tokens: 64000, stream: true, system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}), ...(think && model !== 'claude-haiku-4-5' ? { output_config: { effort: think } } : {}) } }); // effort: 설정 › AI 생각(안 보내면 Sonnet 5.5는 high라 느려요)
-    let text = '', stop = '', inTok = 0, outTok = 0;
+      body: { model, max_tokens: gen5 ? 128000 : 64000, stream: true, ...(gen5 && think ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}), system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}), ...(think && model !== 'claude-haiku-4-5' ? { output_config: { effort: think } } : {}) } }); // effort: 설정 › AI 생각(안 보내면 Sonnet 5.5는 high라 느려요)
+    let text = '', stop = '', inTok = 0, outTok = 0, cached = 0;
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
       let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
-      if (j.type === 'message_start') inTok = Number(j.message?.usage?.input_tokens) || inTok;
+      if (j.type === 'message_start') { const u = j.message?.usage || {}; cached = Number(u.cache_read_input_tokens) || 0; inTok = (Number(u.input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0) + cached || inTok; } // 입력은 캐시한 것까지 다 세요(값 계산이 안 틀리게)
       else if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text;
       else if (j.type === 'message_delta') { stop = j.delta?.stop_reason || stop; outTok = Number(j.usage?.output_tokens) || outTok; }
       else if (j.type === 'error') throw new Error('Claude 오류 · ' + (j.error?.message || '알 수 없음'));
     }
     if (stop === 'refusal') throw new Error('Claude가 이 대화 정리를 거절했어요. 다른 모델로 다시 해 주세요.');
-    if (stop === 'max_tokens') throw Object.assign(cutError(), { partial: text.trim() });
+    // 한도에 걸렸는데 답 글이 짧으면 생각이 한도(64,000토큰)를 다 먹은 것: 턴을 반으로 줄여도 또 걸려서 다시 보내지 않아요(값만 두 번 나가요)
+    if (stop === 'max_tokens') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); }
     if (!stop) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
-    return { text: text.trim(), inTok, outTok };
+    return { text: text.trim(), inTok, outTok, cached };
   }
 
   // OpenAI Chat Completions(스트리밍). AI 생각 설정은 안 씀(모델 기본값).
-  async function askOpenAI(model, system, input, json = false) {
+  async function askOpenAI(model, system, input, json = false, think = '') {
     const key = String(await getValue('openaiKey', '')).trim();
     if (!key) throw new Error('설정에서 OpenAI API 키를 먼저 넣어 주세요.');
-    const raw = await requestRaw('POST', 'https://api.openai.com/v1/chat/completions', {
-      timeout: 600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + key },
-      body: { model, stream: true, stream_options: { include_usage: true }, messages: [{ role: 'system', content: system }, { role: 'user', content: input }], ...(json ? { response_format: { type: 'json_object' } } : {}) } });
+    const re = think && /^(gpt-5|o\d)/.test(model) ? { reasoning_effort: think } : {}; // 설정 › AI 생각을 생각하는 모델에만(예전엔 안 넘겨서 기본값으로 느렸어요)
+    const ask = r => requestRaw('POST', 'https://api.openai.com/v1/chat/completions', {
+      timeout: 3600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + key },
+      body: { model, stream: true, stream_options: { include_usage: true }, messages: [{ role: 'system', content: system }, { role: 'user', content: input }], ...(json ? { response_format: { type: 'json_object' } } : {}), ...r } });
+    const raw = await ask(re).catch(e => re.reasoning_effort && /HTTP 400\b/.test(String(e?.message)) ? ask({}) : Promise.reject(e));
     let text = '', finish = '', u = {};
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
@@ -3249,7 +3266,7 @@
       const c = j.choices?.[0]; if (c?.delta?.content) text += c.delta.content; if (c?.finish_reason) finish = c.finish_reason;
       if (j.usage) u = j.usage;
     }
-    if (finish === 'length') throw Object.assign(cutError(), { partial: text.trim() });
+    if (finish === 'length') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude·Gemini와 같게)
     if (finish === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.prompt_tokens) || 0, outTok: Number(u.completion_tokens) || 0, cached: Number(u.prompt_tokens_details?.cached_tokens) || 0 };
@@ -3351,12 +3368,13 @@
   // 플랜 쪽 오류는 API 요금으로 돌리지 않고 그대로 멈춰요. 한도는 다시 시도해도 소용없어서 HTTP 번호를 뺍니다(askModel이 429를 재시도해요).
   const gptFail = code => new Error({ subscription_sharing_usage_limit_exceeded: 'ChatGPT 사용 한도에 걸렸어요. ChatGPT 설정 › 사용량을 확인해 주세요.', subscription_sharing_user_not_eligible: '이 계정·워크스페이스는 ChatGPT 구독 연결을 쓸 수 없어요.',
     subscription_sharing_usage_unavailable: 'HTTP 503 · ChatGPT가 잠깐 응답을 못 해요.', subscription_sharing_user_unavailable: 'HTTP 503 · ChatGPT가 잠깐 응답을 못 해요.' }[code] || 'ChatGPT 오류 · ' + (code || '알 수 없음'));
-  async function askChatGPT(model, system, input, json = false) {
-    const call = token => requestRaw('POST', GPT_API + '/responses', { timeout: 600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + token, Accept: 'text/event-stream' },
-      body: { model: model.slice('chatgpt:'.length), instructions: system + (json ? '\nJSON만 출력한다. 코드블록, 설명문, JSON 외 텍스트는 출력하지 않는다.' : ''), input: [{ role: 'user', content: input }], store: false, stream: true } });
+  async function askChatGPT(model, system, input, json = false, think = '') { // think: 설정 › AI 생각(낮음·보통·높음) · 예전엔 안 넘겨서 늘 모델 기본값(더 오래 생각)으로 돌아 느렸어요
+    const rz = think ? { reasoning: { effort: think, summary: 'auto' } } : {}; // summary: 생각 요약이 오는 동안은 살아 있는 것(5분 조용하면 끊는 데 안 걸리게)
+    const call = (token, r = rz) => requestRaw('POST', GPT_API + '/responses', { timeout: 3600000, onProgress: raw => updateProg(raw), headers: { Authorization: 'Bearer ' + token, Accept: 'text/event-stream' },
+      body: { model: model.slice('chatgpt:'.length), instructions: system + (json ? '\nJSON만 출력한다. 코드블록, 설명문, JSON 외 텍스트는 출력하지 않는다.' : ''), input: [{ role: 'user', content: input }], store: false, stream: true, ...r } });
     const friendly = e => { const m = String(e?.message); return /HTTP 429\b/.test(m) ? gptFail('subscription_sharing_usage_limit_exceeded') : /HTTP 401\b/.test(m) ? new Error('ChatGPT가 로그인을 받아 주지 않아요. 설정에서 다시 로그인해 주세요.') : /HTTP 403\b/.test(m) ? new Error('ChatGPT 구독 연결이 막혔어요(계정·지역 제한일 수 있어요) · ' + m) : e; };
     const token = await gptToken(); let raw;
-    try { raw = await call(token).catch(async e => { if (!/HTTP 401\b/.test(String(e?.message))) throw e; return call(await gptToken(token)); }); } catch (e) { throw friendly(e); }
+    try { raw = await call(token).catch(async e => { const m = String(e?.message); if (/HTTP 400\b/.test(m) && rz.reasoning) return call(token, {}); if (!/HTTP 401\b/.test(m)) throw e; return call(await gptToken(token)); }); } catch (e) { throw friendly(e); }
     let text = '', done = false, cut = '', u = {};
     for (const line of raw.split('\n')) {
       if (!line.startsWith('data:')) continue;
@@ -3366,7 +3384,7 @@
       else if (j.type === 'response.incomplete') cut = j.response?.incomplete_details?.reason || 'unknown';
       else if (j.type === 'response.failed' || j.type === 'error') throw gptFail(j.response?.error?.code || j.error?.code || j.code);
     }
-    if (cut === 'max_output_tokens') throw Object.assign(cutError(), { partial: text.trim() });
+    if (cut === 'max_output_tokens') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것
     if (cut === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
     if (cut || !done) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.input_tokens) || 0, outTok: Number(u.output_tokens) || 0, cached: Number(u.input_tokens_details?.cached_tokens) || 0 };
@@ -6382,7 +6400,7 @@
           <div><div class="wd-bar"><i style="width:${injPc}%"></i></div><small style="margin:6px 0 0">${lastInj?.total && lastInj.total !== injected ? '원문 포함' : '전체'} ${fmt(lastInj?.total || injected)}자 중</small></div></div>
       </div>
       ${injLine}
-      <div class="wd-foot"><span class="muted" style="font-size:12px">1~${n.turns}턴 기억</span><span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button></div>
+      <div class="wd-foot"><span class="muted" style="font-size:12px">${n.turns ? '1~' + n.turns + '턴' : '시작 전'} 기억</span><span class="hero-dot">·</span><button class="hero-reset" data-act="reset"${busyNow ? ' disabled' : ''}>기억 초기화</button></div>
     </section>`;
     return old + (sceneOn ? dash : hero) + castHtml + recent + donut + (!sceneOn ? ltmRow : '') + verFoot();
   }
@@ -6762,7 +6780,7 @@
     const now0 = snapshot?.note; // 넣기 전 노트를 정리 기록(hist)에 남겨요 → 설정 › 백업 › 되돌릴 곳 고르기로 되돌릴 수 있게
     if (opt.regress && !otherRoom && snapshot?.note) return rgDraft(memory, turns || 0, '이 방 백업에서');
     const users0 = personsIn(splitSections(memory).find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name);
-    draft = { fromFile: true, sections: splitSections(opt.regress ? carryNote(memory, 'regress', users0) : memory), uptoId: upto, turns: turns || 1, chat: chatId, evidence: { ok: 0, bad: 0 }, kept: [], lost: [],
+    draft = { fromFile: true, sections: splitSections(opt.regress ? carryNote(memory, 'regress', users0) : memory), uptoId: upto, turns: turns || 0, chat: chatId, evidence: { ok: 0, bad: 0 }, kept: [], lost: [],
       ...(otherRoom || etc || opt.regress ? { carry: { base: memory, mode: opt.regress ? 'regress' : 'same', who: users0, other: otherRoom && !opt.regress, fromOther: otherRoom, etc } } : {}),
       ...(now0 ? { before: { memory: noteMemory(), upto: now0.upto, turns: now0.turns } } : {}), back: { tab: nav.tab, setTab: nav.setTab, wrOpen: nav.wrOpen }, // back: 넣은 뒤 돌아갈 자리(백업 화면 · 확프연동 펼친 채)
       sub: `파일에서 불러온 노트예요${here ? '' : ' (다른 기기·방의 노트라 지금 대화 끝에 붙여요)'}. 확인하고 채팅에 넣어 주세요.${now0 ? ' 넣기 전 노트는 설정 › 백업 › 되돌릴 곳 고르기에 남아요.' : ''}` };
@@ -6978,7 +6996,7 @@
           if (!body) throw new Error('붙일 답변 글을 못 읽었어요');
           // 앱 방식은 노트 전체를 넣어서, 웹 모드로 키운 큰 기억(5만 자 넘음)은 채팅 두 칸에 안 들어가요 → 이 방을 웹 모드로
           if (!sceneOn && stripProof(l.memory).length > 50000) { await applyScene(true, chatId, true); pageToast('웹 모드에서 키운 큰 기억이라 이 방도 웹 모드로 켰어요'); }
-          await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.fxOnly ? 0 : l.turns || 1, l.at || undefined, l.by || ''));
+          await writeMessage(chatId, msgId(carrier), body + buildBlock(l.memory, l.upto, l.fxOnly ? 0 : l.turns || 0, l.at || undefined, l.by || ''));
           await saveFull(chatId, l.upto, l.memory, l.turns, l.at);
           if (nav.gsOn) gsSave(true);
           setTimeout(() => refresh().catch(() => {}), 300);
@@ -10531,7 +10549,7 @@
     const ev = draft.evidence;
     const lost = draft.lost || [], kept = draft.kept || [];
     return `${draft.reviewDiff ? reviewDiffHtml(draft.reviewDiff) : ''}${carryHtml()}<div class="card" style="margin-bottom:12px">
-        <div style="font-size:15px;font-weight:700">1~${draft.turns}턴 기억이 나왔어요</div>
+        <div style="font-size:15px;font-weight:700">${draft.turns ? '1~' + draft.turns + '턴' : '시작 전'} 기억이 나왔어요</div>
         <div class="muted" style="margin-top:4px">${esc(draft.sub)}</div>
         ${(() => { const before = snapshot?.note ? stripProof(noteMemory()).length : 0, after = stripProof(joinSections(draft.sections)).length; // 홈과 같은 기준(채팅에 들어가는 크기)
           const oldLog = blocksOf(sections().find(x => x.key === '날짜로그')?.body || ''), newLog = blocksOf(draft.sections.find(x => x.key === '날짜로그')?.body || '');
@@ -10835,12 +10853,18 @@
     autoSumOn =String(await getValue('autoSum', 'on')) !== 'off'; if (!autoSumOn) return;
     { let hold = null; try { hold = JSON.parse(String(await getValue('autoHold:' + chatId, '') || 'null')); } catch (_) {} if (hold && hold.upto === snapshot.note?.upto && freshTurns() < hold.fresh + cycle) return; }
     const once = k => { if (autoSum[k] === chatId) return; autoSum[k] = chatId; return true; };
+    // 앞선 자동 정리가 아직 도는 중(다른 탭)이거나 새로고침으로 끊겼으면 또 부르지 않아요: Fable처럼 오래 걸리는 정리를 새로고침할 때마다 다시 불러 값이 계속 나갔어요
+    //   한 번 쉬고 나면 정리 주기만큼 더 쌓일 때까지 자동은 쉬어요(autoHold) · 직접 누르는 정리는 그대로 돼요 · 60분 넘은 표시는 끝난 걸로 봐요(정리 한도가 60분)
+    { let r = null; try { r = JSON.parse(String(await getValue('autoRun:' + chatId, '') || 'null')); } catch (_) {}
+      if (r && Date.now() - r.at < 3600000 && r.upto === (snapshot.note?.upto || '')) { await setValue('autoRun:' + chatId, ''); await setValue('autoHold:' + chatId, JSON.stringify({ upto: r.upto, fresh: freshTurns() }));
+        logErr('자동 정리', '앞선 자동 정리가 끝나기 전에 페이지가 새로 열려서 다시 안 부름', chatId); if (once('cut')) pageToast('지난 자동 정리가 끝나기 전에 페이지가 새로 열렸어요 · 값이 또 나가지 않게 자동 정리는 잠깐 쉬어요 · 지금 하려면 조아메모리 홈에서 "지금 바로 정리"를 눌러 주세요'); return; } }
     if (snapshot.note?.sel && !(fullNote && fullNote.upto === snapshot.note.upto)) { if (once('nofull')) pageToast('이 기기엔 전체 기억이 없어 자동 정리를 건너뛰어요 · 조아메모리 홈에서 "처음부터 다시 만들기"를 눌러 주세요'); return; }
     if ((!snapshot.note || !snapshot.note.turns) && freshTurns() > 100) { if (once('big')) pageToast('웹 모드 첫 기억은 정리하기를 한 번 눌러 만들어 주세요 · 그 뒤로는 10턴마다 자동이에요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     if (!String(await getValue(keyOf(m), '')).trim()) { if (once('nokey')) pageToast(provOf(m) === 'chatgpt' ? '자동 정리엔 ChatGPT 로그인이 필요해요 · 조아메모리 › 설정 › 정리 › AI에서 로그인해 주세요' : `웹 모드 자동 정리엔 키가 필요해요 · 조아메모리 › 설정 › 정리에서 ${KEYS[provOf(m)]?.[1] || '키'}를 넣어 주세요`); return; }
     { const chat = snapshot.all.filter(isChat); if (msgRole(chat[chat.length - 1]) === 'user') return; /* 답이 오면 말풍선이 바뀌어 다시 불려요 */ }
     autoBusy = true; repaintInline(); if (isOpen() && !nav.view && !nav.fxEdit) render();
+    await setValue('autoRun:' + chatId, JSON.stringify({ at: Date.now(), upto: snapshot.note?.upto || '' })); // 도는 중 표시(새로고침해도 남아요)
     try {
       pageToast(freshTurns() + '턴이 쌓여서 기억을 갱신하는 중이에요…');
       draft = null; await run('new');
@@ -10857,7 +10881,7 @@
         else if (w.length) { logErr('자동 정리', '그대로 넣음 · ' + w.join(' · '), chatId); pageToast('기억을 갱신했어요 · ' + w.join(' · ') + ' · 이상하면 설정 › 기록 › 정리 기록에서 되돌려요'); } }
     } catch (e) { console.info('[조아메모리 실험판] 자동 정리 실패 · ' + e.message); logErr('자동 정리', e.message, chatId); autoSum.wait = { c: chatId, n: freshTurns() + 3 };
       if (autoSum.failed !== chatId + '|' + e.message) { autoSum.failed = chatId + '|' + e.message; pageToast('자동 정리가 안 됐어요 · ' + String(e.message).slice(0, 80) + ' · 조아메모리 › 설정 › 기록 › 오류 기록에서 확인'); } }
-    finally { autoBusy = false; repaintInline(); if (isOpen() && !nav.view && !nav.fxEdit) render(); }
+    finally { autoBusy = false; await setValue('autoRun:' + chatId, ''); repaintInline(); if (isOpen() && !nav.view && !nav.fxEdit) render(); }
   }
   async function reinject(cid) {
     if (!cid || !sceneOn || busyNow || moving) return;
@@ -11413,7 +11437,7 @@
         catch (e) {
           // 새 대화가 길어 답이 잘리면 앞쪽 절반 턴만 정리합니다. 나머지는 다음 정리 때 이어져요.
           const users = msgs.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0);
-          if (!e.cut || mode !== 'new' || users.length < 2) throw e;
+          if (!e.cut || e.think || mode !== 'new' || users.length < 2) throw e; // think: 생각이 한도를 먹은 것 → 반으로 줄여도 똑같아요
           const half = Math.ceil(users.length / 2);
           msgs = msgs.slice(0, users[half]);
           uptoId = msgId(msgs[msgs.length - 1]); turns = (n?.turns || 0) + half;
