@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.77
+// @version      5.8.78
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -551,7 +551,8 @@
     for (const [a, b] of list) for (const [k, v] of Object.entries(origDiff(a, b))) if (!origMap[k] || origMap[k].length < v.length) { origMap[k] = v; n++; }
     if (n) await setValue('orig:' + chatId, JSON.stringify(origMap)); return n; }
   let packSig = {}; // 'pack:방' = { 사건 키: 간추린 글 표시 } · 간추리기로 줄인 사건 · 2차로 한 줄까지 줄인 건 앞에 '2:'
-  const packIs = (k, lines) => { const v = packSig[k]; return !!v && String(v).replace(/^2:/, '') === fxH(lines.join('\n')); }; // 지금 글이 간추린 그대로인지(그 뒤 고쳐졌으면 아님)
+  const PKH = new Map(), packH = (k, t) => { let c = PKH.get(k); if (!c || c.t !== t) { if (PKH.size > 3000) PKH.clear(); PKH.set(k, c = { t, h: fxH(t) }); } return c.h; }; // 사건 글이 그대로면 지문을 다시 안 만들어요
+  const packIs = (k, lines) => { const v = packSig[k]; return !!v && String(v).replace(/^2:/, '') === packH(k, lines.join('\n')); }; // 지금 글이 간추린 그대로인지(그 뒤 고쳐졌으면 아님)
   // 분기방이 분기 전 방의 원문 보관함·간추린 표시를 이어받아요(분기방에 아직 없을 때만) · 간추린 뒤에 분기해도 분기방에서 원문으로 떠올리게 · store: 드라이브 백업에서 왔으면 그 안의 것
   const packInherit = async (cid, src, store) => { if (!cid || !src || cid === src) return;
     for (const k of ['orig', 'pack']) { if (String(await getValue(k + ':' + cid, '') || '')) continue; const v = String(store?.[k] || await getValue(k + ':' + src, '') || ''); if (!v || v === '{}') continue;
@@ -587,7 +588,7 @@
   // 간추린 사건의 원문 본문 낱말: 사건마다 한 번만 뽑아 두고(원문 글이 바뀌면 다시) 매 턴은 이 목록만 걸러 써요 · 점수가 원문으로 고르던 때와 같게(간추리며 빠진 본문 낱말로도 떠올라요)
   //   근거 줄은 빼고 뽑아요(원문으로 고르던 때도 stripProof가 근거 줄을 빼고 봤어요)
   const OWC = new Map();
-  const owToks = k => { const o = origMap[k]; if (!o) return null; let c = OWC.get(k); if (!c || c.src !== o) { if (OWC.size > 3000) OWC.clear(); c = { src: o, toks: [...new Set((o.split('\n').slice(1).filter(l => !PROOF_LINE.test(l)).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))] }; OWC.set(k, c); } return c.toks; };
+  const owOf = k => { const o = origMap[k]; if (!o) return null; let c = OWC.get(k); if (!c || c.src !== o) { if (OWC.size > 3000) OWC.clear(); const L = o.split('\n'), keep = L.filter(l => !PROOF_LINE.test(l)); c = { src: o, txt: keep.length === L.length ? o : keep.join('\n'), toks: [...new Set((keep.slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))] }; OWC.set(k, c); } return c; }; // txt: 근거 줄을 뺀 원문(없으면 원문 그대로 · 글을 또 들고 있지 않아요)
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
     const packed = new Map(), all = stripProof(sceneOn ? origSwap(memory, packed) : memory, sceneOn), pool = []; // 웹 모드: 줄어든·묶인 사건은 보관함 원문으로 떠올려요 · 간추린 사건은 짧은 글로 고르고 넣을 때만 원문(fullOf)
     const FO = new Map(), fullOf = (sec, it, t) => { const k = itemKey(it.key); if (sec !== '날짜로그' || !packed.has(k)) return t; let r = FO.get(k); if (r == null) FO.set(k, r = splitSections(stripProof('■ 날짜로그\n' + origMap[k], true))[0]?.body || t); return r; };
@@ -609,7 +610,10 @@
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('피터')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
-    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)), pk = itemKey(key), ow = packed.has(pk) ? owToks(pk) : null; BW.set(id, r = (ow || [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))]).filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
+    // 간추린 사건이면 원문(이름·본문 낱말을 원문으로 봐요) · 제목이 같은 다른 칸(이정표) 항목은 아님
+    const PB = new Map(); if (packed.size) for (const it of secs.filter(x => x.key === '날짜로그').flatMap(x => ib(x).items)) { const k = itemKey(it.key); if (packed.has(k)) PB.set(it.key + '\u0000' + it.lines.join('\n'), k); }
+    const packOf = (key, body) => { const k = PB.size ? PB.get(key + '\u0000' + body) : null; return k ? owOf(k) : null; };
+    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)), ow = packOf(key, body)?.toks; BW.set(id, r = (ow || [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))]).filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
     const df = new Map(), bdf = new Map(); let nItems = 0;
     for (const sec of secs) for (const it of si(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
@@ -630,7 +634,7 @@
       for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(scene, w)) { core += 2; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 · 대화와 맞출 땐 명사 꼴만('끝에·에서'로 안 떠올리게) // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
       let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (w.length >= 3 && !common.has(w) && has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점 · 직전 답은 길어서 '이마·허리' 같은 두 글자는 우연히 겹쳐 3글자부터)
       bodyN = Math.min(4, bs) + Math.min(2.1, bc); core += bodyN;
-      const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + body) ? 1 : 0) + sm * 2;
+      const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + (packOf(key, body)?.txt || body)) ? 1 : 0) + sm * 2;
       why.set(k, [hit.length ? '‘' + hit.slice(0, 3).join('·') + '’ 이야기가 나와서' : '', sm >= 0.5 ? '비슷한 장면이라서' : ''].filter(Boolean).join(' · ') || '지금 나온 인물이 있어서');
       const ai = injCtx.ai?.[itemKey(key)], saidHit = dayHit(key) || words(key).some(w => (df.get(w) || 0) <= rare && said && inSaid(w)) || bs > 0, aiOk = ai != null && ai >= Math.max(70, (injCtx.aiTop || 0) - 20) && (ai >= (injKind === 'reroll' ? 90 : 80) || saidHit); // 확신(80+)하거나 보낸 말에 직접 나올 때만 · bs: 보낸 말에 본문 낱말('민들레')이 나와도 보낼 때 새로 골라요
       if (saidHit) injSaidHits.add(itemKey(key));
@@ -729,7 +733,7 @@
     }
     // 떠올린 옛 사건의 바로 앞뒤 사건은 제목만 같이(일이 어디서 시작해 어떻게 끝났는지) · 같은 NPC가 나오는 사건만 · 이미 들어간 건 빼요
     { const logSec = secs.find(x => x.key === '날짜로그'), L = logSec ? ib(logSec).items : [], got = [...pick.values()].filter(u => u.sec === '날짜로그' && u.recall);
-      const inIt = (p, it) => personAlias(p.name).some(a => a && a.length >= 2 && nmIn(it.lines.join(' '), a));
+      const inIt = (p, it) => personAlias(p.name).some(a => a && a.length >= 2 && nmIn(packOf(it.key, it.lines.join('\n'))?.txt || it.lines.join(' '), a));
       // 유저는 이어짐 판단에서 빼요 · 유저 표시가 없으면 가장 자주 나오는 한 사람(동률이면 아무도 안 뺌) · 떠올린 사건이 있을 때만 세요
       let npcs = got.length ? cast.filter(p => !p.isUser) : [];
       if (npcs.length > 1 && !cast.some(p => p.isUser)) { const c = npcs.map(p => [p, L.filter(it => inIt(p, it)).length]).sort((a, b) => b[1] - a[1]); if (c[0][1] > c[1][1]) npcs = npcs.filter(p => p !== c[0][0]); }
@@ -894,15 +898,18 @@
   //   확률은 현실보다 살짝 높게(롤플레잉용).
   let onceOut = [], onceChat = '', onceStale = false; // onceStale: 채팅 노트에 지난 꿈 줄이 남아 있음 → 다시 써서 빼요
   let preg = null, pregChat = '', pregOut = [], pregSig = '', pregMode = true, pregHasKey = false; // pregHasKey: AI 키가 있으면 정리할 때 임신·관계를 같이 알아채요 · 없으면 직접 시작·임테기만 // pregMode: 임신 기능 전체(끄면 찾기·AI 확인·채팅에 넣기 다 안 함 · 기록은 남음)
-  const P_DAY = s => { const n = String(s || '').match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})/); if (n) return Math.round(Date.UTC(2899 + +n[1], n[2] - 1, +n[3]) / 864e5); // 연도 없는 이야기: 1년차 = 2900년
-    const m = String(s || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : null; };
-  const P_STR = d => { const x = new Date(d * 864e5); if (x.getUTCFullYear() >= 2900) return (x.getUTCFullYear() - 2899) + '년차 ' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); return x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
+  const P_UTC = (y, m, d) => { const t = new Date(Date.UTC(2000, 0, 1)); t.setUTCFullYear(y, m - 1, d); return Math.round(t / 864e5); }; // Date.UTC는 0~99년을 1900년대로 바꿔서
+  const P_DAY = s => { const m = String(s || '').match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\.(\d{1,2})\.(\d{1,2})/); if (!m) return null; // 글에서 먼저 나온 날짜 · 현재상태 아래쪽에 적힌 옛일('1년차 12.27')이 맨 앞의 오늘 날짜를 밀어내지 않게
+    return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]); }; // 연도 없는 이야기: 1년차 = 2900년
+  // 두 날짜 사이 날수 · 'N년차'와 진짜 연도는 서로 못 세요(null)
+  const P_GAP = (a, b) => a == null || b == null || (a >= 339676) !== (b >= 339676) ? null : b - a; // 339676 = 2900.01.01
+  const P_STR = d => { const x = new Date(d * 864e5); if (x.getUTCFullYear() >= 2900) return (x.getUTCFullYear() - 2899) + '년차 ' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); return String(x.getUTCFullYear()).padStart(4, '0') + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
   function storyDay(mem) {
     mem = noPast(mem);
     const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB);
     if (d != null) return d;
     const all = [...String(mem || '').matchAll(/\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
-    if (all.length) return Math.max(...all);
+    if (all.length) { const ds = itemBlocks(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').items.map(x => P_DAY(x.lines[0])).filter(x => x != null), z = ds[ds.length - 1], same = z == null ? [] : all.filter(x => P_GAP(z, x) != null); return Math.max(...(same.length ? same : all)); } // 년차·연도가 섞였으면 마지막 사건과 같은 꼴에서
     // 노트가 없거나 날짜가 없으면(정리 전·앱 방식) 대화에서 바로: 최근 AI 답 머리말의 날짜(돈 안 듦)
     for (const m of [...(snapshot?.all || [])].reverse()) { if (msgRole(m) !== 'assistant') continue; const x = P_DAY2(stripBlocks(msgText(m)).slice(0, 400)); if (x != null) return x; }
     return null;
@@ -1113,7 +1120,7 @@
     }
   }
   const P_NOYEAR = 2900;
-  const P_DAY2 = s => { s = String(s || ''); { const n = P_DAY(s); if (n != null && /년차/.test(s)) return n; } const m = s.match(/(\d{4})\s*(?:[.\-/·]|[년年]\s*·?)\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5);
+  const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\s*(?:[.\-/·]|[년年]\s*·?)\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]);
     const md = s.match(/(\d{1,2})\s*[월月]\s*·?\s*(\d{1,2})\s*[일日]/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)); let x = msgRole(m) === 'assistant' ? P_DAY2(t.slice(0, 400)) : null; // AI 답 앞부분의 날짜(머리말)
@@ -1568,20 +1575,21 @@
       pregSave(); if (isOpen()) render();
     } catch (e) { logErr('핏줄 확인', e.message); pregGeneAsk.failed = true; } finally { pregGeneAsk.busy = false; } // 실패하면 이번 접속 동안 다시 안 물어요
   }
-  async function pregRelAsk(todo, who) {
+  async function pregRelAsk(todo, who, fresh = new Set()) {
     if (pregRelAsk.busy || !pregMode || !pregHasKey || !preg) return; pregRelAsk.busy = true; const cid = pregChat;
     try {
       const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; if (!String(await getValue(keyOf(m), '')).trim()) return;
       const r = parseJsonLoose(await askModel(P_REL_PROMPT, `[유저 캐릭터] ${who}\n\n` + todo.map((x, i) => `[${i}] ${x.src.slice(0, 1500)}`).join('\n\n'), '🍼관계 확인', true));
-      const list = r?.rels; if (!preg || pregChat !== cid || !Array.isArray(list)) return;
-      preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0 }; }
+      const list = r?.rels; if (!preg || pregChat !== cid) return; if (!Array.isArray(list)) throw new Error('AI 답에 관계 목록이 없어요');
+      preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0, ...(x.b ? { b: 1 } : {}) }; }
+      for (const k of Object.keys(preg.relAi)) if (preg.relAi[k].b && !fresh.has(k)) delete preg.relAi[k]; // 말풍선 답은 정리되면 다시 안 봐요(임신 기록과 턴별 사본이 계속 커지지 않게)
       for (const x of todo) if (!preg.relAi[x.k]) (pregRelAsk.failed ||= new Set()).add(x.k); // 답에 빠진 사건은 굳히지 않고 다음 접속에 다시 물어요
       pregSave(); if (isOpen()) render();
     } catch (e) { logErr('관계 확인', e.message); for (const x of todo) (pregRelAsk.failed ||= new Set()).add(x.k); } finally { pregRelAsk.busy = false; } // 실패한 사건은 이번 접속 동안 다시 안 물어요(화면 그릴 때마다 AI를 부르지 않게)
   }
   function pregKitRels(mem, ask = false) { // ask: 임신 화면을 열었을 때만 아직 안 물어본 사건을 AI에 물어요(보낼 때마다 묻지 않게)
     // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
-    const base = storyDay(mem), out = [], mine0 = pRelMine(mem), todo = [];
+    const base = storyDay(mem), out = [], mine0 = pRelMine(mem), todo = [], bub = new Set();
     const mine = t => mine0(t).split('\n').filter(l => l && !P_PAST.test(l)).join('\n'); // 지난 관계를 떠올린 줄은 그날 관계로 안 쳐요
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const src = [b.title, ...b.lines].join('\n'), d = P_DAY(b.title); if (d == null) continue;
       const fx = preg?.relFix?.[pKey(src)], ai = pregHasKey && P_SEX.test(src) ? preg?.relAi?.[pKey(src)] : null;
@@ -1597,13 +1605,13 @@
       if (x != null) cur = x;
       // 키가 있으면 관계 낱말이 든 아직 정리 안 된 말풍선도 AI가 읽어요(날짜로그 사건과 같은 요청에 · 말풍선마다 한 번 · 유저 캐릭터 본인 관계만)
       //   낱말로만 보면 '단테가 그녀 안에…'처럼 엄마가 '그녀·너'로 나온 문장을 남의 관계로 버려서, 정리 전엔 최근 관계를 못 잡고 예전 사건만 떴어요 · 답이 오기 전엔 낱말 그대로
-      if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
+      if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; bub.add(k); // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
         if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) { const tt = relAiText(ai, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { same.t += '\n' + tt; same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } if (x == null && cur != null) for (const p of t.split(/\n+|(?<=[.!?。])\s+/)) cur += pSkip(p); continue; } // AI가 아니라면 낱말로도 안 세요 · AI가 판단한 말풍선도 '일주일 뒤' 같은 날짜 넘김은 세요(뒤 장면 날짜가 안 밀리게) · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
-        if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src }); }
+        if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src, b: 1 }); }
       for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
         if (x == null && cur != null) cur += pSkip(p);
         const st = mine(p.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(y => y.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
-    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name);
+    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name, bub);
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
@@ -1977,7 +1985,7 @@
     if (love.who && love.who !== f.who) { love.exes = [...(love.exes || []).filter(x => x !== love.who), love.who].slice(-5); delete love.past; cyc(`${love.who}${love.stage === 'broke' ? '와 헤어진 뒤' : love.stage === 'married' ? '와 결혼한 뒤' : '와 사귀던 중'} → 새 연애 ${f.who}`); Object.assign(love, { stage: f.stage, start: null, startBy: '', broke: f.stage === 'broke' ? day ?? null : null, log: [], kinds: [], ev: null, stageBy: '', stageK: '', side: '', sideBy: '' }); love.side = loveSideFind(f.who); }
     if (!love.who) love.stage = f.stage; love.who = f.who;
     if (love.stage === 'married' && f.stage === 'dating') f = { ...f, stage: 'married' };
-    if (love.stage !== f.stage) { if (f.stage === 'broke') { love.broke = day ?? null; cyc(`${love.who}와 헤어짐${love.start != null && day != null && day >= love.start ? ` · ${day - love.start + 1}일 사귐` : ''}`); } else { cyc(`${love.who}와 다시 사귐${love.broke != null && day != null && day >= love.broke ? ` · ${day - love.broke}일 만에` : ''}`); love.broke = null; if (day != null && love.startBy !== 'user') { love.start = day; love.startBy = 'again'; } } love.stage = f.stage; love.ev = null; }
+    if (love.stage !== f.stage) { if (f.stage === 'broke') { love.broke = day ?? null; cyc(`${love.who}와 헤어짐${(P_GAP(love.start, day) ?? -1) >= 0 ? ` · ${day - love.start + 1}일 사귐` : ''}`); } else { cyc(`${love.who}와 다시 사귐${(P_GAP(love.broke, day) ?? -1) >= 0 ? ` · ${day - love.broke}일 만에` : ''}`); love.broke = null; if (day != null && love.startBy !== 'user') { love.start = day; love.startBy = 'again'; } } love.stage = f.stage; love.ev = null; }
     if (!love.startBy || love.startBy === 'note') { const g = loveStartGuess(mem, love.who); love.start = g; love.startBy = g != null ? 'note' : ''; }
     if (JSON.stringify(love) !== was) loveSave(); return f; }
   const loveLive = (mem, who) => { if (typeof love?.live === 'boolean') return love.live; try { const { rel, me } = loveCtx(), RE = /동거\s*(?:중|하|를\s*시작|생활)|(?:같이|함께)\s*(?:사는|살고\s*있|살기\s*시작|살게\s*됨)|(?:같은|한)\s*집에(?:서)?\s*(?:사는|살고\s*있)/; return !!me && (rel.some(r => ((r.from === me && r.to === who) || (r.to === me && r.from === who)) && RE.test(r.text || '')) || RE.test(splitSections(noPast(mem)).find(x => x.key === '현재상태')?.body || '')); } catch (_) { return false; } };
@@ -2046,7 +2054,7 @@
       if (love.who !== who || loveChat !== chatId) return;
       const st = P_DAY2(d.start || ''), ay = parseFloat(d.approxYears), today = storyDay(mem); if (!love.startBy || love.startBy === 'note' || love.startBy === 'again') { if (st != null) { love.start = st; love.startBy = 'ai'; love.startApprox = false; } else if (ay > 0 && today != null) { love.start = today - Math.round(ay * 365); love.startBy = 'ai'; love.startApprox = true; } }
       const lines = (Array.isArray(d.breaks) ? d.breaks : []).map(b => ({ d: P_DAY2(b.d || ''), k: String(b.kind || '') })).filter(b => /헤어짐|다시 사귐|결혼/.test(b.k)).sort((a, b) => (a.d ?? 0) - (b.d ?? 0));
-      if (lines.length) { let last = love.start ?? null; const mk = lines.map(b => { const t = `${b.d != null ? P_STR(b.d) + ' · ' : ''}${who}와 ${b.k}${b.k === '헤어짐' && last != null && b.d != null ? ' · ' + (b.d - last + 1) + '일 사귐' : b.k === '다시 사귐' && last != null && b.d != null ? ' · ' + (b.d - last) + '일 만에' : ''}`; last = b.d; return t; });
+      if (lines.length) { let last = love.start ?? null; const mk = lines.map(b => { const t = `${b.d != null ? P_STR(b.d) + ' · ' : ''}${who}와 ${b.k}${b.k === '헤어짐' && P_GAP(last, b.d) >= 0 && P_GAP(last, b.d) != null ? ' · ' + (b.d - last + 1) + '일 사귐' : b.k === '다시 사귐' && P_GAP(last, b.d) >= 0 && P_GAP(last, b.d) != null ? ' · ' + (b.d - last) + '일 만에' : ''}`; last = b.d; return t; });
         love.cycles = [...(love.cycles || []).filter(t => !t.includes(who + '와 헤어짐') && !t.includes(who + '와 다시 사귐') && !t.includes(who + '와 결혼')), ...mk].slice(-30); }
       const evs = (Array.isArray(d.events) ? d.events : []).map(e => ({ d: P_DAY2(e.d || ''), t: String(e.t || '').trim(), open: !!e.open, ...(e.solved && !e.open ? { solved: true } : {}), w: who })).filter(e => e.t);
       love.log = love.log || [];
@@ -2057,9 +2065,9 @@
     } catch (e) { toast('연애 기록 확인 실패 · ' + errMsg(e), 'err', 3500); }
     finally { loveScanBusy = ''; render(); }
   }
-  const loveAnniv = day => { if (love?.stage === 'broke' || love?.start == null || day == null || day < love.start) return ''; const n = day - love.start + 1, M = [[100, '100일'], [200, '200일'], [300, '300일'], [366, '1주년'], [500, '500일'], [731, '2주년'], [1000, '1000일'], [1096, '3주년']], x = M.find(([m]) => m >= n && m - n <= 3); return x ? (x[0] === n ? ` · 오늘 ${x[1]}` : ` · ${x[0] - n}일 뒤 ${x[1]}`) + '(기억할지·챙길지는 정해지지 않음)' : ''; };
+  const loveAnniv = day => { if (love?.stage === 'broke' || (P_GAP(love?.start, day) ?? -1) < 0) return ''; const n = day - love.start + 1, M = [[100, '100일'], [200, '200일'], [300, '300일'], [366, '1주년'], [500, '500일'], [731, '2주년'], [1000, '1000일'], [1096, '3주년']], x = M.find(([m]) => m >= n && m - n <= 3); return x ? (x[0] === n ? ` · 오늘 ${x[1]}` : ` · ${x[0] - n}일 뒤 ${x[1]}`) + '(기억할지·챙길지는 정해지지 않음)' : ''; };
   const loveApx = d => d >= 365 ? `약 ${Math.floor(d / 365)}년${d % 365 >= 150 ? ' 반' : ''}` : d >= 60 ? `약 ${Math.round(d / 30.4)}개월` : `약 ${d}일`;
-  const loveDays = day => { const n = x => x != null && day != null && day >= x ? day - x + 1 : 0; if (love.stage !== 'broke' && love.startApprox && n(love.start)) return `사귄 지 ${loveApx(n(love.start))}`; if (love.stage === 'broke' && love.brokeApprox && n(love.broke)) return `헤어진 지 ${loveApx(n(love.broke))}`; return love.stage === 'broke' ? (n(love.broke) ? `헤어진 지 ${n(love.broke)}일` : '헤어진 사이') : (n(love.start) ? `사귄 지 ${n(love.start)}일` : '사귀는 중'); };
+  const loveDays = day => { const n = x => Math.max(0, (P_GAP(x, day) ?? -1) + 1); if (love.stage !== 'broke' && love.startApprox && n(love.start)) return `사귄 지 ${loveApx(n(love.start))}`; if (love.stage === 'broke' && love.brokeApprox && n(love.broke)) return `헤어진 지 ${loveApx(n(love.broke))}`; return love.stage === 'broke' ? (n(love.broke) ? `헤어진 지 ${n(love.broke)}일` : '헤어진 사이') : (n(love.start) ? `사귄 지 ${n(love.start)}일` : '사귀는 중'); };
   function loveTick(chatId, snap, said = '', back = 0) {
     loveOut = []; loveSig = ''; if (!loveMode || loveChat !== chatId) return; love = love || {};
     const mem = noteMemory() || '', day = pregDay(mem, snap) ?? storyDay(mem); if (!loveSync(day, mem) || love.stage === 'married' || love.quiet) return;
@@ -2078,7 +2086,7 @@
       const newDay = dd != null && dd >= 1 && love.evRollDay !== day, p0 = gap < 3 ? 0 : dd != null ? (newDay ? (dd >= 3 ? 0.4 : 0.2) : gap >= 8 ? 0.15 : 0) : (gap >= 8 ? 0.2 : 0), p = p0 ? Math.min(0.6, p0 + tn * 0.05) : 0;
       if (newDay && gap >= 3) love.evRollDay = day; // 같은 날 또 생기는 건 드물게(긴 장면 하루에 일이 줄줄이 안 터지게) // 이야기 날짜로 며칠에 한 번꼴 · 날짜를 모르면 턴으로
       if (r('ev') < p) {
-        const K = [...(broke ? ['이 인물 생활에서 생긴 일(일·친구·가족)', '마주침(원래 같이 다니던 곳·같은 생활권일 때만)', '남은 물건 — 돌려 달라거나 돌려주거나 가져가라는 얘기', '같이 쓰던 것·사는 곳 정리(같이 살았다면 집 문제까지)', '술자리', '소식이 들림', '새 사람 소식(어느 쪽이든)'] : ['이 인물 생활에서 터진 일(일·학업·가족·돈·건강)', '둘 주변에서 생긴 사건사고', '일·학업·약속 때문에 생긴 일', '의견이 갈리는 일', '서운하게 하는 일(본인은 모를 수도)', '오해가 생길 만한 일', '둘 사이에 끼어드는 사람', '둘을 두고 도는 소문', `${who}가 먼저 꺼내는 일(제안·애정·질투·장난)`, '둘이 가까워지는 일(이 인물 방식으로)', ...(loveLive(mem, love.who) ? ['같이 사는 집에서 생기는 일'] : []), ...(love.start != null && day != null && day - love.start >= 180 ? ['오래 사귄 사이라서 생기는 일'] : [])]), ...(love.side ? [`바람 상대 ${love.side} 쪽에서 생긴 일`] : []), ...(!broke && loveExPrev() ? [`전 연인 ${loveExPrev()} 쪽에서 생긴 일`] : [])]; // 새 연애 중에도 전 연인이 가끔 얽혀요
+        const K = [...(broke ? ['이 인물 생활에서 생긴 일(일·친구·가족)', '마주침(원래 같이 다니던 곳·같은 생활권일 때만)', '남은 물건 — 돌려 달라거나 돌려주거나 가져가라는 얘기', '같이 쓰던 것·사는 곳 정리(같이 살았다면 집 문제까지)', '술자리', '소식이 들림', '새 사람 소식(어느 쪽이든)'] : ['이 인물 생활에서 터진 일(일·학업·가족·돈·건강)', '둘 주변에서 생긴 사건사고', '일·학업·약속 때문에 생긴 일', '의견이 갈리는 일', '서운하게 하는 일(본인은 모를 수도)', '오해가 생길 만한 일', '둘 사이에 끼어드는 사람', '둘을 두고 도는 소문', `${who}가 먼저 꺼내는 일(제안·애정·질투·장난)`, '둘이 가까워지는 일(이 인물 방식으로)', ...(loveLive(mem, love.who) ? ['같이 사는 집에서 생기는 일'] : []), ...((P_GAP(love.start, day) ?? 0) >= 180 ? ['오래 사귄 사이라서 생기는 일'] : [])]), ...(love.side ? [`바람 상대 ${love.side} 쪽에서 생긴 일`] : []), ...(!broke && loveExPrev() ? [`전 연인 ${loveExPrev()} 쪽에서 생긴 일`] : [])]; // 새 연애 중에도 전 연인이 가끔 얽혀요
         const cold = mine0.some(x => x.open), pool0 = K.filter(k => !(love.kinds || []).slice(-2).includes(k) && !(cold && /먼저 꺼내는|가까워지는/.test(k))), /* 안 풀린 일이 있으면(냉전·다툼 중) NPC가 다가가는 쪽 후보는 빼요 · 풀리는 건 서사에 계기 있을 때 */ rub = pool0.filter(k => /의견|서운|오해|약속/.test(k)), good = pool0.filter(k => /먼저 꺼내는|가까워지는/.test(k)), pool = tn >= 2 && rub.length && r('tw') < 0.5 ? rub : tn === 0 && good.length && r('gd') < 0.4 ? good : pool0, kind = pool[Math.floor(r('k') * pool.length)];
         const open = (love.log || []).filter(x => x.open && (!x.w || x.w === who)), old = !broke && open.length && r('old') < 0.25 ? open[Math.floor(r('o') * open.length)].t : '';
         const era = { modern: '현대', old: '옛날', fantasy: '판타지' }[pWorld(mem)] || '';
@@ -2187,7 +2195,7 @@
     const list = [...new Set([love.who, ...all].filter(Boolean))], more = !nav.loveAll && list.length > 5;
     const pick = `<details class="pg-hq pg-dad lv-pick"${nav.loveAll ? ' open' : ''}><summary aria-label="상대 바꾸기"><b>${love.who ? esc(love.who) : '상대 고르기'}</b><i>▾</i></summary><span class="pg-hb"><b>상대 고르기</b><span class="pg-dadl">${(more ? list.slice(0, 5) : list).map(n => `<button class="pg-wchip" data-act="lovewho" data-arg="${esc(n)}" aria-pressed="${love.who === n}">${esc(n)}</button>`).join('')}${more ? `<button class="pg-wchip" data-act="loveall">＋ ${list.length - 5}명 더</button>` : ''}<button class="pg-wchip" data-act="lovewho" data-arg="" aria-pressed="${!love.who}">없음</button></span></span></details>`;
     const by = !love.who ? (love.whoBy === 'user' ? '상대 없음으로 정했어요 · 채팅에 안 들어가요' : '노트에서 연인을 못 찾았어요 · 이름을 눌러 골라 주세요') : love.whoBy === 'user' ? '직접 골랐어요' : '노트 관계 줄에서 자동으로 찾았어요';
-    const nOf = x => x != null && day != null && day >= x ? day - x + 1 : 0, n = broke ? nOf(love.broke) : nOf(love.start);
+    const nOf = x => Math.max(0, (P_GAP(x, day) ?? -1) + 1), n = broke ? nOf(love.broke) : nOf(love.start);
     const sideList = [...new Set([love.side, ...all.filter(x => x !== love.who)].filter(Boolean))].slice(0, nav.loveSideAll ? 99 : 5);
     const sidePick = love.who ? `<button class="pg-wchip lv-c7" data-act="lovesideopen" aria-expanded="${!!nav.loveSideOpen}">🤫 바람 상대 · ${love.side ? esc(love.side) : '없음'}</button>` : '';
     const sideRow = love.who && nav.loveSideOpen ? `<div class="lv-siderow"><b>유저 캐릭터의 바람 상대</b><span class="pg-dadl">${[...sideList, ''].map(x => `<button class="pg-wchip" data-act="loveside" data-arg="${esc(x)}" aria-pressed="${(love.side || '') === x}">${x ? esc(x) : '없음'}</button>`).join('')}${!nav.loveSideAll && all.length > 6 ? '<button class="pg-wchip" data-act="lovesideall">＋ 더</button>' : ''}</span></div>` : '';
@@ -5249,6 +5257,24 @@
     .tline li.old::before{border-color:var(--pencil)}
     .tline li.side{background:transparent;border-style:dashed}
     .tl-date{background:var(--acc-soft);color:var(--acc-ink)}
+    /* 날짜로그 달력 */
+    .tl-vw{flex:none;display:inline-flex;background:var(--mist);border-radius:999px;padding:3px}.tl-vw button{border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--graphite);padding:6px 13px;border-radius:999px;cursor:pointer}.tl-vw button[aria-pressed="true"]{background:var(--paper);color:var(--acc-ink);box-shadow:0 1px 4px rgba(34,30,46,.1)}
+    .tl-vwr{margin:2px 0 10px}.tl-cal{margin-bottom:16px}
+    .cal{background:var(--paper);border:1px solid var(--rule);border-radius:22px;padding:16px 12px 14px;margin:0;box-shadow:0 8px 24px rgba(34,30,46,.05)}
+    .cal-h{display:flex;align-items:center;justify-content:space-between;padding:0 6px 10px}.cal-h>button{width:36px;height:36px;padding:0;border:0;border-radius:50%;background:var(--mist);color:var(--acc-ink);font:inherit;font-size:17px;line-height:1;cursor:pointer}.cal-h>button:disabled{opacity:.35;cursor:default}
+    .cal-tm>.cal-t{border:0;border-radius:14px;background:transparent;padding:0 14px;font:inherit;text-align:center;cursor:pointer}.cal-t b{display:block;font-size:18px;line-height:1.25;font-weight:800;color:var(--ink)}.cal-t small{display:block;margin-top:1px;font-size:11.5px;line-height:1.3;font-weight:500;color:var(--graphite)}
+    .cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}.cal-g .cw{font-size:11px;line-height:1.3;color:var(--graphite);text-align:center;padding:2px 0 5px}.cal-g .cw:first-child{color:#D9667A}
+    .cd{position:relative;display:block;box-sizing:border-box;width:100%;height:56px;margin:0;border:0;background:transparent;border-radius:14px;padding:0;font:inherit;font-size:13px;line-height:1;text-align:center;color:var(--pencil)}.cd{cursor:pointer}.cd.has{color:var(--ink);font-weight:700}.cd.sel{background:var(--acc);color:#fff}
+    .cd>span{position:absolute;left:0;right:0;top:2px;width:22px;height:22px;margin:0 auto;display:grid;place-items:center;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums;border-radius:50%}.cd.now>span{background:var(--acc);color:#fff;font-weight:800}.cd.sel.now>span{background:#fff;color:#5B43B8}
+    .cd .cc,.cd .ce{position:absolute;left:50%;top:26px;width:26px;height:26px;margin-left:-13px;background:center/contain no-repeat;font-style:normal;font-size:22px;line-height:26px}.cd em{position:absolute;left:calc(50% + 9px);top:25px;min-width:14px;height:14px;line-height:14px;padding:0 3px;box-sizing:border-box;border-radius:9px;background:#FF3B30;color:#fff;font-style:normal;font-size:9px;font-weight:800}
+    .cal-p{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.cm{position:relative;display:block;box-sizing:border-box;width:100%;height:76px;margin:0;border:0;background:transparent;border-radius:18px;padding:0;font:inherit;font-size:13.5px;line-height:1;text-align:center;color:var(--pencil)}.cm.has{color:var(--ink);font-weight:700;cursor:pointer}.cm.sel{background:var(--acc-soft)}
+    .cm>span{position:absolute;left:0;right:0;top:11px;line-height:18px}.cm .cc,.cm .ce{position:absolute;left:50%;top:33px;width:30px;height:30px;margin-left:-15px;background:center/contain no-repeat;font-style:normal;font-size:25px;line-height:30px}.cm em{position:absolute;left:calc(50% + 8px);top:33px;min-width:17px;height:17px;line-height:17px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#FF3B30;color:#fff;font-style:normal;font-size:10px;font-weight:800}.cm-0{position:absolute;left:50%;top:45px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--rule)}
+        .cc.c0{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%23A996EC%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}.cc.c1{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%23F2A7B8%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}.cc.c2{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%239FD5A8%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}.cc.c3{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%23F2CF7A%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}.cc.c4{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%239DBDF0%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}.cd.sel .cc{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2218%2015%2060%2062%22%3E%3Cpath%20d%3D%22M27%2030L30%2018L40%2026Q48%2024%2056%2026L66%2018L69%2030Q75%2037%2075%2047Q75%2064%2048%2064L38%2064L28%2074L30%2062Q21%2057%2021%2047Q21%2037%2027%2030Z%22%20fill%3D%22%23C9BBFA%22%2F%3E%3Cellipse%20cx%3D%2239%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cellipse%20cx%3D%2257%22%20cy%3D%2245%22%20rx%3D%223.4%22%20ry%3D%224.2%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2052Q45.5%2055%2048%2052Q50.5%2055%2053%2052%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%223.6%22%20ry%3D%222.4%22%20fill%3D%22%23FFB3C7%22%2F%3E%3C%2Fsvg%3E")}
+    .cd .due,.cal-due>i,.cm-0.on{-webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2022%22%3E%3Cpath%20d%3D%22M12%2021C5%2015.500%201%2011.500%201%207A6%206%200%200%201%2012%204A6%206%200%200%201%2023%207C23%2011.500%2019%2015.500%2012%2021Z%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2022%22%3E%3Cpath%20d%3D%22M12%2021C5%2015.500%201%2011.500%201%207A6%206%200%200%201%2012%204A6%206%200%200%201%2023%207C23%2011.500%2019%2015.500%2012%2021Z%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat}.cd .due{position:absolute;left:max(0px,calc(50% - 21px));top:4px;width:9px;height:9px;background:var(--acc)}.cd .due.late{background:var(--pencil)}.cd .due.ok{background:#3FB98F}.cd.sel .due{left:max(3px,calc(50% - 18px));top:6px;width:8px;height:8px;background:#fff}.cd .egg{position:absolute;left:calc(50% + 9px);top:1px;width:16px;font-size:11px;line-height:16px;font-weight:400}.cd .egg::after{content:'';position:absolute;inset:-4px -5px -9px -3px}.cd.now .egg{left:calc(50% + 10px)}.cal-due.ok:not(.cal-df){background:linear-gradient(rgba(63,185,143,.13) 0 0),var(--paper);border-color:transparent}.cal-due.on:not(.cal-df){background:var(--acc-soft);border-color:transparent}.cal-due.on:not(.cal-df) em{background:var(--paper)}.cal-df{width:100%;box-sizing:border-box;align-items:center;padding:11px 16px 11px 14px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);text-align:left;cursor:pointer}.cal-df>b{flex:none;width:6px;height:6px;margin:-3px 3px 0 0;border:solid var(--graphite);border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}.cal-df[aria-expanded="true"]>b{margin-top:3px;transform:rotate(225deg)}.cal-cw{position:relative}.cal-eg{position:absolute;left:0;top:calc(100% + 3px);z-index:6;width:max-content;max-width:210px;padding:4px 4px 4px 12px;border-radius:14px;background:var(--paper);border:1px solid var(--rule);box-shadow:0 6px 18px rgba(30,20,60,.1);font-size:12px;font-weight:600;color:var(--ink)}.cal-eg.m{left:50%;transform:translateX(-50%)}.cal-eg.r{left:auto;right:0}.cal-eg p{display:flex;align-items:center;gap:7px;margin:0}.cal-eg i{font-style:normal;font-size:14px}.cal-eg button{border:0;background:transparent;width:28px;height:28px;font:inherit;font-size:10px;color:var(--graphite);cursor:pointer}.cal-tm{display:flex;flex-direction:column;align-items:center}.cal-tm>span{display:flex;align-items:center;justify-content:center;gap:6px;min-height:20px}.cal-tm small{font-size:11px;font-weight:500;color:var(--graphite)}.cal-now{flex:none;border:0;border-radius:99px;padding:3px 7px;background:var(--acc-soft);color:var(--acc-ink);font:inherit;font-size:10.5px;font-weight:700;line-height:1;white-space:nowrap;cursor:pointer}.cm-0.on{width:10px;height:10px;margin-left:-5px;border-radius:0;background:var(--acc)}.cal-due{display:flex;gap:11px;align-items:center;margin:0 0 9px;padding:11px 6px 11px 14px;border-radius:18px;background:var(--paper);border:1px solid var(--rule)}.cal-due>i{flex:none;width:13px;height:13px;background:var(--acc)}.cal-due>span{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--ink)}.cal-due em,.cal-pop.add em{font-style:normal;font-size:11px;font-weight:700;color:var(--acc-ink);background:var(--acc-soft);border-radius:99px;padding:2px 8px;margin-right:7px}.cal-due small{display:block;margin-top:4px;font-size:12px;font-weight:500;color:var(--graphite)}.cal-due.late>i{background:var(--pencil)}.cal-due.ok>i{background:#3FB98F}.cal-due.late>span{color:var(--graphite)}.cal-due .cal-ed{margin-top:6px}.cal-mo{border:0;background:transparent;width:36px;height:36px;font:inherit;font-size:17px;color:var(--graphite);cursor:pointer}.cal-pop.add{display:block;width:min(300px,86%);max-height:260px;overflow-y:auto}.cal-pop.add p{margin:9px 4px 4px;font-size:11.5px;color:var(--graphite)}.cal-pop.add>button{display:block;width:100%;height:auto;padding:9px 8px;text-align:left;font-size:13px;line-height:1.4}.cal-pop.add .cal-ed input{width:auto;height:38px;text-align:left;padding:0 12px}.cal-pop.add .btn{width:auto;height:38px;padding:0 14px;font-size:13px;color:#fff;background:var(--acc)}.cal-hid{margin:4px;text-align:center}.cal-d .cal-q.qi{position:static;margin:0 0 0 auto}.cal-d .cal-q.qi>.pg-hb{left:auto;right:0;top:34px;width:min(232px,100%);box-sizing:border-box}.cal-d .cal-q>.pg-hb::before{display:none}.tl-fold .cal-q>summary{display:grid;place-items:center;justify-content:center;text-align:center;padding:0;width:18px;height:18px;font-size:10.5px}.cal-q>.pg-hb>span+span{margin-top:5px}
+    .tl-cal{container-type:inline-size}@container (min-width:620px){.cal{padding:24px 26px 22px}.cal-h{padding-bottom:16px}.cal-h>button{width:44px;height:44px;font-size:21px}.cal-t b{font-size:24px}.cal-t small{font-size:13px}.cal-g{gap:6px}.cal-g .cw{font-size:13px;padding-bottom:8px}.cd{height:88px;border-radius:20px;font-size:17px}.cd>span{top:6px;width:32px;height:32px}.cd .cc,.cd .ce{top:43px;width:38px;height:38px;margin-left:-19px;font-size:31px;line-height:38px}.cd em{left:calc(50% + 13px);top:42px;min-width:20px;height:20px;line-height:20px;border-radius:10px;font-size:12px}.cd .egg{left:calc(50% + 16px);top:4px;width:22px;font-size:17px;line-height:22px}.cd .due{left:calc(50% - 32px);top:7px;width:15px;height:15px}.cd.sel .due{left:calc(50% - 30px);top:9px;width:13px;height:13px}.cal-p{gap:8px}.cm{height:124px;font-size:17px;border-radius:24px}.cm>span{top:18px;line-height:22px}.cm .cc,.cm .ce{top:48px;width:52px;height:52px;margin-left:-26px;font-size:42px;line-height:52px}.cm em{left:calc(50% + 16px);top:48px;min-width:23px;height:23px;line-height:23px;border-radius:12px;font-size:13px}.cm-0{top:70px;width:8px;height:8px;margin-left:-4px}.cal-d>b{font-size:18px}.cal-d>small{font-size:13.5px}}
+    .cal-ht{flex:none;border:0;background:transparent;padding:4px;font:inherit;font-size:17px;line-height:1;color:var(--graphite);cursor:pointer}.cal-pop{position:absolute;right:0;bottom:calc(100% + 6px);z-index:3;display:grid;grid-template-columns:repeat(4,38px);gap:4px;padding:8px;border-radius:18px;background:var(--paper);border:1px solid var(--rule);box-shadow:0 10px 30px rgba(34,30,46,.16)}.cal-pop button{width:38px;height:38px;padding:0;border:0;border-radius:12px;background:transparent;font:inherit;font-size:19px;line-height:1;color:var(--ink);cursor:pointer}.cal-pop .h{color:#FF5C7A}.cal-pop button[aria-pressed="true"]{background:var(--mist)}.cal-pop .x{font-size:11.5px;color:var(--graphite)}.cal-pop .x:disabled{opacity:.35;cursor:default}.cal-pop input{box-sizing:border-box;width:38px;height:38px;border:0;border-radius:12px;background:var(--mist);font:inherit;font-size:16px;text-align:center;color:var(--ink);outline:0;padding:0}.cal-pop input::placeholder{font-size:11.5px;color:var(--graphite)}
+    .cal-d{position:relative;display:flex;align-items:baseline;gap:8px;margin:16px 4px 8px}.cal-d>b{flex:none;font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap}.cal-d>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:500;color:var(--graphite)}.cal-d>.cal-q,.cal-d>.cal-ht{flex:none}.cal-d>.cal-ht{padding:4px}
+    .tl-cal .tl-calev .tl-title{margin:0 0 3px;font-size:15px}.cal-sub{display:block;font-size:12px;color:var(--graphite);margin:0 0 2px}.cal-ft{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;margin-top:6px}.cal-ft small{font-size:11px;color:var(--pencil)}.cal-mv{display:inline-flex;gap:2px}.cal-mv button{width:28px;height:28px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;color:var(--graphite);cursor:pointer}.cal-mv button:disabled{opacity:.3;cursor:default}.cal-ft .tl-ppl{margin:0 auto 0 0}.cal-ft .linkbtn{font-size:11px;font-weight:500;color:var(--graphite);text-decoration:none;padding:7px 0}.cal-ft .linkbtn.on{color:var(--acc-ink);font-weight:700}.cal-ed{display:flex;gap:6px;width:100%}.cal-ed input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--ink);background:var(--mist);border:0;border-radius:12px;padding:8px 12px;outline:0}.cal-ed input:focus{box-shadow:inset 0 0 0 1.5px var(--acc)}.tl-cal .tl-calev{border-left:0;margin:0 0 12px;padding:0}.tl-cal .tl-calev>li::before{content:none}.tl-cal .tl-calev>li{margin-bottom:9px;padding:12px 14px}.tl-cal .tl-calev .tl-ev-fold>details>summary{margin:0;padding-top:0}.tl-cal .tl-calev>li.side{opacity:1;background:var(--paper);border-style:solid;padding-bottom:12px}.tl-cal .tl-ppl .av{background:none!important;box-shadow:none;margin-right:1px;font-size:16px}
     .inj-card summary b,.wd-tile b{color:var(--acc-ink)}
     /* 웹 모드 대시보드 */
     .wd{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
@@ -6466,7 +6492,7 @@
         if (!(cursor = next)) break;
       }
       etcQuiet = true;
-      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked', 'relkind']) await setValue(k + ':' + chatId, ''); relMemo = {}; relMemoChat = ''; }
+      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked', 'relkind']) await setValue(k + ':' + chatId, ''); relMemo = {}; relMemoChat = ''; tlDu = { c: '', v: { o: {}, m: [] } }; }
       finally { etcQuiet = false; }
       const now = new Date().toISOString();
       await setValue('resetAt:' + chatId, now); await setValue('etcAt:' + chatId, now);
@@ -6488,7 +6514,7 @@
     a.download = name; document.body.appendChild(a); a.click(); a.remove();
   }
   // 백업에 담는 이 방의 기기 저장값. 노트 자리(full·parked·moved)는 불러올 때 확인 화면 → 넣기로 다시 만들어져서 되살리지 않아요.
-  const BACKUP_KEYS = ['hist', 'orig', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'if', 'talk', 'gc', 'usage', 'ltmorig', 'ltmdone', 'pins', 'noinj', 'preg', 'love', 'styfix', 'pack']; // ltmorig: 장기기억으로 옮긴 원래 사건(되돌리기용) · ltmdone: 이미 옮긴 사건 · noinj: 꺼 둔(미주입) 항목
+  const BACKUP_KEYS = ['hist', 'orig', 'edited', 'quotes', 'etcnames', 'phone', 'pc', 'board', 'news', 'wiki', 'live', 'bet', 'if', 'talk', 'gc', 'usage', 'ltmorig', 'ltmdone', 'pins', 'noinj', 'preg', 'love', 'styfix', 'pack', 'caldue']; // ltmorig: 장기기억으로 옮긴 원래 사건(되돌리기용) · ltmdone: 이미 옮긴 사건 · noinj: 꺼 둔(미주입) 항목
   async function backupData(light = false) { // light: 정리 기록은 빼요(드라이브 자동 올리기 · 기록은 '방ID-h' 파일에 따로 있어요)
     const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId) return null;
     const store = {};
@@ -6711,7 +6737,7 @@
   }
   // 백업의 명대사·ETC·정리 기록을 이 기기에 넣기 · skip: 안 넣을 키(회귀면 임신 기록은 그 방 것이라 안 가져와요)
   async function putEtc(e, chatId, skip = []) {
-    etcQuiet = true; try { for (const [k, v] of Object.entries(e.store)) if (BACKUP_KEYS.includes(k) && !skip.includes(k)) await setValue(k + ':' + chatId, String(v)); } finally { etcQuiet = false; }
+    etcQuiet = true; try { for (const [k, v] of Object.entries(e.store)) if (BACKUP_KEYS.includes(k) && !skip.includes(k)) await setValue(k + ':' + chatId, String(v)); } finally { etcQuiet = false; tlDu = { c: '', v: { o: {}, m: [] } }; }
     if (Array.isArray(e.fixlib) && e.fixlib.length) { // 보관함: 이 기기에 없는 이름만 보태요(있는 건 그대로)
       let lib = []; try { lib = JSON.parse(String(await getValue('fixlib', '[]')) || '[]'); } catch (_) {}
       const have = new Set(lib.map(x => x.name)); lib = [...lib, ...e.fixlib.filter(x => x && x.name && x.text && !have.has(x.name))].slice(0, 100);
@@ -6828,9 +6854,9 @@
       return { src: 'g', memory: d.memory, upto: d.upto, turns: d.turns, at, by: d.by || '', savedAt: d.at, savedBy: d.by || '' };
     } catch (_) { return null; }
   }
-  async function gsList() { // 드라이브의 방 백업 목록(스크립트 v3부터)
+  async function gsList(all = false) { // 드라이브의 방 백업 목록(스크립트 v3부터) · all: 모드 기록·사본 파일까지
     let r; try { r = await gsCall({ action: 'list' }); } catch (e) { if (/알 수 없는 요청/.test(e.message)) throw new Error('드라이브 스크립트가 예전 버전이에요 · 설정 › 백업 › 연결 설정에서 "구글 스크립트 복사"로 새 글을 붙여 넣고 새 버전으로 배포해 주세요(주소는 그대로)'); throw e; }
-    return Array.isArray(r.items) ? r.items.filter(x => !/-[mhs]$/.test(x.chat)) : []; // '-m' = 모드 기록 · '-h' = 정리 기록 · '-s' = 턴별 사본 파일
+    return Array.isArray(r.items) ? r.items.filter(x => all || !/-[mhs]$/.test(x.chat)) : []; // '-m' = 모드 기록 · '-h' = 정리 기록 · '-s' = 턴별 사본 파일
   }
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
@@ -6864,9 +6890,21 @@
   // 턴별 사본(pregsnap·lovesnap)은 '방ID-s' 파일로 따로(5.8.70): 60턴치 사본이 모드 기록을 키워서, 방을 열 때·폰을 다시 볼 때마다 통째로 받다 아이폰이 꺼졌어요
   //   평소엔 '-m'(임신·연애·문체 보정)만 받고, 사본은 분기할 때 이 기기에 그 턴 것이 없을 때만 받아요 · 예전 판이 '-m'에 넣어 둔 사본도 그대로 읽어요
   const GS_SNAP = ['pregsnap', 'lovesnap'];
-  async function gsSnapPull(room) { let got = false;
-    for (const part of ['-s', '-m']) { const d = await gsModeFetch(room, part); if (!d?.store) continue;
-      for (const k of GS_SNAP) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } } return got; }
+  //   사본은 기기마다 자기 파일('방ID-기기-s')에만 올려요: 한 파일을 같이 쓰면 나중에 올린 기기가 다른 기기 사본을 덮어요 · 올릴 때 받아서 합치면 폰이 큰 파일을 계속 받아요
+  const gsDevId = async () => { let d = String(await getValue('gsdev', '') || ''); if (!d) { d = Math.random().toString(36).slice(2, 8); await setValue('gsdev', d); } return d; };
+  //   임신·연애가 같은 방을 이어서 찾아요: 10분 안엔 받은 걸 같이 써요(큰 파일을 두 번 안 받게)
+  const gsSnapRuns = new Map();
+  function gsSnapPull(room) { const r = gsSnapRuns.get(room); if (r && Date.now() - r.at < 6e5) return r.p; const p = gsSnapGet(room); gsSnapRuns.set(room, { at: Date.now(), p }); return p; }
+  async function gsSnapGet(room) { let got = false; const mark = 'gssp:' + room;
+    if (IS_STAY && Date.now() - (Number(await getValue(mark, '0')) || 0) < 216e5) return false; // 지난번에 받다가 페이지가 꺼졌으면 6시간 쉬어요(열 때마다 또 받다 꺼지지 않게)
+    if (IS_STAY) await setValue(mark, String(Date.now()));
+    crumbOn('gssnap', '드라이브에서 턴별 사본 받기');
+    try {
+      let mine = []; try { mine = (await gsList(true)).filter(x => x.chat.startsWith(room + '-') && /^-[a-z0-9]+-s$/.test(x.chat.slice(room.length))).sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0)).slice(-6).map(x => x.chat.slice(room.length)); } catch (_) {} // 옛 스크립트엔 목록이 없어요
+      for (const part of ['-m', '-s', ...mine]) { const d = await gsModeFetch(room, part); if (!d?.store) continue; // 옛 판 파일(-m·-s) 먼저, 기기 파일은 오래된 것부터(같은 턴은 새것이 남게)
+        for (const k of GS_SNAP) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } }
+    } finally { crumbOff('gssnap'); if (IS_STAY) await setValue(mark, ''); }
+    return got; }
   // 받은 크기는 'gsmlen:방-m'에 남겨요 · 다음에 받을 때 표시(crumb)에 붙어서, 받다가 꺼지면 오류 기록에 그 크기가 찍혀요
   async function gsModeFetch(chatId, part = '-m') { try { const r = await gsCall({ action: 'load', chat: chatId + part }), d = JSON.parse(r.data); await setValue('gsmlen:' + chatId + part, String(String(r.data || '').length)); return d?.app === 'memo-mode' && d.chat === chatId ? d : null; } catch (_) { return null; } }
   const gsLenTxt = async k => { const n = Number(await getValue('gsmlen:' + k, '0')) || 0; return n ? ' · 지난번 ' + Math.round(n / 1000) + '천 자' : ''; };
@@ -6876,10 +6914,8 @@
   async function gsModeSave(chatId, pulled = false) { if (!chatId || !String(await getValue('gsUrl', '')).trim()) return; try { if (!pulled) await gsPullStore(chatId); /* pulled: 방금 같은 방을 받았으면 또 안 받아요 */ const store = {}, snaps = {}; for (const k of GS_MODE) { const v = await getValue(k + ':' + chatId, ''); if (v) (GS_SNAP.includes(k) ? snaps : store)[k] = v; } if (!Object.keys(store).length && !Object.keys(snaps).length) return;
       const head = { app: 'memo-mode', v: 1, at: new Date().toISOString(), by: DEVICE, chat: chatId }, put = async (part, title, st) => { const s = JSON.stringify({ ...head, store: st }); gsModeBig(chatId, part, s, st); await gsCall({ action: 'save', chat: chatId + part, title: roomTitle() + title, data: s }); await setValue('gsmlen:' + chatId + part, String(s.length)); };
       await put('-m', ' 모드', store); /* 사본이 없어도 '-m'은 늘 새로 써요: 예전 판이 사본까지 넣어 둔 큰 '-m'을 작게 덮어요 */ if (pregChat === chatId && preg) pregSave.base = { c: chatId, s: preg.saved || 0 };
-      if (Object.keys(snaps).length) { const all = GS_SNAP.map(k => snaps[k] || '').join('\n'); let x = 0; for (let i = 0; i < all.length; i++) x = (x * 31 + all.charCodeAt(i)) | 0; const sig = x + ':' + all.length; // 사본은 바뀌었을 때만 올려요
-        // 올리기 전에 드라이브 '-s'를 받아 합쳐요: 안 합치면 다른 기기가 올린 턴 사본이 이 기기 것으로 덮여 사라져요 · 같은 턴은 이 기기 것
-        if (String(await getValue('gss:' + chatId, '')) !== sig) { const r = await gsModeFetch(chatId, '-s'); for (const k of GS_SNAP) { const t = r?.store?.[k]; if (t) snaps[k] = snapMerge(t, snaps[k] || '') || t; }
-          await put('-s', ' 사본', snaps); await setValue('gss:' + chatId, sig); } } }
+      if (Object.keys(snaps).length) { const all = GS_SNAP.map(k => snaps[k] || '').join('\n'); let x = 0; for (let i = 0; i < all.length; i++) x = (x * 31 + all.charCodeAt(i)) | 0; const dev = await gsDevId(), sig = dev + ':' + x + ':' + all.length; // 사본은 바뀌었을 때만 올려요
+        if (String(await getValue('gss:' + chatId, '')) !== sig) { await put('-' + dev + '-s', ' 사본', snaps); await setValue('gss:' + chatId, sig); } } }
     catch (e) { logErr('연동', '모드 기록 올리기 실패 · ' + e.message); } }
   const gsModeSoon = chatId => { clearTimeout(gsModeSoon.t); gsModeSoon.t = setTimeout(() => gsModeSave(chatId), 8000); };
   // 다른 기기의 임신·연애·문체 보정을 드라이브에서 한 번에 받아요 · 방을 열 때 + 폰·탭을 다시 볼 때(다른 기기에서 고친 게 새로고침 없이 와요)
@@ -9504,6 +9540,100 @@
     return `<div class="rvbar on"><span><b>🔍 확인할 기억을 골라 주세요</b><small>${k ? `${k}개 골랐어요 · 같은 일이면 하나로 합쳐요` : '사건 · 아직 끝나지 않은 일 · 인물 · 최대 5개'}</small></span><span class="rvbar-b"><button class="linkbtn" data-act="rvpick" data-arg="off">취소</button><button class="btn pri" data-act="rvgo"${k && !busyNow ? '' : ' disabled'}>확인하기${k ? ` (${k})` : ''}</button></span></div>`; };
   const rvStart = () => nav.rvPick ? '' : `<button class="rv-start" data-act="rvpick"${busyNow || noFullHere() ? ' disabled' : ''} title="${noFullHere() ? '이 기기엔 전체 기억이 없어서 못 해요' : '고른 기억을 원문과 다시 맞춰 봐요'}">🔍 다시 확인</button>`;
   const rvCk = k => `<i class="rv-ck${nav.rvSel?.has(k) ? ' on' : ''}" aria-hidden="true"></i>`;
+  // 달력으로 보기: 고른 달 한 장과 고른 날 사건만 그려요 · 달·날을 누르면 달력 칸만 다시 그려요(기억 화면 전체를 다시 안 만들게)
+  let tlCal = false, tlCalDraw = null; getValue('tlView', '').then(v => { tlCal = v === 'cal'; }).catch(() => {});
+  const tlDayOf = date => { if (/~/.test(date)) return null; const d = P_DAY(date) ?? (/\d{4}/.test(date) ? P_DAY2(date) : null); if (d == null) return null; // 여러 날·연도 없는 날짜는 달력에 못 놓아요
+    const m = String(date).match(/년차\s*(\d{1,2})[.\/](\d{1,2})/) || String(date).match(/\d{4}\s*(?:[.\-/·]|[년年]\s*·?)\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/), x = new Date(d * 864e5); return m && (x.getUTCMonth() + 1 !== +m[1] || x.getUTCDate() !== +m[2]) ? null : d; }; // 없는 날짜(13월·2월 30일)도
+  const tlYmOf = d => { const x = new Date(d * 864e5); return x.getUTCFullYear() * 12 + x.getUTCMonth(); };
+  let tlYr = new Set(); // 달력에서 'N년차'로 적힌 해(서기 3000년 같은 진짜 연도와 가르려고)
+  const noYearOf = y => y >= P_NOYEAR && tlYr.has(y) ? (y - P_NOYEAR + 1) + '년차' : y + '년';
+  const tlYmTxt = ym => { const y = Math.floor(ym / 12); return noYearOf(y) + ' ' + (ym % 12 + 1) + '월'; };
+  // 끝나지 않은 일의 날짜: 글에 분명히 적힌 것만('~까지' · 마감 · 앞으로의 날 + '~기로/예정') · 약속한 날·마지막 언급은 안 봐요 · AI 안 씀 · 못 읽으면 null
+  const DUE_D = '(\\d{1,3}\\s*년차\\s*\\d{1,2}[.\\/]\\d{1,2}|\\d{4}\\.\\d{1,2}\\.\\d{1,2})(?:\\s+(\\d{1,2}:\\d{2}))?', DUE_T = '(?:\\s*(?:오전|오후|아침|낮|저녁|밤|새벽|정오|자정))?',
+    DUE_UNTIL = new RegExp(DUE_D + DUE_T + '\\s*(?:전\\s*)?까지'), DUE_END = new RegExp('(?:기한|마감|만료)(?:일)?(?:은|는|이)?\\s*[:：]?\\s*' + DUE_D), DUE_END2 = new RegExp(DUE_D + '\\s*(?:마감|만료|기한)'), DUE_PLAN = new RegExp(DUE_D + '[^.。!?\\n]{0,40}?(?:[가-힣]기로|예정|약속)', 'g'), DUE_ANY = new RegExp(DUE_D, 'g'), DUE_OK = new RegExp('끝\\s*[(（]\\s*' + DUE_D + '[^)）]{0,12}[)）]\\s*지킴');
+  function dueOf(t, today) {
+    const p = String(t.title).split(/\s*·\s*/), base = { key: fxH(itemKey(p[p.length - 1])), kind: p.length > 1 ? p[0] : '', who: p.length > 2 ? p.slice(1, -1).join(' · ') : '', name: p[p.length - 1] };
+    const lm = String(t.text).match(/[（(]마지막 언급\s*[:：]\s*([^)）]*)[)）]\s*$/), tx = lm ? t.text.slice(0, lm.index) : t.text, all = base.name + ' ' + tx, at = m => m ? { d: tlDayOf(m[1]), time: m[2] || '' } : null;
+    if (t.closed) { const a = at(tx.match(DUE_OK)); return a?.d == null ? null : { ...base, ...a, ok: 1 }; }
+    let a = at(all.match(DUE_UNTIL)); if (a?.d != null) return { ...base, ...a, until: 1 };
+    a = at(all.match(DUE_END) || all.match(DUE_END2)); if (a?.d != null) return { ...base, ...a, until: 1 };
+    const ref = (lm ? tlDayOf(lm[1].split('·')[0].trim()) : null) ?? today, later = m => { const x = at(m); return x?.d != null && (P_GAP(ref, x.d) ?? -1) > 0 ? x : null; };
+    if (ref != null) for (const re of base.kind === '예정' ? [DUE_PLAN, DUE_ANY] : [DUE_PLAN]) for (const m of all.matchAll(re)) { const x = later(m); if (x) return { ...base, ...x }; }
+    return { ...base, d: null }; }
+  // 내가 달력에 한 것(caldue:방 · 이 기기에만): o = 끝나지 않은 일마다 { x 숨김 · v 지킴 · d 고친 날짜 } · m = 직접 적은 것 { k 날짜, t 글, v 지킴 } · 노트·채팅엔 안 들어가요
+  let tlDu = { c: '', v: { o: {}, m: [] } };
+  const duFix = v => ({ o: v?.o && typeof v.o === 'object' && !Array.isArray(v.o) ? Object.fromEntries(Object.entries(v.o).slice(-300)) : {}, m: Array.isArray(v?.m) ? v.m.filter(x => x && typeof x.t === 'string' && typeof x.k === 'string').slice(-300) : [] });
+  function duOf(c) { if (tlDu.c !== c) { const h = tlDu = { c, v: { o: {}, m: [] } }; if (c) getValue('caldue:' + c, '').then(v => { if (tlDu !== h || !v) return; h.v = duFix(JSON.parse(String(v))); tlCalPaint(); }).catch(() => {}); } return tlDu.v; }
+  function duSave(fn) { const cid = chatIdFromPath(), h = (duOf(cid || ''), tlDu); if (!cid) return; // 저장은 한 줄로 · 저장된 것에 이번 것만 얹어서 다른 창에서 한 것도 남아요
+    return duSave.q = (duSave.q || Promise.resolve()).then(async () => { let v = null; try { v = JSON.parse(String(await getValue('caldue:' + cid, '') || 'null')); } catch (_) {}
+      v = duFix(v); fn(v); for (const k of Object.keys(v.o)) if (!Object.keys(v.o[k] || {}).length) delete v.o[k]; v = duFix(v);
+      await setValue('caldue:' + cid, Object.keys(v.o).length || v.m.length ? JSON.stringify(v) : ''); if (tlDu === h) { h.v = v; tlCalPaint(); } }).catch(e => logErr('달력', '약속 저장 실패 · ' + (e?.message || e))); }
+  // 달력 칸과 펼쳐 둔 '날짜 없는 사건'만 다시 그리기
+  function tlCalPaint() { const box = root.querySelector('[data-tlcal]'); if (!box || !tlCalDraw) return; const mn = out('main'), y = mn.scrollTop; box.innerHTML = tlCalDraw(); const ol = root.querySelector('details[data-lazy="tlold"][open]>ol'); if (ol && tlOld) ol.innerHTML = tlOld(); mn.scrollTop = y; }
+  const dTxt = d => tlYr.has(new Date(d * 864e5).getUTCFullYear()) || new Date(d * 864e5).getUTCFullYear() < P_NOYEAR ? P_STR(d) : (x => x.getUTCFullYear() + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'))(new Date(d * 864e5));
+  const TL_NTH = ['', '첫', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+  function tlCalHtml(evs, { li, today, who, round = 1, rounds = 0, split = [], dues = [], eggs = [], has = null }) {
+    const by = new Map(), ymN = new Map(); let last = null; tlYr = new Set();
+    for (const e of evs) { const d = tlDayOf(e.date); if (d == null) continue; last = d; by.get(d)?.push(e) || by.set(d, [e]); const ym = tlYmOf(d); ymN.set(ym, (ymN.get(ym) || 0) + 1); if (/년차/.test(e.date)) tlYr.add(Math.floor(ym / 12)); }
+    if (last == null) return emptyBox('달력에 놓을 수 있는 날짜가 아직 없어요.');
+    const sk = d => { let r = round; while (r > 1 && split[r - 1] != null && d < split[r - 1]) r--; return r > 1 ? r + ':' + d : String(d); }; // 회차마다 따로
+    const du = duOf(chatIdFromPath() || ''), dBy = new Map(), dAdd = (d, x) => { dBy.get(d)?.push(x) || dBy.set(d, [x]); }, st = (d, ok) => ok ? 'ok' : (P_GAP(today, d) ?? 0) < 0 ? 'late' : 'on', loose = []; let hid = 0;
+    for (const x of dues) { const o = du.o[x.key] || {}, d = o.d ?? x.d; if (o.x) { hid++; continue; } if (d == null) { if (!x.ok) loose.push(x); continue; } dAdd(d, { ...x, id: 'o' + x.key, d, s: st(d, x.ok || o.v), mine: !!o.v }); }
+    du.m.forEach((x, i) => { const d = Number(x.k.split(':').pop()); if (sk(d) !== x.k || has && !has(x.t)) return; dAdd(d, { id: 'm' + x.k + '|' + x.t, kind: '', who: '', name: x.t, time: '', d, s: st(d, x.v), mine: !!x.v, own: 1 }); });
+    const egg = eggs.filter(x => !du.o[x.key]?.x); hid += eggs.length - egg.length;
+    for (const d of [...dBy.keys(), ...egg.map(x => x.d)]) { const k = tlYmOf(d); if (!ymN.has(k)) ymN.set(k, 0); }
+    if (today != null && P_GAP(today, last) != null && !ymN.has(tlYmOf(today))) ymN.set(tlYmOf(today), 0);
+    const yms = [...ymN.keys()].sort((a, b) => a - b), ym = ymN.has(nav.tlYm) ? nav.tlYm : tlYmOf(last), at = yms.indexOf(ym), y = Math.floor(ym / 12), m = ym % 12, noYear = tlYr.has(y);
+    const first = P_UTC(y, m + 1, 1), len = P_UTC(y, m + 2, 1) - first, days = Array.from({ length: len }, (_, i) => first + i), sel = nav.tlDay != null && tlYmOf(nav.tlDay) === ym ? nav.tlDay : days.filter(d => by.has(d)).pop() ?? days.filter(d => dBy.has(d) || egg.some(x => x.d === d)).pop() ?? days.find(d => d === today) ?? first;
+    const eBy = new Map(); for (const x of egg) { const b = new Date(x.d * 864e5), n = y - b.getUTCFullYear(); if (b.getUTCMonth() !== m || n < 0) continue; const d = P_UTC(y, m + 1, b.getUTCDate()); // 기일은 해마다 같은 날 · 오늘까지만
+      if (n && (!x.yearly || tlYmOf(d) !== ym || !((P_GAP(x.d, today) ?? -1) >= d - x.d))) continue; const t = { ...x, txt: n ? x.wed ? `${x.name} · 결혼 ${n}주년` : `${x.name}의 ${TL_NTH[n] ? TL_NTH[n] + ' 번째' : n + '번째'} 기일` : x.txt }; eBy.get(d)?.push(t) || eBy.set(d, [t]); }
+    const dueFold = l => !l.length ? '' : `<button class="cal-due cal-df ${['on', 'late', 'ok'].find(k => l.some(x => x.s === k))}" data-act="tldf" aria-expanded="${!!nav.tlDf}"><i></i><span>약속 ${l.length}</span><b></b></button>${nav.tlDf ? l.map(dueRow).join('') : ''}`;
+    const wd = d => new Date(d * 864e5).getUTCDay(), WK = '일월화수목금토', dn = d => new Date(d * 864e5).getUTCDate();
+    const dueB = l => l ? `<b class="due ${['on', 'late', 'ok'].find(k => l.some(x => x.s === k))}"></b>` : '';
+    const stamp = n => who ? `<i class="ce">${esc(ANIM.get(who) || PROF.get(who)?.emoji || animalOf(who))}</i>` : `<i class="cc c${n % 5}"></i>`;
+    const cell = d => { const l = by.get(d), n = l?.length || 0, c = (n ? ' has' : '') + (d === sel ? ' sel' : '') + (d === today ? ' now' : '');
+      return `<button class="cd${c}" data-act="tlday" data-arg="${d}" aria-pressed="${d === sel}" aria-label="${m + 1}월 ${dn(d)}일 ${n ? '사건 ' + n + '개' : '사건 없음'}"><span>${dn(d)}</span>${n ? stamp(dn(d)) : ''}${n > 1 ? `<em>${n}</em>` : ''}${dueB(dBy.get(d))}${eBy.has(d) ? `<b class="egg">${eBy.get(d)[0].ic}</b>` : ''}</button>`; };
+    const left = d => { const n = P_GAP(today, d); return n == null ? '' : n === 0 ? '오늘' : n > 0 ? n + '일 남음' : -n + '일 지남'; };
+    const dueRow = x => { const open = nav.tlDue === x.id, a = esc(x.id); return `<div class="cal-due ${x.s}"><i></i><span>${x.kind ? `<em>${esc(x.kind)}</em>` : ''}${esc(x.name)}<small>${[x.who && esc(x.who), x.time, x.until && x.s !== 'ok' ? (m + 1) + '월 ' + dn(x.d) + '일까지' : '', x.s === 'ok' ? '지킴' : left(x.d)].filter(Boolean).join(' · ')}</small>${open ? `<span class="cal-ft">${x.ok ? '' : `<button class="linkbtn" data-act="tldok" data-arg="${a}">${x.mine ? '지킴 풀기' : '지킴'}</button>`}${x.ok ? '' : `<button class="linkbtn" data-act="tldmv" data-arg="${a}">날짜 바꾸기</button>`}<button class="linkbtn" data-act="tldx" data-arg="${a}">지우기</button></span>${nav.tlDueD ? `<span class="cal-ed"><input data-tldd value="${esc(dTxt(x.d))}" aria-label="날짜"><button class="btn sm pri" data-act="tlddok" data-arg="${a}">저장</button></span>` : ''}` : ''}</span><button class="cal-mo" data-act="tldue" data-arg="${a}" aria-expanded="${open}" aria-label="고치기">⋯</button></div>`; };
+    const ago = today == null || Math.abs(today - sel) > 36500 ? '' : today === sel ? '오늘' : today > sel ? agoText(today - sel) : sel - today + '일 뒤', L = by.get(sel) || [];
+    const years = [...new Set(yms.map(k => Math.floor(k / 12)))], py = years.includes(nav.tlPickY) ? nav.tlPickY : y, pa = years.indexOf(py), pN = yms.filter(k => Math.floor(k / 12) === py).reduce((a, k) => a + ymN.get(k), 0);
+    const mon = i => { const k = py * 12 + i, n = ymN.get(k) || 0; return ymN.has(k) ? `<button class="cm has${k === ym ? ' sel' : ''}" data-act="tlym" data-arg="${k}" aria-pressed="${k === ym}" aria-label="${i + 1}월 사건 ${n}개"><span>${i + 1}월</span>${n ? stamp(i + 1) : '<i class="cm-0 on"></i>'}${n > 1 ? `<em>${n}</em>` : ''}</button>` : `<div class="cm"><span>${i + 1}월</span><i class="cm-0"></i></div>`; };
+    const pick = !nav.tlPick ? '' : `<div class="cal"><div class="cal-h"><button data-act="tlpy" data-arg="${years[pa - 1] ?? ''}"${pa > 0 ? '' : ' disabled'} aria-label="앞 해">‹</button><button class="cal-t" data-act="tlpick" aria-expanded="true"><b>${noYearOf(py)}</b><small>사건 ${pN}개</small></button><button data-act="tlpy" data-arg="${years[pa + 1] ?? ''}"${pa < years.length - 1 ? '' : ' disabled'} aria-label="뒤 해">›</button></div><div class="cal-p">${Array.from({ length: 12 }, (_, i) => mon(i)).join('')}</div></div>`;
+    return (pick || `<div class="cal"><div class="cal-h"><button data-act="tlym" data-arg="${yms[at - 1] ?? ''}"${at > 0 ? '' : ' disabled'} aria-label="앞 달">‹</button><span class="cal-tm"><button class="cal-t" data-act="tlpick" aria-expanded="${!!nav.tlPick}"><b>${tlYmTxt(ym)}</b></button><span><small>${rounds ? round + '회차 · ' : ''}사건 ${ymN.get(ym)}개</small>${today != null && sel !== today && ymN.has(tlYmOf(today)) ? `<button class="cal-now" data-act="tlnow" data-arg="${today}">오늘</button>` : ''}</span></span><button data-act="tlym" data-arg="${yms[at + 1] ?? ''}"${at < yms.length - 1 ? '' : ' disabled'} aria-label="뒤 달">›</button></div>
+      <div class="cal-g">${noYear ? '' : [...WK].map(w => `<div class="cw">${w}</div>`).join('') + '<div></div>'.repeat(wd(first))}${days.map((d, i) => d === sel && nav.tlEgg && eBy.has(d) ? `<div class="cal-cw">${cell(d)}<div class="cal-eg${noYear ? '' : ['', '', ' m', ' m', ' m', ' r', ' r'][wd(d)]}">${eBy.get(d).map(x => `<p><i>${x.ic}</i><span>${esc(x.txt)}</span><button data-act="tldx" data-arg="o${esc(x.key)}" aria-label="지우기">✕</button></p>`).join('')}</div></div>` : cell(d)).join('')}</div></div>`) + `
+      <div class="cal-d"><b>${m + 1}월 ${dn(sel)}일${noYear ? '' : ' ' + WK[wd(sel)] + '요일'}</b><small>${L.length ? '사건 ' + L.length + '개' : '사건 없음'}${ago ? ' · ' + ago : ''}</small><details class="pg-hq qi cal-q"><summary class="nf-q" aria-label="달력 설명">?</summary><span class="pg-hb"><span>보기용 · 채팅·노트엔 안 들어감</span><span>정리해야 반영</span><span>보라 약속 · 회색 지남 · 초록 지킴</span><span>＋ 약속 적기 · ⋯ 고치기 · 이 기기에만</span><span>날짜 고치기·↑↓만 노트에 반영</span></span></details><button class="cal-ht add" data-act="tladd" aria-expanded="${!!nav.tlAdd}" aria-label="이 날에 약속 적기">＋</button>${nav.tlAdd ? `<div class="cal-pop add"><span class="cal-ed"><input data-tladd placeholder="이 날 할 일 · 약속" maxlength="60" aria-label="약속 적기" autocomplete="off"><button class="btn sm pri" data-act="tladdok" data-arg="${sk(sel)}">적기</button></span>${loose.length ? `<p>끝나지 않은 일에서 고르기</p>${loose.slice(0, 30).map(x => `<button data-act="tldset" data-arg="${x.key}|${sel}">${x.kind ? `<em>${esc(x.kind)}</em>` : ''}${esc(x.name)}</button>`).join('')}` : ''}</div>` : ''}</div>${L.length ? `<ol class="tline tl-calev">${L.map((e, i) => li(e, false, L.length, i)).join('')}</ol>` : ''}${dueFold(dBy.get(sel) || [])}${hid ? `<p class="cal-hid"><button class="linkbtn" data-act="tldback">지운 것 ${hid}개 다시 보기</button></p>` : ''}`;
+  }
+  // 사건 날짜 고치기: 제목 줄의 날짜만 바꿔요 · 없으면 null(못 찾음) · 같은 제목이 이미 있으면 ''
+  function evDateSet(mem, key, date) {
+    const list = splitSections(mem), s0 = list.find(x => x.key === '날짜로그'); if (!s0) return null;
+    const b = itemBlocks(s0.body), it = b.items.find(x => itemKey(x.key) === key); if (!it) return null;
+    const head = it.lines[0].trim().replace(/^▸\s*/, ''), tail = (head.match(/\s*\(요약\)\s*$/) || [''])[0], t = nSplitTitle(head.slice(0, head.length - tail.length))[1].replace(/^\[|\]$/g, '').replace(/^날짜 미상\s*-\s*/, '');
+    const old = it.lines.join('\n'), L0 = '▸ [' + date + '-' + t + ']' + tail, nk = itemKey(itemBlocks(L0).items[0]?.key || '');
+    if (b.items.some(x => x !== it && itemKey(x.key) === nk)) return '';
+    it.lines[0] = L0;
+    const at = P_DAY2(date), tm = t => (String(t).match(/(\d{1,2}):(\d{2})/) || []).slice(1).reduce((x, y) => x * 60 + +y, 0) || null, rest = b.items.filter(x => x !== it), dOf = x => { const d = nSplitTitle(x.lines[0].trim().replace(/^▸\s*/, ''))[0], v = tlDayOf(d); return P_GAP(at, v) == null ? null : [v, tm(d)]; };
+    let pos = -1, seen = false; rest.forEach((x, i) => { const v = dOf(x); if (!v) return; seen = true; if (v[0] < at || v[0] === at && (tm(date) == null || v[1] == null || v[1] <= tm(date))) pos = i; });
+    if (seen) { if (pos < 0) pos = rest.findIndex(x => dOf(x)) - 1; rest.splice(pos + 1, 0, it); } else rest.splice(b.items.indexOf(it), 0, it);
+    s0.body = [...b.head, ...rest.flatMap(x => x.lines)].join('\n').trim();
+    return { memory: joinSections(list.filter(x => x.body.trim())), nk, old, now: it.lines.join('\n') };
+  }
+  // 같은 날 사건끼리 순서 바꾸기(dir: -1 위로 · 1 아래로) · 이름은 안 바뀌어서 이어 둔 것은 그대로
+  function evMove(mem, key, dir) {
+    const list = splitSections(mem), s0 = list.find(x => x.key === '날짜로그'); if (!s0) return null;
+    const b = itemBlocks(s0.body), dOf = x => tlDayOf(nSplitTitle(x.lines[0].trim().replace(/^▸\s*/, ''))[0]), i = b.items.findIndex(x => itemKey(x.key) === key); if (i < 0) return null;
+    const d = dOf(b.items[i]); let j = i + dir; while (b.items[j] && (b.items[j].del || dOf(b.items[j]) !== d)) j += dir; if (d == null || !b.items[j]) return null;
+    [b.items[i], b.items[j]] = [b.items[j], b.items[i]]; s0.body = [...b.head, ...b.items.flatMap(x => x.lines)].join('\n').trim();
+    return joinSections(list.filter(x => x.body.trim())); }
+  // 날짜가 바뀌면 사건 이름도 바뀌어서, 이름으로 이어 둔 것(📌 고정 · 넣음/뺌 · 간추린 원문 · 관계 기록)을 새 이름으로 옮겨요
+  async function evKeyMove(cid, a, b, old, now) {
+    if (injPins.delete(a)) { injPins.add(b); await setValue('pins:' + cid, JSON.stringify([...injPins])); }
+    if (NO_INJ.delete('날짜로그|' + a)) { NO_INJ.add('날짜로그|' + b); await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); }
+    if (origMap[a]) { const o = origMap[a].split('\n'), nl = now.split('\n'), was = packIs(a, old.split('\n')) ? packSig[a] : null; o[0] = nl[0]; origMap[b] = o.join('\n'); delete origMap[a]; if (was) packSig[b] = (/^2:/.test(was) ? '2:' : '') + fxH(now); delete packSig[a];
+      await setValue('orig:' + cid, JSON.stringify(origMap)); await setValue('pack:' + cid, JSON.stringify(packSig)); }
+    if (preg && pregChat === cid) { const src = t => { const x = blocksOf(t)[0]; return pKey([x?.title, ...(x?.lines || [])].join('\n')); }, p = src(old), q = src(now); let ch = false;
+      for (const m of [preg.relFix, preg.relAi]) if (m?.[p]) { const v = { ...m[p] }; if (m === preg.relFix) delete v.d; m[q] = v; delete m[p]; ch = true; }
+      if (ch) await pregSave(); }
+  }
   function timelineHtml() {
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요.');
     const names = [...people().keys()], who = nav.tlWho && names.includes(nav.tlWho) ? nav.tlWho : null;
@@ -9522,18 +9652,18 @@
     const rounds = rN ? `<div class="pchips" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px">${[0, ...Array.from({ length: rN }, (_, i) => i + 1)].map(i => `<button class="pcchk" data-act="tlround" data-arg="${i}" aria-pressed="${i === rnd}">${i ? i + '회차' : '지금 · ' + (rN + 1) + '회차'}</button>`).join('')}</div>` : '';
     const evsAll = (rnd ? pastEv : blocksOf(bodyOf('날짜로그'))).map(b => {
       const packed = /\(요약\)/.test(b.title || ''), m = (b.title || '').replace(/\s*\(요약\)\s*$/, '').match(/^\[?([^\]\-]+?)\s*-\s*(.+?)\]?$/);
-      const q = b.lines.find(l => /^근거\s*[:：]/.test(l));
-      return { raw: b.title || '', date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, lines: evMeta2(b.lines.filter(notProofLine)),
+      const q = b.lines.find(l => /^근거\s*[:：]/.test(l)); let ls, al; // 본문·나온 사람 글은 화면에 나올 때 한 번만 풀어요(안 보이는 사건까지 풀면 긴 방에서 열 때마다 멈췄어요)
+      return { raw: b.title || '', date: m ? m[1].trim() : '', title: m ? m[2].trim() : (b.title || '사건').replace(/^\[|\]$/g, ''), packed, get lines() { return ls ??= evMeta2(b.lines.filter(notProofLine)); },
         quote: q ? q.replace(/^근거\s*[:：]\s*/, '').replace(/^["“]|["”]$/g, '') : '',
         // 나온 사람 = 제목·행동 줄에 이름이 있는 사람. "장소 · 그 자리 인물 나열" 줄과 근거 줄은 세지 않습니다(같은 파티에 있었을 뿐인 사람 X).
-        all: (b.title || '') + ' ' + b.lines.filter(l => notProofLine(l) && !metaOf(l))
-          .map(l => { const p = String(l).split(/\s+→\s+/); return p.length > 1 && metaOf(p[0]) ? p.slice(1).join(' → ') : l; }).join(' ') };
+        get all() { return al ??= (b.title || '') + ' ' + b.lines.filter(l => notProofLine(l) && !metaOf(l))
+          .map(l => { const p = String(l).split(/\s+→\s+/); return p.length > 1 && metaOf(p[0]) ? p.slice(1).join(' → ') : l; }).join(' '); } };
     });
     const evs = evsAll.filter(e => !who || has(e.all));
     const chips = `<div class="tl-who"><button data-act="tlwho" data-arg="" aria-pressed="${!who}"><span class="av tl-all">✦</span><small>전체</small></button>${names.map(n =>
       `<button data-act="tlwho" data-arg="${esc(n)}" aria-pressed="${n === who}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div>`;
     // 서사 고리는 여기 한 곳에만: 위엔 아직 끝나지 않은 일, 끝난 일은 접어서
-    const th = rnd ? [] : threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
+    const th = rnd || (tlCal && evs.length) ? [] : threads().filter(t => !who || has(t.title) || has(t.text)), openTh = th.filter(t => !t.closed), doneTh = th.filter(t => t.closed);
     // 열린 고리의 "(마지막 언급: 날짜 · N턴)"은 본문에서 떼어 아래 근거 버튼 옆 알약으로. 100턴 넘게 안 나온 고리는 '오래됨'
     const nowTurn = (snapshot?.note?.turns || 0) + freshTurns(); let allNm = null;
     const thRow = t => { let thWho = ''; const m = String(t.title).match(/^(.{1,6}?)\s*[·:：]\s*(.+)$/);
@@ -9579,7 +9709,32 @@
     // 사건이 많아지면(1000턴…) 최근 10개만 펼치고 예전 사건은 접어 둡니다.
     const RECENT = 10, olderEv = evs.slice(0, -RECENT), recentEv = evs.slice(-RECENT);
     //   접힌 예전 사건은 펼칠 때 그려요(5.8.76): 긴 방은 이 칸이 기억 화면의 3/4이라, 안 펼쳐도 매번 다 만들어서 열 때 0.5초씩 멈췄어요 · tlOld = 펼칠 때 쓸 그리기
+    const calOn = tlCal && evs.length > 0, other = calOn ? evs.filter(e => tlDayOf(e.date) == null) : [];
     tlOld = () => olderEv.map(evLiFold).join('');
+    const view = evs.length ? `<div class="sechead tl-vwr"><span>${calOn ? (rnd ? rnd + '회차(회귀 전) · ' : '') + (who ? esc(who) + ' · ' : '') + '사건 ' + evs.length + '개' : ''}</span><span class="tl-vw"><button data-act="tlview" data-arg="" aria-pressed="${!calOn}">목록</button><button data-act="tlview" data-arg="cal" aria-pressed="${calOn}">달력</button></span></div>` : '';
+    // 달력은 날짜로그만: 달력 + 그날 사건 + 날짜 없는 사건 · 큰 흐름·이정표·남은 일·세계관·명대사는 목록에서만(만들지도 않아요)
+    // 달력의 사건 카드: 제목·장소·이름만 · 누르면 펼쳐요 · 날짜는 위에 있어서 카드엔 안 써요(날짜 없는 사건만 적어요) · 펼친 맨 아래에 📌·날짜 고치기
+    const prevD = new Map(); if (calOn) { let p = ''; for (const e of evs) { if (tlDayOf(e.date) != null) p = e.date; else if (p) prevD.set(e, p); } } // 날짜 모르는 사건 바로 앞 사건의 날짜
+    const pinTag = k => { if (!sceneOn || rnd) return ''; const p = injPins.has(k), on = !!lastInj && !lastInj.all && lastInj.keys?.has(k); return (on && !p ? '<small>채팅에 들어감</small>' : '') + `<button class="linkbtn${p ? ' on' : ''}" data-act="pin" data-arg="${esc(k)}" aria-pressed="${p}" title="고정하면 늘 채팅에 들어가요">${p ? '📌 고정됨' : '고정'}</button>`; };
+    const calLi = (e, dated, n = 1, i = 0) => { if (nav.rvPick) return evLi(e);
+      const k = itemKey(e.raw), side = isSide(e), [first, ...rest] = side ? [] : e.lines, meta = first && metaOf(first) ? first : '', ed = nav.tlEd === k;
+      const sub = [dated === true ? (e.date || '날짜 미상') + (/\d/.test(e.date) || !prevD.get(e) ? '' : ' · ' + prevD.get(e) + ' 다음 일') : '', side ? subjOf(e.title) + ' 사건에 나옴' : '', e.packed ? '줄여 둠' : ''].filter(Boolean).join(' · ') + memTag(e);
+      const foot = rnd || noFullHere() || /~/.test(e.date) ? '' : ed ? `<span class="cal-ed"><input data-tldate value="${esc(/\d/.test(e.date) ? e.date : String(prevD.get(e) || '').replace(/\s*\d{1,2}:\d{2}.*$/, ''))}" placeholder="1996.02.24 · 5년차 02.24" aria-label="사건 날짜" autocomplete="off"><button class="btn sm pri" data-act="tldsave" data-arg="${esc(k)}"${busyNow ? ' disabled' : ''}>저장</button><button class="btn sm" data-act="tldate" data-arg="">취소</button></span>` : `<button class="linkbtn" data-act="tldate" data-arg="${esc(k)}"${busyNow ? ' disabled' : ''}>${dated === true ? '날짜 넣기' : '날짜 고치기'}</button>`, mv = n > 1 && !who && !rnd && !noFullHere() && !ed ? `<span class="cal-mv"><button data-act="tlmove" data-arg="-${esc(k)}" aria-label="위로"${i > 0 && !busyNow ? '' : ' disabled'}>↑</button><button data-act="tlmove" data-arg="+${esc(k)}" aria-label="아래로"${i < n - 1 && !busyNow ? '' : ' disabled'}>↓</button></span>` : '';
+      return `<li class="tl-ev-fold"><details${ed || nav.tlOpen === k ? ' open' : ''}><summary><b class="tl-title">${esc(e.title)}</b>${sub ? `<small class="cal-sub">${esc(sub.replace(/^ · /, ''))}</small>` : ''}${meta ? evBody(meta) : ''}</summary>${side ? sideBody(e) : (meta ? rest : e.lines).map(evBody).join('')}${quoteHtml(e.quote)}<div class="cal-ft"><span class="tl-ppl">${peopleIn(e).map(n => avatar(n)).join('')}</span>${mv}${ed ? '' : pinTag(k)}${foot}</div></details></li>`; };
+    const today = calOn && !rnd ? pregDay(noteMemory() || '', snapshot) : null;
+    let dues = []; if (calOn && !rnd) try { dues = threads().filter(t => !who || has(t.title) || has(t.text)).map(t => { try { return dueOf(t, today); } catch (_) { return null; } }).filter(Boolean); } catch (_) {} // 못 읽는 줄은 건너뛰어요
+    const split = []; if (calOn && rN) for (const b of blocksOf(bodyOf(PAST))) { const m = String(b.title || '').match(/^\[(\d+)회차 · ([^\-\]]+)-/), d = m && tlDayOf(m[2].trim()); if (d != null && !(split[m[1]] <= d)) split[m[1]] = d; } // 회차마다 갈라진 날(그 회차 사건 중 제일 이른 날)
+    const eggs = [], eD = today ?? evs.reduce((p, e) => tlDayOf(e.date) ?? p, null); /* 오늘을 모르면 마지막 사건 날 */ if (calOn) try { // 기일 = 인물 칸의 '퇴장: 죽음 · 날짜' 줄 · 회차 끝 = 그 회차 마지막 날
+      if (!rnd) for (const it of itemBlocks(bodyOf('인물')).items) { const l = it.lines.find(l => /^\s*-?\s*퇴장\s*[:：]\s*(죽음|사망)/.test(l)); if (!l || /추정|위장|가짜|척|오해/.test(l)) continue;
+        const d = tlDayOf(l), nm = names.find(n => sameName(n, it.key)) || String(it.key).replace(/[【】]/g, '').trim(); if (d != null && (P_GAP(d, today) ?? 0) >= 0 && (!who || sameName(who, nm))) eggs.push({ key: 'e' + fxH('기일|' + nm + '|' + d), d, ic: '🪦', name: nm, txt: nm + ' · 떠난 날', yearly: true }); }
+      if (!rnd && loveMode && love?.who && love.stage !== 'broke' && loveChat === chatIdFromPath() && (!who || sameName(who, love.who))) { // 사귄 날·100일·결혼한 날 = 연애 모드에 적힌 날짜
+        const put = (d, ic, txt, wed) => { if (typeof d === 'number' && (P_GAP(d, eD) ?? -1) >= 0) eggs.push({ key: 'e' + fxH('연애|' + love.who + '|' + txt + '|' + d), d, ic, name: love.who, txt: love.who + ' · ' + txt, yearly: !!wed, wed }); };
+        if (typeof love.start === 'number') { put(love.start, '💕', '사귄 날'); put(love.start + 99, '💕', '100일'); } put(love.wedding?.who === love.who ? love.wedding.day : null, '💍', '결혼한 날', true); }
+      if (rnd && !who) { let d = null, t = ''; for (const e of evs) { const x = tlDayOf(e.date); if (x != null && (d == null || x >= d)) { d = x; t = e.title; } } // 같은 날이면 뒤에 적힌 것
+        if (d != null) { const dead = /죽음|사망|숨을 거두|숨지|목숨을 잃|죽다/.test(t) && !/뻔|척|위기|가짜|꿈|위장/.test(t); eggs.push({ key: 'e' + fxH('회차|' + rnd + '|' + d), d, ic: dead ? '🪦' : '🌀', name: '', txt: rnd + '회차 · 여기까지' }); } } } catch (_) {}
+    tlCalDraw = calOn ? () => tlCalHtml(evs, { li: calLi, today, who, round: rnd || rN + 1, rounds: rN, split, dues, eggs, has: who ? has : null }) : null;
+    if (calOn) { tlOld = () => other.map(e => calLi(e, true)).join('');
+      return rvBar() + rounds + chips + view + '<div class="tl-fold tl-cal" data-tlcal>' + tlCalDraw() + '</div>' + (other.length ? `<details class="tl-up tl-fold tl-cal" data-lazy="tlold"><summary><b>날짜 없는 사건 ${other.length}</b></summary><ol class="tline tl-calev"></ol></details>` : ''); }
     const list = evs.length ? `${olderEv.length ? `<details class="tl-up tl-fold" data-lazy="tlold"><summary><b>예전 사건 ${olderEv.length}</b></summary><ol class="tline"></ol></details>` : ''}<ol class="tline">${recentEv.map(evLi).join('')}</ol>`
       : emptyBox(who ? `${esc(josa(who, '이', '가'))} 나온 사건이 아직 없어요.` : '아직 사건이 없어요.');
     const head = `<div class="sechead"><span>${rnd ? `${rnd}회차(회귀 전) · ` : ''}${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개${sideN ? `(나옴 ${sideN})` : ''} · 오래된 일부터${rnd ? ' · 이번 생에서는 아직 안 일어난 일' : ''}</span></div>`;
@@ -9605,7 +9760,7 @@
     const worldHtml = rnd ? '' : !who ? `<details class="tl-up tl-fold"><summary><b>🌍 세계관 ${world.reduce((a, b) => a + b.lines.length + (b.title ? 1 : 0), 0)}</b></summary>
       ${world.map(b => `${b.title ? `<p><span>${esc(b.title)}</span></p>` : ''}${b.lines.filter(notProofLine).map(l => `<p>${esc(l)}</p>`).join('')}`).join('') || '<p>아직 정리된 세계관이 없어요. 원문에서 설정·규칙이 확인되면 정리할 때 여기에 쌓여요.</p>'}</details>` : '';
     const qHtml = quoteFold(who);
-    return rvBar() + descHtml('timeline') + rounds + chips + storyHtml + milesHtml + worldHtml + etcHtml + upcoming + memHtml + head + list + (rnd ? '' : qHtml);
+    return rvBar() + rounds + chips + view + storyHtml + milesHtml + worldHtml + etcHtml + upcoming + memHtml + head + list + (rnd ? '' : qHtml);
   }
   function quoteFold(who, open) {
     const qs = quotes().map((q, i) => ({ ...q, i })).filter(q => !who || q.who === who || sameName(q.who, who));
@@ -9620,7 +9775,6 @@
     '이정표': '이야기가 꺾인 순간 · 전 → 후 · 지금도 남은 흔적 · 날짜로그가 묶여도 남음 · 최대 20개(웹 모드 60개)',
     '날짜로그': '사건별 기록 · 원인 → 행동 → 결과 · 날짜는 연도까지 · 노트가 커지면 오래된 사건부터 (요약) 묶음',
     phone: '인물마다 폰·컴퓨터 속 구경 · 노트의 성격·말투·관계에 맞춰 AI가 꾸민 팬 콘텐츠 · 기억 노트·채팅엔 들어가지 않음',
-    timeline: '큰 흐름 · 세계관 · 명대사 · 날짜순 사건을 한 줄로 · 얼굴을 누르면 그 사람 이야기만 · 원문에 나온 일만 기록(근거 버튼으로 확인)',
     '서사 고리': '아직 안 끝난 약속·계획·복선·갈등 · 끝나면 날짜로그로 이동',
     '명대사': '상대 캐릭터 대사 원문 그대로 · 번역·장면 함께 · 최대 15개 · 버튼을 눌렀을 때만 뽑음 · 화면 확인용(채팅 노트엔 미포함)',
     '세계관': '원문에서 확인된 설정·규칙 · 한 번 확인되면 계속 유지',
@@ -10859,6 +11013,7 @@
     try { await dropOldNote(chatId, n.carrierId, msgText(snap.all.find(m => msgId(m) === n.carrierId))); } catch (_) { /* 예전 자리 정리가 실패해도 새 자리에는 이미 들어감 */ }
     return true;
   }
+  root.addEventListener('click', e => { if (nav.tlAdd && !e.target.closest?.('.cal-pop,.cal-ht')) { nav.tlAdd = false; root.querySelector('.cal-pop')?.remove(); } if (nav.tlEgg && !e.target.closest?.('.cal-eg,.cd')) { nav.tlEgg = false; root.querySelector('.cal-eg')?.remove(); } }); // 작은 창 밖을 누르면 닫혀요
   root.addEventListener('change', e => { if (e.target?.classList?.contains('fx-cat') && nav.fxEdit) nav.fxEdit.cat = e.target.value; });
   root.addEventListener('input', e => { if (!e.target?.closest?.('.fx-card')) return; // 고정 설정 쓰는 중: 글자를 바로 nav에 담아 둬요(화면이 다시 그려져도 안 지워지게)
     if (e.target.tagName === 'TEXTAREA') { if (nav.fxEdit) nav.fxEdit.text = e.target.value; const c = root.querySelector('.fx-cnt'); if (c) c.textContent = e.target.value.length.toLocaleString() + '자'; }
@@ -11631,7 +11786,7 @@
       // 채팅 노트와 이 기기 전체본에 같은 정리 시각을 찍어요(같은 정리본인지 알아보는 기준).
       const savedAt = new Date().toISOString(); await memTouch(chatId); // 새 정리본 = 기억을 고친 것
       // 다른 방 정리 기록은 안 가져와요(이 방 '회귀 › 이 방' 목록에 남의 방 턴이 섞이지 않게) · 회귀면 임신 기록도 그 방 것이라 안 가져와요
-      if (draft.carry?.etc?.on) { await putEtc(draft.carry.etc, chatId, [...(draft.carry.mode === 'regress' ? ['preg'] : []), ...(draft.carry.other || draft.carry.fromOther ? ['hist'] : [])]); lap('명대사·ETC'); }
+      if (draft.carry?.etc?.on) { await putEtc(draft.carry.etc, chatId, [...(draft.carry.mode === 'regress' ? ['preg', 'caldue'] : []), ...(draft.carry.other || draft.carry.fromOther ? ['hist'] : [])]); lap('명대사·ETC'); }
       // 이 방 회귀: 돌아간 날보다 뒤에 생긴 임신은 이번 생엔 아직 없어요 → 지난 산모수첩에 '회귀 기록'으로 접어 둬요(지문에 임신이 계속 들어가지 않게)
       const pregWas = draft.carry?.mode === 'rback' && preg ? JSON.stringify(preg) : null;
       const loveWas = draft.carry?.mode === 'rback' && love && loveChat === chatId ? JSON.stringify(love) : null;
@@ -12158,6 +12313,31 @@
       case 'chgpick': nav.key = Number(arg); render(); out('main').scrollTop = 0; return;
       case 'tlwho': nav.tlWho = arg || null; nav.qOpen = false; return keepScroll(render);
       case 'tlround': nav.tlRound = Number(arg) || 0; return keepScroll(render);
+      case 'tlview': tlCal = arg === 'cal'; setValue('tlView', arg); return keepScroll(render);
+      case 'tlym': case 'tlday': case 'tlnow': if (arg === '') return; nav.tlEgg = act === 'tlday' && !!e.target.closest?.('.egg') && !(nav.tlEgg && nav.tlDay === Number(arg)); /* 이모지를 눌렀을 때만 작은 창 */ if (act === 'tlnow') { nav.tlDay = Number(arg); nav.tlYm = tlYmOf(nav.tlDay); } else nav[act === 'tlym' ? 'tlYm' : 'tlDay'] = Number(arg); nav.tlEd = nav.tlOpen = ''; nav.tlPick = nav.tlAdd = nav.tlDueD = nav.tlDf = false; nav.tlDue = ''; return tlCalPaint();
+      case 'tlmove': { e.preventDefault(); const cid = chatIdFromPath(), up = arg[0] === '-', k = arg.slice(1), m = cid && !busyNow && evMove(noteMemory(), k, up ? -1 : 1); if (!m) return; nav.tlOpen = k; return nWriteMem(m, ['날짜로그'], '순서를 바꿨어요'); }
+      case 'tldf': nav.tlDf = !nav.tlDf; nav.tlDue = ''; return tlCalPaint();
+      case 'tladd': nav.tlAdd = !nav.tlAdd; return tlCalPaint();
+      case 'tladdok': { const t = (root.querySelector('[data-tladd]')?.value || '').replace(/\s+/g, ' ').trim().slice(0, 60); if (!t) return; nav.tlAdd = false; return duSave(v => { if (!v.m.some(x => x.k === arg && x.t === t)) v.m.push({ k: arg, t }); }); }
+      case 'tldset': { const [k, d] = arg.split('|'); nav.tlAdd = false; return duSave(v => { (v.o[k] ||= {}).d = Number(d); }); }
+      case 'tldue': nav.tlDue = nav.tlDue === arg ? '' : arg; nav.tlDueD = false; return tlCalPaint();
+      case 'tldmv': nav.tlDueD = !nav.tlDueD; return tlCalPaint();
+      case 'tldok': case 'tldx': case 'tlddok': { const own = arg[0] === 'm', id = arg.slice(1), q = id.indexOf('|'), hit = x => x.k + '|' + x.t === id; let d = null;
+        if (act === 'tlddok') { const v = (root.querySelector('[data-tldd]')?.value || '').trim(); d = /년차|\d{4}/.test(v) ? tlDayOf(v) : null; if (d == null) return toast('날짜를 못 읽었어요 · 1996.02.24나 5년차 02.24처럼 적어 주세요', 'err', 3500); nav.tlYm = tlYmOf(d); nav.tlDay = d; }
+        nav.tlDue = ''; nav.tlDueD = false;
+        return duSave(v => { if (own) { const i = v.m.findIndex(hit); if (i < 0) return; if (act === 'tldx') v.m.splice(i, 1); else if (act === 'tldok') { if (v.m[i].v) delete v.m[i].v; else v.m[i].v = 1; } else { const r = id.slice(0, q).includes(':') ? id.slice(0, q).split(':')[0] + ':' : ''; v.m[i].k = r + d; } return; }
+          const o = v.o[id] ||= {}; if (act === 'tldx') o.x = 1; else if (act === 'tldok') { if (o.v) delete o.v; else o.v = 1; } else o.d = d; }); }
+      case 'tldback': return duSave(v => { for (const k of Object.keys(v.o)) delete v.o[k].x; });
+      case 'tlpick': nav.tlPick = !nav.tlPick; nav.tlPickY = null; return tlCalPaint();
+      case 'tlpy': if (arg === '') return; nav.tlPickY = Number(arg); return tlCalPaint();
+      case 'tldate': e.preventDefault(); nav.tlEd = arg; tlCalPaint(); root.querySelector('[data-tldate]')?.focus({ preventScroll: true }); return;
+      case 'tldsave': { e.preventDefault(); const cid = chatIdFromPath(), it = logItems(noteMemory()).find(x => itemKey(x.key) === arg), v = (root.querySelector('[data-tldate]')?.value || '').trim(); if (!cid || busyNow) return;
+        if (it && v === nSplitTitle(it.lines[0].trim().replace(/^▸\s*/, '').replace(/\s*\(요약\)\s*$/, ''))[0]) { nav.tlEd = ''; return tlCalPaint(); }
+        const d = !/년차|\d{4}/.test(v) ? null : tlDayOf(v); if (d == null) return toast('날짜를 못 읽었어요 · 1996.02.24나 5년차 02.24처럼 적어 주세요', 'err', 3500);
+        const hm = v.match(/\d{1,2}:\d{2}/), r = evDateSet(noteMemory(), arg, (/년차/.test(v) ? P_STR(d) : (x => String(x.getUTCFullYear()).padStart(4, '0') + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'))(new Date(d * 864e5))) + (hm ? ' ' + hm[0] : '')); if (!r) return toast(r === '' ? '그 날짜에 같은 제목의 사건이 이미 있어요' : '그 사건을 못 찾았어요', 'err', 3000);
+        await nWriteMem(r.memory, ['날짜로그'], '날짜를 고쳤어요'); // 저장이 됐을 때만 이어 둔 것을 옮겨요
+        if (chatIdFromPath() !== cid || !logItems(noteMemory()).some(x => itemKey(x.key) === r.nk)) return;
+        await evKeyMove(cid, arg, r.nk, r.old, r.now); nav.tlEd = ''; nav.tlOpen = r.nk; nav.tlYm = tlYmOf(d); nav.tlDay = d; return keepScroll(render); }
       case 'prov': { const list = MODELS.find(([g]) => g.toLowerCase() === arg)?.[1] || []; // 회사를 누르면 그 회사 모델로(같은 회사면 그대로)
         const id = provOf(curModel) === arg ? curModel : (list.find(([x]) => x.endsWith(arg === 'claude' ? 'claude-sonnet-5-5' : DEFAULT_MODEL)) || list[0])[0]; pickModel(id); await saveSettings(true); return render(); }
       case 'stab': nav.setTab = arg; ui('[data-out="main"]')?.querySelectorAll('[data-sec]').forEach(x => { x.hidden = x.dataset.sec !== arg; }); el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); return;
@@ -12225,7 +12405,7 @@
       case 'lovesideopen': nav.loveSideOpen = !nav.loveSideOpen; return keepScroll(render);
       case 'loveside': if (!love) return; loveSnap('바람 상대'); love.side = arg || ''; love.sideBy = 'user'; nav.loveSideAll = false; nav.loveSideOpen = false; loveSave(); return keepScroll(render);
       case 'lovesideall': nav.loveSideAll = true; return keepScroll(render);
-      case 'lovestage': if (!love?.who) return; if (arg !== love.stage) loveSnap(arg === 'married' ? '결혼' : arg === 'broke' ? '헤어짐' : '연애 중'); { const day = storyDay(noteMemory() || ''), to = arg || (love.stage === 'broke' ? 'dating' : 'broke'); if (to === love.stage) return; if (to === 'married') { const n0 = love.start != null && day != null && day >= love.start ? day - love.start + 1 : 0, mine0 = (love.log || []).filter(x => !x.w || x.w === love.who), cy0 = love.cycles || [];
+      case 'lovestage': if (!love?.who) return; if (arg !== love.stage) loveSnap(arg === 'married' ? '결혼' : arg === 'broke' ? '헤어짐' : '연애 중'); { const day = storyDay(noteMemory() || ''), to = arg || (love.stage === 'broke' ? 'dating' : 'broke'); if (to === love.stage) return; if (to === 'married') { const n0 = Math.max(0, (P_GAP(love.start, day) ?? -1) + 1), mine0 = (love.log || []).filter(x => !x.w || x.w === love.who), cy0 = love.cycles || [];
           love.wedding = { who: love.who, me: (persons().find(p => p.isUser)?.name || pregWhoDefault(noteMemory() || '').name || ''), start: love.start ?? null, day: day ?? null, days: n0, fights: mine0.filter(x => /싸|다툼|언쟁|말다툼|화냄|서운|질투|토라/.test(x.t)).length, makeups: mine0.filter(x => /화해|풀림|사과/.test(x.t)).length, splits: cy0.filter(t => t.includes(love.who + '와 헤어짐')).length, moments: mine0.slice().sort((p, q) => (p.d ?? 0) - (q.d ?? 0)).slice(-8).map(x => ({ d: x.d ?? null, t: x.t })) }; love.wedding.vow = loveVow(love.who, love.wedding.me); love.wedTheme = WED_THEME[Math.floor(Math.random() * WED_THEME.length)][0]; love.wedLayout = wedRoll(); love.wedNameRow = Math.random() < 0.5; love.wedLine = Math.floor(Math.random() * 10); love.cycles = [...(love.cycles || []), `${day != null ? P_STR(day) + ' · ' : ''}${love.who}와 결혼${n0 ? ` · ${n0}일 연애` : ''}`].slice(-30); love.stage = 'married'; love.married = day ?? null; love.log = []; love.ev = null; } else if (to === 'dating') love.stage = 'dating'; else { love.stage = 'broke'; love.broke = null; } love.stageBy = 'user'; love.stageK = loveKindNow(); love.ev = null; loveSave(); return keepScroll(render); }
       case 'lovedate': { if (!love?.who) return; loveSnap('날짜'); const day = storyDay(noteMemory() || ''), br = love.stage === 'broke';
         const v = prompt(br ? '헤어진 날 (2026.03.14) · 며칠째(숫자) · 대략이면 3년·6개월·2년 반' : '사귀기 시작한 날 (2026.03.14) · 며칠째(숫자) · 대략이면 3년·6개월·2년 반', ''); if (v == null || !v.trim()) return;
@@ -13057,7 +13237,7 @@
     lastPath = nowChat; autoAttend(); // 방을 옮길 때도 출석 확인(하루 한 번만 실제로 보내요)
     openSheet(false);
     snapshot = null; draft = null; nav = fresh(); histList = []; histLast = null; histN = 0;
-    fullNote = null; origMap = {}; packSig = {}; injPins = new Set(); refresh.n = (refresh.n || 0) + 1; loading = false; // 앞 방 기억·원문 보관함·고정 사건도 비워요 · 돌던 앞 방 읽기는 그만두게(새 방 읽기가 곧 다시 채워요)
+    fullNote = null; origMap = {}; packSig = {}; OWC.clear(); PKH.clear(); tlOld = tlCalDraw = null; tlDu = { c: '', v: { o: {}, m: [] } }; injPins = new Set(); refresh.n = (refresh.n || 0) + 1; loading = false; // 앞 방 기억·원문 보관함·고정 사건도 비워요 · 돌던 앞 방 읽기는 그만두게(새 방 읽기가 곧 다시 채워요)
     inlineBtn.remove(); capBtn.remove(); if (cap.on) capOff();
     placeInlineButton();
     render();
