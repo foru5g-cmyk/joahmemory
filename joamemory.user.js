@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.70
+// @version      5.8.71
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -111,14 +111,14 @@
     { key: '인물',        short: '인물',     group: 'people', color: '#EFA6C4', icon: 'person' },
     { key: '인지·비밀',   short: '인지',     group: 'people', color: '#A6D9B5', icon: 'eye'    },
     { key: '소지품',      short: '소지품',   group: 'memory', color: '#E8C48A', icon: 'note'   },
-    { key: '장소·조직',   short: '장소·조직', group: 'memory', color: '#D6C1AA', icon: 'globe'  },
+    { key: '장소·조직',   short: '장소', group: 'memory', color: '#D6C1AA', icon: 'globe'  },
     { key: '서사 고리',   short: '서사 고리', group: 'memory', color: '#F2B190', icon: 'thread' },
     { key: '명대사',      short: '명대사',   group: 'memory', color: '#D9C8F0', icon: 'quote'  },
     { key: '감정선',      short: '감정선',   group: 'people', color: '#F4BCD3', icon: 'heart'  },
     { key: '세계관',      short: '세계관',   group: 'memory', color: '#C4C4CC', icon: 'globe'  },
     { key: '날짜로그',    short: '날짜로그', group: 'memory', color: '#EBCB7A', icon: 'cal'    },
     { key: '관계·감정선', short: '관계',     group: 'people', color: '#F4BCD3', icon: 'heart'  },
-    { key: '호칭·말투',   short: '호칭·말투', group: 'people', color: '#93D3BE', icon: 'speech' },
+    { key: '호칭·말투',   short: '호칭', group: 'people', color: '#93D3BE', icon: 'speech' },
     { key: '회귀 전',     short: '회귀 전',  group: 'memory', color: '#B8B4CC', icon: 'cal'    },
   ];
   const ALIAS = { '지난 줄거리': '날짜로그', '열린 떡밥': '서사 고리', '관계도': '관계·감정선', '인지': '인지·비밀', '호칭': '호칭·말투' };
@@ -3990,11 +3990,14 @@
   // 9. 화면 틀
   // ══════════════════════════════════════════════════════════════
   // 위 메뉴 5개. 기억(지난 이야기) / 상태(지금 값) / 인물 / 감정선(감정 변화)
-  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['now', '상태'], ['people', '인물'], ['fixed', '고정'], ['phone', '기타']]; // 웹 모드 메뉴 · 백업은 설정 › 백업
-  const TABS = [['home', '홈'], ['timeline', '타임라인'], ['now', '상태'], ['people', '인물'], ['phone', 'etc'], ['settings', '설정']];
-  const STORY_TABS = ['명대사', '세계관', FIXED]; // 줄거리·날짜로그·서사 고리는 타임라인 탭에
+  // 메뉴(5.8.74): 웹·앱 이름을 맞추고 상태는 인물 안으로(인물 | 상태 …) · 빈 칸에 모드(위쪽 🎲 칩에서 옮김) · 화면 키('now' 등)는 그대로라 정리·노트엔 영향 없어요
+  const WEB_TABS = [['home', '홈'], ['timeline', '기억'], ['people', '인물'], ['mode', '모드'], ['fixed', '고정'], ['phone', '기타']]; // 웹 모드 메뉴 · 백업은 설정 › 백업
+  const TABS = [['home', '홈'], ['timeline', '기억'], ['people', '인물'], ['mode', '모드'], ['phone', '기타'], ['settings', '설정']];
+  const STORY_TABS = ['명대사', '세계관', FIXED]; // 줄거리·날짜로그·서사 고리는 기억 탭에
   const NOW_TABS = ['현재상태', '소지품', '장소·조직']; // 옷차림은 현재상태의 인물 카드 안에
-  const PEOPLE_TABS = [['list', '인물'], ['map', '관계도'], ['speech', '호칭·말투'], ['know', '인지']];
+  const PEOPLE_TABS = [['list', '인물'], ['now:현재상태', '상태'], ['speech', '호칭'], ['know', '인지'], ['now:소지품', '소지품'], ['now:장소·조직', '장소'], ['map', '관계도']]; // 'now:칸' = 상태 화면(nav.tab 'now')의 그 칸 · 알약 한 줄(5.8.75)
+  const HLOGO = '<svg class="hlogo" viewBox="18 15 60 62" aria-hidden="true"><path d="M27 30 L30 18 L40 26 Q48 24 56 26 L66 18 L69 30 Q75 37 75 47 Q75 64 48 64 L38 64 L28 74 L30 62 Q21 57 21 47 Q21 37 27 30 Z" fill="#7B61D9"/><ellipse cx="39" cy="45" rx="3.4" ry="4.2" fill="#fff"/><ellipse cx="57" cy="45" rx="3.4" ry="4.2" fill="#fff"/><path d="M43 52 Q45.5 55 48 52 Q50.5 55 53 52" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="31" cy="52" rx="3.6" ry="2.4" fill="#FFB3C7"/><ellipse cx="65" cy="52" rx="3.6" ry="2.4" fill="#FFB3C7"/></svg>'; // 머리 아이콘(5.8.77 · 고양이 · 동그란 눈 + ω 입 + 볼터치)
+  const pplSeg = which => `<div class="seg">${PEOPLE_TABS.map(([k, l]) => `<button data-act="ppl" data-arg="${k}" aria-pressed="${k === which}">${l}</button>`).join('')}</div>`;
   const tabFor = k => (['줄거리', '이정표', '날짜로그', '서사 고리', '명대사', '세계관', FIXED].includes(k) ? 'timeline' : STORY_TABS.includes(k) ? 'story' : NOW_TABS.includes(k) ? 'now' : 'people');
 
   // 글꼴: Pretendard. jsDelivr가 막히는 곳에선 구글 Noto Sans KR로 (쓰일 때만 내려받아요).
@@ -4046,6 +4049,7 @@
     .verfoot{text-align:center;font-size:11px;color:var(--graphite);margin:22px 0 8px;letter-spacing:.2px}
     .verfoot .vup{border:0;cursor:pointer;background:#FF6F91;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:4px}
     .verfoot small{font-size:10px;margin-left:2px}
+    .verfoot .vhome{display:inline-flex;vertical-align:-4px;margin-left:5px;padding:2px;transition:transform .15s}.verfoot .vhome:hover{transform:scale(1.25)} /* 조아 홈(사이트)으로 가는 작은 하트 */
     .htitle span{font-size:12px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .dot{display:none}
     .hbtn{min-width:40px;height:40px;padding:0 10px;border:0;border-radius:20px;background:transparent;display:flex;align-items:center;justify-content:center;
@@ -5182,6 +5186,9 @@
     .pg-hb b{display:block;color:var(--ink);font-size:12.5px;margin-bottom:3px}
     .pg-hb p{margin:0}.nf-sub{margin:6px 0 12px;font-size:12.5px;color:var(--graphite)}.nf-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf-opt{border:1px solid var(--rule);border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}.nf-opt b{font-size:14px;font-weight:800;color:var(--ink)}.nf-opt small{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--graphite)}.nf-ic{display:block;font-size:18px;margin-bottom:6px}.nf-tag{font-style:normal;font-size:10.5px;font-weight:800;margin-left:5px;padding:2px 6px;border-radius:999px;background:var(--mist);color:var(--acc-ink,#5B45B0);vertical-align:2px}.nf-opt .btn{width:100%;padding:9px 0;font-size:13.5px;text-align:center}.nf-foot{margin:12px 0 0;font-size:12px;color:var(--graphite)}@media (max-width:340px){.nf-opts{grid-template-columns:1fr}}.nf-pick{margin:12px 0 0;display:flex;flex-direction:column;gap:6px}.nf-pick>small{font-size:12px;color:var(--graphite)}.nf-pi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);font:inherit;text-align:left;cursor:pointer}.nf-pi b{font-size:13.5px;color:var(--ink)}.nf-pi small{font-size:11.5px;color:var(--graphite)}.nf-pi:hover{border-color:var(--acc)}.thw{display:block;margin:2px 0 2px;font-size:11.5px;font-weight:600;color:var(--graphite)}.thr-foot{position:relative;margin-top:4px;min-height:26px}.hka{float:right;display:inline-flex;gap:10px;line-height:26px}.hka button{all:unset;cursor:pointer;font-size:11.5px;color:var(--graphite,#8C869C)}.hka button:hover{color:var(--acc,#7B61D9)}.hke{display:flex;gap:6px;margin-top:6px}.hke input{flex:1;min-width:0;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--rule,#E6E1F0);border-radius:8px}.hke button{all:unset;cursor:pointer;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);padding:0 4px}.thr-foot .evd{margin:0}.thr-foot>.pill-st{position:absolute;top:2px;right:0}.rvd{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px}.rvd-h b{font-size:15px;font-weight:800;color:var(--ink)}.rvd-h small{display:block;font-size:12px;color:var(--graphite);margin-top:2px}.rvd-c{margin-top:14px}.rvd-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.rvd-t span{font-size:11.5px;color:var(--graphite)}.rvd-t b{font-size:13.5px;color:var(--ink)}.rvd-k{font-style:normal;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--mist);color:var(--acc-ink)}.rvd-k[data-k="지움"]{background:#FBE4E2;color:#B4443F}.rvd-k[data-k="새로"]{background:#E3F4EA;color:#2F7D4F}.rvd-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rvd-b{border:1px solid var(--rule);border-radius:14px;padding:10px;min-width:0;font-size:12.5px;line-height:1.55;color:var(--ink)}.rvd-b>small{display:block;font-size:11px;font-weight:800;color:var(--graphite);margin-bottom:4px}.rvd-b p{margin:0 0 4px;padding:1px 3px;word-break:break-all}.rvd-b p.del{color:#B4443F;text-decoration:line-through;background:#FBE4E2;border-radius:4px}.rvd-b p.add{color:#2F7D4F;background:#E3F4EA;border-radius:4px}.rvd-b p.none{color:var(--pencil)}.rvd-b p.same{color:var(--pencil);font-size:11.5px}.rvd-b p.why{color:var(--graphite);background:var(--mist);border-radius:4px}@media (max-width:340px){.rvd-g{grid-template-columns:1fr}}li:has(>.tl-rv),.thr:has(>.tl-rv){position:relative;padding-right:40px}.rvbar{display:flex;margin:0 0 10px}.sechead:has(.rv-start),.meta:has(.rv-start){display:flex;align-items:center;gap:8px}.sechead .rv-start,.meta .rv-start{margin-left:auto}.rv-start{flex:none;border:1px solid var(--rule);border-radius:999px;background:var(--paper);padding:3px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--graphite);cursor:pointer}.rvbar-b{display:flex;align-items:center;gap:10px;flex:none}.rvbar-b .btn{padding:7px 14px;font-size:13px}.rvp{position:relative}.rvp.sel{outline-style:solid}.rv-ck{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid var(--acc);background:var(--paper);display:grid;place-items:center;font-style:normal;z-index:1}.rv-ck.on{background:var(--acc)}.rv-ck.on::after{content:'✓';color:#fff;font-size:13px;font-weight:800;line-height:1}.rv-start:disabled{opacity:.5;cursor:default}.rvbar.on{justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--mist)}.rvbar.on .linkbtn{flex:none;white-space:nowrap}.rvbar.on b{display:block;font-size:13.5px;color:var(--ink)}.rvbar.on small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.rvp{outline:2px dashed var(--acc);outline-offset:2px;cursor:pointer}.tl-rv{position:absolute;right:10px;bottom:10px;display:inline-grid;place-items:center;width:26px;height:26px;margin:0;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);font-size:12px;line-height:1;cursor:pointer;opacity:.75}.tl-rv:hover{opacity:1}.tl-rv:hover{color:var(--acc-ink)}.tl-rv:disabled{opacity:.5;cursor:default}
     .wd-tile{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
+    .hlogo{width:24px;height:25px;margin-left:6px;vertical-align:-4px;transform:rotate(-12deg)}.hsw{margin:0 6px 0 auto;white-space:nowrap} /* 5.8.77 머리: 이름 옆 작은 아이콘 · 웹 모드 스위치 */
+    .wd-tiles{gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:20px}.wd-tiles>.wd-tile{border:0;border-radius:0;background:transparent}.wd-tiles>.wd-tile+.wd-tile{border-left:1px solid var(--rule)} /* 자동 정리·채팅에 넣는 기억을 한 카드로 */
+    .cast-row.hcard,.nrules.hcard{background:var(--paper);border:1px solid var(--rule);border-radius:20px}.cast-row.hcard{padding:14px 12px;margin-left:0;margin-right:0}.nrules.hcard{padding:4px 16px;margin-bottom:6px}.nrules.hcard>li:last-child{border-bottom:0} /* 홈 등장인물·최근 바뀐 것도 흰 카드로(바탕에 그냥 놓이면 덜 읽혀서) */
     .wd-tile small{display:block;font-size:12px;font-weight:700;color:var(--graphite);margin-bottom:4px}
     .wd-tile b{font-size:30px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums;line-height:1}
     .wd-tile em{font-style:normal;font-size:13px;color:var(--ink2);margin-left:3px}
@@ -5192,7 +5199,7 @@
     .wd-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0 0}
     .wd .inj-card{margin:0}.wd .inj-card summary b{font-size:15px;color:var(--ink)}
     .ncomp .h3,.ncomp .comp-h{margin-top:0}
-    @media (max-width:340px){.wd-tiles{grid-template-columns:1fr}}
+    @media (max-width:340px){.wd-tiles{grid-template-columns:1fr}.wd-tiles>.wd-tile+.wd-tile{border-left:0;border-top:1px solid var(--rule)}}
     /* ── 고급 마감: 카드에 아주 옅은 그림자 · 숫자는 고정폭 ── */
     .hero2,.ncomp,.tl-up,.tl-mem,.tl-story,.inj-card,.wd-tile,.tline li:not(.side){box-shadow:0 1px 2px rgba(34,30,46,.04),0 8px 24px rgba(34,30,46,.05)}
     .wd-tile b,.comp-n b,.ringtext b{font-variant-numeric:tabular-nums}
@@ -6029,7 +6036,7 @@
     if (!verAsked) { verAsked = true; checkUpdate().then(() => { if (latestVer && newerVer(latestVer, MY_VER)) render(); }).catch(() => {}); }
     if (!MY_VER) return '';
     const up = latestVer && newerVer(latestVer, MY_VER);
-    return `<div class="verfoot">♡ v${esc(MY_VER)}${up ? ` <button class="vup" data-act="getupdate">update 필요!</button> <small>v${esc(latestVer)}</small>` : ''}</div>`;
+    return `<div class="verfoot">v${esc(MY_VER)}<a class="vhome" href="https://joah.vercel.app/" target="_blank" rel="noopener" title="조아 홈" aria-label="조아 홈"><svg width="16" height="16" viewBox="0 0 24 24" fill="#FF6F91" aria-hidden="true">${ICON.heart}</svg></a>${up ? ` <button class="vup" data-act="getupdate">update 필요!</button> <small>v${esc(latestVer)}</small>` : ''}</div>`;
   };
   const fxOff = it => !!it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)); // 노트관리의 넣음/뺌과 같은 저장소
   // 묶음: 이름을 '묶음｜제목'으로 적어 둬요(노트에 실려서 다른 기기·내보내기·보관함에도 그대로 따라가요) · 묶음 켜기 = 그 안 항목을 한 번에 넣기
@@ -6277,7 +6284,7 @@
         <p class="muted" style="margin:6px 0">필수 기억은 항상 넣고, 옛 일은 방금 쓴 말에 맞춰 골라요</p>
         ${lastInj.pinned.length ? `<h5>📌 고정한 사건</h5><ul class="inj-list">${lastInj.pinned.map(r => injRow(r, true)).join('')}</ul>` : ''}
         <h5>떠올린 기억</h5>${lastInj.recalled.length ? `<ul class="inj-list">${lastInj.recalled.map(r => injRow(r, false)).join('')}</ul>` : '<p class="muted" style="margin:4px 0">지금 대화와 맞는 옛 기억이 없어요. 옛 일을 꺼내면 보낼 때 찾아서 넣어요.</p>'}
-        <p class="muted" style="margin:6px 0 0;font-size:12px">타임라인에서 사건마다 📌 고정할 수 있어요.</p>${injLogHtml()}</details>`;
+        <p class="muted" style="margin:6px 0 0;font-size:12px">기억에서 사건마다 📌 고정할 수 있어요.</p>${injLogHtml()}</details>`;
     const donut = `<details class="ncomp"><summary><div class="h3 comp-h"><span>${NOTE_LIMIT === NO_LIMIT ? '전체 기억 · 제한 없음' : `노트 ${realPc}% 참`}</span><span class="comp-n"><b>${fmt(injected)}</b>${NOTE_LIMIT === NO_LIMIT ? '자' : ` / ${fmt(NOTE_LIMIT)}자`}<button class="comp-mng" data-act="notes">📝 관리</button>${snapshot?.note ? `<button class="comp-mng" data-act="packold"${busyNow ? ' disabled' : ''} title="${(l => l.n ? `아직 안 줄인 오래된 사건 ${l.n}개 · ${l.times}번쯤 누르면 한 바퀴` : '간추릴 오래된 사건이 없어요')(packLeft())}">🗜 간추리기${packLeft().n ? ' ' + packLeft().n : ''}</button>` : ''}</span></div>
       <div class="nc-g" role="img" aria-label="노트 ${fmt(injected)}자 / ${fmt(NOTE_LIMIT)}자"><i style="width:${pc}%"></i><u></u></div>
       <p class="nc-line">${parts.map(x => `${esc(x.key)} ${Math.round(x.len / total * 100)}%`).join(' · ')}<span class="nc-more">자세히</span></p></summary>
@@ -6288,7 +6295,7 @@
     const fxNpc = fixItems(splitSections(noteMemory()).find(x => x.key === FIXED)?.body || '').map((it, i) => [it, i]).filter(([it]) => it.cat === 'NPC' && it.title.trim());
     const fxOf = nm => fxNpc.find(([it]) => sameName(it.title.trim(), nm) || it.title.includes(nm));
     const fxOnly = fxNpc.filter(([it]) => !cast.some(nm => sameName(it.title.trim(), nm) || it.title.includes(nm)));
-    const castHtml = cast.length || fxOnly.length ? `<div class="h3">등장인물</div><div class="cast-row">${cast.map(nm =>
+    const castHtml = cast.length || fxOnly.length ? `<div class="h3">등장인물</div><div class="cast-row hcard">${cast.map(nm =>
       `<button data-act="castpick" data-arg="${esc(nm)}">${avatar(nm)}<span>${fxOf(nm) ? '<em class="fx-pin">📌</em>' : ''}${esc(nm)}</span></button>`).join('')}${fxOnly.map(([it, i]) =>
       `<button data-act="fixopen" data-arg="${i}" class="fx-npc">${avatar(it.title.trim())}<span><em class="fx-pin">📌</em>${esc(it.title.trim())}</span></button>`).join('')}</div>
 ` : '';
@@ -6307,7 +6314,7 @@
         if (sec.added.length) rows.push('<li><em class="rk">' + esc(secInfo(sec.key).short) + '</em>' + pillLine(sec.added[0], 48) + (sec.added.length > 1 ? ' <small class="pdim">외 ' + (sec.added.length - 1) + '줄</small>' : '') + '</li>');
       }
       return '<div class="h3">최근 정리에서 바뀐 것 <small class="muted">' + (h.from + 1) + '~' + h.to + '턴</small></div>'
-        + (rows.length ? '<ul class="nrules">' + rows.slice(0, 6).join('') + '</ul>' : '<p class="muted">큰 변화 없음</p>')
+        + (rows.length ? '<ul class="nrules hcard">' + rows.slice(0, 6).join('') + '</ul>' : '<p class="muted">큰 변화 없음</p>')
         + '<button class="linkbtn" data-act="changes" style="margin:8px 0 4px">' + (rows.length > 6 ? '나머지 ' + (rows.length - 6) + '개 · ' : '') + '자세히 · 지난 회차</button>';
     })() : '';
     // 장기기억 한 줄: 노트가 차는 것과 같은 이야기라 노트 N% 참 바로 아래에. 누르면 장기기억 화면
@@ -6315,7 +6322,7 @@
     // 웹 모드 대시보드: 상태 한 줄 · 자동 정리 타일 · 채팅에 넣는 기억 타일 · 기억 카드
     const rr = 15, rc = 2 * Math.PI * rr, injPc = lastInj ? Math.min(100, Math.round(lastInj.chars / INJ_MAX * 100)) : 0;
     const dash = `<section class="wd${injPicking ? ' picking' : ''}">
-      <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b><label class="inj-sw wd-sw wd-web"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label></div>
+      <div class="wd-status"><svg class="wd-heart ${!injectOn ? 'off' : injPicking || autoBusy ? 'beat' : 'on'}" viewBox="0 0 30 30" width="16" height="16" aria-hidden="true"><path d="M15 26C15 26 3.5 19 3.5 11.2C3.5 7.4 6.4 4.6 9.8 4.6C12.1 4.6 14 5.9 15 7.8C16 5.9 17.9 4.6 20.2 4.6C23.6 4.6 26.5 7.4 26.5 11.2C26.5 19 15 26 15 26Z"/></svg><b class="wd-st ${injectOn ? 'on' : 'off'}">${!injectOn ? '주입 꺼짐' : injPicking ? '<span class="wd-live">기억 고르는 중…</span>' : autoBusy ? '<span class="wd-live">자동 정리 중…</span>' : '실시간 기억'}</b></div>
       ${n && n.sel && !(fullNote && fullNote.upto === n.upto) ? `<section class="nf"><details class="nf-help"><summary><b>${brRun.has(chatIdFromPath()) ? '분기하기 전 방의 정리본을 찾는 중이에요…' : nav.gsOn && (gsRe.get(chatIdFromPath() + '|' + n.upto + '|' + (n.me || 0)) || 0) < 3 ? '전체 기억을 드라이브에서 받는 중이에요…' : '이 기기엔 전체 기억이 없어요'}</b><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more"><p>웹 모드는 전체 기억을 <b>정리한 기기</b>(예: 폰)에만 저장하고, 채팅엔 장면에 맞게 고른 일부만 넣어요. 그래서 다른 기기에선 전체 기억을 가져와야 이어서 정리할 수 있어요.</p><p><b>구글 드라이브</b> · 정리할 때마다 자동으로 올라가고, 다른 기기에서 이 방을 열면 알아서 받아 와요. 정리한 기기와 이 기기 <b>둘 다</b> 같은 주소·비밀번호로 연결해 주세요. 드라이브에 이 방이 없으면 정리한 기기에서 설정 › 백업 › 지금 올리기를 한 번 눌러요.</p><p><b>백업 파일</b> · 정리한 기기에서 설정 › 백업 › 백업 파일 받기 → 그 파일을 여기서 불러와요. 그 뒤 거기서 또 정리하면 다시 옮겨야 해요.</p></div></details><p class="nf-sub">다른 기기에서 정리한 방이에요 · 둘 중 하나로 가져와 주세요</p><div class="nf-opts"><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">☁️</span><b>구글 드라이브</b><em class="nf-tag">추천</em><small>정리할 때마다 자동 백업 · 기기끼리 알아서 맞춰요</small></div>${nav.gsOn ? `<button class="btn pri" data-act="gspick"${busyNow ? ' disabled' : ''}>드라이브에서 찾기</button>` : `<button class="btn pri" data-act="gsopen">연결하기</button>`}</div><div class="nf-opt"><div><span class="nf-ic" aria-hidden="true">💾</span><b>백업 파일</b><small>지금 한 번만 · 정리한 기기에서 받은 파일로</small></div><label class="btn">불러오기<input type="file" accept=".json,.txt,application/json,text/plain" data-out="restorefile" hidden></label></div></div>${nav.gsPick ? `<div class="nf-pick"><small>${nav.gsPickAll ? '드라이브의 다른 방 백업 · 턴 수가 같아야 가져올 수 있어요' : '이 방과 제목·턴 수가 같은 백업'}</small>${nav.gsPick.length ? nav.gsPick.map(x => `<button class="nf-pi" data-act="gspickgo" data-arg="${esc(x.chat)}"><b>${esc(x.title)}</b><small>${esc(x.note)} · ${esc(x.when)}</small></button>`).join('') : `<small>맞는 방이 없어요 · 정리한 기기에서 그 방을 드라이브에 올렸는지 확인해 주세요</small>`}${nav.gsPickAll ? '' : '<button class="linkbtn" data-act="gspick" data-arg="all">제목 다른 방도 보기</button>'}</div>` : ''}<p class="nf-foot">둘 다 안 되면 <button class="linkbtn" data-act="runsheet" data-arg="rebuild"${busyNow ? ' disabled' : ''}>처음부터 다시 만들기</button> · 시간·돈이 많이 들어요</p></section>` : ''}
       ${chunkLine()}<div class="wd-tiles">
         <div class="wd-tile"><div class="wd-top"><svg class="wd-ring${spin || autoBusy ? ' spin' : ''}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${rr}" class="t"/><circle cx="18" cy="18" r="${rr}" class="f" stroke-dasharray="${(rc * (spin || autoBusy ? 0.3 : Math.min(turns, cycle) / cycle)).toFixed(1)} ${rc.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>
@@ -6798,7 +6805,12 @@
       if (got.length) { pageToast('다른 기기 ' + got.join('·') + ' 기록을 받아 왔어요'); render(); }
     } catch (e) { logErr('연동', '임신·연애 받기 실패 · ' + e.message); } finally { gsPullStore.busy = false; crumbOff('gspull'); }
   }
-  const gsBack = () => { if (document.visibilityState !== 'visible' || Date.now() - (gsBack.at || 0) < 30000) return; gsBack.at = Date.now(); gsPullStore(chatIdFromPath()); };
+  // 다른 앱·탭에 1분 넘게 있다 돌아왔을 때만 다시 읽어요(5.8.73): 잠깐 오갈 때마다 방 읽기·드라이브 받기를 또 해서 아이폰이 무거워졌어요
+  //   away.len: 방금 비운 시간 · 돌아온 그 순간(3초 안)에만 써요 · 이 줄이 gsBack·comeBack보다 먼저 듣게 여기 둬요
+  const away = { at: 0, len: 0, end: 0 }, awayGo = () => { if (!away.at) away.at = Date.now(); }, awayBack = () => { if (document.visibilityState !== 'visible' || !away.at) return; away.len = Date.now() - away.at; away.end = Date.now(); away.at = 0; };
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' ? awayGo() : awayBack()); window.addEventListener('blur', awayGo); window.addEventListener('pagehide', awayGo); window.addEventListener('focus', awayBack); window.addEventListener('pageshow', awayBack);
+  const awayLong = () => away.len >= 6e4 && Date.now() - away.end < 3000;
+  const gsBack = () => { if (document.visibilityState !== 'visible' || !awayLong() || Date.now() - (gsBack.at || 0) < 30000) return; gsBack.at = Date.now(); gsPullStore(chatIdFromPath()); };
   document.addEventListener('visibilitychange', gsBack); window.addEventListener('focus', gsBack);
   async function gsSave(quiet = false) {
     try {
@@ -6877,6 +6889,8 @@
   }
   // 안내를 펼친 채로 화면이 다시 그려져도 접히지 않게
   root.addEventListener('toggle', e => { if (e.target.classList?.contains('gshow')) nav.gsGuide = e.target.open; }, true);
+  var tlOld = null; // var: 화면이 이 줄보다 먼저 그려져도 안 멈추게 · 기억 화면 '예전 사건'은 펼칠 때 한 번만 그려요(timelineHtml이 그릴 함수를 넣어 둬요)
+  root.addEventListener('toggle', e => { const d = e.target; if (!d.open || d.dataset?.lazy !== 'tlold' || d.dataset.done || !tlOld) return; d.dataset.done = '1'; const ol = d.querySelector(':scope>ol'); if (ol) ol.innerHTML = tlOld(); }, true);
   // 노트의 마지막 날짜로그 사건(제목) — 어느 기억인지 내용으로 알아보게
   const lastEvent = mem => { const b = blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').pop(); return b ? String(b.title).replace(/^\[|\]$/g, '').replace(/\]?\s*\(요약\)\s*$/, '').replace(/^[^-]*-\s*/, '') : ''; };
   const whenOf = t => t ? new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '시각 모름';
@@ -6892,8 +6906,8 @@
   }
   function fullAskHtml() {
     const f = nav.fullAsk; if (!f || f.chatId !== chatIdFromPath()) return '';
-    return `<div class="devask"><b>근거·감정선 전체를 받아올까요?</b>
-      <p>구글 백업에 지금 기억(1~${f.n.turns}턴)과 같은 정리본의 근거·감정선 전체가 있어요. 받아도 채팅 노트는 바뀌지 않고, 이 기기 화면에서 근거 버튼·감정선 단계가 보이게 돼요.</p>
+    return `<div class="devask"><b>근거 전체를 받아올까요?</b>
+      <p>구글 백업에 지금 기억(1~${f.n.turns}턴)과 같은 정리본의 근거 전체가 있어요. 받아도 채팅 노트는 바뀌지 않고, 이 기기 화면에서 근거 버튼이 보이게 돼요.</p>
       <div class="devask-btns"><button class="btn pri" data-act="fullget">받기</button><button class="btn" data-act="fullskip">괜찮아요</button></div></div>`;
   }
   let lostBusy = false;
@@ -7049,16 +7063,16 @@
         return `<div class="h3" style="margin-top:10px">최근 정리</div><ul class="nrules">${rs.map(r => `<li><em class="rk">${r.from ? r.from + '~' : ''}${r.to || '?'}턴</em>${r.ms ? Math.round(r.ms / 1000) + '초 · ' : ''}입력 ${tk(r.inTok || 0)}${r.cached ? `(캐시 ${tk(r.cached)})` : ''} · 출력 ${tk(r.outTok || 0)} 토큰${r.thinkTok ? `<small style="font-size:11px;opacity:.7"> (생각 ${tk(r.thinkTok)} · 글 ${tk((r.outTok || 0) - r.thinkTok)})</small>` : ''}${r.usd != null ? ` · 약 ${fmt(won(r.usd))}원` : ''}</li>`).join('')}</ul><p class="muted" style="margin-top:4px">출력이 클수록 오래 걸려요(출력엔 AI가 생각한 양도 들어가요)</p>`; })()}
       ${usage.length ? `<div class="h3" style="margin-top:10px">무엇에</div>${rowsOf(sumBy(kindOf))}<div class="h3" style="margin-top:10px">어느 모델로</div>${rowsOf(sumBy(r => modelName(r.model)))}` : ''}
       <p class="muted" style="margin-top:6px">정리·커뮤니티·폰·뉴스·위키·실시간톡·명대사 모두 합친 금액 · 공식 단가(입력·출력 토큰) 기준 · 1달러 = 1,400원으로 어림 · 최근 300번까지만 셈</p>
-      <p class="muted" style="margin-top:8px">근거·감정선·명대사는 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 내보내 두세요.</p>${snapshot?.note ? `<p style="margin-top:10px;font-size:11px;opacity:.7"><button type="button" class="linkbtn" style="font-size:11px" data-act="trimmeasure">미리 재기</button>${packDone().length ? ` · <button type="button" class="linkbtn" style="font-size:11px" data-act="packundo"${busyNow ? ' disabled' : ''}>간추린 사건 ${packDone().length}개 원문으로 되돌리기</button>` : ''}</p>${nav.trimInfo ? `<p class="muted" style="margin-top:2px;font-size:11px;white-space:pre-line">${esc(nav.trimInfo)}</p>` : ''}` : ''}`;
+      <p class="muted" style="margin-top:8px">근거·명대사는 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 내보내 두세요.</p>${snapshot?.note ? `<p style="margin-top:10px;font-size:11px;opacity:.7"><button type="button" class="linkbtn" style="font-size:11px" data-act="trimmeasure">미리 재기</button>${packDone().length ? ` · <button type="button" class="linkbtn" style="font-size:11px" data-act="packundo"${busyNow ? ' disabled' : ''}>간추린 사건 ${packDone().length}개 원문으로 되돌리기</button>` : ''}</p>${nav.trimInfo ? `<p class="muted" style="margin-top:2px;font-size:11px;white-space:pre-line">${esc(nav.trimInfo)}</p>` : ''}` : ''}`;
   }
 
   // ── 기억 ──
-  function memoryHtml(tabs = STORY_TABS) {
+  function memoryHtml(tabs = STORY_TABS, segFor = null) { // segFor: 알약 줄을 바꿔 그려요(상태 = 인물 알약 줄)
     if (!snapshot?.note && snapshot && tabs.includes(FIXED)) return fixedHtml(); // 정리 전에도 고정 설정은 첫 턴부터 넣게
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요.<br>확인 탭에서 "지금 정리"를 눌러 주세요.');
     if (!tabs.includes(nav.mem)) nav.mem = tabs[0];
     const k = nav.mem, body = bodyOf(k);
-    const seg = `<div class="seg">${tabs.map(t => `<button data-act="mem" data-arg="${esc(t)}" aria-pressed="${t === k}">${esc(secInfo(t).short)}</button>`).join('')}</div>`;
+    const seg = segFor ? segFor(k) : `<div class="seg">${tabs.map(t => `<button data-act="mem" data-arg="${esc(t)}" aria-pressed="${t === k}">${esc(secInfo(t).short)}</button>`).join('')}</div>`;
     if (k === '의상') return peopleHtml('outfit', seg);
     const head = txt => descHtml(k) + `<div class="sechead"><span>${txt}</span></div>`;
     const li = l => {
@@ -8760,9 +8774,9 @@
       + hist.map(l => { const m = l.match(/^(\S+)\s*[:：]\s*(.*)$/); return '<p class="pnt"><i>' + esc(m[1]) + '</i>' + esc(m[2]) + '</p>'; }).join(''));
   }
   // ── 노트 관리: 고치는 곳은 여기 한 곳 ──
-  //   메뉴 4개(인물·타임라인·상태·고정 설정) → 칸마다 작은 한 줄 카드 → 누르면 펼침 → '수정'을 누르면 펼친 글자 그대로 그 자리에서 고침 → 저장(AI 안 씀, 채팅 노트에 바로)
+  //   메뉴 4개(인물·기억·상태·고정 설정) → 칸마다 작은 한 줄 카드 → 누르면 펼침 → '수정'을 누르면 펼친 글자 그대로 그 자리에서 고침 → 저장(AI 안 씀, 채팅 노트에 바로)
   //   오른쪽 '넣음/뺌' 알약: 끄면 채팅 노트에서만 빠지고 여기엔 그대로
-  const N_GROUPS = [['인물', ['인물', '인지·비밀']], ['타임라인', ['줄거리', '이정표', '날짜로그', '서사 고리', '세계관', PAST]], ['상태', ['현재상태', '소지품', SHELF, '장소·조직']], [FIXED, [FIXED]]];
+  const N_GROUPS = [['인물', ['인물', '인지·비밀']], ['기억', ['줄거리', '이정표', '날짜로그', '서사 고리', '세계관', PAST]], ['상태', ['현재상태', '소지품', SHELF, '장소·조직']], [FIXED, [FIXED]]];
   const N_PROOF = /^\s*-?\s*(?:근거|번역)\s*[:：]/; // 근거·번역 줄만 숨겨요([닫힘] 고리는 보여요)
   const N_NEW = { '인물': ['【새 인물】', '- 프로필: '], '날짜로그': ['▸ [날짜-새 사건]', '- 장소 · 이름, 이름', '- 원인 → 행동 → 결과'], '이정표': ['▸ [날짜-새 이정표]', '- 전 → 후: '], '소지품': ['▸ 새 물건 (가진 사람)', '- 상태: '], '장소·조직': ['▸ 새 장소 (장소)', '- 위치·특징: '] };
   const nSplitTitle = t => { const x = String(t).replace(/^\[|\]$/g, ''), i = x.indexOf('-'); return i > 0 && i <= 24 && /\d/.test(x.slice(0, i)) ? [x.slice(0, i).trim(), x.slice(i + 1).trim()] : ['', String(t)]; };
@@ -9026,7 +9040,7 @@
       if (!its.length) { const l = hit(body.split('\n')); if (l) res.push({ sec, key: sec + '¦', title: secInfo(sec).short, line: bullet(l) }); continue; }
       for (const it of its) { const l = hit(it.lines); if (l) res.push({ sec, key: sec + '¦' + itemKey(it.key), title: it.lines[0].trim().replace(/^▸\s*/, ''), line: l === it.lines[0] ? '' : bullet(l) }); } }
     return res; }
-  const nFindHtml = () => { const q = String(nav.nq || '').trim(); if (!q) return '<p class="nsum">찾을 말을 치면 인물·타임라인·상태·고정 설정에서 한 번에 찾아요</p>';
+  const nFindHtml = () => { const q = String(nav.nq || '').trim(); if (!q) return '<p class="nsum">찾을 말을 치면 인물·기억·상태·고정 설정에서 한 번에 찾아요</p>';
     const res = nFind(sections(), q); if (!res.length) return '<p class="nsum">맞는 항목이 없어요</p>';
     return '<p class="nsum"><b>' + res.length + '</b>개' + (res.length > 60 ? ' · 60개만 보여요 · 말을 더 길게 쳐 보세요' : '') + '</p>' + res.slice(0, 60).map(r => '<div class="nc"><div class="nc-h" data-act="nfind" data-arg="' + esc(r.key) + '"><span class="nc-t"><b>' + esc(r.title.replace(/^\[(.*)\]$/, '$1').replace(/^【(.+?)】\s*/, '$1 ').trim()) + '</b><small>' + esc(secInfo(r.sec).short + (r.line ? ' · ' + r.line : '')) + '</small></span></div></div>').join(''); };
   function notesHtml() {
@@ -9459,7 +9473,9 @@
         <span class="tl-ppl">${peopleIn(e).map(n => avatar(n)).join('')}</span>${quoteHtml(e.quote)}</details></li>`; };
     // 사건이 많아지면(1000턴…) 최근 10개만 펼치고 예전 사건은 접어 둡니다.
     const RECENT = 10, olderEv = evs.slice(0, -RECENT), recentEv = evs.slice(-RECENT);
-    const list = evs.length ? `${olderEv.length ? `<details class="tl-up tl-fold"><summary><b>예전 사건 ${olderEv.length}</b></summary><ol class="tline">${olderEv.map(evLiFold).join('')}</ol></details>` : ''}<ol class="tline">${recentEv.map(evLi).join('')}</ol>`
+    //   접힌 예전 사건은 펼칠 때 그려요(5.8.76): 긴 방은 이 칸이 기억 화면의 3/4이라, 안 펼쳐도 매번 다 만들어서 열 때 0.5초씩 멈췄어요 · tlOld = 펼칠 때 쓸 그리기
+    tlOld = () => olderEv.map(evLiFold).join('');
+    const list = evs.length ? `${olderEv.length ? `<details class="tl-up tl-fold" data-lazy="tlold"><summary><b>예전 사건 ${olderEv.length}</b></summary><ol class="tline"></ol></details>` : ''}<ol class="tline">${recentEv.map(evLi).join('')}</ol>`
       : emptyBox(who ? `${esc(josa(who, '이', '가'))} 나온 사건이 아직 없어요.` : '아직 사건이 없어요.');
     const head = `<div class="sechead"><span>${rnd ? `${rnd}회차(회귀 전) · ` : ''}${who ? `${esc(who)} · ` : ''}사건 ${evs.length}개${sideN ? `(나옴 ${sideN})` : ''} · 오래된 일부터${rnd ? ' · 이번 생에서는 아직 안 일어난 일' : ''}</span></div>`;
     // 큰 흐름(줄거리)은 맨 위에 한 번. 인물을 고르면 그 사람 이야기만 보이니 숨깁니다.
@@ -9594,7 +9610,7 @@
   function peopleHtml(forced = null, segOverride = null) {
     const which = forced || nav.ppl;
     if (!snapshot?.note) return emptyBox('아직 정리한 기억이 없어요.');
-    const seg = segOverride ?? `<div class="seg">${PEOPLE_TABS.map(([k, l]) => `<button data-act="ppl" data-arg="${k}" aria-pressed="${k === which}">${l}</button>`).join('')}</div>`;
+    const seg = segOverride ?? pplSeg(which);
     if (which === 'feel') {
       const fl = feelings();
       const stepLi = (st, now) => `<li class="${now ? 'now' : ''}${st.star ? ' turn' : ''}">
@@ -9652,7 +9668,7 @@
     const ranked = [...names].sort((a, b) => nb.get(b).size - nb.get(a).size);
     const rootName = names.includes(nav.center) ? nav.center : names.find(n => PROF.get(n)?.isUser && nb.get(n).size) || ranked[0]; // 고른 사람 > 유저 캐릭터 > 관계 많은 사람
     const pt = (a, b) => rel.filter(r => r.from === a && r.to === b).map(r => r.text).join(' · ');
-    if (!rootName || !rel.length) return seg + emptyBox('관계·감정선이 정리되면 관계도가 그려져요.');
+    if (!rootName || !rel.length) return seg + emptyBox('관계가 정리되면 관계도가 그려져요.');
     // 고른 사람이 아직 누구와도 이어져 있지 않아도 관계도를 지우지 않고, 다른 사람을 고를 수 있게 둡니다.
     if (!nb.get(rootName).size) {
       const bar = `<div class="centers">${ranked.map(x => `<button data-act="center" data-arg="${esc(x)}" aria-pressed="${x === rootName}">${esc(x)}</button>`).join('')}</div>`;
@@ -9870,7 +9886,7 @@
 
   function graphHtml() {
     const g = graphModel();
-    if (!g.root) return emptyBox('관계·감정선이 정리되면 관계도가 그려져요.');
+    if (!g.root) return emptyBox('관계가 정리되면 관계도가 그려져요.');
     const sel = nav.gsel && g.pos.has(nav.gsel) ? nav.gsel : null;
     const cut = (t, n) => (t.length > n ? t.slice(0, n) + '…' : t);
     // 두 사람 사이 선은 하나만 긋고, 서로 보는 관계는 선 옆에 두 줄로 나란히 씁니다(선·이름과 안 겹치게).
@@ -10160,7 +10176,7 @@
       return (sh.length ? `<p class="pchips">${sh.map(x => `<span>${esc(x)}</span>`).join('')}</p>` : '') + (lg.length ? `<p>${esc(lg.join(' · '))}</p>` : ''); })(ppl.get(name))}${pr.family ? `<p class="pnt"><i>가족</i>${esc(pr.family)}</p>` : ''}${pr.story ? `<p class="pnt"><i>사연</i>${esc(pr.story)}</p>` : ''}${pr.worry ? `<p class="pnt"><i>고민</i>${esc(pr.worry)}</p>` : ''}${pr.plan ? `<p class="pnt"><i>계획</i>${esc(pr.plan)}</p>` : ''}</div></div>
       ${/* 이 화면엔 이 사람만의 것(프로필·관계)만. 기억·사건·명대사·서사 고리는 타임라인(이 사람), 몸·옷·소지품은 상태, 아는 것은 인지에 한 번씩만 */
         cat('', '관계 · 마음 · 호칭', relRows) || emptyBox('아직 정리된 관계가 없어요.')}
-      <div class="jump" style="margin-top:6px"><button data-act="tlperson" data-arg="${esc(name)}"><b>${esc(name)} 타임라인 보기</b><span class="v">기억·사건·명대사</span></button></div>`;
+      <div class="jump" style="margin-top:6px"><button data-act="tlperson" data-arg="${esc(name)}"><b>${esc(name)} 기억 보기</b><span class="v">기억·사건·명대사</span></button></div>`;
   }
 
   // ── 원문 편집 ──
@@ -10476,7 +10492,7 @@
         ${(draft.strongChanges || []).length ? `<details class="sfx"><summary>${(n => n ? `✏️ 센 말 ${n}줄을 원문 행동으로 바꿨어요` : "✏️ 센 말 고친 것을 원래대로 돌렸어요")(draft.strongChanges.filter(x => !x.undone).length)}</summary>${draft.strongChanges.map((x, j) => `<div class="sfx-row"><small>${esc(x.key)}</small>${x.undone ? `<p>${esc(x.before)}</p><p class="sfx-note">원래 문장으로 되돌렸어요</p>` : `<p class="sfx-b">${esc(x.before)}</p><p class="sfx-a">${esc(x.after)}</p>`}<div class="sfx-btns">${x.undone ? '' : `<button class="linkbtn" data-act="sfxundo" data-arg="${j}">원래 문장으로</button>`}<button class="linkbtn" data-act="pvEdit" data-arg="${esc(x.key)}">수정하기</button></div></div>`).join('')}</details>` : ''}
         ${draft.madeUp?.length ? `<div class="hidebox" style="margin-top:10px"><span><b>원문에서 못 찾은 호칭·별명 ${draft.madeUp.length}개</b><br>${draft.madeUp.map(w => `「${esc(w)}」<button class="linkbtn" data-act="dropname" data-arg="${esc(w)}">지우기</button>`).join(' ')}${draft.madeUp.length > 1 ? ` <button class="linkbtn" data-act="dropname" data-arg="">모두 지우기</button>` : ''}<br>대화에 나온 적 없는 말이에요. AI가 지어냈을 수 있어요. 진짜 쓰는 호칭이면 그냥 두세요.</span></div>` : ''}
         ${ev.ok + ev.bad ? `<div class="muted" style="margin-top:8px">근거 확인 · 원문에서 찾음 <b style="color:var(--ok)">${ev.ok}</b>${ev.bad ? ` · 못 찾음 <b style="color:var(--bad)">${ev.bad}</b> (고쳐 쓴 인용일 수 있어요)` : ''}</div>` : ''}
-        <div class="muted" style="margin-top:6px;font-size:11.5px">감정선·명대사·근거·프로필 꼬리표는 화면에만 있고 채팅엔 안 들어가요. 빨간 경고는 채팅에 들어가는 내용만 봐요.</div>
+        <div class="muted" style="margin-top:6px;font-size:11.5px">명대사·근거·프로필 꼬리표는 화면에만 있고 채팅엔 안 들어가요. 빨간 경고는 채팅에 들어가는 내용만 봐요.</div>
       </div>
       ${(() => { if (!draft.before || draft.restore) return '';
         const after = joinSections(draft.sections), ch = changesOf(draft.before.memory, after), n = changeCount(ch);
@@ -10552,7 +10568,7 @@
       + box('백업', '보관 · 되돌리기 · 다른 방으로 · 연결', `
         ${backupHtml()}
         ${nav.gsSheet ? gsSheetHtml() : ''}
-        <details class="bk-info"><summary>자세히 · 무엇이 담기나요</summary><p class="muted">· 담기는 것: 기억 노트(근거·감정선까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
+        <details class="bk-info"><summary>자세히 · 무엇이 담기나요</summary><p class="muted">· 담기는 것: 기억 노트(근거까지 든 전체본) · 정리 기록 · 명대사 · ETC(폰·컴퓨터·커뮤니티·뉴스·위키·실시간톡) · 쓴 돈 기록<br>
         · API 키는 담기지 않아요(파일이 새도 안전하게).<br>
         · 구글 드라이브를 연결해 두면 정리해서 넣을 때마다 자동으로 올라가고, 새 기기에서 방을 열면 불러올지 물어봐요.<br>
         · 받은 파일을 아이클라우드·구글 드라이브에 저장해 두면, 다른 기기에서 "백업 불러오기"로 열 수 있어요.<br>
@@ -10615,7 +10631,7 @@
     paintInlineButton(label, due);
 
     // 머리
-    const tabName = nav.tab === 'settings' ? '설정' : '조아메모리ෆ';
+    const tabName = nav.tab === 'settings' ? '설정' : '조아메모리';
     const inSettings = nav.tab === 'settings' && !nav.view;
     let title = tabName, sub = inSettings ? '바꾸면 바로 저장돼요' : brRun.has(chatIdFromPath()) ? '분기하기 전 방의 정리본을 찾는 중이에요…' /* 따라온 옛 노트를 맞는 기억처럼 보여 주지 않아요 */ : n ? `1~${n.turns}턴 기억 · ${turns > cycle ? `정리할 때예요 (+${turns - cycle}턴)` : turns === cycle ? '정리할 때예요' : `다음 정리까지 ${cycle - turns}턴`}` : '아직 정리 전';
     const baseTitle = title, baseSub = sub; // 보기 화면에서도 머리는 앱 제목 그대로(뒤로는 메뉴 바로 아래 줄에)
@@ -10640,9 +10656,9 @@
     out('header').innerHTML = editing
       ? `${back}<div class="htitle"><b>${esc(title)}</b><span>${sub}</span></div>
         ${nav.part == null && !nav.fxEdit && editHasList(nav.key) ? '' : `<button class="hsave" data-act="saveEdit"${busyNow ? ' disabled' : ''}>${nav.view === 'pvEdit' ? '적용' : '저장'}</button>`}`
-      : `${inline ? '' : back}<div class="htitle"><b>${esc(inline ? baseTitle : title)}</b><span>${inline ? baseSub : sub}${attendMiss && attendMiss === new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) ? ' · <button class="linkbtn" data-act="attendnow" style="color:#D7263D;font-weight:800">오늘 출석 안 됨</button>' : ''}</span></div>
+      : `${inline ? '' : back}<div class="htitle"><b>${esc(inline ? baseTitle : title)}${(inline ? baseTitle : title) === '조아메모리' ? HLOGO : ''}</b><span>${inline ? baseSub : sub}${attendMiss && attendMiss === new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) ? ' · <button class="linkbtn" data-act="attendnow" style="color:#D7263D;font-weight:800">오늘 출석 안 됨</button>' : ''}</span></div>
+      ${sceneOn && snapshot && nav.tab === 'home' && !nav.view ? `<label class="inj-sw wd-sw wd-web hsw"><input type="checkbox" data-act="scenemode" checked${busyNow ? ' disabled' : ''}><i></i>웹 모드</label>` : ''}
       ${inSettings ? '' : `<button class="hbtn gear" data-act="tab" data-arg="settings" aria-label="설정">설정</button>`}
-      <button class="pg-hd" data-act="tab" data-arg="mode" aria-label="모드 열기">🎲 모드<small>임시</small></button>
       <button class="hbtn" data-act="close" aria-label="닫기">${icon('close', 'currentColor', 20)}</button>`;
 
     // 본문
@@ -10670,7 +10686,7 @@
       : nav.tab === 'mode' ? (nav.modeSub ? `<p class="md-back"><button class="linkbtn" data-act="modesub" data-arg="">‹ 모드</button></p>` + (nav.modeSub === 'love' ? loveHtml() : nav.modeSub === 'sty' ? `<div class="pg sty-pg">${styHtml()}</div>` : modeHtml()) : modeSummary())
       : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'if' ? ifHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
       : nav.tab === 'story' ? memoryHtml(STORY_TABS)
-      : nav.tab === 'now' ? memoryHtml(NOW_TABS)
+      : nav.tab === 'now' ? memoryHtml(NOW_TABS, k => pplSeg('now:' + k)) // 상태·소지품·장소는 인물 메뉴 알약 줄 안의 칸
       : nav.tab === 'people' ? peopleHtml()
       : nav.tab === 'feel' ? (snapshot?.note ? peopleHtml('feel', '') : emptyBox('아직 정리한 기억이 없어요.'))
       : nav.tab === 'backup' ? backupHtml()
@@ -10700,7 +10716,7 @@
     if (nav.tab === 'phone' && !nav.view) centerEmoji(main);
     if (nav.tab === 'mode' && nav.modeSub === 'preg') setupKit(main);
     if ((out('main')?.scrollTop || 0) < 60) ui('nav.top')?.classList.remove('dock-hide');
-    out('tabs').innerHTML = (sceneOn ? WEB_TABS : TABS.filter(([k]) => k !== 'settings')).map(([k, l]) => `<button data-act="tab" data-arg="${k}" aria-label="${k === 'phone' ? '기타' : l}"${nav.tab === k ? ' aria-current="page"' : ''}>${k === 'phone' ? '기타' : l}</button>`).join('')
+    out('tabs').innerHTML = (sceneOn ? WEB_TABS : TABS.filter(([k]) => k !== 'settings')).map(([k, l]) => `<button data-act="tab" data-arg="${k}" aria-label="${l}"${nav.tab === k || (k === 'people' && nav.tab === 'now') ? ' aria-current="page"' : ''}>${l}</button>`).join('')
       + `<button class="rail-set" data-act="tab" data-arg="settings" aria-label="설정"${nav.tab === 'settings' ? ' aria-current="page"' : ''}>설정</button>`;
     if (nav.view === 'preview') updatePreviewCount();
     if (nav.tab === 'settings' && !nav.view) fillSettings();
@@ -11990,7 +12006,7 @@
         if (nav.tab === 'story' || nav.tab === 'now') nav.mem = k; else if (nav.tab === 'people') nav.ppl = k === '인지·비밀' ? 'know' : k === '호칭·말투' ? 'speech' : k === '관계·감정선' ? 'map' : k === '감정선' ? 'feel' : 'list';
         render(); out('main').scrollTop = 0; return; }
       case 'mem': nav.mem = arg; nav.grp = ''; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; render(); out('main').scrollTop = 0; return;
-      case 'ppl': nav.ppl = arg; render(); out('main').scrollTop = 0; return;
+      case 'ppl': if (arg.startsWith('now:')) Object.assign(nav, { tab: 'now', mem: arg.slice(4), grp: '', fxEdit: null, fxLib: false, fxDel: false }); else { nav.tab = 'people'; nav.ppl = arg; } render(); out('main').scrollTop = 0; return;
       case 'pchelp': e.preventDefault(); nav.pcHelp = !nav.pcHelp; return keepScroll(render);
       case 'pcset': { // 유저(PC) 표시 켜고 끄기: 인물 칸 프로필 줄 글을 직접 고쳐요 · 웹 모드(이 기기엔 일부만)여도 채팅 노트에 써 두면 정리한 기기가 다음에 열 때 따라가요
         const chatId = chatIdFromPath(), n = snapshot?.note; if (!chatId || !n || busyNow || !arg) return;
@@ -12308,7 +12324,7 @@
       case 'etcskip': return etcPull(false);
       case 'etcsync': await setValue('etcSync', el.checked ? 'on' : 'off'); nav.etcSyncOn = el.checked; toast(el.checked ? 'ETC도 기기끼리 맞춰요. 바뀌면 구글에 자동으로 올라가요.' : 'ETC는 기기마다 따로 둬요.', 'ok', 3000); if (el.checked) etcFirst(); return;
       case 'devkeep': return devChoose(false);
-      case 'fullget': { const f = nav.fullAsk; if (f && f.chatId === chatIdFromPath()) { await saveFull(f.chatId, f.n.upto, f.g.memory, f.n.turns, f.n.at); nav.fullAsk = null; toast('근거·감정선 전체를 받아 왔어요', 'ok', 2500); } return render(); }
+      case 'fullget': { const f = nav.fullAsk; if (f && f.chatId === chatIdFromPath()) { await saveFull(f.chatId, f.n.upto, f.g.memory, f.n.turns, f.n.at); nav.fullAsk = null; toast('근거 전체를 받아 왔어요', 'ok', 2500); } return render(); }
       case 'fullskip': { const f = nav.fullAsk; if (f) await setValue('fullSkip:' + f.chatId, f.key); nav.fullAsk = null; return render(); }
       case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
@@ -12852,11 +12868,11 @@
       if (['low', 'medium', 'high'].includes(t)) thinkLevel = t; }
     const l = Number(await getValue('noteLimit', '50000')); if (LIMITS.includes(l)) NOTE_LIMIT = l;
   })();
-  // 다른 앱·탭에 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다.
+  // 다른 앱·탭에 1분 넘게 갔다가 돌아오면(아이폰 사파리 포함) 채팅의 노트를 다시 읽어 다른 기기에서 넣은 새 노트로 갈아끼웁니다(awayLong).
   let backAt = 0, filePick = false;
   // 폰은 파일 고르는 창에서 돌아올 때도 '돌아옴'이 먼저 와요 → 그때 다시 그리면 파일 칸이 바뀌어 고른 파일을 놓쳐요
   root.addEventListener('click', e => { if (e.target.closest?.('label')?.querySelector('input[type=file]')) filePick = true; }, true);
-  const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
+  const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || !awayLong() || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh(); };
   document.addEventListener('visibilitychange', comeBack);
   window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
