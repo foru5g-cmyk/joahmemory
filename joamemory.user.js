@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.80
+// @version      5.8.81
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2474,7 +2474,7 @@
     return { head, items };
   }
   // 닫힌 고리는 한 줄로: ':' 뒤에 어떻게 끝났는지가 있으면 근거·번역 줄을 빼요(그 장면은 날짜로그에 남아 있어요) · 비어 있으면 근거를 남겨요(제목만 남으면 기억을 잃으니)
-  const shrinkHook = it => !it.open && !it.del && /[:：]\s*\S{2}/.test(it.lines[0]) ? { ...it, lines: it.lines.filter((l, i) => !i || !/^\s*-?\s*(?:근거|번역)\s*[:：]/.test(l)) } : it;
+  const shrinkHook = it => !it.open && !it.del && /[:：]\s*\S{2}/.test(it.lines[0]) ? { ...it, lines: it.lines.filter((l, i) => !i || !/^\s*-?\s*(?:(?:[가-힣]{2,4}\s*)?근거|번역)\s*[:：]/.test(l)) } : it;
   // (삭제)는 이유 줄이 있거나, 근거 줄의 인용을 이번 대화 원문(delSrc)에서 찾을 때만 지워요. delSrc가 비면(기억 다시 확인·형식 맞추기) 근거 줄이 있기만 하면 돼요.
   let delSrc = '';
   // 소지품 이름(끝 괄호·'사진:' 머리말 뺌)이나 그 끝 낱말이 이번 대화 원문에 나왔는지
@@ -6054,7 +6054,7 @@
     for (let l of itemsOf(bodyOf('서사 고리'))) {
       if (/^(?:[-•]\s*)*\[(열림|닫힘)\]/.test(l)) skip = /\(삭제\)/.test(l); if (skip) continue; // (삭제) 고리는 빼요(앞에 '- '가 한 번 더 붙은 것도)
       l = l.replace(/^(?:[-•]\s*)+(?=\[(?:열림|닫힘)\])/, '');
-      const q = l.match(/^근거\s*[:：]\s*(.*)$/);
+      const q = l.match(/^(?:[가-힣]{2,4}\s*)?근거\s*[:：]\s*(.*)$/); // '완료 근거:'처럼 앞에 말이 붙은 것도
       if (q) { if (list.length) list[list.length - 1].quote = q[1].replace(/^["“]|["”]$/g, ''); continue; }
       const t = l.match(/^번역\s*[:：]\s*(.*)$/);
       if (t) { if (list.length) list[list.length - 1].tr = t[1].replace(/^["“]|["”]$/g, ''); continue; }
