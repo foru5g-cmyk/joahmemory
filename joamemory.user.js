@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.76
+// @version      5.8.77
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -551,8 +551,7 @@
     for (const [a, b] of list) for (const [k, v] of Object.entries(origDiff(a, b))) if (!origMap[k] || origMap[k].length < v.length) { origMap[k] = v; n++; }
     if (n) await setValue('orig:' + chatId, JSON.stringify(origMap)); return n; }
   let packSig = {}; // 'pack:방' = { 사건 키: 간추린 글 표시 } · 간추리기로 줄인 사건 · 2차로 한 줄까지 줄인 건 앞에 '2:'
-  const PKH = new Map(), packH = (k, t) => { let c = PKH.get(k); if (!c || c.t !== t) { if (PKH.size > 3000) PKH.clear(); PKH.set(k, c = { t, h: fxH(t) }); } return c.h; }; // 사건 글이 그대로면 지문을 다시 안 만들어요
-  const packIs = (k, lines) => { const v = packSig[k]; return !!v && String(v).replace(/^2:/, '') === packH(k, lines.join('\n')); }; // 지금 글이 간추린 그대로인지(그 뒤 고쳐졌으면 아님)
+  const packIs = (k, lines) => { const v = packSig[k]; return !!v && String(v).replace(/^2:/, '') === fxH(lines.join('\n')); }; // 지금 글이 간추린 그대로인지(그 뒤 고쳐졌으면 아님)
   // 분기방이 분기 전 방의 원문 보관함·간추린 표시를 이어받아요(분기방에 아직 없을 때만) · 간추린 뒤에 분기해도 분기방에서 원문으로 떠올리게 · store: 드라이브 백업에서 왔으면 그 안의 것
   const packInherit = async (cid, src, store) => { if (!cid || !src || cid === src) return;
     for (const k of ['orig', 'pack']) { if (String(await getValue(k + ':' + cid, '') || '')) continue; const v = String(store?.[k] || await getValue(k + ':' + src, '') || ''); if (!v || v === '{}') continue;
@@ -588,7 +587,7 @@
   // 간추린 사건의 원문 본문 낱말: 사건마다 한 번만 뽑아 두고(원문 글이 바뀌면 다시) 매 턴은 이 목록만 걸러 써요 · 점수가 원문으로 고르던 때와 같게(간추리며 빠진 본문 낱말로도 떠올라요)
   //   근거 줄은 빼고 뽑아요(원문으로 고르던 때도 stripProof가 근거 줄을 빼고 봤어요)
   const OWC = new Map();
-  const owOf = k => { const o = origMap[k]; if (!o) return null; let c = OWC.get(k); if (!c || c.src !== o) { if (OWC.size > 3000) OWC.clear(); const L = o.split('\n'), keep = L.filter(l => !PROOF_LINE.test(l)); c = { src: o, txt: keep.length === L.length ? o : keep.join('\n'), toks: [...new Set((keep.slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))] }; OWC.set(k, c); } return c; }; // txt: 근거 줄을 뺀 원문(없으면 원문 그대로 · 글을 또 들고 있지 않아요)
+  const owToks = k => { const o = origMap[k]; if (!o) return null; let c = OWC.get(k); if (!c || c.src !== o) { if (OWC.size > 3000) OWC.clear(); c = { src: o, toks: [...new Set((o.split('\n').slice(1).filter(l => !PROOF_LINE.test(l)).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))] }; OWC.set(k, c); } return c.toks; };
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
     const packed = new Map(), all = stripProof(sceneOn ? origSwap(memory, packed) : memory, sceneOn), pool = []; // 웹 모드: 줄어든·묶인 사건은 보관함 원문으로 떠올려요 · 간추린 사건은 짧은 글로 고르고 넣을 때만 원문(fullOf)
     const FO = new Map(), fullOf = (sec, it, t) => { const k = itemKey(it.key); if (sec !== '날짜로그' || !packed.has(k)) return t; let r = FO.get(k); if (r == null) FO.set(k, r = splitSections(stripProof('■ 날짜로그\n' + origMap[k], true))[0]?.body || t); return r; };
@@ -610,10 +609,7 @@
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('피터')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
-    // 간추린 사건이면 원문(이름·본문 낱말을 원문으로 봐요) · 제목이 같은 다른 칸(이정표) 항목은 아님
-    const PB = new Map(); if (packed.size) for (const it of secs.filter(x => x.key === '날짜로그').flatMap(x => ib(x).items)) { const k = itemKey(it.key); if (packed.has(k)) PB.set(it.key + '\u0000' + it.lines.join('\n'), k); }
-    const packOf = (key, body) => { const k = PB.size ? PB.get(key + '\u0000' + body) : null; return k ? owOf(k) : null; };
-    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)), ow = packOf(key, body)?.toks; BW.set(id, r = (ow || [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))]).filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
+    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)), pk = itemKey(key), ow = packed.has(pk) ? owToks(pk) : null; BW.set(id, r = (ow || [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))]).filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
     const df = new Map(), bdf = new Map(); let nItems = 0;
     for (const sec of secs) for (const it of si(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
@@ -634,7 +630,7 @@
       for (const w of words(key)) if ((df.get(w) || 0) <= rare) { if (said && inSaid(w)) { core += 5; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(scene, w)) { core += 2; hit.push(w); } else if (!common.has(w) && !NOT_NOUN.test(w) && has(text, w)) { core += 0.5; hit.push(w); } } // 제목: 보낸 말 5 · 직전 답 2 · 그 앞 대화 0.5 · 대화와 맞출 땐 명사 꼴만('끝에·에서'로 안 떠올리게) // 숫자는 앞자리까지 맞아야('7번' ≠ '37번')
       let bs = 0, bc = 0; for (const w of bodyWords(key, body)) if ((bdf.get(w) || 0) <= rare) { if (said && inSaid(w)) { bs += 2; hit.push(w); } else if (w.length >= 3 && !common.has(w) && has(scene, w)) { bc += 0.7; hit.push(w); } } // 본문: 보낸 말 2 · 직전 답 0.7(낱말 셋이 겹쳐야 2점 · 직전 답은 길어서 '이마·허리' 같은 두 글자는 우연히 겹쳐 3글자부터)
       bodyN = Math.min(4, bs) + Math.min(2.1, bc); core += bodyN;
-      const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + (packOf(key, body)?.txt || body)) ? 1 : 0) + sm * 2;
+      const k = itemKey(key), sm = injCtx.sim[k] || 0, semOk = (injCtx.gap?.[k] || 0) >= INJ_SEM_GAP, v = core + (hasHere(key + ' ' + body) ? 1 : 0) + sm * 2;
       why.set(k, [hit.length ? '‘' + hit.slice(0, 3).join('·') + '’ 이야기가 나와서' : '', sm >= 0.5 ? '비슷한 장면이라서' : ''].filter(Boolean).join(' · ') || '지금 나온 인물이 있어서');
       const ai = injCtx.ai?.[itemKey(key)], saidHit = dayHit(key) || words(key).some(w => (df.get(w) || 0) <= rare && said && inSaid(w)) || bs > 0, aiOk = ai != null && ai >= Math.max(70, (injCtx.aiTop || 0) - 20) && (ai >= (injKind === 'reroll' ? 90 : 80) || saidHit); // 확신(80+)하거나 보낸 말에 직접 나올 때만 · bs: 보낸 말에 본문 낱말('민들레')이 나와도 보낼 때 새로 골라요
       if (saidHit) injSaidHits.add(itemKey(key));
@@ -733,7 +729,7 @@
     }
     // 떠올린 옛 사건의 바로 앞뒤 사건은 제목만 같이(일이 어디서 시작해 어떻게 끝났는지) · 같은 NPC가 나오는 사건만 · 이미 들어간 건 빼요
     { const logSec = secs.find(x => x.key === '날짜로그'), L = logSec ? ib(logSec).items : [], got = [...pick.values()].filter(u => u.sec === '날짜로그' && u.recall);
-      const inIt = (p, it) => personAlias(p.name).some(a => a && a.length >= 2 && nmIn(packOf(it.key, it.lines.join('\n'))?.txt || it.lines.join(' '), a));
+      const inIt = (p, it) => personAlias(p.name).some(a => a && a.length >= 2 && nmIn(it.lines.join(' '), a));
       // 유저는 이어짐 판단에서 빼요 · 유저 표시가 없으면 가장 자주 나오는 한 사람(동률이면 아무도 안 뺌) · 떠올린 사건이 있을 때만 세요
       let npcs = got.length ? cast.filter(p => !p.isUser) : [];
       if (npcs.length > 1 && !cast.some(p => p.isUser)) { const c = npcs.map(p => [p, L.filter(it => inIt(p, it)).length]).sort((a, b) => b[1] - a[1]); if (c[0][1] > c[1][1]) npcs = npcs.filter(p => p !== c[0][0]); }
@@ -1572,21 +1568,20 @@
       pregSave(); if (isOpen()) render();
     } catch (e) { logErr('핏줄 확인', e.message); pregGeneAsk.failed = true; } finally { pregGeneAsk.busy = false; } // 실패하면 이번 접속 동안 다시 안 물어요
   }
-  async function pregRelAsk(todo, who, fresh = new Set()) {
+  async function pregRelAsk(todo, who) {
     if (pregRelAsk.busy || !pregMode || !pregHasKey || !preg) return; pregRelAsk.busy = true; const cid = pregChat;
     try {
       const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; if (!String(await getValue(keyOf(m), '')).trim()) return;
       const r = parseJsonLoose(await askModel(P_REL_PROMPT, `[유저 캐릭터] ${who}\n\n` + todo.map((x, i) => `[${i}] ${x.src.slice(0, 1500)}`).join('\n\n'), '🍼관계 확인', true));
-      const list = r?.rels; if (!preg || pregChat !== cid) return; if (!Array.isArray(list)) throw new Error('AI 답에 관계 목록이 없어요');
-      preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0, ...(x.b ? { b: 1 } : {}) }; }
-      for (const k of Object.keys(preg.relAi)) if (preg.relAi[k].b && !fresh.has(k)) delete preg.relAi[k]; // 말풍선 답은 정리되면 다시 안 봐요(임신 기록과 턴별 사본이 계속 커지지 않게)
+      const list = r?.rels; if (!preg || pregChat !== cid || !Array.isArray(list)) return;
+      preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0 }; }
       for (const x of todo) if (!preg.relAi[x.k]) (pregRelAsk.failed ||= new Set()).add(x.k); // 답에 빠진 사건은 굳히지 않고 다음 접속에 다시 물어요
       pregSave(); if (isOpen()) render();
     } catch (e) { logErr('관계 확인', e.message); for (const x of todo) (pregRelAsk.failed ||= new Set()).add(x.k); } finally { pregRelAsk.busy = false; } // 실패한 사건은 이번 접속 동안 다시 안 물어요(화면 그릴 때마다 AI를 부르지 않게)
   }
   function pregKitRels(mem, ask = false) { // ask: 임신 화면을 열었을 때만 아직 안 물어본 사건을 AI에 물어요(보낼 때마다 묻지 않게)
     // 관계한 날 전부(날짜로그 · 아직 정리 안 된 대화면 노트 날짜), 오래된 것부터
-    const base = storyDay(mem), out = [], mine0 = pRelMine(mem), todo = [], bub = new Set();
+    const base = storyDay(mem), out = [], mine0 = pRelMine(mem), todo = [];
     const mine = t => mine0(t).split('\n').filter(l => l && !P_PAST.test(l)).join('\n'); // 지난 관계를 떠올린 줄은 그날 관계로 안 쳐요
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const src = [b.title, ...b.lines].join('\n'), d = P_DAY(b.title); if (d == null) continue;
       const fx = preg?.relFix?.[pKey(src)], ai = pregHasKey && P_SEX.test(src) ? preg?.relAi?.[pKey(src)] : null;
@@ -1602,13 +1597,13 @@
       if (x != null) cur = x;
       // 키가 있으면 관계 낱말이 든 아직 정리 안 된 말풍선도 AI가 읽어요(날짜로그 사건과 같은 요청에 · 말풍선마다 한 번 · 유저 캐릭터 본인 관계만)
       //   낱말로만 보면 '단테가 그녀 안에…'처럼 엄마가 '그녀·너'로 나온 문장을 남의 관계로 버려서, 정리 전엔 최근 관계를 못 잡고 예전 사건만 떴어요 · 답이 오기 전엔 낱말 그대로
-      if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; bub.add(k); // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
+      if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
         if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) { const tt = relAiText(ai, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { same.t += '\n' + tt; same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } if (x == null && cur != null) for (const p of t.split(/\n+|(?<=[.!?。])\s+/)) cur += pSkip(p); continue; } // AI가 아니라면 낱말로도 안 세요 · AI가 판단한 말풍선도 '일주일 뒤' 같은 날짜 넘김은 세요(뒤 장면 날짜가 안 밀리게) · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
-        if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src, b: 1 }); }
+        if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src }); }
       for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
         if (x == null && cur != null) cur += pSkip(p);
         const st = mine(p.replace(/["“][^"”\n]*["”]/g, '')); if (st) { const d = cur ?? base; if (d != null && (base == null || base - d <= 42)) { const same = out.find(y => y.d === d); if (same) same.t += '\n' + st; else out.push({ d, t: st }); } } } } // 대사로 지난 일을 꺼낸 건 빼고 지문에서만
-    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name, bub);
+    if (ask && todo.length) pregRelAsk(todo.slice(0, 30), preg?.who || pregWhoDefault(mem).name);
     return out.sort((a, b) => a.d - b.d);
   }
   const pregKitRel = mem => pregKitRels(mem).pop() || null; // 마지막 관계
@@ -6833,9 +6828,9 @@
       return { src: 'g', memory: d.memory, upto: d.upto, turns: d.turns, at, by: d.by || '', savedAt: d.at, savedBy: d.by || '' };
     } catch (_) { return null; }
   }
-  async function gsList(all = false) { // 드라이브의 방 백업 목록(스크립트 v3부터) · all: 모드 기록·사본 파일까지
+  async function gsList() { // 드라이브의 방 백업 목록(스크립트 v3부터)
     let r; try { r = await gsCall({ action: 'list' }); } catch (e) { if (/알 수 없는 요청/.test(e.message)) throw new Error('드라이브 스크립트가 예전 버전이에요 · 설정 › 백업 › 연결 설정에서 "구글 스크립트 복사"로 새 글을 붙여 넣고 새 버전으로 배포해 주세요(주소는 그대로)'); throw e; }
-    return Array.isArray(r.items) ? r.items.filter(x => all || !/-[mhs]$/.test(x.chat)) : []; // '-m' = 모드 기록 · '-h' = 정리 기록 · '-s' = 턴별 사본 파일
+    return Array.isArray(r.items) ? r.items.filter(x => !/-[mhs]$/.test(x.chat)) : []; // '-m' = 모드 기록 · '-h' = 정리 기록 · '-s' = 턴별 사본 파일
   }
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
@@ -6869,21 +6864,9 @@
   // 턴별 사본(pregsnap·lovesnap)은 '방ID-s' 파일로 따로(5.8.70): 60턴치 사본이 모드 기록을 키워서, 방을 열 때·폰을 다시 볼 때마다 통째로 받다 아이폰이 꺼졌어요
   //   평소엔 '-m'(임신·연애·문체 보정)만 받고, 사본은 분기할 때 이 기기에 그 턴 것이 없을 때만 받아요 · 예전 판이 '-m'에 넣어 둔 사본도 그대로 읽어요
   const GS_SNAP = ['pregsnap', 'lovesnap'];
-  //   사본은 기기마다 자기 파일('방ID-기기-s')에만 올려요: 한 파일을 같이 쓰면 나중에 올린 기기가 다른 기기 사본을 덮어요 · 올릴 때 받아서 합치면 폰이 큰 파일을 계속 받아요
-  const gsDevId = async () => { let d = String(await getValue('gsdev', '') || ''); if (!d) { d = Math.random().toString(36).slice(2, 8); await setValue('gsdev', d); } return d; };
-  //   임신·연애가 같은 방을 이어서 찾아요: 10분 안엔 받은 걸 같이 써요(큰 파일을 두 번 안 받게)
-  const gsSnapRuns = new Map();
-  function gsSnapPull(room) { const r = gsSnapRuns.get(room); if (r && Date.now() - r.at < 6e5) return r.p; const p = gsSnapGet(room); gsSnapRuns.set(room, { at: Date.now(), p }); return p; }
-  async function gsSnapGet(room) { let got = false; const mark = 'gssp:' + room;
-    if (IS_STAY && Date.now() - (Number(await getValue(mark, '0')) || 0) < 216e5) return false; // 지난번에 받다가 페이지가 꺼졌으면 6시간 쉬어요(열 때마다 또 받다 꺼지지 않게)
-    if (IS_STAY) await setValue(mark, String(Date.now()));
-    crumbOn('gssnap', '드라이브에서 턴별 사본 받기');
-    try {
-      let mine = []; try { mine = (await gsList(true)).filter(x => x.chat.startsWith(room + '-') && /^-[a-z0-9]+-s$/.test(x.chat.slice(room.length))).sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0)).slice(-6).map(x => x.chat.slice(room.length)); } catch (_) {} // 옛 스크립트엔 목록이 없어요
-      for (const part of ['-m', '-s', ...mine]) { const d = await gsModeFetch(room, part); if (!d?.store) continue; // 옛 판 파일(-m·-s) 먼저, 기기 파일은 오래된 것부터(같은 턴은 새것이 남게)
-        for (const k of GS_SNAP) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } }
-    } finally { crumbOff('gssnap'); if (IS_STAY) await setValue(mark, ''); }
-    return got; }
+  async function gsSnapPull(room) { let got = false;
+    for (const part of ['-s', '-m']) { const d = await gsModeFetch(room, part); if (!d?.store) continue;
+      for (const k of GS_SNAP) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } } return got; }
   // 받은 크기는 'gsmlen:방-m'에 남겨요 · 다음에 받을 때 표시(crumb)에 붙어서, 받다가 꺼지면 오류 기록에 그 크기가 찍혀요
   async function gsModeFetch(chatId, part = '-m') { try { const r = await gsCall({ action: 'load', chat: chatId + part }), d = JSON.parse(r.data); await setValue('gsmlen:' + chatId + part, String(String(r.data || '').length)); return d?.app === 'memo-mode' && d.chat === chatId ? d : null; } catch (_) { return null; } }
   const gsLenTxt = async k => { const n = Number(await getValue('gsmlen:' + k, '0')) || 0; return n ? ' · 지난번 ' + Math.round(n / 1000) + '천 자' : ''; };
@@ -6893,8 +6876,10 @@
   async function gsModeSave(chatId, pulled = false) { if (!chatId || !String(await getValue('gsUrl', '')).trim()) return; try { if (!pulled) await gsPullStore(chatId); /* pulled: 방금 같은 방을 받았으면 또 안 받아요 */ const store = {}, snaps = {}; for (const k of GS_MODE) { const v = await getValue(k + ':' + chatId, ''); if (v) (GS_SNAP.includes(k) ? snaps : store)[k] = v; } if (!Object.keys(store).length && !Object.keys(snaps).length) return;
       const head = { app: 'memo-mode', v: 1, at: new Date().toISOString(), by: DEVICE, chat: chatId }, put = async (part, title, st) => { const s = JSON.stringify({ ...head, store: st }); gsModeBig(chatId, part, s, st); await gsCall({ action: 'save', chat: chatId + part, title: roomTitle() + title, data: s }); await setValue('gsmlen:' + chatId + part, String(s.length)); };
       await put('-m', ' 모드', store); /* 사본이 없어도 '-m'은 늘 새로 써요: 예전 판이 사본까지 넣어 둔 큰 '-m'을 작게 덮어요 */ if (pregChat === chatId && preg) pregSave.base = { c: chatId, s: preg.saved || 0 };
-      if (Object.keys(snaps).length) { const all = GS_SNAP.map(k => snaps[k] || '').join('\n'); let x = 0; for (let i = 0; i < all.length; i++) x = (x * 31 + all.charCodeAt(i)) | 0; const dev = await gsDevId(), sig = dev + ':' + x + ':' + all.length; // 사본은 바뀌었을 때만 올려요
-        if (String(await getValue('gss:' + chatId, '')) !== sig) { await put('-' + dev + '-s', ' 사본', snaps); await setValue('gss:' + chatId, sig); } } }
+      if (Object.keys(snaps).length) { const all = GS_SNAP.map(k => snaps[k] || '').join('\n'); let x = 0; for (let i = 0; i < all.length; i++) x = (x * 31 + all.charCodeAt(i)) | 0; const sig = x + ':' + all.length; // 사본은 바뀌었을 때만 올려요
+        // 올리기 전에 드라이브 '-s'를 받아 합쳐요: 안 합치면 다른 기기가 올린 턴 사본이 이 기기 것으로 덮여 사라져요 · 같은 턴은 이 기기 것
+        if (String(await getValue('gss:' + chatId, '')) !== sig) { const r = await gsModeFetch(chatId, '-s'); for (const k of GS_SNAP) { const t = r?.store?.[k]; if (t) snaps[k] = snapMerge(t, snaps[k] || '') || t; }
+          await put('-s', ' 사본', snaps); await setValue('gss:' + chatId, sig); } } }
     catch (e) { logErr('연동', '모드 기록 올리기 실패 · ' + e.message); } }
   const gsModeSoon = chatId => { clearTimeout(gsModeSoon.t); gsModeSoon.t = setTimeout(() => gsModeSave(chatId), 8000); };
   // 다른 기기의 임신·연애·문체 보정을 드라이브에서 한 번에 받아요 · 방을 열 때 + 폰·탭을 다시 볼 때(다른 기기에서 고친 게 새로고침 없이 와요)
@@ -13072,7 +13057,7 @@
     lastPath = nowChat; autoAttend(); // 방을 옮길 때도 출석 확인(하루 한 번만 실제로 보내요)
     openSheet(false);
     snapshot = null; draft = null; nav = fresh(); histList = []; histLast = null; histN = 0;
-    fullNote = null; origMap = {}; packSig = {}; OWC.clear(); PKH.clear(); injPins = new Set(); refresh.n = (refresh.n || 0) + 1; loading = false; // 앞 방 기억·원문 보관함·고정 사건도 비워요 · 돌던 앞 방 읽기는 그만두게(새 방 읽기가 곧 다시 채워요)
+    fullNote = null; origMap = {}; packSig = {}; injPins = new Set(); refresh.n = (refresh.n || 0) + 1; loading = false; // 앞 방 기억·원문 보관함·고정 사건도 비워요 · 돌던 앞 방 읽기는 그만두게(새 방 읽기가 곧 다시 채워요)
     inlineBtn.remove(); capBtn.remove(); if (cap.on) capOff();
     placeInlineButton();
     render();
