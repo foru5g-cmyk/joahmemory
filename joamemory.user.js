@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.74
+// @version      5.8.75
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -560,13 +560,15 @@
   const packTake = async (cid, orig, pack) => { if (!cid || !pack) return; /* 다른 기기에서 간추린 표시·원문을 이 기기에도(되돌리기 버튼이 따라오게) */
     let o, s; try { o = origJoin(JSON.parse(String(await getValue('orig:' + cid, '') || '{}')) || {}, JSON.parse(orig || '{}')); s = JSON.parse(pack) || {}; } catch (_) { return; }
     await setValue('orig:' + cid, JSON.stringify(o)); await setValue('pack:' + cid, JSON.stringify(s)); if (chatIdFromPath() === cid) { origMap = o; packSig = s; } };
-  function origSwap(memory) { // 떠올릴 노트: 줄어든 사건은 원문으로 · (요약)에 묶인 사건은 그 (요약) 바로 뒤에 원문을 날짜순으로(빠진 사건 중 (요약) 기간 안의 것만 · 정정으로 지운 사건은 안 살려요)
+  function origSwap(memory, packed = null) { // 떠올릴 노트: 줄어든 사건은 원문으로 · (요약)에 묶인 사건은 그 (요약) 바로 뒤에 원문을 날짜순으로(빠진 사건 중 (요약) 기간 안의 것만 · 정정으로 지운 사건은 안 살려요)
+    // packed(Map)를 주면 간추린 사건은 짧은 글 그대로 두고 키(→ 원문이 더 긴 만큼)만 담아요: 고르기는 짧은 글로, 원문은 고른 사건만(5.8.78 · 매 턴 원문 전체를 훑지 않게)
     if (!Object.keys(origMap).length) return memory;
     const L = splitSections(memory), sec = L.find(x => x.key === '날짜로그'); if (!sec) return memory;
     const B = itemBlocks(sec.body), have = new Set(B.items.map(it => itemKey(it.key))), out = [...B.head];
     const lost = Object.entries(origMap).filter(([k]) => !have.has(k)).map(([k, v]) => ({ v, d: P_DAY2(v.split('\n')[0]) })).filter(x => x.d != null).sort((x, y) => x.d - y.d);
-    for (const it of B.items) { const o = !it.del && origMap[itemKey(it.key)];
-      out.push(o && (origBody(it).length <= 2 || packIs(itemKey(it.key), it.lines)) ? o : it.lines.join('\n')); // 간추린 사건도 간추린 그대로일 때만 원문으로(그 뒤 고쳐졌으면 고친 글을 써요)
+    for (const it of B.items) { const k = itemKey(it.key), o = !it.del && origMap[k], pk = !!o && packIs(k, it.lines), swap = o && (origBody(it).length <= 2 || pk && !packed);
+      if (pk && packed && !swap) packed.set(k, o.length - it.lines.join('\n').length);
+      out.push(swap ? o : it.lines.join('\n')); // 간추린 사건도 간추린 그대로일 때만 원문으로(그 뒤 고쳐졌으면 고친 글을 써요)
       const m = /\(요약\)/.test(it.lines[0]) && it.lines[0].match(/\[([^\]~]+)~([^\]]+?)-/), a = m && P_DAY2(m[1]), z = m && P_DAY2(m[2]);
       if (a != null && z != null) for (const x of lost) if (x.d >= a && x.d <= z) out.push(x.v); }
     sec.body = out.join('\n'); return joinSections(L);
@@ -582,8 +584,13 @@
       (cur ? cur.lines : head).push(l); }
     items.head = head; return items;
   }
+  // 간추린 사건의 원문 본문 낱말: 사건마다 한 번만 뽑아 두고(원문 글이 바뀌면 다시) 매 턴은 이 목록만 걸러 써요 · 점수가 원문으로 고르던 때와 같게(간추리며 빠진 본문 낱말로도 떠올라요)
+  //   근거 줄은 빼고 뽑아요(원문으로 고르던 때도 stripProof가 근거 줄을 빼고 봤어요)
+  const OWC = new Map();
+  const owToks = k => { const o = origMap[k]; if (!o) return null; let c = OWC.get(k); if (!c || c.src !== o) { if (OWC.size > 3000) OWC.clear(); c = { src: o, toks: [...new Set((o.split('\n').slice(1).filter(l => !PROOF_LINE.test(l)).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))] }; OWC.set(k, c); } return c.toks; };
   function selectInjection(memory, poolMode = false) { // poolMode: 고르지 않고 떠올릴 후보만(AI 재검토용)
-    const all = stripProof(sceneOn ? origSwap(memory) : memory, sceneOn), pool = []; // 웹 모드: 줄어든·묶인 사건은 보관함 원문으로 떠올려요
+    const packed = new Map(), all = stripProof(sceneOn ? origSwap(memory, packed) : memory, sceneOn), pool = []; // 웹 모드: 줄어든·묶인 사건은 보관함 원문으로 떠올려요 · 간추린 사건은 짧은 글로 고르고 넣을 때만 원문(fullOf)
+    const FO = new Map(), fullOf = (sec, it, t) => { const k = itemKey(it.key); if (sec !== '날짜로그' || !packed.has(k)) return t; let r = FO.get(k); if (r == null) FO.set(k, r = splitSections(stripProof('■ 날짜로그\n' + origMap[k], true))[0]?.body || t); return r; };
     if (!poolMode && !sceneOn) { lastInj = { chars: all.length, all: true, recalled: [], pinned: [], keys: null }; return memory; } // 앱 방식은 노트 전체 그대로
     const text = injCtx.text, secs = splitSections(all);
     // 이번 한 번 고르는 동안은 칸마다 한 번만 항목으로 나눠요(같은 칸을 서너 번 다시 나누지 않게 · 결과는 읽기만 해요)
@@ -602,7 +609,7 @@
     //   본문엔 흔한 말이 많아서 한글 명사 꼴만 봐요: 영어 대사('you')·인물 이름('피터')·동사·형용사·조사 꼴('뜨거운·했다고·청하며·끝에')은 빼요
     const nameW = new Set(cast.flatMap(p => personAlias(p.name)).filter(Boolean));
     const NOT_NOUN = /(?:[다며고서게면요죠까어아여해했던는은을를에와과도로른진된한든데져겨히]|(?<!타)운|이라)$/; // '돈이라·챙겨·가만히'도 빼요 // '뜨거운'은 빼고 '한인타운'은 남겨요 · '와인·애인'도 남게 '인'은 안 봐요
-    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)); BW.set(id, r = [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))].filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
+    const bodyWords = (key, body) => { const id = key + '\u0000' + body; let r = BW.get(id); if (r) return r; const tw = new Set(words(key)), pk = itemKey(key), ow = packed.has(pk) ? owToks(pk) : null; BW.set(id, r = (ow || [...new Set((String(body).split('\n').slice(1).join(' ').match(/[가-힣]{2,}/g) || []).map(injStem))]).filter(w => w.length >= 2 && !INJ_STOP.has(w) && !tw.has(w) && !nameW.has(w) && !nameW.has(injStem(w)) && !NOT_NOUN.test(w))); return r; }; // '백호랑이가' → '백호랑이' → 이름
     const df = new Map(), bdf = new Map(); let nItems = 0;
     for (const sec of secs) for (const it of si(sec)) { nItems++; for (const w of words(it.key)) df.set(w, (df.get(w) || 0) + 1); for (const w of bodyWords(it.key, it.lines.join('\n'))) bdf.set(w, (bdf.get(w) || 0) + 1); }
     const rare = Math.max(2, Math.ceil(nItems * 0.05));
@@ -634,7 +641,7 @@
     for (const sec of secs) {
       const b = ib(sec), head = b.head.join('\n').trim(), k = sec.key, mode = secMode(k);
       if (k === FIXED || k === '현재상태') { if (sec.body.trim()) units.push({ sec: k, i: -1, text: sec.body, pri: 100 }); continue; } // 고정 설정: 칸 방식과 상관없이 항목마다 고른 대로(미주입만 빼고 늘 넣어요) · 현재상태: 지금 이 순간의 사실이라 늘 통째로(주입 탭에 버튼 없음)
-      if (mode === 'off') { if (k === '날짜로그') b.items.forEach((it, i) => { if (injPins.has(itemKey(it.key))) units.push({ sec: k, i, text: it.lines.join('\n'), pri: 88, pin: true, key: itemKey(it.key) }); }); continue; } // 안 넣기(📌 고정한 사건은 남겨요)
+      if (mode === 'off') { if (k === '날짜로그') b.items.forEach((it, i) => { if (injPins.has(itemKey(it.key))) units.push({ sec: k, i, text: fullOf(k, it, it.lines.join('\n')), pri: 88, pin: true, key: itemKey(it.key) }); }); continue; } // 안 넣기(📌 고정한 사건은 남겨요)
       if (k === '소지품' && mode === 'on' && b.items.length) { // 소지품: 물건마다 · 최근 대화·보낸 말에 나온 물건만 내용까지, 나머지는 이름 한 줄(있다는 건 안 잊게)
         if (head && !isNone(head)) units.push({ sec: k, i: -1, text: head, pri: 92 });
         const SYN = [['반지', '링'], ['목걸이', '팬던트', '네크리스'], ['오토바이', '바이크'], ['휴대폰', '핸드폰', '스마트폰', '폰'], ['자동차', '차', '세단', '차량'], ['시계', '워치'], ['가방', '핸드백', '백팩'], ['귀걸이', '이어링'], ['팔찌', '브레이슬릿']]; // 같은 물건을 다르게 부르는 말
@@ -691,15 +698,15 @@
             const v = score(it.key, t), hw = lastHw; if (poolMode && v > 0.5) pool.push({ key: itemKey(it.key), sec: k, text: t, v }); if (v >= 2 && !injSkip.has(itemKey(it.key))) units.push({ sec: k, i, text: t, pri: 60 + v, full: true, rc: true, v, key: itemKey(it.key), hw }); } // 안 나온 인물도 대화와 맞으면 전부
           return;
         }
-        if (k === '날짜로그' && injPins.has(itemKey(it.key))) return units.push({ sec: k, i, text: t, pri: 88, pin: true, key: itemKey(it.key) });
-        if (k === '날짜로그' && i >= b.items.length - injSet.recent) return units.push({ sec: k, i, text: t, pri: 75, key: itemKey(it.key) });
+        if (k === '날짜로그' && injPins.has(itemKey(it.key))) return units.push({ sec: k, i, text: fullOf(k, it, t), pri: 88, pin: true, key: itemKey(it.key) });
+        if (k === '날짜로그' && i >= b.items.length - injSet.recent) return units.push({ sec: k, i, text: fullOf(k, it, t), pri: 75, key: itemKey(it.key) });
         const fm = k === '인지·비밀' ? (injSet.facts?.[itemKey(it.key)] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) : null; // 카드는 정보 이름(':' 앞)으로 저장해요
         if (fm === 'off') return; if (fm === 'on') return units.push({ sec: k, i, text: t, pri: 89, key: itemKey(it.key) });
         // 이정표·회귀 전 사건은 제목 한 줄을 늘(긴 방에서 큰 흐름이 안 끊기게) · 본문은 떠올릴 때만 · 회귀 전은 기억하는 사람이 장면에 있을 때만
         const spine = !injSkip.has(itemKey(it.key)) && (k === '이정표' || (k === PAST && pastHere && !/^\[?\d+회차 · (?:물건|아는 것|장소) · /.test(it.key)));
         if (spine) units.push({ sec: k, i, text: first.replace(/^\s*▸\s*/, '- '), pri: k === PAST ? 55 : 72, short: true });
         const v = score(it.key, t), hw = lastHw; if (poolMode && v > 0.5 && !injSkip.has(itemKey(it.key))) pool.push({ key: itemKey(it.key), sec: k, text: t, v, i, items: k === '날짜로그' ? b.items : null });
-        if (v >= 2 && !injSkip.has(itemKey(it.key))) units.push({ sec: k, i, text: t, pri: 60 + v + i / 1e5, recall: k === '날짜로그', rc: true, v, full: spine, key: itemKey(it.key), hw }); // 점수가 같으면 최근 것 먼저
+        if (v >= 2 && !injSkip.has(itemKey(it.key))) units.push({ sec: k, i, text: fullOf(k, it, t), pri: 60 + v + i / 1e5, recall: k === '날짜로그', rc: true, v, full: spine, key: itemKey(it.key), hw }); // 점수가 같으면 최근 것 먼저
       });
     }
     if (poolMode) { // 위쪽 후보 사건의 바로 앞뒤 사건도(원인·뒷일) — 낱말이 안 겹쳐도 AI가 고를 수 있게
@@ -734,7 +741,7 @@
     // 전체 기억(고정 포함)이 전전 한 칸(INJ_MAX)에 다 들어가면 전부 넣어요 · 넘치면 위에서 고른 그대로 · 안 넣기 칸·✕ 뺀 것·끈 정보는 빼고
     const rest = []; let restN = 0;
     for (const sec of secs) { const k = sec.key; if (k === FIXED || secMode(k) === 'off') continue;
-      ib(sec).items.forEach((it, i) => { const id = k + '|' + i, t = it.lines.join('\n'), p = pick.get(id), key = itemKey(it.key);
+      ib(sec).items.forEach((it, i) => { const id = k + '|' + i, t = fullOf(k, it, it.lines.join('\n')), p = pick.get(id), key = itemKey(it.key);
         if ((p && p.text.length >= t.length) || injSkip.has(key) || (k === '인지·비밀' && (injSet.facts?.[key] || injSet.facts?.[itemKey(String(it.key).split(/[:：]/)[0])]) === 'off')) return;
         rest.push({ id, u: { sec: k, i, text: t, key } }); restN += t.length + 1 - (p ? p.text.length + 1 : 0) + (secCost.has(k) || rest.some(r => r.u.sec === k) ? 0 : k.length + 3); }); }
     const fxN = both ? [...pick.values()].filter(u => u.sec === FIXED).reduce((a, u) => a + u.text.length + 1, 0) : 0;
@@ -752,7 +759,7 @@
     }
     const memoryOut = joinSections(out);
     const picked = [...pick.values()], head1 = u => String(u.text.split('\n')[0]).replace(/^\s*▸\s*/, '').trim();
-    lastInj = { chars: stripProof(memoryOut).length, all: false, total: all.length, keys: new Set(picked.filter(u => u.key).map(u => u.key)),
+    lastInj = { chars: stripProof(memoryOut).length, all: false, total: all.length + [...packed.values()].reduce((a, n) => a + Math.max(0, n), 0), keys: new Set(picked.filter(u => u.key).map(u => u.key)),
       recalled: picked.filter(u => u.rc).map(u => ({ key: u.key, title: u.sec === '인물' ? (String(u.text).match(/【([^】]+)】/) || [, head1(u)])[1] : u.title || head1(u), why: why.get(u.key) || '', sec: u.sec })), pinned: picked.filter(u => u.pin).map(u => ({ key: u.key, title: head1(u) })) };
     return memoryOut;
   }
@@ -1380,7 +1387,7 @@
   }
   const pregSave = () => { if (!pregChat) return; const body = JSON.stringify(preg && { ...preg, saved: 0 }); if (preg && pregSave.body !== pregChat + body) { pregSave.body = pregChat + body; preg.saved = Date.now(); if (nav?.gsOn) gsModeSoon(pregChat); } // saved: 기기끼리 더 최근 걸 고르는 기준 · 내용이 바뀔 때만 올려요(기준은 pregLoad가 잡아요)
     const j = JSON.stringify(preg);
-    const turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = pregChat + '|' + turn + '|' + j.replace(/"saved":\d+/, ''); // 임테기 전(기록만 있고 안 켜진 때)도 그 턴 것으로
+    const turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = pregChat + '|' + j.replace(/"saved":\d+/, ''); // 임테기 전(기록만 있고 안 켜진 때)도 그 턴 것으로 · 턴 번호는 견주지 않아요: 기록이 바뀐 턴에만 사본(연애처럼 · 분기·되돌리기는 그 턴까지 중 마지막 사본을 써서 결과가 같아요)
     if (preg && turn && pregSave.at !== same && pregChat === chatIdFromPath()) { pregSave.at = same; pregSnapPut(pregChat, turn, j); } // 같은 턴에 바뀌면 그 턴 사본을 새것으로
     return setValue('preg:' + pregChat, j); };
   // pregsnap:방 = 턴마다 임신 기록 사본(최근 60턴) · 분기한 방이 갈라진 턴 것을 복사해 가요(그 뒤로는 방마다 따로)
@@ -1394,7 +1401,7 @@
     const keep = list.filter(x => x.turn <= t), x = keep[keep.length - 1]; await setValue('pregsnap:' + c, JSON.stringify({ ...o, list: keep }));
     if (x && x.j !== JSON.stringify(preg)) { await setValue('preg:' + c, x.j); await pregLoad(c); pregSave.at = ''; logErr('임신', '지운 대화 뒤 임신 기록을 ' + x.turn + '턴 때로 되돌림'); pageToast('지운 대화에 맞춰 임신 기록을 ' + x.turn + '턴 때로 되돌렸어요'); } }
   const pregSnapNow = c => { const t = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length; if (!preg || !t || pregChat !== c || c !== chatIdFromPath()) return;
-    const j = JSON.stringify(preg), same = c + '|' + t + '|' + j.replace(/"saved":\d+/, ''); if (pregSave.at === same) return; pregSave.at = same; pregSnapPut(c, t, j); }; // 같은 턴·같은 기록이면 다시 안 써요
+    const j = JSON.stringify(preg), same = c + '|' + j.replace(/"saved":\d+/, ''); if (pregSave.at === same) return; pregSave.at = same; pregSnapPut(c, t, j); }; // 같은 턴·같은 기록이면 다시 안 써요
   // 분기한 방: 이 방엔 임신 기록이 한 번도 없고, 제목이 같은 다른 방과 대화 앞부분(유저 말 3턴 이상)이 글자까지 같으면 → 갈라진 턴까지의 사본 중 가장 늦은 것을 복사
   // 빈 기록(모드 화면만 열어 생긴 것)은 없는 것과 같아요
   const pregEmpty = j => { let o = null; try { o = JSON.parse(String(j || 'null')); } catch (_) {} return !o || (o.start == null && !o.history?.length && !o.books?.length); };
@@ -1590,7 +1597,7 @@
       if (x != null) cur = x;
       // 키가 있으면 관계 낱말이 든 아직 정리 안 된 말풍선도 AI가 읽어요(날짜로그 사건과 같은 요청에 · 말풍선마다 한 번 · 유저 캐릭터 본인 관계만)
       //   낱말로만 보면 '단테가 그녀 안에…'처럼 엄마가 '그녀·너'로 나온 문장을 남의 관계로 버려서, 정리 전엔 최근 관계를 못 잡고 예전 사건만 떴어요 · 답이 오기 전엔 낱말 그대로
-      if (pregHasKey && preg && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k];
+      if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
         if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) { const tt = relAiText(ai, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { same.t += '\n' + tt; same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } if (x == null && cur != null) for (const p of t.split(/\n+|(?<=[.!?。])\s+/)) cur += pSkip(p); continue; } // AI가 아니라면 낱말로도 안 세요 · AI가 판단한 말풍선도 '일주일 뒤' 같은 날짜 넘김은 세요(뒤 장면 날짜가 안 밀리게) · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
         if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src }); }
       for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
@@ -5577,16 +5584,17 @@
   const errHere = () => { const id = chatIdFromPath(); return (errLog || []).filter(x => !id || x.room === id); }; // 지금 방에서 난 오류만(채팅 밖이면 전부)
   // 튕김 추적: 무거운 읽기를 시작할 때 페이지 저장소에 표시하고 끝나면 지워요 · 페이지가 꺼졌다 다시 열렸는데 표시가 남아 있으면 그 일 도중에 꺼진 것 → 오류 기록에 남겨요
   //   (폰 사파리는 메모리가 모자라면 페이지를 통째로 꺼서 다른 기록이 하나도 안 남아요) · 직접 닫거나 새로고침하면(pagehide) 표시를 지워서 헷갈리지 않게
-  const CRUMB = new Map(), crumbSave = () => { try { CRUMB.size ? localStorage.setItem('jm_crumb', JSON.stringify({ w: [...CRUMB.values()], at: Date.now() })) : localStorage.removeItem('jm_crumb'); } catch (_) {} };
+  const CRUMB = new Map(), crumbSave = () => { try { CRUMB.size ? localStorage.setItem('jm_crumb', JSON.stringify({ w: [...CRUMB.values()], at: Date.now(), h: document.hidden ? 1 : 0 })) : localStorage.removeItem('jm_crumb'); } catch (_) {} };
   const lastAct = text => { try { localStorage.setItem('jm_last', JSON.stringify({ t: text, at: Date.now() })); } catch (_) {} }; // 마지막으로 한 일(끝나도 안 지워요) · 다시 열렸을 때 직전에 뭘 했는지
   const crumbOn = (k, text) => { lastAct(text); if (CRUMB.get(k) === text) return; CRUMB.set(k, text); crumbSave(); }, crumbOff = k => { if (CRUMB.delete(k)) crumbSave(); };
   addEventListener('pagehide', () => { try { localStorage.removeItem('jm_crumb'); } catch (_) {} });
+  document.addEventListener('visibilitychange', () => { if (CRUMB.size) crumbSave(); }); // 튕김 기록에 화면을 떠나 있었는지 남기려고(다른 앱에 간 사이 사파리가 뒤 탭을 정리한 건지 가르기)
   // 다시 열림 기록: 3분 안에 페이지가 또 열렸으면 몇 초 만인지 · 어떻게 열렸는지(reload = 페이지가 스스로 다시 불림 · navigate = 주소로 새로 엶) · 직전에 한 일을 오류 기록에 남겨요
   { try { const now = Date.now(), prev = Number(localStorage.getItem('jm_open')) || 0, nav0 = performance.getEntriesByType?.('navigation')?.[0]?.type || '?', la = JSON.parse(localStorage.getItem('jm_last') || 'null');
       localStorage.setItem('jm_open', String(now));
       if (prev && now - prev < 18e4 && location.pathname.includes('/episodes/')) setTimeout(() => logErr('다시 열림', Math.round((now - prev) / 1000) + '초 만에 다시 열림 · 열린 방식 ' + nav0 + ' · ' + (HANDLER || '이름 없음') + (pagePatchOff ? ' · 빠른 쓰기 꺼짐' : '') + (la?.t ? ' · 직전에 한 일: ' + la.t + ' (' + Math.round((now - la.at) / 1000) + '초 전)' : ' · 직전에 한 일 없음')), 3000);
     } catch (_) {} }
-  let crumbSeen = false; const crumbCheck = () => { if (crumbSeen) return; crumbSeen = true; try { const c = JSON.parse(localStorage.getItem('jm_crumb') || 'null'); localStorage.removeItem('jm_crumb'); if (c?.w?.length && Date.now() - c.at < 6e5) logErr('튕김', '지난번에 페이지가 꺼질 때 하던 일: ' + c.w.join(' · ').slice(0, 200)); } catch (_) {} };
+  let crumbSeen = false; const crumbCheck = () => { if (crumbSeen) return; crumbSeen = true; try { const c = JSON.parse(localStorage.getItem('jm_crumb') || 'null'); localStorage.removeItem('jm_crumb'); if (c?.w?.length && Date.now() - c.at < 6e5) logErr('튕김', '지난번에 페이지가 꺼질 때 하던 일: ' + c.w.join(' · ').slice(0, 200) + (c.h == null ? '' : c.h ? ' · 화면을 떠나 있던 중(다른 앱·화면 꺼짐 · 사파리가 뒤 탭을 정리했을 수 있어요)' : ' · 보는 중에 꺼짐')); } catch (_) {} };
   async function logErr(where, msg, room = chatIdFromPath() || '') { // room: 오류가 난 방(늦게 끝난 자동 정리는 그 방 번호를 직접 넘겨요)
     try { if (!errLog) { try { errLog = JSON.parse(String(await getValue('errlog', '[]')) || '[]'); } catch (_) { errLog = []; } }
       const m = String(msg?.message || msg || '').slice(0, 300), last = errLog[errLog.length - 1];
@@ -6773,9 +6781,9 @@
     let here = upto && chat.some(m => msgId(m) === upto);
     // 같은 방 백업인데 정리 지점이 지금 읽어 둔 쪽(지난 노트 뒤)보다 앞이면 대화를 처음부터 읽어 찾아요(5.8.79)
     //   예전엔 못 찾으면 대화 끝에 붙여서, 420턴 백업을 458턴 방에 넣으면 남은 38턴이 '새 대화 없음'이 됐어요 · 그래도 못 찾으면(지워진 메시지) 예전처럼 끝에
-    if (upto && !here && !otherRoom && chatId) { let whole = null; try { whole = await readAll(chatId); } catch (_) {}
-      const w = whole ? whole.findIndex(m => msgId(m) === upto) : -1;
-      if (w >= 0) { here = true; if (!whole.cut) turns = whole.slice(0, w + 1).filter(m => msgRole(m) === 'user').length || turns; } }
+    //   대화 전체를 한꺼번에 읽지 않아요(긴 방은 몇 백만 자라 아이폰이 페이지를 꺼요): 최신 쪽부터 한 쪽(50개)씩 읽다가 찾으면 멈추고, 읽은 쪽은 안 들고 있어요 · 턴 수는 같은 방 백업에 적힌 값 그대로
+    if (upto && !here && !otherRoom && chatId) { try { let cursor = ''; for (let page = 0; page < MAX_PAGES; page++) { if (page === 4 || (page && page % 20 === 0)) crumbOn('bkfind', '백업 정리 지점 찾기 ' + page + '쪽째(1쪽 50개)');
+        const { list, next } = await listPage(chatId, cursor); if (list.some(m => msgId(m) === upto)) { here = true; break; } if (!(cursor = next)) break; } } catch (_) {} finally { crumbOff('bkfind'); } }
     if (!here) { upto = chat.length ? msgId(chat[chat.length - 1]) : '';
       if (otherRoom) { let all = chat; try { all = (await readAll(chatId)).filter(isChat); } catch (_) {} turns = all.filter(m => msgRole(m) === 'user').length; } // 다른 방 기억(이어가기): 턴 수는 이 방 대화에서 유저가 보낸 말만 세요(원래 방·이 방 예전 노트 숫자는 안 봐요)
       else if (!turns) turns = (snapshot?.note?.turns || 0) + freshTurns(); }
@@ -7351,12 +7359,12 @@
   // 되풀이·틀·구조 다시 확인: 코드가 못 세서 점검 뒤 새 답 5개가 모이면 문체 화면을 열 때 AI에 한 번만 물어요(점검마다 한 번 · 실패하면 그 점검엔 다시 안 물어요)
   const STY_RE_PROMPT = "너는 RP 답 문체 점검기다. [반복 목록] 항목마다 [최근 답]들에 그 반복이 아직 나오는지 본다. 글의 꼴이 같으면 나온 것, 뜻만 비슷하고 꼴이 다르면 안 나온 것. 항목마다 그 반복이 나온 답 개수 n. JSON 하나만: {\"items\":[{\"i\":번호,\"n\":0}]}";
   async function styRecheck(cid) {
-    const d = styFix.c === cid && !styFix.d?.cleared ? styFix.d : null; if (!d?.items?.length || styRecheck.busy || styRecheck.failed === d.at) return;
+    const d = styFix.c === cid && !styFix.d?.cleared ? styFix.d : null; if (!d?.items?.length || d.reTried || styRecheck.busy || styRecheck.failed === d.at) return; // reTried: 이 점검은 이미 한 번 물었음(빠진 항목이 있어도 다시 안 물어요)
     const idx = d.items.map((it, i) => /^(되풀이|틀|구조)$/.test(it.kind) && !it.re ? i : -1).filter(i => i >= 0), a = styNewAns(d); if (!idx.length || a.length < 5) return;
     styRecheck.busy = true; render();
     try { const r = parseJsonLoose(await askModel(STY_RE_PROMPT, '[반복 목록]\n' + idx.map(i => i + '. ' + d.items[i].kind + ' · ' + d.items[i].pat).join('\n') + '\n\n' + a.map((x, k) => `[최근 답 ${k + 1}]\n${x.slice(0, 3000)}`).join('\n\n'), '✍문체 다시 확인', true));
       if (styFix.c !== cid || styFix.d !== d) return; let got = 0; for (const x of r?.items || []) { const it = d.items[x?.i]; if (it && idx.includes(x.i)) { it.re = { hit: Math.min(a.length, Math.max(0, parseInt(x.n, 10) || 0)), of: a.length }; got++; } }
-      if (!got) throw new Error('AI 답에 항목이 없어요'); d.saved = Date.now(); await setValue('styfix:' + cid, JSON.stringify(d)); }
+      if (!got) throw new Error('AI 답에 항목이 없어요'); d.reTried = 1; d.saved = Date.now(); await setValue('styfix:' + cid, JSON.stringify(d)); }
     catch (e) { styRecheck.failed = d.at; logErr('문체 점검', '되풀이·틀·구조 다시 확인 실패 · ' + String(e?.message || e).slice(0, 120)); }
     finally { styRecheck.busy = false; if (chatIdFromPath() === cid) render(); } }
   async function styleCheck(auto = false, tries = 0, rawIn = '') { // rawIn: 정리 AI가 같이 적은 문체 점검 답(있으면 따로 안 불러요)
@@ -7391,7 +7399,7 @@
     if (!d) return hero;
     if (!n) return hero + '<p class="lv-note">굳어진 반복이 없어요</p>';
     const kinds = [...new Set(d.items.map(it => it.kind || '반복'))], na = styNewAns(d), af = d.items.map(it => styAfter(d, it, na)), chk = af.filter(Boolean), fixed = chk.filter(x => !x.hit).length;
-    if (!styAutoOn && na.length >= 5 && !styRecheck.busy && styRecheck.failed !== d.at && d.items.some(it => /^(되풀이|틀|구조)$/.test(it.kind) && !it.re)) { const c0 = chatIdFromPath(); setTimeout(() => styRecheck(c0), 0); } // 화면을 열 때만(뒤에서 따로 안 불러요) · 정리할 때마다 자동 점검이 켜져 있으면 안 물어요(다음 정리 때 새로 점검해서 고쳐진 건 저절로 빠져요 · 돈·아이폰 일 아끼기)
+    if (!styAutoOn && na.length >= 5 && !d.reTried && !styRecheck.busy && styRecheck.failed !== d.at && d.items.some(it => /^(되풀이|틀|구조)$/.test(it.kind) && !it.re)) { const c0 = chatIdFromPath(); setTimeout(() => styRecheck(c0), 0); } // 화면을 열 때만(뒤에서 따로 안 불러요) · 정리할 때마다 자동 점검이 켜져 있으면 안 물어요(다음 정리 때 새로 점검해서 고쳐진 건 저절로 빠져요 · 돈·아이폰 일 아끼기)
     const afHtml = x => !x ? '' : !x.hit ? '<b class="sty-ok">✓ 고쳐짐</b>' : `<b class="sty-left${x.hit / x.of < x.before / x.bOf ? ' less' : ''}">${x.hit}/${x.of}</b>`;
     const afLine = x => !x ? '' : `<p class="sty-af">점검 때 답 ${x.bOf}개 중 ${x.before}개 → 그 뒤 답 ${x.of}개 중 ${x.hit}개${!x.hit ? ' · 고쳐졌어요' : x.hit / x.of < x.before / x.bOf ? ' · 줄었어요' : ' · 아직 그대로예요'}</p>`;
     const grp = k => `<details class="sty-grp"${G[k] ? ' open' : ''}><summary data-act="stygrp" data-arg="${esc(k)}"><span class="sty-k k-${esc(k)}">${esc(k)}</span>${d.items.filter(it => (it.kind || '반복') === k).length}개<i>▾</i></summary>${d.items.map((it, i) => (it.kind || '반복') !== k ? '' : `<div class="sty-it"><div class="sty-row"><span>${/^(되풀이|틀|구조)$/.test(k) ? esc(it.pat) : '“' + esc(it.pat) + '”'}</span><b class="sty-n">${cnt(it)}</b>${afHtml(af[i])}<button class="sty-x" data-act="styrm" data-arg="${i}" aria-label="이 항목 빼기">×</button></div>${/^(되풀이|틀|구조)$/.test(k) && it.n ? `<div class="sty-bar"><i style="width:${Math.min(100, Math.round(it.n / (d.of || 5) * 100))}%"></i></div>` : ''}${(it.ex || []).length ? `<p class="sty-ex">${esc(it.ex[0])}</p>` : ''}${afLine(af[i])}</div>`).join('')}</details>`;
