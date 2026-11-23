@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.82
+// @version      5.8.83
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -7403,7 +7403,7 @@
     try { const r = parseJsonLoose(await askModel(STY_RE_PROMPT, '[반복 목록]\n' + idx.map(i => i + '. ' + d.items[i].kind + ' · ' + d.items[i].pat).join('\n') + '\n\n' + a.map((x, k) => `[최근 답 ${k + 1}]\n${x.slice(0, 3000)}`).join('\n\n'), '✍문체 다시 확인', true));
       if (styFix.c !== cid || styFix.d !== d) return; let got = 0; for (const x of r?.items || []) { const it = d.items[x?.i]; if (it && idx.includes(x.i)) { it.re = { hit: Math.min(a.length, Math.max(0, parseInt(x.n, 10) || 0)), of: a.length }; got++; } }
       if (!got) throw new Error('AI 답에 항목이 없어요'); d.reTried = 1; d.saved = Date.now(); await setValue('styfix:' + cid, JSON.stringify(d)); }
-    catch (e) { styRecheck.failed = d.at; logErr('문체 점검', '되풀이·틀·구조 다시 확인 실패 · ' + String(e?.message || e).slice(0, 120)); }
+    catch (e) { styRecheck.failed = d.at; if (styFix.c === cid && styFix.d === d) { d.reTried = 1; await setValue('styfix:' + cid, JSON.stringify(d)).catch(() => {}); } logErr('문체 점검', '되풀이·틀·구조 다시 확인 실패 · ' + String(e?.message || e).slice(0, 120)); }
     finally { styRecheck.busy = false; if (chatIdFromPath() === cid) render(); } }
   async function styleCheck(auto = false, tries = 0, rawIn = '') { // rawIn: 정리 AI가 같이 적은 문체 점검 답(있으면 따로 안 불러요)
     const cid = chatIdFromPath(); if (!cid || !snapshot || busyNow) { if (auto && cid && tries < 20) { setTimeout(() => { if (chatIdFromPath() === cid) styleCheck(true, tries + 1, rawIn).catch(() => {}); }, 15000); return; } // 자동 정리가 이어서 도는 중이면 끝날 때까지 15초마다 다시(최대 5분)
