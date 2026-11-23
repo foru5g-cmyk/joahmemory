@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.81
+// @version      5.8.82
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6054,7 +6054,7 @@
     for (let l of itemsOf(bodyOf('서사 고리'))) {
       if (/^(?:[-•]\s*)*\[(열림|닫힘)\]/.test(l)) skip = /\(삭제\)/.test(l); if (skip) continue; // (삭제) 고리는 빼요(앞에 '- '가 한 번 더 붙은 것도)
       l = l.replace(/^(?:[-•]\s*)+(?=\[(?:열림|닫힘)\])/, '');
-      const q = l.match(/^(?:[가-힣]{2,4}\s*)?근거\s*[:：]\s*(.*)$/); // '완료 근거:'처럼 앞에 말이 붙은 것도
+      const q = l.match(/^(?:[가-힣]{2,4}\s*)?근거\s*[:：]\s*(.*)$/); // 앞말이 붙은 근거도
       if (q) { if (list.length) list[list.length - 1].quote = q[1].replace(/^["“]|["”]$/g, ''); continue; }
       const t = l.match(/^번역\s*[:：]\s*(.*)$/);
       if (t) { if (list.length) list[list.length - 1].tr = t[1].replace(/^["“]|["”]$/g, ''); continue; }
