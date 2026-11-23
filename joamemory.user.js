@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.69
+// @version      5.8.70
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -6736,7 +6736,7 @@
   }
   async function gsList() { // 드라이브의 방 백업 목록(스크립트 v3부터)
     let r; try { r = await gsCall({ action: 'list' }); } catch (e) { if (/알 수 없는 요청/.test(e.message)) throw new Error('드라이브 스크립트가 예전 버전이에요 · 설정 › 백업 › 연결 설정에서 "구글 스크립트 복사"로 새 글을 붙여 넣고 새 버전으로 배포해 주세요(주소는 그대로)'); throw e; }
-    return Array.isArray(r.items) ? r.items.filter(x => !/-m$/.test(x.chat)) : []; // '-m' = 모드 기록 파일
+    return Array.isArray(r.items) ? r.items.filter(x => !/-[mhs]$/.test(x.chat)) : []; // '-m' = 모드 기록 · '-h' = 정리 기록 · '-s' = 턴별 사본 파일
   }
   async function gsBranch(chatId, c) { // 분기한 방: 제목이 같은 다른 방 백업 중 정리 시각·턴 수가 똑같은 것
     try { const t = roomTitle(), items = (await gsList()).filter(x => x.chat !== chatId && x.title === t).slice(0, 6);
@@ -6767,17 +6767,29 @@
       let theirs = []; try { theirs = JSON.parse(d.hist || '[]'); } catch (_) {} const next = histMerge(await historyOf(room), Array.isArray(theirs) ? theirs : []); if (!next) return false;
       await setValue('hist:' + room, JSON.stringify(next)); logErr('연동', '드라이브에서 정리 기록을 받아 합침 · ' + room.slice(0, 8) + '…', room); return true; } catch (_) { return false; } }
   // 드라이브의 턴별 사본(임신·연애)을 이 기기 것에 합쳐요(분기해 온 방이 다른 기기에서 하던 방일 때) · 더해진 게 있으면 true
-  async function gsSnapPull(room) { const d = await gsModeFetch(room); if (!d?.store) return false; let got = false;
-    for (const k of ['pregsnap', 'lovesnap']) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } return got; }
-  async function gsModeFetch(chatId) { try { const r = await gsCall({ action: 'load', chat: chatId + '-m' }), d = JSON.parse(r.data); return d?.app === 'memo-mode' && d.chat === chatId ? d : null; } catch (_) { return null; } }
-  async function gsModeSave(chatId, pulled = false) { if (!chatId || !String(await getValue('gsUrl', '')).trim()) return; try { if (!pulled) await gsPullStore(chatId); /* pulled: 방금 같은 방을 받았으면 또 안 받아요 */ const store = {}; for (const k of GS_MODE) { const v = await getValue(k + ':' + chatId, ''); if (v) store[k] = v; } if (!Object.keys(store).length) return;
-      await gsCall({ action: 'save', chat: chatId + '-m', title: roomTitle() + ' 모드', data: JSON.stringify({ app: 'memo-mode', v: 1, at: new Date().toISOString(), by: DEVICE, chat: chatId, store }) }); if (pregChat === chatId && preg) pregSave.base = { c: chatId, s: preg.saved || 0 }; }
+  // 턴별 사본(pregsnap·lovesnap)은 '방ID-s' 파일로 따로(5.8.70): 60턴치 사본이 모드 기록을 키워서, 방을 열 때·폰을 다시 볼 때마다 통째로 받다 아이폰이 꺼졌어요
+  //   평소엔 '-m'(임신·연애·문체 보정)만 받고, 사본은 분기할 때 이 기기에 그 턴 것이 없을 때만 받아요 · 예전 판이 '-m'에 넣어 둔 사본도 그대로 읽어요
+  const GS_SNAP = ['pregsnap', 'lovesnap'];
+  async function gsSnapPull(room) { let got = false;
+    for (const part of ['-s', '-m']) { const d = await gsModeFetch(room, part); if (!d?.store) continue;
+      for (const k of GS_SNAP) { const next = snapMerge(String(await getValue(k + ':' + room, '') || ''), d.store[k]); if (next) { await setValue(k + ':' + room, next); got = true; } } } return got; }
+  // 받은 크기는 'gsmlen:방-m'에 남겨요 · 다음에 받을 때 표시(crumb)에 붙어서, 받다가 꺼지면 오류 기록에 그 크기가 찍혀요
+  async function gsModeFetch(chatId, part = '-m') { try { const r = await gsCall({ action: 'load', chat: chatId + part }), d = JSON.parse(r.data); await setValue('gsmlen:' + chatId + part, String(String(r.data || '').length)); return d?.app === 'memo-mode' && d.chat === chatId ? d : null; } catch (_) { return null; } }
+  const gsLenTxt = async k => { const n = Number(await getValue('gsmlen:' + k, '0')) || 0; return n ? ' · 지난번 ' + Math.round(n / 1000) + '천 자' : ''; };
+  // 올리는 모드 기록이 10만 자를 넘으면 이 페이지에서 방마다 한 번 칸별 크기를 오류 기록에 남겨요(무엇이 큰지 보게)
+  const gsModeBig = (chatId, part, s, store) => { if (s.length < 1e5 || (gsModeBig.seen ||= new Set()).has(chatId + part)) return; gsModeBig.seen.add(chatId + part);
+    logErr('연동', '드라이브 모드 기록(' + part + ') ' + Math.round(s.length / 1000) + '천 자 · ' + Object.entries(store).map(([k, v]) => k + ' ' + Math.round(String(v).length / 1000) + '천').join(' · '), chatId); };
+  async function gsModeSave(chatId, pulled = false) { if (!chatId || !String(await getValue('gsUrl', '')).trim()) return; try { if (!pulled) await gsPullStore(chatId); /* pulled: 방금 같은 방을 받았으면 또 안 받아요 */ const store = {}, snaps = {}; for (const k of GS_MODE) { const v = await getValue(k + ':' + chatId, ''); if (v) (GS_SNAP.includes(k) ? snaps : store)[k] = v; } if (!Object.keys(store).length && !Object.keys(snaps).length) return;
+      const head = { app: 'memo-mode', v: 1, at: new Date().toISOString(), by: DEVICE, chat: chatId }, put = async (part, title, st) => { const s = JSON.stringify({ ...head, store: st }); gsModeBig(chatId, part, s, st); await gsCall({ action: 'save', chat: chatId + part, title: roomTitle() + title, data: s }); await setValue('gsmlen:' + chatId + part, String(s.length)); };
+      await put('-m', ' 모드', store); /* 사본이 없어도 '-m'은 늘 새로 써요: 예전 판이 사본까지 넣어 둔 큰 '-m'을 작게 덮어요 */ if (pregChat === chatId && preg) pregSave.base = { c: chatId, s: preg.saved || 0 };
+      if (Object.keys(snaps).length) { const all = GS_SNAP.map(k => snaps[k] || '').join('\n'); let x = 0; for (let i = 0; i < all.length; i++) x = (x * 31 + all.charCodeAt(i)) | 0; const sig = x + ':' + all.length; // 사본은 바뀌었을 때만 올려요
+        if (String(await getValue('gss:' + chatId, '')) !== sig) { await put('-s', ' 사본', snaps); await setValue('gss:' + chatId, sig); } } }
     catch (e) { logErr('연동', '모드 기록 올리기 실패 · ' + e.message); } }
   const gsModeSoon = chatId => { clearTimeout(gsModeSoon.t); gsModeSoon.t = setTimeout(() => gsModeSave(chatId), 8000); };
   // 다른 기기의 임신·연애·문체 보정을 드라이브에서 한 번에 받아요 · 방을 열 때 + 폰·탭을 다시 볼 때(다른 기기에서 고친 게 새로고침 없이 와요)
   async function gsPullStore(chatId) {
     if (!chatId || !String(await getValue('gsUrl', '')).trim() || gsPullStore.busy) return; gsPullStore.busy = true;
-    crumbOn('gspull', '드라이브에서 임신·연애·문체 기록 받기'); try { let d = await gsModeFetch(chatId); if (!d && !IS_STAY && !gsPullStore.big?.has(chatId)) { (gsPullStore.big ||= new Set()).add(chatId); if (Date.now() - (Number(await getValue('gsbig:' + chatId, '0')) || 0) > 216e5) { await setValue('gsbig:' + chatId, String(Date.now())); crumbOn('gsbig', '드라이브 큰 백업 받기'); try { d = await gsFetch(chatId); } finally { crumbOff('gsbig'); } } } /* 받기 '전에' 시각을 남겨요: 받다가 폰이 페이지를 끄면 다시 열 때마다 큰 백업을 또 받다 꺼지는 반복이 생겨서 · 6시간에 한 번 */ /* 큰 백업(옛 판이 넣어 둔 모드 기록)은 방마다 한 시간에 한 번만 열어 봐요 */ if (!d?.store || chatIdFromPath() !== chatId) return; const got = [], J = v => { try { return JSON.parse(v || 'null'); } catch (_) { return null; } };
+    crumbOn('gspull', '드라이브에서 임신·연애·문체 기록 받기' + await gsLenTxt(chatId + '-m')); try { let d = await gsModeFetch(chatId); if (!d && !IS_STAY && !gsPullStore.big?.has(chatId)) { (gsPullStore.big ||= new Set()).add(chatId); if (Date.now() - (Number(await getValue('gsbig:' + chatId, '0')) || 0) > 216e5) { await setValue('gsbig:' + chatId, String(Date.now())); crumbOn('gsbig', '드라이브 큰 백업 받기'); try { d = await gsFetch(chatId); } finally { crumbOff('gsbig'); } } } /* 받기 '전에' 시각을 남겨요: 받다가 폰이 페이지를 끄면 다시 열 때마다 큰 백업을 또 받다 꺼지는 반복이 생겨서 · 6시간에 한 번 */ /* 큰 백업(옛 판이 넣어 둔 모드 기록)은 방마다 한 시간에 한 번만 열어 봐요 */ if (!d?.store || chatIdFromPath() !== chatId) return; const got = [], J = v => { try { return JSON.parse(v || 'null'); } catch (_) { return null; } };
       { const r = J(d.store.preg), base = pregSave.base?.c === chatId ? pregSave.base.s : (preg?.saved || 0), body = x => JSON.stringify({ ...x, saved: 0 });
         if (r && pregChat === chatId && (!preg || ((r.saved || 0) > base && body(r) !== body(preg)))) { await setValue('preg:' + chatId, JSON.stringify(r)); if (chatIdFromPath() === chatId) await pregLoad(chatId); got.push('임신'); } } // 저장 시각으로(개수로 견주면 출산 뒤 짧아진 기록을 덮어요) · 둘 다 고쳤으면 다른 기기 것 // 저장 시각이 늦은 쪽만(개수로 견주면 출산 뒤 짧아진 기록을 덮어요)
       { const r = J(d.store.love), mine = await loveOf(chatId); if (r) { const next = mine ? loveMerge(mine, r) : r; if (!mine || !loveAll(next, mine)) { await setValue('love:' + chatId, JSON.stringify(next)); if (loveChat === chatId && chatIdFromPath() === chatId) await loveLoad(chatId); if (!mine || !loveSame(next, mine)) got.push('연애'); else render(); } } } /* 요즘 일·기분처럼 작은 것도 전부 받아요(loveAll) · 알림은 사건·상대가 바뀌었을 때만 */ // 연애는 합쳐요(안 풀린 일·지나온 일까지)
