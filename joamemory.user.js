@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.71
+// @version      5.8.72
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -2107,7 +2107,56 @@
     const lChips = lOn && love.who ? `<span class="pg-wchip">💞 상대 · ${esc(love.who)}</span><span class="pg-wchip">${love.stage === 'broke' ? '💔 헤어짐' : love.stage === 'married' ? '💍 결혼' : '💗 연애 중'}</span><span class="pg-wchip">📅 ${esc(loveDays(day))}</span>${love.side ? `<span class="pg-wchip">🤫 ${esc(love.side)}</span>` : ''}${love.stage === 'broke' && love.exNew ? `<span class="pg-wchip">👀 ${esc(love.who)}의 새 사람 · ${esc(love.exNew)}</span>` : ''}` : `<span class="pg-wchip">${lOn ? '상대를 아직 못 찾았어요' : '꺼져 있어요'}</span>`;
     // 카드 아무 데나 누르면 들어가요(하트·물음표는 그것만)
     return `<div class="pg">${modeCard({ ic: '🍼', title: '임신', heart: pregHeart(), chips: pChips, open: 'preg' })}${modeCard({ ic: '💞', title: '현실 연애<em class="lv-test">11/30까지 테스트</em>', heart: loveHeart(lOn), chips: lChips, open: 'love' })}${(() => { const d = styFix.c === chatIdFromPath() && !styFix.d?.cleared ? styFix.d : null, l = styLeft(d);
-      return modeCard({ ic: '✍', title: '문체 보정', heart: styHeart(), chips: d ? `<span class="pg-wchip">${d.items.length ? '반복 ' + d.items.length + '개' : '반복 없음'}</span>${d.items.length ? `<span class="pg-wchip">${l === Infinity ? '계속 넣는 중' : l ? l + '턴 더 넣어요' : '끝남'}</span>` : ''}` : '<span class="pg-wchip">굳은 반복 찾아 노트에</span>', open: 'sty' }); })()}</div>`;
+      return modeCard({ ic: '✍', title: '문체 보정', heart: styHeart(), chips: d ? `<span class="pg-wchip">${d.items.length ? '반복 ' + d.items.length + '개' : '반복 없음'}</span>${d.items.length ? `<span class="pg-wchip">${l === Infinity ? '계속 넣는 중' : l ? l + '턴 더 넣어요' : '끝남'}</span>` : ''}` : '<span class="pg-wchip">굳은 반복 찾아 노트에</span>', open: 'sty' }); })()}</div>`; // 크랙 설정(crRows)은 노트 저장·프로필 목록 고칠 때까지 숨김
+  }
+  // 크랙 방 설정(유저노트·대화 프로필): 화면을 열 때 한 번 읽고, 저장·고르기를 누를 때 한 번 보내요 · 뒤에서 도는 것 없음 · 모드 화면을 나가면 내려놓아요
+  const CR_PROF = 'https://crack-api.wrtn.ai/crack-api/profiles';
+  let crs = null;
+  const crRows = () => '<div class="h3">크랙 설정</div><button class="ltm-row" data-act="modesub" data-arg="crnote"><b>📝 유저노트</b><span>이 방 노트 고치기 · 프리셋</span><i>›</i></button><button class="ltm-row" data-act="modesub" data-arg="crprof"><b>👤 대화 프로필</b><span>찾기 · 즐겨찾기 · 바로 바꾸기</span><i>›</i></button>';
+  const crGet = u => pageGet(u).catch(() => crack('GET', u));
+  async function crsLoad() {
+    const id = chatIdFromPath(); if (!id || crs?.id === id && (crs.busy || crs.ok)) return;
+    const s = crs = { id, busy: true }; render();
+    try {
+      const c = (await crackGet(id))?.data, pid = (await crGet(CR_PROF))?.data?._id, list = pid ? (await crGet(CR_PROF + '/' + pid + '/chat-profiles'))?.data : null;
+      let pre = [], fav = []; try { pre = JSON.parse(String(await getValue('crpre', '') || '[]')); fav = JSON.parse(String(await getValue('crfav', '') || '[]')); } catch (_) {}
+      Object.assign(s, { ok: true, note: String(c?.story?.userNote?.content || ''), ext: !!c?.story?.userNote?.isExtend, prof: String(c?.chatProfile?._id || ''), pre, fav,
+        profs: (Array.isArray(list) ? list : []).map(p => ({ id: String(p._id), name: String(p.name || ''), info: String(p.information || '') })) });
+    } catch (e) { s.err = String(e?.message || e); }
+    s.busy = false; if (crs === s && chatIdFromPath() === id) render();
+  }
+  // 프로필을 바꿀 때 첫 지문 이름: 채팅 시작 전(유저가 아직 한 번도 안 보냄)일 때만, 첫 지문 하나에서 옛 이름을 새 이름으로 · 조사(은/는·이/가…)는 새 이름 받침에 맞춰요
+  const CR_JOSA = [['으로서', '로서'], ['이었', '였'], ['이에요', '예요'], ['이랑', '랑'], ['이라', '라'], ['으로', '로'], ['이다', '다'], ['은', '는'], ['이', '가'], ['을', '를'], ['과', '와'], ['아', '야']];
+  async function crFirstName(chatId, from, to) {
+    const { list, next } = await listPage(chatId);
+    if (next || list.some(m => msgRole(m) === 'user')) return 0;
+    const first = sortOld(list).find(m => msgRole(m) === 'assistant'), id = msgId(first), text = msgText(first);
+    if (!id || !text) return 0;
+    const k = to.charCodeAt(to.length - 1) - 0xAC00, bat = k >= 0 && k <= 11171 ? k % 28 : 0, js = CR_JOSA.flat().map(j => j === '이' ? '이(?![가-힣])' : j).join('|'); // 이 하나만은 뒤에 글자가 붙으면 이름 일부(지훈이가)로 봐요
+    let n = 0; const re = new RegExp('(^|[^가-힣A-Za-z0-9])' + reEsc(from) + '(' + js + ')?', 'g');
+    const nextText = text.replace(re, (all, pre, j) => { n++; if (!j) return pre + to; const p = CR_JOSA.find(x => x.includes(j)); return pre + to + (p[0].startsWith('으로') ? (bat && bat !== 8 ? p[0] : p[1]) : bat ? p[0] : p[1]); });
+    if (!n || nextText === text) return 0;
+    await writeRaw(chatId, id, nextText); return n;
+  }
+  function crsHtml(kind) {
+    const id = chatIdFromPath();
+    if (!id) return emptyBox('채팅방에서 열어 주세요.');
+    if (!crs || crs.id !== id || crs.busy) return emptyBox('크랙에서 불러오는 중…');
+    if (crs.err) return '<div class="pg"><p class="muted">불러오지 못했어요 · ' + esc(crs.err) + '</p><button class="btn sm" data-act="modesub" data-arg="' + kind + '">다시 불러오기</button></div>';
+    const dis = crs.saving ? ' disabled' : '';
+    if (kind === 'crnote') {
+      const lim = crs.ext ? 2000 : 500, v = crs.draft ?? crs.note;
+      return '<div class="pg"><div class="pg-card"><div class="pg-mode"><span class="pg-ic">📝</span><div style="flex:1;min-width:0"><b>유저노트</b><small>이 방 노트 · 저장하면 크랙에 바로 들어가요</small></div></div>'
+        + '<div class="rf"><textarea class="cr-ta" data-out="crnote" maxlength="' + lim + '" rows="8">' + esc(v) + '</textarea></div>'
+        + '<div class="cr-foot"><span><b data-out="crcnt">' + v.length + '</b> / ' + lim + '자' + (crs.ext ? ' · 늘린 노트' : '') + '</span><button class="btn sm pri" data-act="crnsave"' + dis + '>저장</button></div></div>'
+        + '<div class="h3">프리셋</div>' + (crs.pre.length ? '<div class="cr-pre">' + crs.pre.map((p, i) => '<span><button data-act="crnpre" data-arg="' + i + '">' + esc(p.length > 24 ? p.slice(0, 23) + '…' : p) + '</button><button class="cr-x" data-act="crndel" data-arg="' + i + '" aria-label="프리셋 지우기">✕</button></span>').join('') + '</div>' : '<p class="muted">아직 없어요 · 누르면 위 칸에 채워져요</p>')
+        + '<button class="linkbtn" data-act="crnadd">지금 글을 프리셋으로 남기기</button></div>';
+    }
+    const fav = new Set(crs.fav), row = p => '<div class="cr-prow' + (p.id === crs.prof ? ' on' : '') + '" data-find="' + esc(p.name.toLowerCase()) + '"><button class="cr-pick" data-act="crpick" data-arg="' + p.id + '"' + dis + '><b>' + esc(p.name) + (p.id === crs.prof ? ' <em>지금</em>' : '') + '</b><small>' + esc(p.info.slice(0, 60)) + '</small></button><button class="cr-star" data-act="crfav" data-arg="' + p.id + '" aria-label="즐겨찾기" aria-pressed="' + fav.has(p.id) + '">' + (fav.has(p.id) ? '★' : '☆') + '</button></div>';
+    const fs = crs.profs.filter(p => fav.has(p.id)), rest = crs.profs.filter(p => !fav.has(p.id));
+    return '<div class="pg"><div class="rf"><input type="search" data-out="psearch" placeholder="프로필 찾기 · ' + crs.profs.length + '개"></div>'
+      + (fs.length ? '<div class="h3">★ 즐겨찾기</div>' + fs.map(row).join('') + '<div class="h3">전체</div>' : '') + (rest.map(row).join('') || (fs.length ? '' : '<p class="muted">프로필이 없어요</p>'))
+      + '<p class="muted cr-tip">채팅 시작 전에 바꾸면 첫 지문 속 이름도 같이 바꿔요</p></div>';
   }
   function loveHtml() {
     const on = loveMode; if (on) love = love || {}; const mem = noteMemory() || '', day = storyDay(mem), f = on ? loveSync(day, mem) : null, broke = love?.stage === 'broke';
@@ -5186,6 +5235,7 @@
     .pg-hb b{display:block;color:var(--ink);font-size:12.5px;margin-bottom:3px}
     .pg-hb p{margin:0}.nf-sub{margin:6px 0 12px;font-size:12.5px;color:var(--graphite)}.nf-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nf-opt{border:1px solid var(--rule);border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}.nf-opt b{font-size:14px;font-weight:800;color:var(--ink)}.nf-opt small{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--graphite)}.nf-ic{display:block;font-size:18px;margin-bottom:6px}.nf-tag{font-style:normal;font-size:10.5px;font-weight:800;margin-left:5px;padding:2px 6px;border-radius:999px;background:var(--mist);color:var(--acc-ink,#5B45B0);vertical-align:2px}.nf-opt .btn{width:100%;padding:9px 0;font-size:13.5px;text-align:center}.nf-foot{margin:12px 0 0;font-size:12px;color:var(--graphite)}@media (max-width:340px){.nf-opts{grid-template-columns:1fr}}.nf-pick{margin:12px 0 0;display:flex;flex-direction:column;gap:6px}.nf-pick>small{font-size:12px;color:var(--graphite)}.nf-pi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);font:inherit;text-align:left;cursor:pointer}.nf-pi b{font-size:13.5px;color:var(--ink)}.nf-pi small{font-size:11.5px;color:var(--graphite)}.nf-pi:hover{border-color:var(--acc)}.thw{display:block;margin:2px 0 2px;font-size:11.5px;font-weight:600;color:var(--graphite)}.thr-foot{position:relative;margin-top:4px;min-height:26px}.hka{float:right;display:inline-flex;gap:10px;line-height:26px}.hka button{all:unset;cursor:pointer;font-size:11.5px;color:var(--graphite,#8C869C)}.hka button:hover{color:var(--acc,#7B61D9)}.hke{display:flex;gap:6px;margin-top:6px}.hke input{flex:1;min-width:0;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--rule,#E6E1F0);border-radius:8px}.hke button{all:unset;cursor:pointer;font-size:12px;font-weight:700;color:var(--acc,#7B61D9);padding:0 4px}.thr-foot .evd{margin:0}.thr-foot>.pill-st{position:absolute;top:2px;right:0}.rvd{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px 16px;margin:0 0 12px}.rvd-h b{font-size:15px;font-weight:800;color:var(--ink)}.rvd-h small{display:block;font-size:12px;color:var(--graphite);margin-top:2px}.rvd-c{margin-top:14px}.rvd-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.rvd-t span{font-size:11.5px;color:var(--graphite)}.rvd-t b{font-size:13.5px;color:var(--ink)}.rvd-k{font-style:normal;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--mist);color:var(--acc-ink)}.rvd-k[data-k="지움"]{background:#FBE4E2;color:#B4443F}.rvd-k[data-k="새로"]{background:#E3F4EA;color:#2F7D4F}.rvd-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rvd-b{border:1px solid var(--rule);border-radius:14px;padding:10px;min-width:0;font-size:12.5px;line-height:1.55;color:var(--ink)}.rvd-b>small{display:block;font-size:11px;font-weight:800;color:var(--graphite);margin-bottom:4px}.rvd-b p{margin:0 0 4px;padding:1px 3px;word-break:break-all}.rvd-b p.del{color:#B4443F;text-decoration:line-through;background:#FBE4E2;border-radius:4px}.rvd-b p.add{color:#2F7D4F;background:#E3F4EA;border-radius:4px}.rvd-b p.none{color:var(--pencil)}.rvd-b p.same{color:var(--pencil);font-size:11.5px}.rvd-b p.why{color:var(--graphite);background:var(--mist);border-radius:4px}@media (max-width:340px){.rvd-g{grid-template-columns:1fr}}li:has(>.tl-rv),.thr:has(>.tl-rv){position:relative;padding-right:40px}.rvbar{display:flex;margin:0 0 10px}.sechead:has(.rv-start),.meta:has(.rv-start){display:flex;align-items:center;gap:8px}.sechead .rv-start,.meta .rv-start{margin-left:auto}.rv-start{flex:none;border:1px solid var(--rule);border-radius:999px;background:var(--paper);padding:3px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--graphite);cursor:pointer}.rvbar-b{display:flex;align-items:center;gap:10px;flex:none}.rvbar-b .btn{padding:7px 14px;font-size:13px}.rvp{position:relative}.rvp.sel{outline-style:solid}.rv-ck{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid var(--acc);background:var(--paper);display:grid;place-items:center;font-style:normal;z-index:1}.rv-ck.on{background:var(--acc)}.rv-ck.on::after{content:'✓';color:#fff;font-size:13px;font-weight:800;line-height:1}.rv-start:disabled{opacity:.5;cursor:default}.rvbar.on{justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--mist)}.rvbar.on .linkbtn{flex:none;white-space:nowrap}.rvbar.on b{display:block;font-size:13.5px;color:var(--ink)}.rvbar.on small{display:block;font-size:11.5px;color:var(--graphite);margin-top:2px}.rvp{outline:2px dashed var(--acc);outline-offset:2px;cursor:pointer}.tl-rv{position:absolute;right:10px;bottom:10px;display:inline-grid;place-items:center;width:26px;height:26px;margin:0;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);font-size:12px;line-height:1;cursor:pointer;opacity:.75}.tl-rv:hover{opacity:1}.tl-rv:hover{color:var(--acc-ink)}.tl-rv:disabled{opacity:.5;cursor:default}
     .wd-tile{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
+    .cr-ta{min-height:160px}.cr-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font-size:12px;color:var(--graphite)}.cr-foot b{color:var(--ink)}.cr-pre{display:flex;flex-wrap:wrap;gap:6px}.cr-pre span{display:inline-flex;border:1px solid var(--rule);border-radius:999px;background:var(--paper);overflow:hidden}.cr-pre button{border:0;background:none;font:inherit;font-size:12.5px;color:var(--ink);padding:7px 4px 7px 12px;cursor:pointer}.cr-pre .cr-x{padding:7px 10px 7px 6px;color:var(--graphite)}.cr-prow{display:flex;align-items:center;border:1px solid var(--rule);border-radius:12px;background:var(--paper);margin:0 0 8px}.cr-prow.on{border-color:var(--ink)}.cr-pick{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;border:0;background:none;font:inherit;text-align:left;padding:10px 12px;cursor:pointer;color:var(--ink)}.cr-pick b{font-size:14px}.cr-pick em{font-style:normal;font-size:11px;color:var(--graphite);margin-left:4px}.cr-pick small{font-size:12px;color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cr-star{width:44px;height:44px;border:0;background:none;font-size:18px;color:#FFB020;cursor:pointer}.cr-tip{margin-top:12px;font-size:12px} /* 5.8.78 크랙 설정 */
     .hlogo{width:24px;height:25px;margin-left:6px;vertical-align:-4px;transform:rotate(-12deg)}.hsw{margin:0 6px 0 auto;white-space:nowrap} /* 5.8.77 머리: 이름 옆 작은 아이콘 · 웹 모드 스위치 */
     .wd-tiles{gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:20px}.wd-tiles>.wd-tile{border:0;border-radius:0;background:transparent}.wd-tiles>.wd-tile+.wd-tile{border-left:1px solid var(--rule)} /* 자동 정리·채팅에 넣는 기억을 한 카드로 */
     .cast-row.hcard,.nrules.hcard{background:var(--paper);border:1px solid var(--rule);border-radius:20px}.cast-row.hcard{padding:14px 12px;margin-left:0;margin-right:0}.nrules.hcard{padding:4px 16px;margin-bottom:6px}.nrules.hcard>li:last-child{border-bottom:0} /* 홈 등장인물·최근 바뀐 것도 흰 카드로(바탕에 그냥 놓이면 덜 읽혀서) */
@@ -6696,7 +6746,12 @@
     if (d?.app === 'memo-note' && !memory) return;
     if (!memory) { memory = normalizeImported(raw); const problem = checkImported(memory); if (problem) return toast(problem, 'err', 5000); }
     const chat = (snapshot?.all || []).filter(isChat);
-    const here = upto && chat.some(m => msgId(m) === upto);
+    let here = upto && chat.some(m => msgId(m) === upto);
+    // 같은 방 백업인데 정리 지점이 지금 읽어 둔 쪽(지난 노트 뒤)보다 앞이면 대화를 처음부터 읽어 찾아요(5.8.79)
+    //   예전엔 못 찾으면 대화 끝에 붙여서, 420턴 백업을 458턴 방에 넣으면 남은 38턴이 '새 대화 없음'이 됐어요 · 그래도 못 찾으면(지워진 메시지) 예전처럼 끝에
+    if (upto && !here && !otherRoom && chatId) { let whole = null; try { whole = await readAll(chatId); } catch (_) {}
+      const w = whole ? whole.findIndex(m => msgId(m) === upto) : -1;
+      if (w >= 0) { here = true; if (!whole.cut) turns = whole.slice(0, w + 1).filter(m => msgRole(m) === 'user').length || turns; } }
     if (!here) { upto = chat.length ? msgId(chat[chat.length - 1]) : '';
       if (otherRoom) { let all = chat; try { all = (await readAll(chatId)).filter(isChat); } catch (_) {} turns = all.filter(m => msgRole(m) === 'user').length; } // 다른 방 기억(이어가기): 턴 수는 이 방 대화에서 유저가 보낸 말만 세요(원래 방·이 방 예전 노트 숫자는 안 봐요)
       else if (!turns) turns = (snapshot?.note?.turns || 0) + freshTurns(); }
@@ -10683,7 +10738,7 @@
         <div class="actions" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><button class="btn pri" data-act="errcopy">복사</button><button class="btn" data-act="errclear">지우기</button></div>
         ${errHere().length ? '<ol class="errl-list">' + [...errHere()].reverse().map(x => `<li><small>${esc(new Date(x.at).toLocaleString('ko-KR'))} · ${esc(x.where)}</small><p>${esc(x.msg)}</p></li>`).join('') + '</ol>' : emptyBox('아직 오류가 없어요.')}</section>`
       : nav.tab === 'timeline' ? timelineHtml()
-      : nav.tab === 'mode' ? (nav.modeSub ? `<p class="md-back"><button class="linkbtn" data-act="modesub" data-arg="">‹ 모드</button></p>` + (nav.modeSub === 'love' ? loveHtml() : nav.modeSub === 'sty' ? `<div class="pg sty-pg">${styHtml()}</div>` : modeHtml()) : modeSummary())
+      : nav.tab === 'mode' ? (nav.modeSub ? `<p class="md-back"><button class="linkbtn" data-act="modesub" data-arg="">‹ 모드</button></p>` + (/^cr/.test(nav.modeSub) ? crsHtml(nav.modeSub) : nav.modeSub === 'love' ? loveHtml() : nav.modeSub === 'sty' ? `<div class="pg sty-pg">${styHtml()}</div>` : modeHtml()) : modeSummary())
       : nav.tab === 'phone' ? (nav.dev === 'pc' ? pcHtml() : nav.dev === 'board' ? boardHtml() : nav.dev === 'news' ? newsHtml() : nav.dev === 'wiki' ? wikiHtml() : nav.dev === 'live' ? liveHtml() : nav.dev === 'bet' ? betHtml() : nav.dev === 'if' ? ifHtml() : nav.dev === 'talk' ? talkHtml() : nav.dev === 'gc' ? gcHtml() : phoneHtml())
       : nav.tab === 'story' ? memoryHtml(STORY_TABS)
       : nav.tab === 'now' ? memoryHtml(NOW_TABS, k => pplSeg('now:' + k)) // 상태·소지품·장소는 인물 메뉴 알약 줄 안의 칸
@@ -11500,7 +11555,7 @@
       const now = await readSinceLastNote(chatId, 6); lap('대화 확인');
       // 정리하는 사이 마지막으로 정리한 메시지가 리롤·삭제됐으면 묻습니다(그 답을 기준으로 다음 정리가 이어지므로).
       //   최근 몇 쪽만 읽으니, 지난 노트 끝까지 못 읽었으면(나눠서 정리하는 긴 채팅 — 묶음 끝은 한참 앞) 확인하지 않아요. 안 그러면 멀쩡한데 경고가 떠요. // 처음부터 다시 정리(rebuild)는 끝 메시지가 예전 노트보다 한참 앞일 수 있어서(100턴씩 나눠 처음부터) 확인하지 않아요
-      if (draft.uptoId && !draft.restore && draft.mode !== 'rebuild' && now.covered && !now.all.some(m => msgId(m) === draft.uptoId)
+      if (draft.uptoId && !draft.restore && !draft.fromFile && draft.mode !== 'rebuild' && now.covered // 백업 파일: 정리 지점은 불러올 때 이 방 대화에서 찾아 둬서(지난 노트보다 앞일 수 있음) 다시 안 물어요 && !now.all.some(m => msgId(m) === draft.uptoId)
         && (apply.auto || !confirm('정리하는 사이 마지막 대화가 리롤되거나 지워졌어요. 그래도 이 결과를 넣을까요? (취소하면 아무것도 바뀌지 않아요)'))) { if (apply.auto) { draft = null; nav.view = null; } logErr('정리', '정리하는 사이 마지막 대화가 리롤·삭제돼서 안 넣고 확인 화면에 둠', chatId); toast('넣지 않았어요. 노트는 그대로예요.', 'info', 3000); return; }
       // 정리하는 사이 다른 기기(폰·컴)가 먼저 노트를 넣었으면 덮어쓰기 전에 묻습니다.
       //   내 정리가 더 많은 턴을 담았으면 그쪽 내용도 이미 들어 있어서 덮어써도 되고, 아니면 그쪽이 최신이라 취소를 권합니다.
@@ -11751,6 +11806,7 @@
   root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; }); // ChatGPT 로그인 주소: 다시 그려져도 남게
   root.addEventListener('input', e => { if (e.target.dataset?.nq === undefined) return; nav.nq = e.target.value; const box = ui('.nq-res'); if (box) box.innerHTML = nFindHtml(); }); // 노트 관리 검색: 결과 칸만 다시 그려요(글자 칸을 다시 그리면 치던 글이 끊겨요)
   root.addEventListener('input', e => {
+    if (e.target.dataset?.out === 'crnote' && crs) { crs.draft = e.target.value; const c = out('crcnt'); if (c) c.textContent = e.target.value.length; return; } // 유저노트 쓰는 중: 다시 그려져도 남게 · 글자 수
     if (e.target.dataset?.out !== 'psearch') return;
     const q = e.target.value.trim().toLowerCase();
     root.querySelectorAll('[data-find]').forEach(el => { el.style.display = !q || el.dataset.find.includes(q) ? '' : 'none'; });
@@ -11885,7 +11941,7 @@
         try { await rewriteNote(cid, after); nav.hookUndo = { cid, before, after }; await refresh(); }
         catch (err) { toast('바꾸기 실패 · ' + errMsg(err), 'err'); } finally { busyNow = false; keepScroll(render); } return; }
       case 'ncfold': { const d = el.closest('details'); if (d) { d.open = false; d.scrollIntoView({ block: 'nearest' }); } return; } // 홈 노트 구성 접기
-      case 'tab': histList = []; /* 기록 화면을 나가면 전체 기록은 내려놓아요 */ nav.tab = arg; nav.view = null; if (arg === 'mode') nav.modeSub = null; nav.themeOpen = false; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); { const t0 = performance.now(); render(); const ms = performance.now() - t0; if (ms > 400) logErr('느림', `${arg} 탭 그리기 ${(ms / 1000).toFixed(1)}초`); } out('main').scrollTop = 0; return; // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게)
+      case 'tab': crs = null; histList = []; /* 기록 화면을 나가면 전체 기록은 내려놓아요 */ nav.tab = arg; nav.view = null; if (arg === 'mode') nav.modeSub = null; nav.themeOpen = false; nav.fxEdit = null; nav.fxLib = false; nav.fxDel = false; quiet(); { const t0 = performance.now(); render(); const ms = performance.now() - t0; if (ms > 400) logErr('느림', `${arg} 탭 그리기 ${(ms / 1000).toFixed(1)}초`); } out('main').scrollTop = 0; return; // 다른 칸으로 나가면 고정 설정 수정 창은 닫아요(다시 들어올 때 안 뜨게)
       case 'ltmopen': nav.view = 'ltm'; nav.key = null; if (!ltmData || ltmData.chatId !== chatIdFromPath() || Date.now() - ltmData.at > 30000) { if (ltmData?.chatId !== chatIdFromPath()) ltmData = null; ltmLoad(); } ltmBy = String(await getValue('ltmBy', '')); { const m = String(await getValue('model', DEFAULT_MODEL)); nav.ltmHasKey = !!String(await getValue(keyOf(m), '')).trim(); } render(); out('main').scrollTop = 0; return;
       case 'ltmload': if (ltmData?.err) ltmData = null; return ltmLoad();
       case 'ltmadd': return (ltmBy || (nav.ltmHasKey === false ? 'file' : 'api')) === 'file' ? ltmCopy() : ltmAdd();
@@ -12065,7 +12121,26 @@
         const w0 = parseInt(prompt('지금 몇 주예요?', String(Math.floor((day - preg.start) / 7))), 10); if (!(w0 >= 3 && w0 <= 42)) return toast('주수는 3~42 사이로 적어 주세요.', 'err');
         Object.assign(preg, { start: day - w0 * 7, w0: Math.min(preg.w0 ?? w0, w0), why: '주수를 직접 고쳤어요', fixId: msgId([...(snapshot?.all || [])].filter(isChat).pop()) }); await pregSave(); return keepScroll(render); }
       case 'pregdadall': { nav.dadAll = true; return render(); }
-      case 'modesub': nav.modeSub = arg || null; render(); out('main').scrollTop = 0; return;
+      case 'modesub': nav.modeSub = arg || null; if (/^cr/.test(arg)) crsLoad(); else crs = null; render(); out('main').scrollTop = 0; return;
+      case 'crnsave': { const v = out('crnote')?.value, lim = crs?.ext ? 2000 : 500; if (!crs?.ok || crs.saving || v == null || crs.id !== chatIdFromPath()) return;
+        if (v.length > lim) { toast('유저노트는 ' + lim + '자까지예요 · 지금 ' + v.length + '자', 'err', 4000); return; }
+        crs.saving = true; render();
+        try { await crack('PATCH', API_A + crs.id, { userNote: { content: v, isExtend: crs.ext } }); crs.note = v; crs.draft = null; toast('유저노트 저장했어요', 'ok', 2500); }
+        catch (e) { toast('유저노트 저장 못 했어요 · ' + (e?.message || e), 'err', 4000); }
+        crs.saving = false; render(); return; }
+      case 'crnpre': if (crs?.pre?.[+arg] != null) { crs.draft = crs.pre[+arg]; render(); } return;
+      case 'crnadd': { const v = (out('crnote')?.value || '').trim(); if (!crs?.ok || !v) return; if (crs.pre.includes(v)) { toast('이미 있는 프리셋이에요', 'info', 2000); return; }
+        crs.pre = [v, ...crs.pre].slice(0, 30); await setValue('crpre', JSON.stringify(crs.pre)); render(); return; }
+      case 'crndel': if (!crs?.pre) return; crs.pre.splice(+arg, 1); await setValue('crpre', JSON.stringify(crs.pre)); render(); return;
+      case 'crfav': if (!crs?.fav) return; crs.fav = crs.fav.includes(arg) ? crs.fav.filter(x => x !== arg) : [...crs.fav, arg]; await setValue('crfav', JSON.stringify(crs.fav)); render(); return;
+      case 'crpick': { if (!crs?.ok || crs.saving || arg === crs.prof || crs.id !== chatIdFromPath()) return;
+        const from = crs.profs.find(p => p.id === crs.prof)?.name.trim() || '', to = crs.profs.find(p => p.id === arg)?.name.trim() || '';
+        crs.saving = true; render();
+        try { await crack('PATCH', API_A + crs.id, { chatProfileId: arg }); crs.prof = arg;
+          const n = from && to && from !== to ? await crFirstName(crs.id, from, to).catch(e => { logErr('첫 지문 이름', e); return -1; }) : 0;
+          toast('프로필 바꿨어요' + (n > 0 ? ' · 첫 지문 이름 ' + n + '곳도 바꿨어요(새로고침하면 보여요)' : n < 0 ? ' · 첫 지문은 못 바꿨어요' : ''), n < 0 ? 'err' : 'ok', 4000); }
+        catch (e) { toast('프로필 못 바꿨어요 · ' + (e?.message || e), 'err', 4000); }
+        crs.saving = false; render(); return; }
       case 'loveon': { loveMode = !loveMode; await setValue('loveMode', loveMode ? 'on' : 'off'); const cid = chatIdFromPath(); if (cid && loveChat !== cid) await loveLoad(cid); if (loveMode) { love = love || {}; loveSync(storyDay(noteMemory() || ''), noteMemory() || ''); loveScan(cid); } toast(loveMode ? '현실 연애를 켰어요 · 연인이 있는 방에서 알아서 들어가요' : '현실 연애를 껐어요 · 어느 방에도 안 들어가요 · 기록은 그대로', 'ok', 3000); keepScroll(render); if (cid) { if (sceneOn) reinject(cid); else loveAppSync(cid).then(() => refresh()).then(render).catch(() => {}); } return; }
       case 'lovewho': if (!love) return; loveSnap('상대 바꾸기'); { const auto = loveAutoWho(), day = storyDay(noteMemory() || ''), when = day != null ? P_STR(day) + ' · ' : '';
         if (love.who !== arg) { if (love.who && arg) { const back = (love.exes || []).includes(arg); love.cycles = [...(love.cycles || []), when + (back ? `${love.who}와 ${love.stage === 'broke' ? '헤어진 뒤' : '끝'} → ${arg}와 다시 사귐` : `${love.who}${love.stage === 'broke' ? '와 헤어진 뒤' : '와 끝'} → 새 연애 ${arg}`)].slice(-30); love.exes = [...(love.exes || []).filter(x => x !== love.who && x !== arg), love.who].slice(-5); }
