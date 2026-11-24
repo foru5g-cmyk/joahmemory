@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.88
+// @version      5.8.89
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -11237,7 +11237,7 @@
           const pull = async () => { // 드라이브에서 받기(큰 백업이라 5초쯤 걸려요)
           let g = null, why = '', have = null; try { const r = await gsCall({ action: 'load', chat: chatId, prev: 1 }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, me: Number(d.me) || 0, hist: d.store?.hist || '', orig: d.store?.orig || '', pack: d.store?.pack || '', r }; } catch (e) { why = e.message || String(e); }
           // memTake: 크랙은 분기할 때 메시지 번호를 그대로 복사해요(원래 방과 정리 지점 번호가 같음) → 방은 번호로만 가려요(load가 이 방 백업만 줌) · 정리 지점이 같거나 정리 시각·턴 수가 같으면 같은 정리본
-          if (memTake(c, g, stale) && chatIdFromPath() === chatId) { have = g.r; await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); await packTake(chatId, g.orig, g.pack); pageToast(stale ? '다른 기기에서 고친 기억을 받아 왔어요' : '이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
+          if (memTake(c, g, stale) && chatIdFromPath() === chatId) { have = g.r; const was = stale ? fullNote?.memory : null; await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); await packTake(chatId, g.orig, g.pack); if (!stale || was !== fullNote?.memory) pageToast(stale ? '다른 기기에서 고친 기억을 받아 왔어요' : '이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요'); /* 받아 보니 글이 같으면(고친 시각만 못 적힌 것) 조용히 */
             if (g.hist && !(await historyOf(chatId)).length) { await setValue('hist:' + chatId, g.hist); logErr('연동', '구글 드라이브에서 이 방 정리 기록도 받음(회귀·분기·되돌리기용)'); }
             else if (!g.hist) gsHistPull(chatId).catch(() => {}); } /* 새 판은 정리 기록을 따로 올려서 그 파일에서 */ // 이 기기에 정리 기록이 없을 때만
           else if (stale) { if (nth >= 2) { await memTouch(chatId, c.me); logErr('연동', '다른 기기가 고친 기억이 드라이브에 없어 이 기기 것을 그대로 씀 · 고친 기기에서 한 번 더 올려 주세요'); } /* 세 번 받아 봐도 없으면 그만 찾아요(방을 열 때마다 다시 받지 않게) */
@@ -11299,7 +11299,7 @@
         if (nav.fullTried !== tryKey) { nav.fullTried = tryKey;
           gsPeek(chatId).then(async g => { if (!g || g.upto !== n.upto || !sameAsChat(g.memory, n.memory) || chatIdFromPath() !== chatId) return;
             if (String(await getValue('fullSkip:' + chatId, '')) === tryKey) return;
-            await saveFull(chatId, n.upto, g.memory, n.turns, n.at); render(); }); } // 묻지 않고 알아서 받아요(채팅은 안 건드림)
+            await saveFull(chatId, n.upto, g.memory, n.turns, n.at); await memTouch(chatId, Math.max(MEM_AT.get(chatId) || 0, n.me || 0)); render(); }); } // 채팅 노트와 같은 글이니 고친 시각도 같이(안 적으면 나중에 또 받아요) · 묻지 않고 알아서 받아요(채팅은 안 건드림)
       }
       // 채팅에서 노트가 사라졌으면(노트 든 말풍선 삭제·오류 등) 남은 기억 중 지금 대화에 맞는 것으로 바로 다시 넣어요.
       //   후보: 이 기기 정리본 · 이 기기 사본 · 정리 기록 · (구글 연결 시) 구글 백업. 기억 초기화 뒤의 것만.
