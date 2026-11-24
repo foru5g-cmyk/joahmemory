@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.91
+// @version      5.8.92
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3095,7 +3095,7 @@
     if (t.length < 80) return '내용이 너무 짧아요. 답이 중간에 끊겼다면 AI에게 "계속"이라고 보내고 이어진 답까지 함께 붙여 넣어 주세요.';
     return '';
   }
-  const LOG_BUDGET = 15000, LOG_RECENT = 15, LOG_SKIP = '(본문 생략 · 그대로 보존)'; // 1.5만 자 넘으면 오래된 사건은 제목만 보내요(정리 비용이 노트 길이만큼 계속 오르지 않게 · 예전 6만)
+  const LOG_BUDGET = 15000, LOG_RECENT = 15, LOG_PACKED = 10, LOG_SKIP = '(생략)'; // 1.5만 자 넘으면 오래된 사건은 제목만 보내요(정리 비용이 노트 길이만큼 계속 오르지 않게 · 예전 6만)
   function trimLogForSummary(memory, fresh) { // 날짜로그가 1.5만 자를 넘으면 최근 + 새 대화에 나온 사건만 본문, 나머지는 제목만
     const secs = splitSections(memory), i = secs.findIndex(x => x.key === '날짜로그');
     if (i < 0 || secs[i].body.length <= LOG_BUDGET) return { memory, hidden: new Set() };
@@ -3103,7 +3103,7 @@
     const words = k => [...new Set((String(k).match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(w => w.length > 2 && /[가-힣]$/.test(w) ? w.slice(0, -1) : w))].filter(w => w.length >= 2 && !/^\d+$/.test(w));
     const size = it => it.lines.join('\n').length, keep = new Set(items.slice(-LOG_RECENT)); let used = [...keep].reduce((n, it) => n + size(it), 0);
     const ranked = items.filter(it => !keep.has(it)).map(it => [it, words(it.key).filter(w => text.includes(w)).length]).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
-    for (const [it] of ranked) { if (used + size(it) > LOG_BUDGET) continue; keep.add(it); used += size(it); }
+    let pk = 0; for (const [it] of ranked) { if (used + size(it) > LOG_BUDGET || packIs(itemKey(it.key), it.lines) && ++pk > LOG_PACKED) continue; keep.add(it); used += size(it); } // 간추린 사건은 관련 큰 것 10개까지만 본문(짧아진 만큼 다른 옛 사건으로 채우지 않게)
     const hidden = new Set(), lines = [...head];
     for (const it of items) { if (keep.has(it)) lines.push(...it.lines); else { hidden.add(it.key); lines.push('▸ ' + it.key + ' ' + LOG_SKIP); } }
     secs[i] = { ...secs[i], body: lines.join('\n') };
@@ -3112,7 +3112,7 @@
   function dropSkipped(out, hidden) { // AI가 본문 생략한 사건을 다시 쓰면 버려요(빈 본문으로 덮어쓰지 않게)
     if (!hidden.size) return out;
     const os = splitSections(out), j = os.findIndex(x => x.key === '날짜로그'); if (j < 0) return out;
-    const b = itemBlocks(os[j].body), base = k => k.replace(/\s*\(본문 생략[^)]*\)\s*$/, '').trim(); if (!b.items.some(it => hidden.has(base(it.key)))) return out;
+    const b = itemBlocks(os[j].body), base = k => k.replace(/\s*\((?:본문 )?생략[^)]*\)\s*$/, '').trim(); if (!b.items.some(it => hidden.has(base(it.key)))) return out;
     os[j] = { ...os[j], body: [...b.head, ...b.items.filter(it => !hidden.has(base(it.key))).flatMap(it => it.lines)].join('\n') };
     return joinSections(os);
   }
