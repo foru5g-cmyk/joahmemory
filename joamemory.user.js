@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.85
+// @version      5.8.86
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1895,7 +1895,7 @@
   // ── 💞 현실 연애: 방마다 켜요 · 상황만 넣고 반응은 그 인물 성격대로 · 지나온 일은 정리 AI가 실제 대화에서 적어요 ──
   let love = null, loveChat = '', loveOut = [], loveSig = '', loveMode = false; // loveMode: 하트(모든 방 공통 · 기본 꺼짐) · 켜면 연인이 있는 방에서 알아서
   const loveOf = async c => { try { return JSON.parse(String(await getValue('love:' + c, '') || 'null')); } catch (_) { return null; } };
-  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); } // 기록이 바뀌면 다른 기기도 받게 곧바로 드라이브에(여러 번 바뀌면 마지막에 한 번) // saved: 기록이 실제로 바뀐 때만(매 턴 주사위로 바뀌면 다른 기기의 새 기록보다 늘 최신으로 보여서 못 받아요)
+  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|scanTry)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); } // 기록이 바뀌면 다른 기기도 받게 곧바로 드라이브에(여러 번 바뀌면 마지막에 한 번) // saved: 기록이 실제로 바뀐 때만(매 턴 주사위로 바뀌면 다른 기기의 새 기록보다 늘 최신으로 보여서 못 받아요)
     const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + sig; // 턴마다 바뀌는 주사위 값은 빼고 견줘요(기록이 그대로면 사본을 또 안 만들어요)
     if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, j, 'lovesnap:'); } // 턴마다 사본(분기한 방이 갈라진 턴 것을 가져가요)
     return setValue('love:' + loveChat, j); };
@@ -2047,15 +2047,15 @@
   let loveScanBusy = '';
   async function loveScan(chatId, force = false) {
     if (!loveMode || !love?.who || loveChat !== chatId || loveScanBusy === chatId || loveBranch.wait?.has(chatId)) return; const who = love.who, mem = noteMemory() || '', key = who; // 상대마다 한 번만(그 뒤는 정리할 때 적어요) · 다시 하려면 '날짜로그 다시 확인'
-    if (!force && love.scanned === key) return; if (!mem) return;
+    const tried = key + '|' + (snapshot?.note?.turns || 0); if (!force && (love.scanned === key || love.scanTry === tried)) return; if (!mem) return; // scanTry: 이 정리에선 이미 불러 봤음(끊겼다고 방을 열 때마다 다시 안 불러요 · 다음 정리 때나 '날짜로그 다시 확인'으로)
     const nick = nameNick(who), hit = t => t.includes(who) || (nick && t.includes(nick)), me = loveCtx().me || '';
     const pick = k => (splitSections(noPast(mem)).find(x => x.key === k)?.body || '').split(/\n(?=\s*▸)/).filter(b => /^\s*▸/.test(b) && hit(b)).join('\n');
     const short = t => t.split('\n').map(l => l.trim()).filter(l => l && !/^(?:-\s*)?(?:근거|번역)\s*[:：]/.test(l)).slice(0, 3).map(l => l.slice(0, 160)).join('\n'); // 사건마다 제목+두 줄만(통째로 보내면 느려요)
     const lg = pick('날짜로그').split(/\n(?=\s*▸)/).map(short).join('\n'), ms = pick('이정표'), bond = ((splitSections(noPast(mem)).find(x => x.key === '현재상태')?.body || '').match(/▸\s*둘만의 것[\s\S]*?(?=\n\s*▸|$)/) || [''])[0].split('\n').filter(l => hit(l) || /^\s*ㄴ/.test(l)).join('\n');
     const src = ['[날짜로그]', lg, '[이정표]', ms, '[둘만의 것]', bond].join('\n').slice(-14000); if ((lg + ms).trim().length < 10) { love.scanned = key; loveSave(); return; }
-    loveScanBusy = chatId; render();
+    loveScanBusy = chatId; love.scanTry = tried; await setValue('love:' + chatId, JSON.stringify(love)); render();
     try {
-      const raw = await askModelRetry(`너는 RP 기억 노트에서 ${me || '유저 캐릭터'}와 ${who} 두 사람의 연애 기록만 뽑는다. 노트에 분명히 적힌 것만 쓰고 지어내지 않는다.\n[출력] JSON 하나만: {"start":"사귀기 시작한 날 YYYY.MM.DD(분명할 때만, 없으면 빈칸)","approxYears":"날짜는 없고 '2년째'·'3년 전부터'처럼 대략만 있으면 지금까지 사귄 햇수(숫자, 반년은 .5) · 없으면 빈칸","breaks":[{"d":"날짜","kind":"헤어짐|다시 사귐|결혼"}],"events":[{"d":"날짜","t":"20자 안팎 한 줄","open":true,"solved":false}]}\n- breaks: 두 사람이 헤어지거나 다시 사귀거나 결혼한 날만, 날짜순.\n- events: 두 사람 관계에 남는 일만(싸움·화해·서운함·질투·권태·이별·재회, 고백·첫 데이트·첫 키스·첫 관계·기념일·청혼 같은 두 사람의 날). 안부·모임·평범한 데이트·다른 인물끼리의 일은 빼고, 다툼이 풀리지 않고 끝났으면 open:true, 다툼·서운함이 노트 안에서 나중에 풀렸으면 solved:true.`, src, '💞연애 기록');
+      const raw = await askModelRetry(`너는 RP 기억 노트에서 ${me || '유저 캐릭터'}와 ${who} 두 사람의 연애 기록만 뽑는다. 노트에 분명히 적힌 것만 쓰고 지어내지 않는다.\n[출력] JSON 하나만: {"start":"사귀기 시작한 날 YYYY.MM.DD(분명할 때만, 없으면 빈칸)","approxYears":"날짜는 없고 '2년째'·'3년 전부터'처럼 대략만 있으면 지금까지 사귄 햇수(숫자, 반년은 .5) · 없으면 빈칸","breaks":[{"d":"날짜","kind":"헤어짐|다시 사귐|결혼"}],"events":[{"d":"날짜","t":"20자 안팎 한 줄","open":true,"solved":false}]}\n- breaks: 두 사람이 헤어지거나 다시 사귀거나 결혼한 날만, 날짜순.\n- events: 두 사람 관계에 남는 일만(싸움·화해·서운함·질투·권태·이별·재회, 고백·첫 데이트·첫 키스·첫 관계·기념일·청혼 같은 두 사람의 날). 안부·모임·평범한 데이트·다른 인물끼리의 일은 빼고, 다툼이 풀리지 않고 끝났으면 open:true, 다툼·서운함이 노트 안에서 나중에 풀렸으면 solved:true.`, src, '💞연애 기록', !force);
       let d; try { d = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요'); }
       if (love.who !== who || loveChat !== chatId) return;
       const st = P_DAY2(d.start || ''), ay = parseFloat(d.approxYears), today = storyDay(mem); if (!love.startBy || love.startBy === 'note' || love.startBy === 'again') { if (st != null) { love.start = st; love.startBy = 'ai'; love.startApprox = false; } else if (ay > 0 && today != null) { love.start = today - Math.round(ay * 365); love.startBy = 'ai'; love.startApprox = true; } }
@@ -2068,7 +2068,7 @@
       const bg = t => { const c = String(t).replace(/[^가-힣A-Za-z0-9]/g, ''), o = new Set(); for (let i = 0; i < c.length - 1; i++) o.add(c.slice(i, i + 2)); return o; }, sim = (p, q) => { const A = bg(p), B = bg(q); let n = 0; for (const x of A) if (B.has(x)) n++; return A.size && B.size ? n / Math.min(A.size, B.size) : 0; };
       for (const e of evs) { if (love.log.some(l => l.t === e.t)) continue; const k = force ? love.log.findIndex(l => l.d != null && l.d === e.d && (!l.w || l.w === who) && sim(l.t, e.t) >= 0.3) : -1; if (k >= 0) love.log[k] = { ...e, solved: !!(love.log[k].solved || (love.log[k].open && !e.open)) }; else love.log.push(e); }
       love.log.sort((a, b) => (a.d ?? 0) - (b.d ?? 0)); love.log = love.log.slice(-60); love.scanned = key; love.sumT = Math.max(love.sumT || 0, snapshot?.note?.turns || 0); loveSave(); if (nav.gsOn) gsSave(true); /* 노트 끝까지 다시 읽은 기록 → 다른 기기도 이걸 받게 바로 드라이브에 */
-    } catch (e) { toast('연애 기록 확인 실패 · ' + errMsg(e), 'err', 3500); }
+    } catch (e) { if (force) toast('연애 기록 확인 실패 · ' + errMsg(e), 'err', 3500); else logErr('연애', '기록 확인 실패 · ' + e.message); }
     finally { loveScanBusy = ''; render(); }
   }
   const loveAnniv = day => { if (love?.stage === 'broke' || (P_GAP(love?.start, day) ?? -1) < 0) return ''; const n = day - love.start + 1, M = [[100, '100일'], [200, '200일'], [300, '300일'], [366, '1주년'], [500, '500일'], [731, '2주년'], [1000, '1000일'], [1096, '3주년']], x = M.find(([m]) => m >= n && m - n <= 3); return x ? (x[0] === n ? ` · 오늘 ${x[1]}` : ` · ${x[0] - n}일 뒤 ${x[1]}`) + '(기억할지·챙길지는 정해지지 않음)' : ''; };
@@ -3159,7 +3159,7 @@
       try { out = await askAny(model, system, input, json, thinkLevel, true).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, input, json, '', true) : Promise.reject(e)); break; } // 설정 › AI 생각(적게·보통·깊게)을 ETC·점검에도 그대로 · 그 값을 못 받는 모델이면 값 없이 한 번 더
       catch (e) {
         if (k >= waits.length || !/HTTP (429|500|502|503|504)\b/.test(String(e?.message))) throw e;
-        toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
+        if (!bg) toast(`AI가 바빠요. ${waits[k]}초 뒤 다시 시도해요… (${k + 1}/${waits.length})`, 'info', 4000);
         await new Promise(r => setTimeout(r, waits[k] * 1000));
       }
     }
@@ -7383,7 +7383,7 @@
     if (ans.length < 5) { if (!auto) toast('AI 답이 5개는 있어야 점검할 수 있어요.', 'info', 3000); return; }
     if (!auto) { busyNow = true; nav.styBusy = true; render(); toast('문체 점검 중이에요… (20~40초)'); }
     try {
-      const raw = rawIn || await askModelRetry(STY_PROMPT, ans.map((t, i) => `[최근 답 ${i + 1}]\n${t.slice(0, 3000)}`).join('\n\n'), '✍문체 점검');
+      const raw = rawIn || await askModelRetry(STY_PROMPT, ans.map((t, i) => `[최근 답 ${i + 1}]\n${t.slice(0, 3000)}`).join('\n\n'), '✍문체 점검', auto);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요'); }
       const items = (data?.items || []).filter(it => it?.pat)
         .map(it => { const kind = String(it.kind || '').replace(/[^가-힣]/g, '').slice(0, 3), ai = /^(되풀이|틀|구조)$/.test(kind); return { kind, ex: (Array.isArray(it.ex) ? it.ex : [it.ex]).filter(Boolean).slice(0, 2).map(x => String(x).replace(/["“”]/g, '').trim().slice(0, 60)), pat: String(it.pat).replace(/["“”]/g, '').replace(/[.。]s*$/, '').trim().slice(0, ai ? 30 : 25), n: ai ? Math.min(ans.length, Math.max(0, parseInt(it.n, 10) || 0)) : styCount(ans, kind, it.pat), na: ai ? 0 : ans.filter(t => styCount([t], kind, it.pat)).length }; })
@@ -7415,15 +7415,15 @@
       + (styRecheck.busy ? '<p class="lv-scan" style="margin:8px 0 0"><i></i>되풀이·틀·구조가 고쳐졌는지 보는 중…</p>' : '');
     return hero + sum + `<div class="sty-h"><b>찾은 반복</b><div class="sty-seg">${[5, 10, 0].map(k => `<button data-act="stykeep" data-arg="${k}" aria-pressed="${(d.keep ?? 10) === k}">${k ? k + '턴' : '계속'}</button>`).join('')}</div></div>${kinds.map(grp).join('')}
       <details class="sty-note"><summary>📝 노트에 들어가는 글<span>▾</span></summary><pre>${esc(styLines().join('\n'))}</pre></details>`; };
-  async function askModelRetry(system, input, label) {
+  async function askModelRetry(system, input, label, quiet = false) { // quiet: 저절로 도는 확인(알림 없이 · 오류 기록에만)
     askModelRetry.last = [system, input, label];
     let sys = system, soft = false;
     for (let i = 0; ; i++) {
       try { return await askModel(sys, input, label, true); }
       catch (e) {
-        if (e?.cut && e.partial) { toast('답이 길어서 받은 만큼만 보여 드려요', 'ok', 3000); return e.partial; }
-        if (!soft && /안전 필터/.test(String(e?.message))) { soft = true; sys = system + SOFT_RETRY; toast('안전 필터에 걸려서 살짝 돌려 말하게 다시 하는 중이에요…', 'ok', 3000); continue; }
-        if (i < 1 && !/키를|안전 필터|거절|빈 답/.test(String(e?.message))) { toast('한 번 더 시도하는 중이에요…', 'ok', 2500); logErr('알림', (label || 'AI') + ' 첫 시도 실패 → 한 번 더 · ' + String(e?.message || e).slice(0, 160)); continue; } /* 왜 다시 했는지 오류 기록에 남겨요 */
+        if (e?.cut && e.partial) { if (!quiet) toast('답이 길어서 받은 만큼만 보여 드려요', 'ok', 3000); return e.partial; }
+        if (!soft && /안전 필터/.test(String(e?.message))) { soft = true; sys = system + SOFT_RETRY; if (!quiet) toast('안전 필터에 걸려서 살짝 돌려 말하게 다시 하는 중이에요…', 'ok', 3000); continue; }
+        if (i < 1 && !/키를|안전 필터|거절|빈 답/.test(String(e?.message))) { if (!quiet) toast('한 번 더 시도하는 중이에요…', 'ok', 2500); logErr('알림', (label || 'AI') + ' 첫 시도 실패 → 한 번 더 · ' + String(e?.message || e).slice(0, 160)); continue; } /* 왜 다시 했는지 오류 기록에 남겨요 */
         throw e;
       }
     }
