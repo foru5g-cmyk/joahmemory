@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.84
+// @version      5.8.85
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1268,7 +1268,7 @@
     if (preg.genes == null) pregGeneAsk(mem);
     const world = pWorld(mem); preg.era = world; if (preg.lossV == null && preg.start != null) preg.lossV = (day - preg.start) / 7 < 5 ? 2 : 1; if (preg.planV == null && preg.start != null) preg.planV = (day - preg.start) / 7 < 20 ? 2 : 1; const p = pregPlan(), age = day - preg.start, wk = Math.floor(age / 7), dd = ((age % 7) + 7) % 7;
     if (wk < 0) return;
-    const chat = (snap?.all || []).filter(isChat), lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
+    const all = (snap?.all || []).filter(isChat), chat = preg.rgId ? all.slice(all.findIndex(m => msgId(m) === preg.rgId) + 1) : all /* 회귀 앞 장면(출산 등)은 안 읽어요 */, lastAi = stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'assistant') || {}));
     const atHosp = P_HOSP[world].test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said);
     preg.fired ||= {}; preg.shown ||= {}; preg.log ||= []; preg.seen ||= {};
     if (preg.unaware && P_TELL.test(said) && !/못\s*하|아니야|아닐/.test(said)) { preg.unaware = false; preg.log.push({ w: wk, t: '임신 사실을 알게 됨', at: turn }); }
@@ -1387,10 +1387,22 @@
     const wk = endDay != null ? Math.floor((endDay - preg.start) / 7) : null, w0 = preg.w0 || 0;
     const line = `${kind} · ${preg.who || ''} · ${P_STR(preg.start + w0 * 7)}(${w0}주) ~ ${endDay != null ? P_STR(endDay) + '(' + wk + '주)' : '?'}${why ? ' · ' + why : ''}`;
     const nth = (preg.books || []).filter(b => b.kind === '출산').length + (kind === '출산' ? 1 : 0), ORD = ['', '첫째', '둘째', '셋째', '넷째', '다섯째'];
-    const book = { title: kind === '출산' ? `${ORD[nth] || nth + '번째'} 산모수첩` : `${kind} 기록`, kind, line, who: preg.who, father: preg.father || '', log: preg.log || [], at: Date.now() };
+    const book = { title: kind === '출산' ? `${ORD[nth] || nth + '번째'} 산모수첩` : kind === '회귀' ? '회귀 전 산모수첩' : `${kind} 기록`, kind, line, who: preg.who, father: preg.father || '', log: preg.log || [], at: Date.now() };
     preg = { on: kind !== '출산', world: preg.world, peek: preg.peek, maleOk: preg.maleOk, books: [...(preg.books || []), book], history: [...(preg.history || []), line], after: endDay ?? preg.after, afterV2: true, afterTurn: (snapshot?.note?.turns || 0) + freshTurns(),
       ...(kind === '유산' || kind === '사산' ? { undo: JSON.stringify({ ...preg, books: undefined, history: undefined, undo: undefined }) } : {}) }; // undo: 되돌리기용으로 접어 둔 그 임신
     pregOut = []; pregSig = ''; pregSave();
+  }
+  // 그 턴의 임신 기록: 턴 사본에서, 없으면(오래된 턴) 그 턴 정리 기록에서 · 회귀할 때 한 번만 읽어요
+  async function pregAt(c, T) { try { const l = JSON.parse(String(await getValue('pregsnap:' + c, '') || 'null'))?.list || []; return JSON.parse(l.filter(x => x.turn <= T).pop()?.j || [...histList].reverse().find(h => h.to === T && h.pregA)?.pregA || 'null'); } catch (_) { return null; } }
+  // 이 방 회귀: 돌아간 때 뒤에 생긴 임신·낳은 아기는 이번 생엔 아직 없어요 → '회귀 전 산모수첩'으로 접어 둬요(아이 표시·첫째 둘째 세기에서 빠져요) · 그때 임신 중이었으면(was) 그때 기록을 다시 이어요
+  function pregRegress(bd, { turns, uptoId }, was) {
+    const alive = !!was && was.start != null && !was.ended && was.start + 14 <= bd;
+    if (preg.start != null && !preg.ended && (preg.start + 14 > bd || preg.endNext?.dayN > bd)) pregArchive('회귀', bd - 1, '회귀로 이번 생에선 아직 없는 임신');
+    const later = b => b.kind !== '회귀' && (was ? !(was.books || []).some(x => x.at === b.at) : P_DAY2(String(b.line || '').split('~')[1] || '') > bd);
+    if ((preg.books || []).some(later)) { if (preg.start == null && !preg.userOff) preg.on = true; preg.books = preg.books.map(b => later(b) ? { ...b, kind: '회귀', title: '회귀 전 ' + b.title } : b); delete preg.undo; }
+    if (alive && !preg.userOff && (preg.start == null || preg.start === was.start)) preg = { ...was, endNext: null, books: preg.books || [], history: preg.history || [], world: preg.world, peek: preg.peek, maleOk: preg.maleOk };
+    if (preg.start == null) { Object.assign(preg, { after: bd, afterV2: true, afterTurn: turns }); delete preg.aiSaid; }
+    preg.rgId = uptoId; pregOut = []; pregSig = ''; pregSave();
   }
   const pregSave = () => { if (!pregChat) return; const body = JSON.stringify(preg && { ...preg, saved: 0 }); if (preg && pregSave.body !== pregChat + body) { pregSave.body = pregChat + body; preg.saved = Date.now(); if (nav?.gsOn) gsModeSoon(pregChat); } // saved: 기기끼리 더 최근 걸 고르는 기준 · 내용이 바뀔 때만 올려요(기준은 pregLoad가 잡아요)
     const j = JSON.stringify(preg);
@@ -10642,7 +10654,7 @@
   function rgDraft(base, T, note) {
     const nowMem = noteMemory() || '', chat = (snapshot?.all || []).filter(isChat), who = personsIn(splitSections(base).find(x => x.key === '인물')?.body || '').filter(x => x.isUser).map(x => x.name);
     draft = { chat: chatIdFromPath(), sections: splitSections(carryNote(base, 'rback', who, nowMem)), uptoId: msgId(chat[chat.length - 1]), turns: (snapshot.note.turns || 0) + freshTurns(), evidence: { ok: 0, bad: 0 }, kept: [], lost: [],
-      before: { memory: nowMem, upto: snapshot.note.upto, turns: snapshot.note.turns }, carry: { base, now: nowMem, mode: 'rback', who },
+      before: { memory: nowMem, upto: snapshot.note.upto, turns: snapshot.note.turns }, carry: { base, now: nowMem, mode: 'rback', who, T },
       sub: `1~${T}턴 때로 돌아가요${note ? ' · ' + note : ''}. ${T + 1}턴부터 지금까지 일은 회귀 전 칸에 남아요.${freshTurns() ? ' 마지막 정리 뒤 나눈 ' + freshTurns() + '턴은 회귀 전 칸에 안 들어가요(먼저 정리하고 회귀하면 들어가요).' : ''} 잘못 회귀했으면 채팅을 보내기 전에 회귀 › 이 방 › '방금 한 회귀 취소'로 되돌릴 수 있어요.` };
     nav.view = 'preview'; render(); out('main').scrollTop = 0;
   }
@@ -11745,14 +11757,12 @@
       const savedAt = new Date().toISOString(); await memTouch(chatId); // 새 정리본 = 기억을 고친 것
       // 다른 방 정리 기록은 안 가져와요(이 방 '회귀 › 이 방' 목록에 남의 방 턴이 섞이지 않게) · 회귀면 임신 기록도 그 방 것이라 안 가져와요
       if (draft.carry?.etc?.on) { await putEtc(draft.carry.etc, chatId, [...(draft.carry.mode === 'regress' ? ['preg', 'caldue'] : []), ...(draft.carry.other || draft.carry.fromOther ? ['hist'] : [])]); lap('명대사·ETC'); }
-      // 이 방 회귀: 돌아간 날보다 뒤에 생긴 임신은 이번 생엔 아직 없어요 → 지난 산모수첩에 '회귀 기록'으로 접어 둬요(지문에 임신이 계속 들어가지 않게)
       const pregWas = draft.carry?.mode === 'rback' && preg ? JSON.stringify(preg) : null;
       const loveWas = draft.carry?.mode === 'rback' && love && loveChat === chatId ? JSON.stringify(love) : null;
       if (loveWas) { const bd = storyDay(noPast(draft.carry.base)); const x = bd != null ? loveRoll({ j: loveWas }, bd) : null; love = x ? JSON.parse(x.j) : {}; loveOut = []; loveSig = ''; loveSave(); } // 날짜를 모르면 비워요(돌아간 노트 관계 줄로 다시 찾아요)
       if (draft.restore && draft.pregBack) { try { preg = JSON.parse(draft.pregBack); pregOut = []; pregSig = ''; pregSave(); } catch (_) {} }
       if (draft.restore && draft.loveBack && loveChat === chatId) { try { love = JSON.parse(draft.loveBack); loveOut = []; loveSig = ''; loveSave(); } catch (_) {} } // 노트와 짝인 연애 기록
-      if (draft.carry?.mode === 'rback' && preg) { const bd = storyDay(noPast(draft.carry.base)); if (bd != null) { if (preg.start != null && !preg.ended && preg.start + 14 > bd) pregArchive('회귀', bd - 1, '회귀로 이번 생에선 아직 없는 임신');
-        if (preg.start == null) { Object.assign(preg, { after: bd, afterV2: true, afterTurn: draft.turns }); delete preg.aiSaid; pregOut = []; pregSig = ''; pregSave(); } } }
+      if (draft.carry?.mode === 'rback' && preg) { const bd = storyDay(noPast(draft.carry.base)); if (bd != null) pregRegress(bd, draft, await pregAt(chatId, draft.carry.T)); }
       if (!parked) await updateInjCtx(chatId, snapshot, memory, stripBlocks(msgText([...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user') || {})), true); lap('뜻 검색·고르기'); // 새로고침 때처럼 마지막 유저 말로(AI 재검토까지)
       if (!parked) await writeMessage(chatId, msgId(carrier), stripBlocks(msgText(carrier)).trimEnd() + buildBlock(memory, draft.uptoId, draft.turns, savedAt));
       ownUpto = draft.uptoId; lap('채팅에 쓰기');
