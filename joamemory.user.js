@@ -6290,7 +6290,7 @@
         ${sceneOn ? one('🗑️', '장기기억 모두 지우기', 'ltmdelall') : ''}
       </div>${nav.fxPick ? fxLibHtml(true) : ''}</section>`;
   }
-  const orbS = (pc, spin, mini = '') => { const nm = persons().find(p => !p.isUser)?.name; // 평소엔 멈춤(점은 채워진 끝) · 정리할 때만 채워지며 돌아요(--d: 다시 그려도 돌던 자리에서 이어서)
+  const orbS = (pc, spin, mini = '') => { const nm = [...people().keys()][0]; /* 유저 캐릭터가 맨 앞(등장인물 첫 칸과 같은 얼굴) */ // 평소엔 멈춤(점은 채워진 끝) · 정리할 때만 채워지며 돌아요(--d: 다시 그려도 돌던 자리에서 이어서)
     return `<div class="orb-s${mini}${spin ? ' busy' : ''}" aria-hidden="true" style="--d:-${Date.now() % 3000}ms"><svg class="r" viewBox="0 0 40 40"><circle class="t" cx="20" cy="20" r="19.4"/><circle class="p" cx="20" cy="20" r="19.4" pathLength="100" stroke-dasharray="${pc.toFixed(1)} 200" transform="rotate(-90 20 20)"/></svg><i style="transform:rotate(${(pc * 3.6).toFixed(1)}deg)"></i>${nm ? `<span class="fc" style="background:${avColor(nm)[0]}">${esc(ANIM.get(nm) || PROF.get(nm)?.emoji || animalOf(nm))}</span>` : SPARK}</div>`; };
   const SPARK = '<svg viewBox="-2.5 -.5 24 24"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3L12 3Z"/><path d="m5 14 .8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14Z"/></svg>';
   function homeHtml() {
