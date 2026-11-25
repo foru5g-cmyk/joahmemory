@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.99
+// @version      6.0.0
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -411,33 +411,27 @@
     if (/^(되풀이|틀|구조)$/.test(it.kind)) return it.re?.of ? { hit: it.re.hit, of: it.re.of, before: it.n, bOf: d.of || 5 } : null; // 코드가 못 세는 셋은 AI 다시 확인 결과로(styRecheck)
     if (!/^(말투|어미|문두|단어|구절)$/.test(it.kind)) return null; return { hit: a.filter(t => styCount([t], it.kind, it.pat)).length, of: a.length, before: it.na ?? it.n, bOf: d.of || 5 }; };
   const styNewAns = d => { if (!d) return []; const fresh = (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0); return fresh > 0 ? styAns(Math.min(fresh, 5)) : []; }; // 점검 뒤 새로 쓴 답(최대 5개)
-  const styLast = t => t.split('\n').map(x => x.trim()).filter(Boolean).pop() || '';
-  // 대사 줄이면 { 말한 사람, 말 } · '**이름**｜"대사" (번역)' 꼴도 · 아니면 null
-  const styTalk = l => { const m = String(l).replace(/\s*[(（][^()（）\n]*[)）][\s*_.]*$/, '').match(/^[\s*_]*(?:([^"“「『❝|｜:：\n]{1,16}?)[\s*_]*[|｜:：]\s*)?[*_]*["“「『❝](.*?)["”」』❞][\s*_.]*$/); return m && { who: (m[1] || '').replace(/[*_\s]/g, ''), say: m[2].trim() }; };
-  const styTwin = t => { const L = t.split('\n').map(x => x.trim()).filter(Boolean).map(styTalk).filter((x, i, A) => !(x && i && A[i - 1] && /[가-힣]/.test(x.say) && !/[가-힣]/.test(A[i - 1].say))); /* 외국어 대사 바로 아래 번역 줄은 한 대사 */ for (let i = 0; i < L.length; i++) { if (!L[i]) continue; let k = i; while (L[k]) k++; if (k - i === 2 && L[i].who === L[i + 1].who || L.slice(i, k).some((x, q) => q && x.who && x.who === L[i + q - 1].who)) return true; i = k; } return false; }; // 같은 사람이 지문 없이 잇달아(이름이 안 적힌 방은 딱 두 줄일 때만 · 셋 이상은 주고받는 대화)
-  const STY_END = { '답을 늘 대사로 끝냄': [t => !!styTalk(styLast(t)) || /^[\s*_]*[“"「『❝]|[”"」』❞][\s*_.]*$/.test(styLast(t)), 0.8, /끝|마무|닫/], '답 끝을 늘 질문·양자택일로 닫음': [t => /\?[\s”"」』❞*_.]*$/.test(styLast(t).replace(/\s*[(（][^()（）\n]*[)）][\s*_.]*$/, '')), 0.4, /질문/],
-    '대사로 양자택일을 시킴': [t => [...t.matchAll(/["“「『❝]([^"”」』❞\n]*)["”」』❞]|[(（]([^()（）\n]*)[)）]/g)].some(m => { const x = m[1] || m[2] || ''; return /아니면[^.!…]{1,60}\?/.test(x) || /[^.!?…]{2,30}(?:래|까|니|냐|나|요|지),\s*[^.!?…]{2,40}(?:래|까|니|냐|나|요|지)\s*\?/.test(x) || /[^.!?]{2,60},?\s+or\s+[^.!?]{2,60}\?/i.test(x); }), 0.3, /양자택일|둘 중/],
-    '대사를 말줄임표(…)로 엶': [t => t.split('\n').some(l => /^(?:…|⋯|\.{2,}|·{2,})/.test(styTalk(l)?.say || '')), 0.4, /말줄임|…|\.{2,}/], '같은 사람 대사를 지문 없이 잇달아 씀': [styTwin, 0.4, /대사.{0,12}(?:연달|연속|이어|잇달|두\s*번)|(?:연달|연속|이어|잇달).{0,12}대사/] }; // 코드가 세는 짜임(최근 답 10개까지) · [나왔는지, 넘으면 굳은 것, AI가 찾은 같은 것]
+  // 답의 마지막 줄 · 맨 끝에 붙은 상태창(`…` · ```…``` · > 줄)은 건너뛰어요
+  const styLast = t => { let x = t.trim(), y; while ((y = x.replace(/(?:^|\n)[ \t]*[*_]*`+(?:[^`]+|[^\n]+)`+[*_]*$/, '').replace(/(?:^|\n)[ \t]*>[^\n]*$/, '').trim()) !== x) x = y; return x.split('\n').pop().trim(); };
+  // 대사 줄인지 · '**이름**｜"대사" (번역)' 꼴도
+  const styTalk = l => /^[\s*_]*(?:[^"“「『❝|｜:：\n]{1,16}?[\s*_]*[|｜:：]\s*)?[*_]*["“「『❝].*?["”」』❞][\s*_.]*$/.test(l.replace(/\s*[(（][^()（）\n]*[)）][\s*_.]*$/, ''));
+  const STY_END = { '답을 늘 대사로 끝냄': [t => { const l = styLast(t); return !/^\*[^*"“「『❝][^*]*\*$/.test(l) && (styTalk(l) || /^[\s*_]*[“"「『❝]|[”"」』❞][\s*_.]*$/.test(l)); }, 0.8, /끝|마무|닫/], '답 끝을 늘 질문·양자택일로 닫음': [t => /\?[\s”"」』❞*_.]*$/.test(styLast(t).replace(/\s*[(（][^()（）\n]*[)）][\s*_.]*$/, '')), 0.4, /질문/] }; // 코드가 세는 짜임(최근 답 10개까지) · [나왔는지, 넘으면 굳은 것, AI가 찾은 같은 것]
   const styStill = (d, it) => { const fresh = (snapshot?.note?.turns || 0) + freshTurns() - (d.turn ?? 0); if (fresh < 5) return true; // 점검 뒤 새 답 5개가 쌓이기 전엔 그대로
     const a = styAns(5); if (a.length < 5) return true;
     if (STY_END[it.pat]) { const [hit, r] = STY_END[it.pat]; return a.filter(hit).length / a.length >= r; }
     if (/^(말투|어미|문두|단어|구절)$/.test(it.kind)) return styCount(a, it.kind, it.pat) >= Math.max(2, Math.ceil(a.length / 3));
     if (/^(되풀이|틀|구조)$/.test(it.kind) && it.re?.of) return it.re.hit >= Math.max(2, Math.ceil(it.re.of / 3)); // AI 다시 확인이 있으면 어미·단어와 같은 기준
     return true; }; // 전개·되풀이·틀·구조는 확인 전엔 고른 턴 수만큼
-  // 지문의 꾸밈말(천천히·가볍게)이 최근 답 10개 중 8개 이상에 나올 때만(대사·상태창·애칭은 안 봐요 · 비슷한 말·구절은 AI가 정리 때 찾아요)
-  const styWords = a => { const m = new Map(); a.forEach(t => { const nar = t.split('\n').map(x => x.trim()).filter(l => l && !styTalk(l) && !/^(?:[-#>`|\[]|\*{0,2}\[)|[│｜〚〛❝❞┃┊╎═━■◆▶]/.test(l)).join('\n').replace(/["“「『][^"”」』\n]*["”」』]/g, ' ');
-      for (const w of new Set((nar.match(/(?<![가-힣])[가-힣]{2,4}(?:히|게)(?![가-힣])/g) || []).filter(w => !/(?:에게|[그이저]렇게|어떻게|있게|없게|되게|하게|않게|여전히|당연히)$/.test(w)))) m.set(w, (m.get(w) || 0) + 1); });
-    return [...m].filter(x => x[1] >= Math.ceil(a.length * 0.8)).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([pat, n]) => ({ kind: '단어', pat, n, of: a.length, ex: [] })); };
-  // 자동 점검을 켰을 때: 코드가 세는 짜임은 점검 기간과 상관없이 지금 답에 굳어 있는 동안 넣어요(AI 안 씀 · 새 답이 올 때 한 번만 세요 · 앱 모드는 노트를 다시 써야 해서 안 해요) · ×로 뺀 건 안 넣어요
-  const styNow = d => { if (!styAutoOn || !sceneOn) return []; const a = styAns(10), k = styFix.c + '|' + a.length + '|' + (a[a.length - 1] || '').slice(-40); if (styNow.k !== k) { styNow.k = k; styNow.v = a.length < 5 ? [] : Object.entries(STY_END).map(([pat, [hit, r]]) => ({ kind: '구조', pat, n: a.filter(hit).length, of: a.length, ex: [], r })).filter(x => x.n / x.of >= x.r).concat(styWords(a)); } return styNow.v.filter(x => !d?.no?.includes(x.pat)); };
+  // 자동 점검을 켰을 때: 코드가 세는 짜임은 지금 답에 굳어 있는 동안 넣어요(전부 지웠거나 점검 기간이 끝난 뒤엔 다음 점검까지 쉬어요 · AI 안 씀 · 새 답이 올 때 한 번만 세요 · 앱 모드는 노트를 다시 써야 해서 안 해요) · ×로 뺀 건 안 넣어요
+  const styNow = d => { if (!styAutoOn || !sceneOn || d && (d.cleared || !styLeft(d))) return []; const a = styAns(10), k = styFix.c + '|' + a.length + '|' + (a[a.length - 1] || ''); if (styNow.k !== k) { styNow.k = k; styNow.v = a.length < 5 ? [] : Object.entries(STY_END).map(([pat, [hit, r]]) => ({ kind: '구조', pat, n: a.filter(hit).length, of: a.length, ex: [], r })).filter(x => x.n / x.of >= x.r); } return styNow.v.filter(x => !d?.no?.includes(x.pat)); };
   // 노트·메시지에 넣는 것: 종류마다 한 줄(짜임이 자리를 다 차지해 AI가 찾은 지문·대사 되풀이가 밀리지 않게 자리를 나눠요) · 단어·구절·첫말은 한 줄에 나열만 · 고쳐지면 다음 것이 올라와요 · 어미는 화면에만
   const styPick = list => { const R = ['전개', '구조', '되풀이', '틀', '구절', '문두', '말투', '단어'], max = { 전개: 2, 구조: 3, 되풀이: 3, 틀: 2, 구절: 4, 문두: 1, 말투: 2, 단어: 6 }, n = {}; return list.map((x, i) => [x, R.indexOf(x.kind || ''), i]).filter(x => x[1] >= 0).sort((a, b) => a[1] - b[1] || (b[0].n / (b[0].of || 5) || 0) - (a[0].n / (a[0].of || 5) || 0) || a[2] - b[2]).map(x => x[0]).filter(x => (n[x.kind] = (n[x.kind] || 0) + 1) <= max[x.kind]); };
   const styLines = () => { const d0 = styFix.c && styFix.c === chatIdFromPath() && !styFix.d?.cleared ? styFix.d : null, live = d0?.items?.length && styLeft(d0);
-    const d = { ...(d0 || {}), items: live ? d0.items.filter(it => styStill(d0, it)) : [] }; { const now = styFix.c === chatIdFromPath() ? styNow(styFix.d) : [], has = new Set(d.items.map(it => it.pat)); d.items = [...now.filter(x => !has.has(x.pat) && (x.kind === '구조' || !d.items.some(it => String(it.pat).includes(x.pat)))), ...d.items]; if (d.items.length && !d.at) d.at = Date.now(); }
+    const d = { ...(d0 || {}), items: live ? d0.items.filter(it => styStill(d0, it)) : [] }; { const now = styFix.c === chatIdFromPath() ? styNow(styFix.d) : [], has = new Set(d.items.map(it => it.pat)); d.items = [...now.filter(x => !has.has(x.pat)), ...d.items]; if (d.items.length && !d.at) d.at = Date.now(); }
     d.items = styPick(d.items); if (!d.items.length && !styAutoOn) return [];
     const day = d.items.length ? '(' + new Date(d.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) + ')' : '';
     const kinds = [...new Set(d.items.map(it => it.kind || '반복'))], cnt = it => /^(되풀이|틀|구조|전개)$/.test(it.kind) ? '답 ' + (it.n || '여러') + '개' : (it.n ? it.n + '회' : '여러 번');
-        return [`※ 문체 보정${day}: 문체 기준은 최근 답이 아니라 프롬프트 원문의 묘사 지침 · 쓰기 전에 최근 5턴${d.items.length ? '과 아래 목록' : ''}을 보고 다시 나오는 어미·문두·구조·단어·한 말을 스스로 찾음 · 대사·묘사·행동 모두 직전 답과 같은 단어·표현·문장 모양을 다시 쓰지 않음 · 반복 대신 감각·시점·문장 리듬을 바꿔 매 응답 새 어휘·문장 구조를 시도함 ·목록 항목은 프롬프트·캐릭터 설정과 대조해 프롬프트가 정한 것이면 그대로 두고 아닌 반복만 고침 · 고칠 방향도 프롬프트 지침 안에서 스스로 정함(정해진 형식·이름·호칭은 그대로 · 말버릇·말투는 살리되 매 답 똑같이 되풀이하지 않음) · 답의 흐름·구성은 정해진 순서 없이 장면에 맞게 · 이미 쓴 지문·한 말은 되풀이하지 않고 새로 씀 · 점검 내용은 출력 안 함`,
+        return [`※ 문체 보정${day}: 문체 기준은 최근 답이 아니라 프롬프트 원문의 묘사 지침 · 쓰기 전에 최근 5턴${d.items.length ? '과 아래 목록' : ''}을 보고 다시 나오는 어미·문두·구조·단어·한 말을 스스로 찾음 · 대사·묘사·행동 모두 이미 쓴 단어·표현·문장 모양·한 말을 되풀이하지 않고, 감각·시점·문장 리듬을 바꿔 매 응답 새 어휘·문장 구조로 씀 · 목록 중 프롬프트·캐릭터 설정이 정한 것은 그대로 두고 아닌 반복만 프롬프트 지침 안에서 고침(정해진 형식·이름·호칭은 그대로 · 말버릇·말투는 살리되 매 답 똑같이 되풀이하지 않음) · 답의 흐름·구성은 정해진 순서 없이 장면에 맞게 · 점검 내용은 출력 안 함`,
       ...kinds.map(k => `※ - ${k === '말투' ? '말투 반복' : k} ` + d.items.filter(it => (it.kind || '반복') === k).map(it => (/^(되풀이|틀|구조|전개)$/.test(k) ? it.pat : (k === '말투' ? '대사 끝 ' : '') + '“' + it.pat + '”') + (/^(단어|구절|문두)$/.test(k) ? '' : '(' + cnt(it) + (/^(되풀이|틀|구조|전개)$/.test(k) && it.ex?.[0] ? ' · 예: ' + it.ex[0].slice(0, 40) : '') + ')')).join(' · '))]; };
   // 분기한 방: 갈라진 턴까지 점검한 문체 보정을 가져와요(방마다 한 번 · 분기 전 방에 문체 기록이 있을 때만 대화를 맞춰 봐요)
   async function styBranch(chatId) {
@@ -936,7 +930,9 @@
   const HEAD_DATE = /\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\s*(?:[.\-/·]|[년年]\s*·?)\s*\d{1,2}\s*(?:[.\-/·]|[월月]\s*·?)\s*\d{1,2}\s*[일日]?|\d{1,2}\s*[월月]\s*·?\s*\d{1,2}\s*[일日]/g;
   const HEAD_PROSE = /[다요죠까네지군구나라자어아야해][.!?…~]+[\s*_"”’」』❞)]*$|^[\s*_]*["“「『❝]|["”」』❞][\s*_.]*$|^(?=.{30})[^가-힣]*[a-z][.!?…]+[\s*_]*$/;
   const HEAD_NOT = /(?:기념일|생일|디데이|D-?\s?day|D-\d+|약속|예정|마감|기한|출생|결혼|기일|데뷔|입사|만난|사귄|첫|시작일|다음|지난|어제|내일|모레|과거|회상|작년|내년)[^|\n]{0,12}$/i, HEAD_AFT = /^(?:은|는|이|가|을|를|의|에|엔|까지|부터|도|로|마다|날|생|쯤)|^[^|\n\d]{0,8}(?:까지|예정|기념일|생일|마감|기일|약속|디데이)/;
-  const headTxt = t => { const L = String(t || '').split('\n').map(x => x.trim()).filter(x => x && !/^```\w*$/.test(x)).map(x => x.replace(/```/g, ''));
+  // 『2026년 11월 23일』처럼 괄호 따옴표로 감싼 머리말은 벗겨서 봐요 · 문장으로 끝나면 대사라 그대로 · 큰따옴표는 연도 있는 날짜로 시작할 때만
+  const headOpen = l => /[^\d\s][.!?…~]+[\s*_"”’」』❞)]*$/.test(l) ? l : /^[\s*_#>|-]*[「『❝]/.test(l) ? l.replace(/[「『❝」』❞]/g, ' ') : /^[\s*_#>|-]*["“]\s*\d{4}\s*[.\-/·년年]/.test(l) ? l.replace(/["“”]/g, ' ') : l;
+  const headTxt = t => { const L = String(t || '').split('\n').map(x => x.trim()).filter(x => x && !/^```\w*$/.test(x)).map(x => headOpen(x.replace(/```/g, '')));
     const pick = (l, lead) => { const x = yy4(l.slice(0, 400).replace(/["“「『❝][^"”」』❞\n]*["”」』❞]/g, ' ')); for (const m of x.matchAll(HEAD_DATE)) { const a = x.slice(0, m.index), z = x.slice(m.index + m[0].length); if (HEAD_NOT.test(a) || HEAD_AFT.test(z) || lead && /[가-힣A-Za-z]/.test(a)) continue; return m[0]; } return ''; };
     const scan = l => { for (const [i, x] of l.slice(0, 8).entries()) { const p = HEAD_PROSE.test(x); if (p && i) return ''; const r = pick(x, p); if (r) return r; if (p) return ''; } return ''; }; // 지문·대사가 시작되면 거기까지만 · 첫 줄이 지문이면 날짜로 시작할 때만('11월 23일, 비가 내렸다.')
     const top = scan(L); if (top) return top; const end = L.slice().reverse(); return HEAD_PROSE.test(end[0] || '') ? '' : scan(end); };
@@ -2471,7 +2467,9 @@
   //   사실 줄만 골라요 — 인물: 새 글에 아예 없는 상대와의 관계 줄(+ 그 아래 전환·근거 줄) · 감정선: 날짜 있는 ★ 줄. 태도 문장 고친 건 안 건드려요.
   //   미리보기에서 [되살리기]를 눌러야 붙어요(일부러 뺀 것일 수도 있어서 자동으로는 안 붙여요).
   const REL_SUB = /^\s*(?:-\s*)?(?:전환|근거|번역)\s*[:：]/, relTo = l => !REL_SUB.test(l) && (l.match(/^\s*(?:-\s*)?[^:：→]*?\s*(?:→|->)\s*([^:：]+?)\s*[:：]/) || [])[1]; // 관계 줄의 상대 · 앞 '- '는 있어도 없어도(지침은 '이름 → 상대: …' 꼴)
-  const putBack = (it, lines) => { it.lines = [...it.lines.filter(l => !lines.includes(l)), ...lines]; }; // 빠진 줄을 항목 끝에 · 남아 있던 전환 줄도 그 관계 줄 밑으로
+  const relOwn = L => { let t = ''; return L.map(l => (t = relTo(l) || (REL_SUB.test(l) ? t : ''))); }; // 줄마다 어느 관계(상대)에 딸렸는지
+  // 빠진 줄을 항목 끝에 · 남아 있던 전환 줄도 그 관계 줄 밑으로 · 남은 다른 관계의 똑같은 전환 줄은 그대로(was: 빠지기 전 줄)
+  const putBack = (it, lines, was) => { const own = relOwn(it.lines), old = relOwn(was), stay = (l, i) => REL_SUB.test(l) && own[i] && it.lines[i - 1] !== l && was.some((x, k) => x === l && sameName(old[k], own[i])); it.lines = [...it.lines.filter((l, i) => !lines.includes(l) || stay(l, i)), ...lines]; };
   function droppedLines(oldMem, newMem) {
     const out = [], sec = (m, k) => splitSections(m).find(x => x.key === k)?.body || '', sq = t => String(t).replace(/\s+/g, '');
     for (const k of ['인물']) {
@@ -2486,7 +2484,7 @@
             if (t) take = !newT.some(x => sameName(x, t)); else if (!REL_SUB.test(l)) take = false;
             if (take && (REL_SUB.test(l) || !has.includes(sq(l)))) lines.push(l); } }
         else for (const l of o.lines.slice(1)) { const d = /★/.test(l) && (l.match(/\d{4}\.\d{1,2}\.\d{1,2}|\d+년차\s*\d{1,2}\.\d{1,2}/) || [])[0]; if (d && !has.includes(sq(d))) lines.push(l); }
-        if (lines.length) out.push({ sec: k, key: o.key, lines });
+        if (lines.length) out.push({ sec: k, key: o.key, lines, was: o.lines });
       }
     }
     return out;
@@ -2496,12 +2494,15 @@
   // 노트에서 이 사람 칸만 떼어 낸 작은 노트(옛 형식 '이름: 설명'도) · 없으면 ''
   const manPick = (mem, k) => { const pb = splitSections(mem || '').find(x => x.key === '인물')?.body || '', o = manIn(mem, k); if (o) return joinSections([{ key: '인물', body: o.lines.join('\n') }]);
     const d = pb.split('\n').map(l => l.match(/^\s*-?\s*([^:：【】]{1,16}?)\s*[:：]\s*(.+)$/)).find(m => m && sameName(m[1].trim(), k))?.[2].trim(); return d ? joinSections([{ key: '인물', body: '【' + k + '】 ' + d }]) : ''; };
-  // 🧹 형식 바로잡기: 예전 노트들(새것부터)에서 이 사람의 사라진 관계 줄을 되살려요 · 지금 노트에 있는 상대만 · 되살린 상대 이름들을 돌려줘요
-  function relBack(it, mems, live) { const one = l => joinSections([{ key: '인물', body: l.join('\n') }]), got = [];
+  // 🧹 형식 바로잡기: 예전 노트들(새것부터)에서 이 사람의 사라진 관계 줄을 되살려요 · 지금 노트에 있는 상대만 · gone이 참인 상대(내가 지움)는 빼요 · 되살린 상대 이름들을 돌려줘요
+  function relBack(it, mems, live, gone) { const one = l => joinSections([{ key: '인물', body: l.join('\n') }]), got = [];
     for (const mem of mems) { const o = manIn(mem, itemKey(it.key)); if (!o) continue; let ok = false;
-      const add = (droppedLines(one(o.lines), one(it.lines))[0]?.lines || []).filter(l => { const t = relTo(l); if (t) { ok = live.some(n => sameName(n, t)); if (ok) got.push(t); } return ok; });
-      if (add.length) putBack(it, add); }
+      const add = (droppedLines(one(o.lines), one(it.lines))[0]?.lines || []).filter(l => { const t = relTo(l); if (t) { ok = live.some(n => sameName(n, t)) && !gone(t); if (ok) got.push(t); } return ok; });
+      if (add.length) putBack(it, add, o.lines); }
     return got; }
+  // 그 관계를 내가 지웠는지: 정리 앞→뒤에 사라졌으면 정리하다 빠진 것, 앞 정리 뒤→다음 정리 앞(또는 지금)에 사라졌으면 지운 것 · 정리가 턴으로 안 이어지면(다른 기기에서 정리) 모르니 지운 걸로 안 봐요 · 회귀·불러오기로 사라진 건 되살리지 않아요
+  const relCut = (steps, k, t, turns) => { const has = m => !!manIn(m, k)?.lines.some(l => { const x = relTo(l); return x && sameName(x, t); });
+    for (const [i, h] of steps.entries()) { if (has(h.a)) return (i ? steps[i - 1].from : turns) === h.to; if (has(h.b)) return h.skip; } return false; };
   // 정리 뒤 빠진 핵심: 예전 노트엔 있었는데 새 노트에서 이유 없이 사라진 것만(닫힌 서사 고리처럼 끝난 건 빼요).
   //   AI가 제목을 살짝 바꿔 쓰는 일이 있어서 같은 칸 안에 그 말(또는 같은 날짜)이 있으면 남은 것으로 봐요.
   function lostCore(oldMem, newMem) {
@@ -7480,15 +7481,15 @@
       const raw = rawIn || await askModelRetry(STY_PROMPT, ans.map((t, i) => `[최근 답 ${i + 1}]\n${t.slice(0, 3000)}`).join('\n\n'), '✍문체 점검', auto);
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요'); }
       const sqAll = t => String(t).replace(/[\s"“”'‘’…·.,!?~*_]/g, ''), body = sqAll(ans.join(''));
-      const items = (data?.items || []).filter(it => it?.pat)
+      const no = styFix.c === cid && styFix.d?.no || [], items = (data?.items || []).filter(it => it?.pat)
         .map(it => { const kind = String(it.kind || '').replace(/[^가-힣]/g, '').slice(0, 3), ai = /^(되풀이|틀|구조|전개)$/.test(kind); return { kind, ex: (Array.isArray(it.ex) ? it.ex : [it.ex]).filter(Boolean).slice(0, 2).map(x => String(x).replace(/["“”]/g, '').trim().slice(0, 60)), pat: String(it.pat).replace(/["“”]/g, '').replace(/[.。]\s*$/, '').trim().slice(0, ai ? 45 : 25), ...(kind === '전개' ? { of: rawIn && summarize.styN || ans.length } : {}), n: ai ? Math.min(kind === '전개' && rawIn && summarize.styN || ans.length, Math.max(0, parseInt(it.n, 10) || 0)) : styCount(ans, kind, it.pat), na: ai ? 0 : ans.filter(t => styCount([t], kind, it.pat)).length, ai: Math.min(ans.length, Math.max(0, parseInt(it.n, 10) || 0)) }; })
         .map(({ ai, ...it }) => /^(되풀이|틀|구조|전개)$/.test(it.kind) || it.na >= 3 || ai < 3 || !it.ex.some(x => sqAll(x).length > 2 && body.includes(sqAll(x))) ? it : { ...it, kind: '틀', n: ai }) // 예가 답에 정말 있는 것만
-        .filter(it => it.pat && (/^(되풀이|틀|구조|전개)$/.test(it.kind) ? it.n >= 3 : it.na >= 3)).slice(0, 8); // 중요한 것부터(AI 순서 그대로) · 틀·구조·되풀이도 낱말도 답 5개 중 3개 이상에 나오면 · 되풀이는 노트에서 한 줄로 묶어요
+        .filter(it => it.pat && !no.includes(it.pat) && (/^(되풀이|틀|구조|전개)$/.test(it.kind) ? it.n >= 3 : it.na >= 3)).slice(0, 8); // 중요한 것부터(AI 순서 그대로) · 틀·구조·되풀이도 낱말도 답 5개 중 3개 이상에 나오면 · 되풀이는 노트에서 한 줄로 묶어요
       const more = styAns(10), wide = more.length > ans.length ? more : ans; // 코드가 세는 것은 값이 안 들어 10개까지
-      const no = styFix.c === cid && styFix.d?.no || []; for (const [pat, [hit, r, same]] of Object.entries(STY_END)) { if (no.includes(pat)) continue; const n = wide.filter(hit).length; if (n / wide.length < r) continue; items.splice(0, items.length, ...items.filter(it => !(/^(틀|구조|문두|말투)$/.test(it.kind) && !STY_END[it.pat] && same.test(it.pat)))); items.unshift({ kind: '구조', pat, n, of: wide.length, ex: [] }); }
+      for (const [pat, [hit, r, same]] of Object.entries(STY_END)) { if (no.includes(pat)) continue; const n = wide.filter(hit).length; if (n / wide.length < r) continue; items.splice(0, items.length, ...items.filter(it => !(/^(틀|구조|문두|말투)$/.test(it.kind) && !STY_END[it.pat] && same.test(it.pat)))); items.unshift({ kind: '구조', pat, n, of: wide.length, ex: [] }); }
       const d = { at: Date.now(), saved: Date.now(), items, ...(no.length ? { no } : {}), of: ans.length, turn: (snapshot?.note?.turns || 0) + freshTurns(), keep: styFix.c === cid && styFix.d?.keep != null && !styFix.d.cleared ? styFix.d.keep : Number(await getValue('styKeep', '10')) }; await setValue('styfix:' + cid, JSON.stringify(d)); if (chatIdFromPath() === cid) styFix = { c: cid, d };
       if (snapshot?.note && chatIdFromPath() === cid) await rewriteNote(cid, noteMemory()); // 다음 답부터 바로 들어가게
-      if (!auto) toast(items.length ? `반복 ${items.length}개를 찾아 노트에 넣었어요` : '굳어진 반복이 없어요', 'ok', 3000); else if (chatIdFromPath() === cid) render(); // 자동 점검도 문체 보정 화면에 바로 보이게
+      if (!auto) toast(items.length ? `반복 ${items.length}개를 찾았어요${(e => e ? ` · 어미 ${e}개는 화면에만 보여요` : '')(items.filter(it => it.kind === '어미').length)}` : '굳어진 반복이 없어요', 'ok', 3000); else if (chatIdFromPath() === cid) render(); // 자동 점검도 문체 보정 화면에 바로 보이게
     } catch (e) { if (!auto) toast('문체 점검 실패 · ' + errMsg(e), 'err'); logErr('문체 점검', e.message); }
     finally { if (!auto) { busyNow = false; nav.styBusy = false; render(); } }
   }
@@ -7498,7 +7499,7 @@
     const stats = d ? `<div class="sty-stats"><div class="sty-stat${n ? ' hot' : ''}"><b>${n}</b><span>굳은 반복</span></div><div class="sty-stat"><b>${!n ? '-' : left === Infinity ? '계속' : left ? left + '턴' : '끝남'}</b><span>${!n || !left ? '넣는 중 아님' : '더 넣어요'}</span></div><div class="sty-stat"><b>${d.of || 5}개</b><span>본 답</span></div></div>` : '';
     const hero = `<div class="sty-hero"><div class="sty-top"><span class="sty-ic">✍</span><div style="flex:1;min-width:0"><b>문체 보정</b><small>${d ? new Date(d.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' 점검' : '최근 답 5개에서 굳은 반복을 찾아요'}${styAutoOn ? ' · 정리할 때마다 자동' : ''}</small></div>${styHeart()}</div>${stats}
       <div class="sty-acts"><button class="go" data-act="stylecheck"${busyNow ? ' disabled' : ''}>${d ? '다시 점검' : '점검'}</button>${n ? '<button class="off" data-act="styclear">전부 지우기</button>' : ''}</div>${nav.styBusy ? '<p class="lv-scan" style="margin:12px 0 0"><i></i>최근 답 5개를 보는 중… (20~40초)</p>' : ''}</div>`;
-    const now = styNow(styFix.c === chatIdFromPath() ? styFix.d : null).filter(x => !d?.items?.some(it => it.pat === x.pat)), nowP = now.length ? `<p class="lv-note">지금 답에 굳은 것 · ${now.map(x => (x.kind === '구조' ? esc(x.pat) : (x.kind === '문두' ? '첫말 ' : '') + '“' + esc(x.pat) + '”') + ' ' + x.n + '/' + x.of).join(' · ')}</p>` : '';
+    const now = styNow(styFix.c === chatIdFromPath() ? styFix.d : null).filter(x => !d?.items?.some(it => it.pat === x.pat)), nowP = now.length ? `<p class="lv-note">지금 답에 굳은 것 · ${now.map(x => esc(x.pat) + ' ' + x.n + '/' + x.of).join(' · ')}</p>` : '';
     if (!d || !n) return hero + (nowP || (d ? '<p class="lv-note">굳어진 반복이 없어요</p>' : ''));
     const kinds = [...new Set(d.items.map(it => it.kind || '반복'))], na = styNewAns(d), af = d.items.map(it => styAfter(d, it, na)), chk = af.filter(Boolean), fixed = chk.filter(x => !x.hit).length;
     if (!styAutoOn && na.length >= 5 && !d.reTried && !styRecheck.busy && styRecheck.failed !== d.at && d.items.some(it => /^(되풀이|틀|구조)$/.test(it.kind) && !it.re)) { const c0 = chatIdFromPath(); setTimeout(() => styRecheck(c0), 0); } // 화면을 열 때만(뒤에서 따로 안 불러요) · 정리할 때마다 자동 점검이 켜져 있으면 안 물어요(다음 정리 때 새로 점검해서 고쳐진 건 저절로 빠져요 · 돈·아이폰 일 아끼기)
@@ -11212,7 +11213,7 @@
         for (const x of draft.dropped || []) { if (x.done) continue; // 확인 화면이 없어서 빠진 줄은 묻지 않고 그 항목 끝에 되살려요(dropback과 같은 방식)
           const s = draft.sections.find(z => z.key === x.sec); if (!s) continue; const b = itemBlocks(s.body);
           const it = b.items.find(y => itemKey(y.key) === itemKey(x.key) || (x.sec === '인물' && sameName(y.key, x.key))); if (!it) continue;
-          putBack(it, x.lines); s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim(); x.done = true; }
+          putBack(it, x.lines, x.was); s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim(); x.done = true; }
         const w = [(draft.lost || []).length && '빠진 인물 ' + draft.lost.slice(0, 3).join('·'), (draft.dropped || []).length && '빠진 줄 ' + draft.dropped.length + '개' + (draft.dropped.every(x => x.done) ? '는 되살림' : ''), (draft.gone || []).length && '빠진 소지품·고리 ' + draft.gone.length + '개', (draft.askNames || []).length && '같은 사람인지 헷갈리는 이름 ' + draft.askNames.length + '쌍'].filter(Boolean);
         apply.auto = true; try { await apply(); } finally { apply.auto = false; }
         if (draft && nav.view === 'preview') { logErr('자동 정리', '정리는 됐는데 채팅에 못 넣어서 확인 화면에 남김 · 열어서 [채팅에 넣기]나 [버리기]를 눌러 주세요', chatId); await rest(3, '정리한 걸 채팅에 못 넣었어요'); } // 넣기가 중간에 멈추면 이유를 남겨요
@@ -12256,7 +12257,7 @@
         return; }
       case 'nfixp': { // 인물 블록 바로잡기(AI 안 씀): (고침) 찌꺼기는 itemBlocks가 읽으면서 떼요 · 한 줄짜리 칸이 두 번이면 하나로 · 빈 설명·사라진 관계는 정리 기록에서 되살려요
         const [sec, k] = arg.split('¦'), cid = chatIdFromPath(); if (!cid || busyNow) return;
-        const olds = async () => { const o = new Set(), add = h => { for (const m of [h.after, h.before]) { const x = manPick(m, k); if (x) o.add(x); } }; try { if (String(await gmGet('hist:' + cid, '') || '')) throw 0; await histEach(cid, add); } catch (_) { (await historyOf(cid)).reverse().forEach(add); } return [...o]; }, hasRel = m => manIn(m, k)?.lines.some(l => relTo(l)); let mems;
+        const olds = async () => { steps = []; const add = h => steps.push({ a: manPick(h.after, k), b: manPick(h.before, k), from: h.from, to: h.to, skip: isRg(h) || h.md === 'file' }); try { if (String(await gmGet('hist:' + cid, '') || '')) throw 0; await histEach(cid, add); } catch (_) { steps = []; (await historyOf(cid)).reverse().forEach(add); } return [...new Set(steps.flatMap(h => [h.a, h.b]).filter(Boolean))]; }, hasRel = m => manIn(m, k)?.lines.some(l => relTo(l)); let mems, steps;
         // 관계가 하나도 없고 이 기기 정리 기록에도 없으면: 드라이브의 정리 기록도 봐요
         busyNow = true; render(); try { mems = await olds();
           if (!hasRel(noteMemory()) && !mems.some(hasRel) && nav.gsOn) { toast('드라이브에서 예전 기록을 찾는 중…'); if (await gsHistPull(cid)) mems = await olds(); }
@@ -12270,7 +12271,7 @@
         const descOf = l => (String(l || '').match(/^\s*【[^】]*】\s*(.*)$/) || [])[1]?.trim() || '';
         // 빈 설명: 최근 정리 기록부터 거슬러 가며 이 사람 설명이 있던 마지막 노트에서 가져와요(정리 기록은 방마다 최근 30번)
         let back = false; if (!descOf(lines[0])) for (const mem of mems) { const d = descOf(manIn(mem, k)?.lines[0]); if (d) { lines[0] = lines[0].replace(/】.*$/, '】 ' + d); back = true; break; } }
-        it.lines = lines; const rb = sec === '인물' ? relBack(it, mems, namesIn(noteMemory())) : []; s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim();
+        it.lines = lines; const rb = sec === '인물' ? relBack(it, mems, namesIn(noteMemory()), t => relCut(steps, k, t, snapshot?.note?.turns)) : []; s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim();
         return nWriteMem(joinSections(list.filter(x => x.body.trim())), [sec], (rb.length ? '관계를 되살렸어요 · ' + rb.join('·') + '. ' : '') + (back ? '바로잡았어요 · 설명은 예전 정리 기록에서 되살렸어요.' : '바로잡았어요.') + (back || descOf(lines[0]) ? '' : ' 설명은 정리 기록에 없어서 수정에서 직접 써 주세요.')); }
       case 'ndel': { if (!confirm('이 항목을 지울까요?')) return; const [sec, k] = arg.split('¦'), list = splitSections(noteMemory()), s0 = list.find(x => x.key === sec); if (!s0) return;
         const bb = itemBlocks(s0.body), i = bb.items.findIndex(x => itemKey(x.key) === k); if (i < 0) return; bb.items.splice(i, 1); s0.body = [...bb.head, ...bb.items.flatMap(x => x.lines)].join('\n').trim(); nav.nopen = null;
@@ -12433,8 +12434,8 @@
       case 'fixTurns': return fixTurns();
       case 'injected': nav.view = 'injected'; render(); out('main').scrollTop = 0; return;
       case 'stylecheck': return styleCheck();
-      case 'styclear': { const cid = chatIdFromPath(); if (!cid) return; const d = { at: 0, saved: Date.now(), items: [], cleared: true }; styFix = { c: cid, d }; styPersist(cid, d); toast('문체 보정을 지웠어요', 'ok', 2000); return keepScroll(render); }
-      case 'styrm': { const cid = chatIdFromPath(), d = styFix.c === cid ? styFix.d : null; if (!d) return; const x = d.items.splice(Number(arg), 1)[0]; if (STY_END[x?.pat]) d.no = [...new Set([...(d.no || []), x.pat])]; d.saved = Date.now(); styPersist(cid, d); return keepScroll(render); }
+      case 'styclear': { const cid = chatIdFromPath(); if (!cid) return; const no = styFix.c === cid && styFix.d?.no || [], d = { at: 0, saved: Date.now(), items: [], cleared: true, ...(no.length ? { no } : {}) }; styFix = { c: cid, d }; styPersist(cid, d); toast('문체 보정을 지웠어요', 'ok', 2000); return keepScroll(render); }
+      case 'styrm': { const cid = chatIdFromPath(), d = styFix.c === cid ? styFix.d : null; if (!d) return; const x = d.items.splice(Number(arg), 1)[0]; if (x) d.no = [...new Set([...(d.no || []), x.pat])].slice(-30); d.saved = Date.now(); styPersist(cid, d); return keepScroll(render); }
       case 'stykeep': { const cid = chatIdFromPath(), d = styFix.c === cid ? styFix.d : null; if (!d) return; d.keep = Number(arg); d.saved = Date.now(); setValue('styKeep', String(d.keep)); styPersist(cid, d); return keepScroll(render); }
       case 'styauto': { styAutoOn = !styAutoOn; await setValue('styAuto', styAutoOn ? 'on' : 'off'); toast(styAutoOn ? '문체 보정 자동 점검을 켰어요 · 정리할 때마다 같이 봐요' : '자동 점검을 껐어요', 'ok', 2500); return keepScroll(render); }
       case 'storesize': { // 이 기기에 저장한 글자 수(방 번호가 붙은 것은 종류별로 · 이 방 것 따로)
@@ -12666,7 +12667,7 @@
         for (const [i, x] of (draft?.dropped || []).entries()) { if (x.done || (arg !== '' && i !== Number(arg))) continue;
           const s = draft.sections.find(z => z.key === x.sec); if (!s) continue; const b = itemBlocks(s.body);
           const it = b.items.find(y => itemKey(y.key) === itemKey(x.key) || (x.sec === '인물' && sameName(y.key, x.key))); if (!it) continue;
-          putBack(it, x.lines); s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim(); x.done = true; }
+          putBack(it, x.lines, x.was); s.body = [...b.head, ...b.items.flatMap(y => y.lines)].join('\n').trim(); x.done = true; }
         return keepScroll(render); }
       case 'sfxundo': { const x = draft?.strongChanges?.[Number(arg)]; if (x && !x.undone) { const s = draft.sections.find(z => z.key === x.key); if (s && s.body.includes(x.after)) { s.body = s.body.replace(x.after, () => x.before); x.undone = true; } } return keepScroll(render); }
       case 'getupdate': window.open(UPDATE_URL, '_blank'); return;
