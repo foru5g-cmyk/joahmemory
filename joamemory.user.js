@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.98
+// @version      5.8.99
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -327,8 +327,13 @@
   // 로그인 쿠키(access_token)는 크랙이 토큰을 새로 받는 사이 잠깐 비어요(엣지에서 자주) → 바로 실패하지 말고 0.5초씩 최대 4초 기다려요.
   //   이 틈에 '노트 옮기기·읽기 실패'가 나면 노트가 AI가 못 보는 자리에 남아 기억이 사라진 것처럼 보였어요.
   const waitToken = async () => { for (let i = 0; ; i++) { try { return token(); } catch (e) { if (i >= 7) throw e; await new Promise(r => setTimeout(r, 500)); } } };
-  const crack = async (method, url, body) =>
-    request(method, url, { body, headers: { Authorization: 'Bearer ' + await waitToken(), platform: 'web' } });
+  // 확장 프로그램 길이 아예 끊기면(답이 안 옴) 크랙 페이지 길로 한 번 더: 대화 읽기는 되는데 넣기·출석만 안 되는 폰이 있어요 · 두 번 보내도 같은 것만(POST는 출석만) · 아이폰은 작은 글(30KB)만(큰 노트는 페이지가 꺼진 적이 있어요)
+  const crack = async (method, url, body) => { const headers = { Authorization: 'Bearer ' + await waitToken(), platform: 'web' };
+    try { return await request(method, url, { body, headers }); }
+    catch (e) { const data = body === undefined ? undefined : JSON.stringify(body);
+      if (!/네트워크 요청에 실패/.test(e?.message) || !url.startsWith('https://crack-api.wrtn.ai/') || (method === 'POST' && !url.endsWith('/attendance')) || (IS_STAY && new TextEncoder().encode(data || '').length > 30720)) throw e;
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 15000); let r; try { r = await fetch(url, { method, signal: ac.signal, cache: 'no-store', body: data, headers: { ...headers, Accept: 'application/json', 'Content-Type': 'application/json' } }); } catch (_) { throw e; } finally { clearTimeout(t); }
+      const text = await r.text(); if (!r.ok) throw httpWhy(r.status, text); if (!crack.said) { crack.said = true; logErr('연동', '확장 프로그램이 크랙에 못 닿아서 페이지 길로 보냄'); } try { return text ? JSON.parse(text) : null; } catch (_) { return null; } } };
 
   // ══════════════════════════════════════════════════════════════
   // 5. 노트 읽기·쓰기 · 칸 나누기
@@ -3616,9 +3621,9 @@
     return { ok, bad };
   }
 
-  const editUrls = (chatId, id) => [
-    `https://contents-api.wrtn.ai/character-chat/v3/chats/${chatId}/messages/${id}`,
+  const editUrls = (chatId, id) => [ // 지금 크랙이 쓰는 주소 먼저(옛 주소 contents-api는 503이라 먼저 보내면 되는 길을 시험도 못 하고 UTF-8로 넘어가요)
     `https://crack-api.wrtn.ai/crack-gen/v3/chats/${chatId}/messages/${id}`,
+    `https://contents-api.wrtn.ai/character-chat/v3/chats/${chatId}/messages/${id}`,
   ];
   async function readMessage(chatId, id) {
     const res = await crackGet(`${chatId}/messages/${id}`);
@@ -3674,7 +3679,7 @@
       : `아까 전송이 한 번 실패해서 이 페이지에선 큰 노트를 못 보내요 (${Math.round(best / 1024)}KB / 100KB). 새로고침한 뒤 다시 넣어 주세요.`);
     // 빠른 길 먼저: 페이지에서 크랙 주소로 바로 써요(0.1초쯤 · 크랙 사이트가 자기 API를 부르는 것과 같은 길) · 확장 프로그램을 거치면 한 번 쓰는 데 몇 초씩 걸려요
     //   저장된 글이 보낸 글과 같을 때만 끝내요 · 서버가 거절했거나 글이 다르면 아래 예전 길이 그대로 다시 해요 · 전송 자체가 막힌 환경이면 이 페이지에선 예전 길만
-    if (!pagePatchOff && nextText.length <= PAGE_PATCH_MAX) try { await pagePatch(editUrls(chatId, id)[1], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
+    if (!pagePatchOff && nextText.length <= PAGE_PATCH_MAX) try { await pagePatch(editUrls(chatId, id)[0], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
     let lastError = null;
     for (const url of editUrls(chatId, id)) {
       if (utf16On && u16 < u8) {
@@ -11122,10 +11127,10 @@
     if (seen && !sameText(text, seen)) return;
     if (cleaned !== text) await writeMessage(chatId, id, cleaned, page && !page.some(m => parseMore(m)?.of === id) ? [] : null);
   }
-  async function moveSty(chatId, old) { if (moveSty.busy || !old.length) return; moveSty.busy = true;
-    try { for (const m of old) { const id = msgId(m); if (chatIdFromPath() !== chatId || (moveSty.done ||= new Set()).has(id)) continue; moveSty.done.add(id);
-      const t = msgText(await readMessage(chatId, id)), next = t.replace(STY_RE, ''); if (next !== t && next.trim() && chatIdFromPath() === chatId) await writeRaw(chatId, id, next); } } // 쓰기 바로 전에 다시 읽어 숨긴 글만 떼요
-    catch (e) { moveSty.off = true; logErr('문체 보정', '앞 메시지에서 떼기 실패 · ' + e.message, chatId); } finally { moveSty.busy = false; } }
+  async function moveSty(chatId, old) { if (moveSty.busy || moving || busyNow || chatIdFromPath() !== chatId) return; moveSty.busy = true;
+    try { if (moveSty.off = String(await getValue('styMove', '')) === 'off') return; for (const m of old) { const id = msgId(m); if (chatIdFromPath() !== chatId || moving || busyNow || (moveSty.done ||= new Set()).has(id)) continue; moveSty.done.add(id);
+      const t = msgText(await readMessage(chatId, id)), next = t.replace(STY_RE, ''); if (next !== t && next.trim() && chatIdFromPath() === chatId) { await pagePatch(editUrls(chatId, id)[0], next, false); if (!sameText(msgText(await readMessage(chatId, id)), next)) throw new Error('저장했는데 글이 안 바뀜'); } } } // 쓰기 바로 전에 다시 읽어 숨긴 글만 떼요
+    catch (e) { moveSty.off = true; await setValue('styMove', 'off'); logErr('문체 보정', '앞 메시지에서 떼기 실패(이 기기에선 더 안 해요) · ' + e.message, chatId); } /* 노트 쓰는 길(writeRaw)은 안 써요: 실패하면 노트 쓰기까지 느린 길로 바뀌어서 */ finally { moveSty.busy = false; } }
   let moving = false, injectOn = true; // injectOn=false: 어느 채팅방에도 노트를 넣거나 옮기지 않음(ETC만)
   async function moveNote(chatId, snap, whole0) {
     const n = snap.note, carrier = pickCarrier(snap.all);
@@ -11420,8 +11425,8 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
-      // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 쓰기가 한 번 실패하면 이 페이지에선 그만
-      { const L = snap.all || [], end = L[L.length - 1]; if (sceneOn && injectOn && !busyNow && !moveSty.off && sentHere(chatId) && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) moveSty(chatId, L.filter(m => msgRole(m) === 'user').slice(0, -1).filter(m => msgText(m).includes('MEMO_STY ')).slice(-2)); }
+      // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
+      { const L = snap.all || [], end = L[L.length - 1]; if (sceneOn && injectOn && !IS_STAY && !moveSty.off && sentHere(chatId) && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { const old = L.filter(m => msgRole(m) === 'user').slice(0, -1).filter(m => msgText(m).includes('MEMO_STY ')).slice(-2); if (old.length) setTimeout(() => moveSty(chatId, old), 5000); } }
       const talked = snap.all.some(m => msgRole(m) === 'user'); // 아직 아무 말도 안 한 새 방은 드라이브에 이 방 것이 있을 수 없어요 → 아무것도 안 찾아요
       const early = talked && !gsTried.has('sync|' + chatId) && String(await getValue('gsUrl', '')).trim() ? (gsTried.add('sync|' + chatId), gsModeFetch(chatId)) : null; // 모드 기록(작은 파일)은 전체 기억과 같이 받아서 같이 보여 줘요
       crumbOn(ck, '방 읽기 · 드라이브에서 전체 기억 받기'); { const c = snap.note, stale = memStale(c, fullNote, MEM_AT.get(chatId)); // 웹 모드 방(채팅엔 고른 일부)인데 이 기기에 그 정리본 전체가 없으면 구글 드라이브에서 받아 채워요 · 방마다 한 번만 · stale: 정리 지점은 같아도 다른 기기가 나중에 고쳤으면 다시 받아요
