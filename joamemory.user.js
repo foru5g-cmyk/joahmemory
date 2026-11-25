@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.96
+// @version      5.8.97
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -54,7 +54,7 @@
   //       MEMO_NOTE_END"
   //   공백 4칸이 없으면 "## 제목"이나 "- 항목" 줄에서 덩어리가 끊겨 화면에 보입니다. 탭은 크랙 화면에서 노트가 보여서 안 씀(읽기만 받아요).
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g; // 5.9.5부터 HTML 주석(<!--…-->)으로 써요 · 예전 [//]: # "…" 꼴도 읽어요
-  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다.
+  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다...
   // 노트가 한 답변(100KB)에 안 들어가면 뒷부분만 바로 다음 AI 답변(전)에 이 덩어리로 넣습니다(writeMessage). of= 앞부분이 든 답변 ID.
   //   [//]: # "MEMO_NOTE_MORE of=<ID> at=<시각>
   //       (노트 뒷부분)
