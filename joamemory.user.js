@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      5.8.94
+// @version      5.8.95
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -181,13 +181,14 @@
   const histAll = async c => { const l = ((await dbDo('readonly', st => st.getAll(histRange(c)), 'hist')) || []).map(({ chat, ...r }) => r); l.forEach((h, i) => { if (h.aN) { if (l[i + 1]) h.after = l[i + 1].before; delete h.aN; } }); return l; }; // 꺼낼 땐 채워서(백업 파일은 예전 모양 그대로)
   // 마지막 한 건 + 건수만 꺼내요: 정리 기록은 건마다 노트가 통째로 들어 있어서(30건이면 수백만 자) 방을 읽을 때마다 다 꺼내면 폰 사파리가 메모리가 넘쳐 탭을 꺼요
   //   k: 끝에서 몇 건(tail) · 줄여 넣은 '정리 후 노트'(aN)는 다음 건으로 채워요(끝 건은 늘 온전)
-  const histTail = async (c, k = 1) => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음');
+  const histDb = async () => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음'); return d; };
+  const histTail = async (c, k = 1) => { const d = await histDb();
     return new Promise((res, rej) => { const t = d.transaction('hist', 'readonly'), st = t.objectStore('hist'), out = { n: 0, last: null, tail: [] }, q = st.getAllKeys(histRange(c));
       q.onsuccess = () => { const ks = q.result || []; out.n = ks.length; ks.slice(-k).forEach((key, i) => { const g = st.get(key); g.onsuccess = () => { if (g.result) { const { chat, ...r } = g.result; out.tail[i] = r; } }; }); };
       t.oncomplete = () => { out.tail = out.tail.filter(Boolean); out.tail.forEach((h, i) => { if (h.aN && out.tail[i + 1]) { h.after = out.tail[i + 1].before; delete h.aN; } }); out.last = out.tail[out.tail.length - 1] || null; res(out); };
       t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
-  const histEach = async (c, fn) => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction('hist', 'readonly'), q = t.objectStore('hist').openCursor(histRange(c), 'prev'); q.onsuccess = () => { const r = q.result; if (r) { fn(r.value); r.continue(); } }; t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); }; // 새것부터 한 건씩만 꺼내요(30건을 한꺼번에 안 올려요)
-  const histTx = async (c, fn) => { const d = await db(); if (!d || !d.objectStoreNames.contains('hist')) throw new Error('DB 없음'); return new Promise((res, rej) => { const t = d.transaction('hist', 'readwrite'), st = t.objectStore('hist'); fn(st); t.oncomplete = () => res(true); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
+  const histEach = async (c, fn) => { const d = await histDb(); return new Promise((res, rej) => { const t = d.transaction('hist', 'readonly'), q = t.objectStore('hist').openCursor(histRange(c), 'prev'); q.onsuccess = () => { const r = q.result; if (r) { fn(r.value); r.continue(); } }; t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); }; // 새것부터 한 건씩만 꺼내요(30건을 한꺼번에 안 올려요)
+  const histTx = async (c, fn) => { const d = await histDb(); return new Promise((res, rej) => { const t = d.transaction('hist', 'readwrite'), st = t.objectStore('hist'); fn(st); t.oncomplete = () => res(true); t.onerror = t.onabort = () => rej(t.error || new Error('DB 실패')); }); };
   const histSet = (c, list) => histTx(c, st => { st.delete(histRange(c)); let t = -Infinity; histPackL(list.slice(-HIST_MAX)).forEach((h, i) => { t = Math.max(Number(h.at ?? i), t + 1); st.put({ ...h, at: t, chat: c }); }); }); // 시각이 같거나 거꾸로면 1씩 밀어 순서·건수 그대로 // 통째로 바꾸기(불러오기·비우기)
   //   번호만 훑고 마지막 한 건만 꺼내요(전부 꺼내면 노트가 큰 방은 정리할 때마다 수천만 자가 메모리에 올라와요)
   const histAdd = (c, rec) => histTx(c, st => { const q = st.getAllKeys(histRange(c)); q.onsuccess = () => { const ks = q.result || [];
@@ -2471,6 +2472,7 @@
     }
     return out;
   }
+  const grams = t => { const x = String(t || '').replace(/[\s\p{P}\p{S}]/gu, ''), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; }; // 두 글자씩 자른 묶음(글이 비슷한지 견줄 때)
   const manIn = (mem, k) => itemBlocks(splitSections(mem || '').find(x => x.key === '인물')?.body || '').items.find(x => sameName(itemKey(x.key), k));
   // 노트에서 이 사람 칸만 떼어 낸 작은 노트(옛 형식 '이름: 설명'도) · 없으면 ''
   const manPick = (mem, k) => { const pb = splitSections(mem || '').find(x => x.key === '인물')?.body || '', o = manIn(mem, k); if (o) return joinSections([{ key: '인물', body: o.lines.join('\n') }]);
@@ -2712,7 +2714,7 @@
           const dayOf = k => (String(k).match(/(\d{4}[.\/-]\d{1,2}[.\/-]\d{1,2})/) || [])[1], grams = k => { const t = itemKey(k).replace(/^\[?[^\]\-]*\d\s*-\s*/, '').replace(/[\s\p{P}\p{S}]/gu, ''), g = new Set(); for (let q = 0; q < t.length - 1; q++) g.add(t.slice(q, q + 2)); return g; };
           const dice = (a, b) => { const A = grams(a), B = grams(b); let n = 0; for (const x of A) if (B.has(x)) n++; return A.size + B.size ? 2 * n / (A.size + B.size) : 0; }, dd = dayOf(it.key);
           // 제목이 거의 같으면(85%+) 같은 사건 · 70%대면 내용도 40% 넘게 겹칠 때만(제목만 닮은 다른 일 — '출동함'/'부상함' — 이 덮어써져 사라지지 않게. 틀리면 둘 다 남아요)
-          const bodyDice = (a, b) => { const g = x => { const t = x.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('').replace(/[\s\p{P}\p{S}]/gu, ''), s = new Set(); for (let q = 0; q < t.length - 1; q++) s.add(t.slice(q, q + 2)); return s; }, A = g(a), B = g(b); let n = 0; for (const x of A) if (B.has(x)) n++; return A.size + B.size ? 2 * n / (A.size + B.size) : 0; };
+          const bodyDice = (a, b) => { const g = x => grams(x.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('')), A = g(a), B = g(b); let n = 0; for (const x of A) if (B.has(x)) n++; return A.size + B.size ? 2 * n / (A.size + B.size) : 0; };
           if (dd) { let best = -1, bs = 0; o.items.forEach((x, k) => { if (dayOf(x.key) !== dd) return; const v = dice(x.key, it.key); if (v > bs) { bs = v; best = k; } }); if (bs >= 0.85 || (bs >= 0.7 && bodyDice(o.items[best], it) >= 0.4)) j = best; } }
         if (j < 0 && i < 0 && ['소지품', '장소·조직'].includes(d.key) && !it.del) { // 이름을 조금 바꿔 다시 쓴 같은 물건·장소: 이름 글자 조각이 짧은 쪽의 75% 넘게 겹치고 내용도 절반 넘게 겹치면 같은 것(둘로 남지 않게 · 틀리면 둘 다 남아요)
           const best = sameThing(o.items.map(x => [nameOf(x.key), x.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('')]), nameOf(it.key), it.lines.slice(1).filter(l => !PROOF_LINE.test(l)).join('')); if (best >= 0) j = best; }
@@ -2796,7 +2798,6 @@
     const lacks = coreLost(names, aliasOf);
     // 줄이기만 한 것: 더 짧고, 글 조각(두 글자) 절반 넘게가 원래 글에 있고, 새 부정(사실은·못 등)을 보태지 않은 것.
     //   AI가 말을 조금 바꿔 줄여도(대답 없이 → 말없이) 알아보게 절반으로 잡았어요. 새 사실이 든 수정은 건드리지 않아요.
-    const grams = t => { const x = sq(t).replace(/[\p{P}\p{S}]/gu, ''), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; };
     const near = (a, b) => { const A = grams(a), B = grams(b); if (!B.size) return true; let c = 0; for (const x of B) if (A.has(x)) c++; return c / B.size >= 0.5; };
     const NEG = /않|못\s|못함|못했|아니|없(?:음|다|었|어|는|던|고)|안\s|거짓|사실은|알고\s*보니|불확실|모름|모른|모르|미확인|취소|번복/g; // coreLost 안의 NEG는 밖에서 안 보여서 여기서 다시 선언해요
     const n = itemBlocks(sec.body);
@@ -3138,7 +3139,8 @@
       .replace(/^(\s*)[*•]\s+/, '$1- ')).join('\n');
     const first = t.search(/^\s*■/m);
     if (first > 0) t = t.slice(first);
-    return t.replace(/\n{3,}/g, '\n\n').trim();
+    const rec = (String(text).match(/^[ ]*%%.*$/gm) || []).map(x => x.trim()).filter(x => !t.includes(x)); // 코드블록 밖에 적은 임신·연애 기록 줄도
+    return t.replace(/\n{3,}/g, '\n\n').trim() + rec.map(x => String.fromCharCode(10) + x).join('');
   }
   function checkImported(t) {
     const keys = [...t.matchAll(/^\s*■\s*(.+?)\s*$/gm)].map(m => m[1]);
@@ -3188,7 +3190,7 @@
     if (start && (preg = preg || { on: false }).start == null) { preg.aiSaid = start[1].trim(); preg.ok = pKey(preg.aiSaid); pregSave(); }
     text = String(text).replace(/^\s*%%\s*임신\s*시작\s*\|.*$/gm, '');
     for (const [, d, w] of String(text).matchAll(/^\s*%%\s*관계\s+([^|\n]*?)\s*\|\s*(.+)$/gm)) { const dn = P_DAY(d); if (dn == null) continue; // 정리 AI가 적은 관계(합궁·승은처럼 어떤 말로 나와도) → pregKitRels가 같이 봐요
-      const [who, prot, cnt] = w.split(/\s*·\s*/), times = Math.min(20, parseInt(cnt, 10) || 1), t = relAiText({ with: who, prot: prot || '모름', times, in: prot === '질내사정' && times > 1 ? times : 0 }, ''); preg = preg || { on: false }; preg.rels ||= [];
+      const [who, prot0, cnt] = w.split(/\s*·\s*/), prot = /^질[내외]$/.test(prot0) ? prot0 + '사정' : prot0, times = Math.min(20, parseInt(cnt, 10) || 1), t = relAiText({ with: who, prot: prot || '모름', times, in: prot === '질내사정' && times > 1 ? times : 0 }, ''); preg = preg || { on: false }; preg.rels ||= [];
       if (!preg.rels.some(r => r.d === dn && r.t === t)) { preg.rels.push({ d: dn, t }); pregSave(); } }
     text = String(text).replace(/^\s*%%\s*관계\s+[^|\n]*\|.*$/gm, '');
     const born = String(text).match(/^\s*%%\s*출산\s+([^|\n]*?)\s*\|/m); // 정리 AI가 본 출산(시간을 건너뛰어 '둘째를 낳은 지 석 달'처럼 나와도)
@@ -3204,6 +3206,17 @@
       preg.log.sort((a, b) => (a.w || 0) - (b.w || 0)); pregSave(); }
     return rest;
   }
+  // 정리하면서 같이 적는 임신·관계·연애 기록(%% 줄) 안내
+  function recTails() {
+    const pregOn = !!preg && pregChat === chatIdFromPath() && preg.start != null && !preg.ended && preg.on !== false;
+    const p = (pregOn ? `\n\n[임신 기록 — 노트와 따로] 새 대화 지문에서 ${preg.who || '유저 캐릭터'}의 임신과 관련해 실제로 일어난 일(몸의 변화·증상·검진과 결과·주변 인물이 알아챈 것·새로 알게 된 사실)만 골라, 답 맨 끝에 한 줄에 하나씩 "%%임신 날짜 | 있었던 일" 꼴로 적는다. 날짜는 그 일이 있던 이야기 속 날짜. 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : pregMode && preg?.start == null && !(preg?.userOff && !preg?.on) ? `\n\n[임신 확인 — 노트와 따로] 새 대화 지문에서 유저 캐릭터가 이야기 속에서 실제로 임신한 것이 정해졌으면(어떤 말로 나오든) 답 맨 끝에 "%%임신시작 | 그 근거 문장" 한 줄만 적는다. 다른 인물의 임신·추측·걱정·농담·지난 일이면 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '') + (pregMode && !(preg?.userOff && !preg?.on) ? `\n\n[관계 기록 — 노트와 따로] 새 대화 지문에서 유저 캐릭터 본인이 실제로 성관계를 했으면(어떤 말로 나오든) 그 일마다 답 맨 끝에 "%%관계 날짜 | 상대 이름 · 피임 · 횟수" 한 줄을 적는다. 날짜는 이야기 속 날짜, 피임은 콘돔|콘돔 찢어짐|피임약|사후피임약|질외|질내|피임 안 함|모름 중 하나. 유저 캐릭터가 실제로 아기를 낳았으면(시간을 건너뛴 경우도) "%%출산 날짜 | 그 근거 문장" 한 줄을 적는다. 날짜는 낳은 이야기 속 날짜. 이 줄들은 노트 칸 안에 넣지 않는다.` : '');
+    const loveOn = loveMode && !!love?.who && love.stage !== 'married' && loveChat === chatIdFromPath();
+    return p + (loveOn ? `\n\n[연애 기록 — 노트와 따로] 새 대화 지문에서 유저 캐릭터와 ${love.who}${love.side ? `(그리고 바람 상대 ${love.side})` : ''} 사이에 실제로 있었던 일 중 두 사람 관계에 남는 일만 골라(싸움·화해·서운함·질투·권태·이별·재회, 고백·첫 데이트·첫 키스·첫 관계·기념일·청혼(프로포즈)·결혼 준비 같은 두 사람의 날 · 안부·모임·평범한 데이트처럼 별일 없던 일, 그 밖의 인물끼리의 일은 적지 않음), 답 맨 끝에 한 줄에 하나씩 "%%연애 날짜 | 있었던 일" 꼴로 짧게 적는다. 다툼·서운함이 풀리지 않고 남았으면 끝에 "(안 풀림)"을 붙이고, 예전에 안 풀린 일이 이번에 풀렸으면 "%%연애풀림 | 번호"를 적는다.${(o => o.length ? ' 지금 안 풀린 일: ' + o.map((x, i) => (i + 1) + ') ' + x.t.slice(0, 40)).join(' / ') + '.' : '')((love.log || []).filter(x => x.open && (!x.w || x.w === love.who)))} 두 사람이 사귀기 시작한 날이 지문에 나오면 "%%연애시작 | 날짜" 한 줄. 두 사람이 같이 살게 됐거나 따로 살게 됐으면 "%%연애동거 | 함께" 또는 "%%연애동거 | 따로" 한 줄.${love.phase ? ` 새 대화에 ${love.who}의 생활에 며칠 이어지는 일이 나왔으면 "%%연애요즘 | 그 일(짧게)" 한 줄${love.phase.what ? `(지금 적힌 것: ${love.phase.what} · 그대로면 안 씀)` : ''}, 그 일이 이야기에서 끝났으면 "%%연애요즘 | 끝".` : ''} 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '');
+  }
+  // 이 안내를 빼고 정리했을 때: 막 정리된 노트 글에서 기록만 따로 뽑아요
+  async function recSync(model, recs, note) { const c = chatIdFromPath();
+    try { const o = await askAny(model, '너는 RP 정리 글에서 아래 안내대로 적을 줄만 뽑는 기록 담당이다. 그 줄 말고는 아무것도 쓰지 않는다.', '[새 대화]\n' + note + recs, false, 'low'); if (chatIdFromPath() === c) pregTake(loveTake(o.text)); return o; }
+    catch (e) { logErr('정리', '정리는 됐는데 임신·연애 기록은 못 받음 · ' + e.message, c); } }
   async function summarize(prevMemory, freshMessages, fixed = '', edited = [], from = 1, delta = false, inputOverride = '', tail = '') { // inputOverride: 기억 다시 확인용 입력 · tail: 입력 끝에 붙이는 이번 작업 안내(형식 맞추기)
     const model = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     const cut = delta ? trimLogForSummary(prevMemory, freshMessages) : { memory: prevMemory, hidden: new Set() };
@@ -3213,17 +3226,17 @@
     proofsHidden = delta && !inputOverride && !tail && !fixHint; // 정정(OOC)이 있으면 옛 근거도 고쳐야 할 수 있어 그대로 보내요
     const input = inputOverride || buildInput(proofsHidden ? dropProofLines(cut.memory) : cut.memory, freshMessages, fixed, edited, from, prevMemory) + fixHint + (!inputOverride && !tail && timeJump(prevMemory, freshMessages) ? TIME_JUMP : '') + (cut.hidden.size ? `\n\n[날짜로그 목차] '${LOG_SKIP}'이 붙은 사건 ${cut.hidden.size}개는 본문을 안 보냈을 뿐 그대로 있다. 그 사건은 출력하지 않는다(고치지도 지우지도 않음). 새 대화의 일이 그 사건과 같은 일이면 새 사건으로 만들지 않는다.` : '') + (inputOverride ? '' : tail), system = await buildSystem(delta, prevMemory);
     const think = inputOverride || tail ? 'low' : thinkLevel; // 🔍 다시 확인·형식 맞추기는 새로 판단할 게 적어서 늘 적게(빨라요)
-    const pregOn = !inputOverride && !tail && !!preg && pregChat === chatIdFromPath() && preg.start != null && !preg.ended && preg.on !== false;
-    const inputP = input + (pregOn ? `\n\n[임신 기록 — 노트와 따로] 새 대화 지문에서 ${preg.who || '유저 캐릭터'}의 임신과 관련해 실제로 일어난 일(몸의 변화·증상·검진과 결과·주변 인물이 알아챈 것·새로 알게 된 사실)만 골라, 답 맨 끝에 한 줄에 하나씩 "%%임신 날짜 | 있었던 일" 꼴로 적는다. 날짜는 그 일이 있던 이야기 속 날짜. 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : !inputOverride && !tail && pregMode && preg?.start == null && !(preg?.userOff && !preg?.on) ? `\n\n[임신 확인 — 노트와 따로] 새 대화 지문에서 유저 캐릭터가 이야기 속에서 실제로 임신한 것이 정해졌으면(어떤 말로 나오든) 답 맨 끝에 "%%임신시작 | 그 근거 문장" 한 줄만 적는다. 다른 인물의 임신·추측·걱정·농담·지난 일이면 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '') + (!inputOverride && !tail && pregMode && !(preg?.userOff && !preg?.on) ? `\n\n[관계 기록 — 노트와 따로] 새 대화 지문에서 유저 캐릭터 본인이 실제로 성관계를 했으면(어떤 말로 나오든) 그 일마다 답 맨 끝에 "%%관계 날짜 | 상대 이름 · 피임 · 횟수" 한 줄을 적는다. 날짜는 이야기 속 날짜, 피임은 콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름 중 하나. 유저 캐릭터가 실제로 아기를 낳았으면(시간을 건너뛴 경우도) "%%출산 날짜 | 그 근거 문장" 한 줄을 적는다. 날짜는 낳은 이야기 속 날짜. 이 줄들은 노트 칸 안에 넣지 않는다.` : '');
-    const loveOn = !inputOverride && !tail && loveMode && !!love?.who && love.stage !== 'married' && loveChat === chatIdFromPath();
-    const inputL = inputP + (loveOn ? `\n\n[연애 기록 — 노트와 따로] 새 대화 지문에서 유저 캐릭터와 ${love.who}${love.side ? `(그리고 바람 상대 ${love.side})` : ''} 사이에 실제로 있었던 일 중 두 사람 관계에 남는 일만 골라(싸움·화해·서운함·질투·권태·이별·재회, 고백·첫 데이트·첫 키스·첫 관계·기념일·청혼(프로포즈)·결혼 준비 같은 두 사람의 날 · 안부·모임·평범한 데이트처럼 별일 없던 일, 그 밖의 인물끼리의 일은 적지 않음), 답 맨 끝에 한 줄에 하나씩 "%%연애 날짜 | 있었던 일" 꼴로 짧게 적는다. 다툼·서운함이 풀리지 않고 남았으면 끝에 "(안 풀림)"을 붙이고, 예전에 안 풀린 일이 이번에 풀렸으면 "%%연애풀림 | 번호"를 적는다.${(o => o.length ? ' 지금 안 풀린 일: ' + o.map((x, i) => (i + 1) + ') ' + x.t.slice(0, 40)).join(' / ') + '.' : '')((love.log || []).filter(x => x.open && (!x.w || x.w === love.who)))} 두 사람이 사귀기 시작한 날이 지문에 나오면 "%%연애시작 | 날짜" 한 줄. 두 사람이 같이 살게 됐거나 따로 살게 됐으면 "%%연애동거 | 함께" 또는 "%%연애동거 | 따로" 한 줄.${love.phase ? ` 새 대화에 ${love.who}의 생활에 며칠 이어지는 일이 나왔으면 "%%연애요즘 | 그 일(짧게)" 한 줄${love.phase.what ? `(지금 적힌 것: ${love.phase.what} · 그대로면 안 씀)` : ''}, 그 일이 이야기에서 끝났으면 "%%연애요즘 | 끝".` : ''} 지문에 없는 일은 적지 않고, 없으면 아무것도 적지 않는다. 이 줄은 노트 칸 안에 넣지 않는다.` : '');
+    const recs = inputOverride || tail ? '' : recTails(), inputL = input + recs;
     const lastAi = [...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'assistant' && !isErrMsg(m)); // 문체 점검은 최근 답 5개를 봐요 → 로그가 지금 대화 끝까지 왔을 때만 같이(회귀·나눠 정리·절반만 다시는 따로)
     const styOn = !inputOverride && !tail && styAutoOn && !!lastAi && (freshMessages || []).some(m => msgId(m) === msgId(lastAi)) && (freshMessages || []).filter(m => msgRole(m) !== 'user').length >= 5; summarize.sty = ''; // 문체 점검을 따로 부르지 않고 같이: 같은 로그를 두 번 보내지 않아요
     const inputS = inputL + (styOn ? '\n\n[문체 점검 — 노트와 따로] [새 RP 로그]의 마지막 AI 답 5개만 보고 여러 답에 걸쳐 굳어진 반복을 찾는다. ' + STY_PROMPT.slice(STY_PROMPT.indexOf('찾는 순서')).replace(/\n?\[출력\][\s\S]*$/, '') + '\n노트를 다 쓴 뒤 답 맨 끝에 "%%문체 " 다음에 JSON 하나만 한 줄로 쓴다: {"items":[{"kind":"되풀이","pat":"…","n":0,"ex":["…"]}]} · 없으면 {"items":[]}' : '');
-    const t0 = Date.now(), out = await askAny(model, system, inputS, false, think).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, inputS) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
+    const t0 = Date.now(), cid = chatIdFromPath(), upto = snapshot?.note?.upto || '0', ask = x => askAny(model, system, x, false, think).catch(e => /thinking|effort/i.test(e.message) ? askAny(model, system, x) : Promise.reject(e)); // 생각 설정을 못 받는 모델이면 그냥
+    let bare = inputS !== input && String(await getValue('norec:' + cid, '')) === upto; // 보낸 글이 안전 필터에 막혔던 정리 지점: 우리가 덧붙인 안내는 빼고 보내요
+    const out = await ask(bare ? input : inputS).catch(async e => { if (!e.blocked || bare || inputS === input) throw e; await setValue('norec:' + cid, upto); bare = true; toast('안전 필터에 막혀서 덧붙인 안내를 빼고 한 번만 다시 하는 중이에요…'); return ask(input); });
+    if (bare && recs && out.text) { const o = await recSync(model, recs, cleanOut(out.text)); if (o) for (const k of ['inTok', 'outTok', 'thinkTok', 'cached']) out[k] = (out[k] || 0) + (o[k] || 0); }
     summarize.last = { model, inTok: out.inTok, outTok: out.outTok, thinkTok: out.thinkTok || 0, cached: out.cached || 0, ms: Date.now() - t0 }; // cached: Gemini 자동 캐시 // ms: AI가 답하는 데 걸린 시간
     if (!out.text) throw new Error('AI가 빈 답을 보냈어요.');
-    out.text = pregTake(loveTake(out.text));
+    if (chatIdFromPath() === cid) out.text = pregTake(loveTake(out.text)); // 정리하는 사이 방을 나갔으면 줄을 그대로 둬요(그 방에 돌아가 넣을 때 읽어요)
     { const i = out.text.search(/^\s*%%\s*문체/m); if (i >= 0) { const t = out.text.slice(i), a = t.indexOf('{'), b = t.lastIndexOf('}'); if (styOn && a >= 0 && b > a) summarize.sty = t.slice(a, b + 1); out.text = out.text.slice(0, i).trimEnd(); } }
     if (cut.hidden.size) console.info('[조아메모리] 정리 · 날짜로그 ' + cut.hidden.size + '개는 제목만 보냄(6만 자 넘어서)');
     const answer = dropSkipped(cleanOut(out.text), cut.hidden);
@@ -3260,6 +3273,8 @@
   // 답이 출력 한도에서 잘림 → run()이 범위를 반으로 줄여 한 번 더 해요.
   const cutError = () => Object.assign(new Error('정리 결과가 너무 길어서 잘렸어요. 나눠서 정리해 주세요.'), { cut: true });
   // 한도에 걸렸는데 답 글이 짧음 = 생각이 한도를 다 먹음: 턴을 반으로 줄여도 또 걸려서 정리는 다시 안 보내요(think) · 기타처럼 받은 만큼 보여 주는 곳은 partial을 그대로 써요
+  const sseLines = function* (raw) { for (const line of raw.split('\n')) if (line.startsWith('data:')) { let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; } yield j; } };
+  const cutBy = t => t.length < 8000 ? thinkCut(t) : Object.assign(cutError(), { partial: t }); // 답 글이 짧은데 한도면 생각이 다 먹은 것
   const thinkCut = partial => Object.assign(new Error('AI가 생각하느라 답 한도를 다 써서 정리 글을 못 냈어요. 위 열쇠 › AI 생각을 "적게"로 바꾸거나 다른 모델로 해 주세요. (턴을 줄여도 똑같아서 다시 보내지 않았어요)'), { cut: true, think: true, partial });
   // 한 번에 받으면 긴 정리에서 서버가 3분쯤에 끊는 일이 있어 스트리밍(SSE)으로 끝까지 받습니다. 끝맺음 표시 없이 끝나면 실패로 봅니다.
   const askAny = (model, system, input, json = false, think = '', plain = false) => ({ claude: askClaude, openai: askOpenAI, chatgpt: askChatGPT }[provOf(model)] || askGemini)(model, system, input, json, think, plain); // plain: 정리 말고 나머지(ETC·점검·간추리기) — Gemini에서 생각 요약을 안 받고 첫 글자 전엔 안 끊어요
@@ -3318,9 +3333,7 @@
           e.message += ' · App Check 앱 ID·디버그 토큰이 비어 있어요 · 위 열쇠 › Firebase에서 [채우기]·디버그 토큰을 넣고 [연결 테스트]을 눌러 보세요';
         throw e; });
     let text = '', finish = '', sent = false, u = {}; // sent: 막힌 게 보낸 글(대화·지침)인지 · 아니면 AI가 쓰던 답
-    for (const line of raw.split('\n')) {
-      if (!line.startsWith('data:')) continue;
-      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+    for (const j of sseLines(raw)) {
       const c = j.candidates?.[0];
       for (const p of c?.content?.parts || []) if (!p.thought && p.text) text += p.text;
       if (c?.finishReason) finish = c.finishReason;
@@ -3328,8 +3341,8 @@
       if (j.promptFeedback?.blockReason) { finish = j.promptFeedback.blockReason; sent = true; }
       if (j.error && !finish) throw new Error(`구글이 답 도중 오류를 보냈어요(${j.error.status || j.error.code || ''} · ${j.error.message || ''}). 잠시 뒤 다시 해 주세요.`); // 과부하·한도 같은 오류가 끊김으로 보이지 않게
     }
-    if (/MAX_TOKENS/i.test(finish)) { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude와 같게)
-    if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw new Error(`AI 안전 필터가 막았어요(${sent ? '보낸 글' : 'AI 답 · ' + fmt(text.length) + '자 쓰다가'} · ${finish}). 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.`);
+    if (/MAX_TOKENS/i.test(finish)) throw cutBy(text.trim()); // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude와 같게)
+    if (/SAFETY|PROHIBITED|BLOCKLIST|RECITATION/i.test(finish)) throw Object.assign(new Error(`AI 안전 필터가 막았어요(${sent ? '보낸 글' : 'AI 답 · ' + fmt(text.length) + '자 쓰다가'} · ${finish}). 다른 모델이나 다른 AI로 해 주세요.`), { blocked: sent });
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.promptTokenCount) || 0, outTok: (Number(u.candidatesTokenCount) || 0) + (Number(u.thoughtsTokenCount) || 0), thinkTok: Number(u.thoughtsTokenCount) || 0, cached: Number(u.cachedContentTokenCount) || 0 }; // thinkTok: 출력 중 AI가 생각한 양 · cached: 구글이 알아서 캐시한 앞부분(입력에 포함)
   }
@@ -3349,9 +3362,7 @@
                  ...(fallback ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}) },
       body: { model, max_tokens: gen5 ? 128000 : 64000, stream: true, ...(gen5 && think ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}), system, messages: [{ role: 'user', content: input }], ...(fallback ? { fallbacks: 'default' } : {}), ...(think && model !== 'claude-haiku-4-5' ? { output_config: { effort: think } } : {}) } }); // effort: 설정 › AI 생각(안 보내면 Sonnet 5.5는 high라 느려요)
     let text = '', stop = '', inTok = 0, outTok = 0, cached = 0;
-    for (const line of raw.split('\n')) {
-      if (!line.startsWith('data:')) continue;
-      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+    for (const j of sseLines(raw)) {
       if (j.type === 'message_start') { const u = j.message?.usage || {}; cached = Number(u.cache_read_input_tokens) || 0; inTok = (Number(u.input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0) + cached || inTok; } // 입력은 캐시한 것까지 다 세요(값 계산이 안 틀리게)
       else if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') text += j.delta.text;
       else if (j.type === 'message_delta') { stop = j.delta?.stop_reason || stop; outTok = Number(j.usage?.output_tokens) || outTok; }
@@ -3359,7 +3370,7 @@
     }
     if (stop === 'refusal') throw new Error('Claude가 이 대화 정리를 거절했어요. 다른 모델로 다시 해 주세요.');
     // 한도에 걸렸는데 답 글이 짧으면 생각이 한도(64,000토큰)를 다 먹은 것: 턴을 반으로 줄여도 또 걸려서 다시 보내지 않아요(값만 두 번 나가요)
-    if (stop === 'max_tokens') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); }
+    if (stop === 'max_tokens') throw cutBy(text.trim());
     if (!stop) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok, outTok, cached };
   }
@@ -3374,14 +3385,12 @@
       body: { model, stream: true, stream_options: { include_usage: true }, messages: [{ role: 'system', content: system }, { role: 'user', content: input }], ...(json ? { response_format: { type: 'json_object' } } : {}), ...r } });
     const raw = await ask(re).catch(e => re.reasoning_effort && /HTTP 400\b/.test(String(e?.message)) ? ask({}) : Promise.reject(e));
     let text = '', finish = '', u = {};
-    for (const line of raw.split('\n')) {
-      if (!line.startsWith('data:')) continue;
-      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+    for (const j of sseLines(raw)) {
       if (j.error) throw new Error('OpenAI 오류 · ' + (j.error.message || '알 수 없음'));
       const c = j.choices?.[0]; if (c?.delta?.content) text += c.delta.content; if (c?.finish_reason) finish = c.finish_reason;
       if (j.usage) u = j.usage;
     }
-    if (finish === 'length') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude·Gemini와 같게)
+    if (finish === 'length') throw cutBy(text.trim()); // 답 글이 짧은데 한도면 생각이 다 먹은 것(Claude·Gemini와 같게)
     if (finish === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
     if (!finish) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.prompt_tokens) || 0, outTok: Number(u.completion_tokens) || 0, cached: Number(u.prompt_tokens_details?.cached_tokens) || 0 };
@@ -3491,15 +3500,13 @@
     const token = await gptToken(); let raw;
     try { raw = await call(token).catch(async e => { const m = String(e?.message); if (/HTTP 400\b/.test(m) && rz.reasoning) return call(token, {}); if (!/HTTP 401\b/.test(m)) throw e; return call(await gptToken(token)); }); } catch (e) { throw friendly(e); }
     let text = '', done = false, cut = '', u = {};
-    for (const line of raw.split('\n')) {
-      if (!line.startsWith('data:')) continue;
-      let j; try { j = JSON.parse(line.slice(5)); } catch (_) { continue; }
+    for (const j of sseLines(raw)) {
       if (j.type === 'response.output_text.delta') text += j.delta || '';
       else if (j.type === 'response.completed') { done = true; u = j.response?.usage || {}; }
       else if (j.type === 'response.incomplete') cut = j.response?.incomplete_details?.reason || 'unknown';
       else if (j.type === 'response.failed' || j.type === 'error') throw gptFail(j.response?.error?.code || j.error?.code || j.code);
     }
-    if (cut === 'max_output_tokens') { if (text.trim().length < 8000) throw thinkCut(text.trim()); throw Object.assign(cutError(), { partial: text.trim() }); } // 답 글이 짧은데 한도면 생각이 다 먹은 것
+    if (cut === 'max_output_tokens') throw cutBy(text.trim()); // 답 글이 짧은데 한도면 생각이 다 먹은 것
     if (cut === 'content_filter') throw new Error('OpenAI 필터가 막았어요. 정리할 턴 범위를 줄이거나 다른 모델로 해 주세요.');
     if (cut || !done) throw new Error('AI 답이 끝까지 오지 않았어요(연결이 끊겼어요). 다시 해 주세요.');
     return { text: text.trim(), inTok: Number(u.input_tokens) || 0, outTok: Number(u.output_tokens) || 0, cached: Number(u.input_tokens_details?.cached_tokens) || 0 };
@@ -3775,8 +3782,7 @@
   //   켜고 끄기: 하트 꾹(0.5초) · 설정 › 화면 · 처음엔 꺼짐 · 한 번 켜면 끌 때까지 그대로(방 옮겨도 · 새로 고침해도) · 'maskUse': 예전 'maskOn'에 남은 켜짐은 안 이어받아요
   const mask = { on: false, raw: [], names: [], mode: 'box', color: '#1F1D27', emoji: '💜', ranges: [], t: 0 };
   const MASK_OK = typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function';
-  { const mc = document.createElement('style'); mc.textContent = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute}'; document.documentElement.appendChild(mc); }
-  const maskCss = document.createElement('style'), maskCss2 = document.createElement('style');
+  const MASK_BOX = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute}', maskCss = document.createElement('style'), maskCss2 = document.createElement('style'); maskCss.textContent = MASK_BOX;
   document.documentElement.appendChild(maskCss);
   async function maskLoad() {
     mask.on = String(await getValue('maskUse', 'off')) === 'on'; mask.panel = String(await getValue('maskPanel', 'off')) === 'on';
@@ -3784,7 +3790,7 @@
     mask.raw = raw; mask.names = [...new Set(raw.flatMap(n => [n, nameNick(n)]).filter(x => [...x].length >= 2))].sort((a, b) => b.length - a.length); // '주피터' → '피터'도 · 긴 이름부터
     mask.mode = String(await getValue('maskMode', 'box')); mask.color = String(await getValue('maskColor', '#1F1D27')); mask.emoji = String(await getValue('maskEmoji', '💜')).trim() || '💜';
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
-    maskCss.textContent = maskCss2.textContent = '.jm-mask-l{position:absolute;inset:0;pointer-events:none}.jm-mask-l>i{position:absolute}' + (mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
+    maskCss.textContent = maskCss2.textContent = MASK_BOX + (mask.mode === 'blur' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:0 0 7px rgba(40,36,60,.8)}'
       : mask.mode === 'emoji' ? '::highlight(jm-mask){color:transparent;-webkit-text-fill-color:transparent;text-shadow:none}'
       : `::highlight(jm-mask){color:${c};-webkit-text-fill-color:${c};background-color:${c};text-shadow:none}`); // 가림 상자 모양도 조아메모리 창(그림자 칸) 안에 같이 넣어요
     if (!maskCss2.isConnected) root.appendChild(maskCss2); // 조아메모리 화면(그림자 칸) 안에도 같은 칠
@@ -5201,6 +5207,8 @@
     .keybox{flex:0 0 auto;width:52%;max-width:240px;height:40px;display:flex;align-items:center;border:1.5px solid var(--rule);border-radius:12px;background:var(--paper);padding:0 4px 0 0}.keybox:focus-within{border-color:var(--ink)}
     .srow .keybox input[type=password],.srow .keybox input[type=text]{flex:1;min-width:0;width:auto;max-width:none;height:100%;border:0;padding:0 8px 0 12px;background:transparent}
     .keybox button{flex:none;border:0;border-radius:8px;background:var(--mist);color:var(--ink2);font-size:12px;font-weight:600;padding:5px 9px}
+    .srow .rg-t{display:flex;align-items:center}.srow .rg-t>.pg-hq.qi{top:-5px}
+    :is(.srow,.opt) input[type=number]{flex:none;box-sizing:border-box;height:42px;border:0;border-radius:14px;background:var(--mist);padding:0 8px 1px;font:inherit;font-size:16px;font-weight:700;text-align:center;color:var(--ink);outline:0;appearance:textfield;-moz-appearance:textfield}:is(.srow,.opt) input[type=number]::placeholder{font-size:14px;font-weight:700;line-height:42px;color:var(--pencil)}:is(.srow,.opt) input[type=number]::-webkit-inner-spin-button{display:none}:is(.srow,.opt) input[type=number]:focus{box-shadow:inset 0 0 0 1.5px var(--acc)}.opt input[type=number]{height:30px;border-radius:10px}@media (hover:hover) and (pointer:fine){:is(.srow,.opt) input[type=number]{font-size:14px}}
     .srow input[type=text],.srow input[type=password]{height:40px;border:1.5px solid var(--rule);border-radius:12px;padding:0 12px;font-size:14px;background:var(--paper);color:var(--ink);outline:none}
     .switch{-webkit-appearance:none;appearance:none;width:48px;height:28px;margin:0;border-radius:14px;background:var(--rule);position:relative;flex-shrink:0;cursor:pointer;transition:background .15s}
     .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:left .15s}
@@ -6674,7 +6682,7 @@
       const had = k => new Set(itemBlocks(body(k)).items.map(it => itemKey(it.key)));
       const rb = pastRound(memory), nk = k => itemKey(String(k).replace(/^\[|\]$/g, '')), inBase = new Set(['날짜로그', '이정표', '소지품', '인지·비밀'].flatMap(k => itemBlocks(body(k)).items.map(it => nk(it.key))));
       const out = itemBlocks(nb(PAST)).items.filter(it => { const m = String(it.key).match(/^\[(\d+)회차 · (?:(?:물건|아는 것|장소) · )?(.*)\]$/); return !m || +m[1] <= rb || !inBase.has(nk(m[2])); }).map(it => it.lines), hadLog = new Set([...had('날짜로그'), ...had('이정표')]);
-      const g2 = t => { const x = String(t).replace(/^\[|\]$/g, '').replace(/^[^-]*\d\s*-\s*/, '').replace(/[\s\p{P}\p{S}]/gu, ''), o = new Set(); for (let q = 0; q < x.length - 1; q++) o.add(x.slice(q, q + 2)); return o; };
+      const g2 = t => grams(String(t).replace(/^\[|\]$/g, '').replace(/^[^-]*\d\s*-\s*/, ''));
       const dice = (A, B) => A.size && B.size ? 2 * [...A].filter(x => B.has(x)).length / (A.size + B.size) : 0;
       const baseEv = ['날짜로그', '이정표'].flatMap(k => itemBlocks(body(k)).items).map(it => ({ d: dayOf(it.key), g: g2(it.key), b: g2(it.lines.slice(1).join(' ')) }));
       // 그때까지 다시 정리한 같은 사건(제목만 다름): 같은 날 + 제목 절반 넘게 같음 + 내용도 3할 넘게 같음 · 같은 날 비슷한 제목의 다른 일은 내용이 달라서 남아요
@@ -6784,7 +6792,7 @@
       }
     }
     if (d?.app === 'memo-note' && !memory) return;
-    if (!memory) { memory = normalizeImported(raw); const problem = checkImported(memory); if (problem) return toast(problem, 'err', 5000); }
+    if (!memory) { memory = normalizeImported(raw).replace(/^\s*%%.*$/gm, ''); const problem = checkImported(memory); if (problem) return toast(problem, 'err', 5000); }
     const chat = (snapshot?.all || []).filter(isChat);
     let here = upto && chat.some(m => msgId(m) === upto);
     // 같은 방 백업인데 정리 지점이 지금 읽어 둔 쪽(지난 노트 뒤)보다 앞이면 대화를 처음부터 읽어 찾아요(5.8.79)
@@ -8079,7 +8087,7 @@
       const raw = await askModelRetry(withRules(BOARD_PROMPT, ETC_KO + etcRoll()) + (only ? boardOne(only, vibeOne) : BOARD_MORE), [who, '', `[사이트] ${d.name || ''} — ${d.about || ''}`, only ? `[새로고침할 게시판] ${only}` : `[이미 있는 게시판] ${names.join(', ')}`, only ? '[이 게시판에 이미 있는 글]' : '[이미 올라온 글 제목]', titles, ...(crossHot ? ['', '[다른 게시판 인기글]', crossHot] : []), '', '[기억 노트]', dropProofLines(await etcMemory(chatId)), newLog].join('\n'), '🗨커뮤니티 새로고침');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       // 겹침 거르기: 제목이 같거나, 두 글자 조각이 절반 넘게 겹치면 비슷한 글로 보고 버려요(이미 있는 글 + 이번에 온 글끼리).
-      const norm = t => String(t || '').replace(/[\s\p{P}\p{S}]/gu, ''), grams = t => { const x = norm(t), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; };
+      const norm = t => String(t || '').replace(/[\s\p{P}\p{S}]/gu, '');
       const like = (a, b) => { if (!a.size || !b.size) return false; let n = 0; for (const x of a) if (b.has(x)) n++; return n / Math.min(a.size, b.size) > 0.5; };
       const pool = posts.filter(p => !only || p.board === only).map(p => grams(p.title));
       const have = { has: t => { const g = grams(t); return pool.some(x => like(g, x)); } };
@@ -8272,11 +8280,10 @@
       const replies = [];
       // 거의 같은 문장(두 글자 조각 70% 넘게 겹침)은 하나만: 이번 대댓글끼리 + 내 새 댓글과
       //   짧은 반응(ㅅㅂㅋㅋ·ㄹㅇ 같은 7글자 미만)은 겹쳐도 그대로 둬요
-      const g2 = t => { const x = String(t || '').replace(/[\s\p{P}\p{S}]/gu, ''), g = new Set(); for (let k = 0; k < x.length - 1; k++) g.add(x.slice(k, k + 2)); return g; };
       const near = (a, b) => { if (a.size < 6 || b.size < 6) return false; let n = 0; for (const x of a) if (b.has(x)) n++; return n / Math.min(a.size, b.size) > 0.7; };
-      const seenG = [g2(text)];
+      const seenG = [grams(text)];
       for (const r of (Array.isArray(list) ? list : []).slice(0, 12)) {
-        { const g = g2(r.text); if (seenG.some(x => near(g, x))) continue; seenG.push(g); }
+        { const g = grams(r.text); if (seenG.some(x => near(g, x))) continue; seenG.push(g); }
         const t = String(r.to || '').trim().replace(/^@/, '');
         const to = !t || t.includes(me) || personAlias(me).some(n => t.includes(n)) || t.includes(myNick) || !known.has(t) ? myTag : t;
         const c = { nick: r.nick || 'ㅇㅇ', ip: anon ? (r.ip || '') : '', text: dropIp(r, r.text), ago: '방금', likes: Number(r.likes) || 0, reply: true, by: r.by || '', to };
@@ -8367,7 +8374,7 @@
       inner = `<p class="bd-sec">${VIBE[vibeOf(cur)] || ''} ${esc(cur)} <small class="pdim">${esc(vibeOf(cur))} · 글 ${mine.length}개</small></p><div class="bd-list">${mine.slice((pg - 1) * PER, pg * PER).map(row).join('') || '<p class="pc-empty">글이 없어요</p>'}</div>${pager}
         <p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="board">이미지로 저장</button> · <button class="linkbtn" data-act="bddel" data-arg="board:${esc(cur)}">이 게시판 비우기</button></p>`;
     }
-    return head + genCard() + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${boardData.turns}턴 시점에 만든 커뮤니티${boardData.from ? ` · ${boardData.from}~${boardData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="bdrange">다시 만들기</button></p>${nav.bdRange ? rangeSheet('다시 만들기') : ''}${nav.bdImg ? `<div class="imgsheet" data-act="imgclose"><img src="${nav.bdImg}" alt="커뮤니티 이미지"><p>이미지를 길게 눌러 '사진에 저장'을 고르세요 · 바깥을 누르면 닫혀요</p></div>` : ''}`;
+    return head + genCard() + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${boardData.turns}턴 시점에 만든 커뮤니티${boardData.from ? ` · ${boardData.from}~${boardData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="bdrange">다시 만들기</button></p>${nav.bdRange ? rangeSheet('다시 만들기') : ''}${devImgSheet()}`;
   }
   // ── 📰 뉴스: 이야기 세계의 포털 뉴스(기사·실시간 검색어·댓글). 버튼을 눌렀을 때만 AI 1번, 결과는 이 브라우저에만 ──
   const NEWS_PROMPT = "너는 RP 세계 안의 음지 찌라시 포털 뉴스 화면을 만든다. 기자들은 사실상 음지 커뮤 출신이라 기사체 흉내만 낼 뿐 속은 막장이다. [기억 노트]나 [대화 원문]의 사건·인물로 쓴다.\n- 이 지침에는 일부러 예시 문장을 하나도 넣지 않았다. 제목·검색어·본문·댓글은 전부 이 이야기의 디테일로 처음부터 새로 짓는다. 상투 표현, 같은 말머리, 같은 말버릇을 되풀이하지 않는다. 다시 만들 때마다 전혀 다른 결과가 나와야 한다.\n- 짧고 세게: 기사는 길게 늘어놓지 않는다. 한 기사 = 한 방. 읽자마자 웃기거나 어이없어야 한다.\n- 구라는 화끈하게: 진짜·반반 기사는 노트·원문에 실제로 있는 씨앗(장면·지문·대사·물건·옷·장소·시간대·관계)에서 출발해 막장으로 부풀린다. 구라 기사는 씨앗 없이 아예 처음부터 지어낸 개웃긴 가짜뉴스도 된다: 인물들의 성격·관계·말버릇을 아는 사람이면 빵 터질 만큼 그럴듯하게 황당한 창작 사건. 사소한 일일수록 터무니없는 스케일로(나라가 뒤집히는 수준), 반전에 반전, 쌍방 폭로전, 엉뚱한 배후설, 음모론. 정색한 기사체로 쓸수록 더 웃기게.\n- 수위는 마라맛: 성인 인물의 연애·스킨십·성인 스캔들, 돈, 폭력 시비, 유출설, 갑질, 과거사를 의혹·소문으로 끝까지 키운다. 성인 인물에 대한 야한 유출설·성인 루머도 소문·헤드라인 수준으로는 된다. 노골적인 성행위 묘사는 쓰지 않는다.\n- 유저(사용자 캐릭터)는 기사에서 실명을 쓰지 않는다. 진짜 기사처럼 성에 모 씨를 붙이거나, 역할에 A씨처럼 가린다(검색어·댓글도 마찬가지로 실명 대신 가린 이름이나 별명). 유저의 대사·속마음은 지어내지 않고, 유저는 댓글을 쓰지 않는다. NPC는 실명으로 써도 된다.\n- 진짜와 구라를 섞는다: 기사마다 fact를 진짜|반반|구라 중 하나로. 진짜 1~2개·반반 1~2개·나머지 구라. 진짜·반반은 proof에 근거를 (N턴) \"원문 15~60자 그대로\" 형식으로(대사든 지문이든 원문 그대로). 구라는 proof 빈칸. 겉으로는 구분되지 않게.\n- 포털 이름 하나(지어낸 것, 실제 포털·언론사 이름 금지).\n- 실시간 검색어 10개: 사생활을 파고드는 악랄한 연관검색어와, 인물 이름에 원문 속 사소한 물건·행동을 붙여 대단한 사건처럼 이름 붙인 병맛 밈 조어를 반반. 열 개가 모두 다른 형태. state는 new|up|down|same.\n- 검색어마다 검색 결과: related(연관검색어 3~4개, 더 악랄하게), hits(조각 2개: src는 카페·블로그·지식인·SNS·동영상 중 서로 다르게, title과 한 줄 text, 출처마다 말투가 확 다르게).\n- 기사 5개. 다섯 개가 전부 다른 종류여야 한다: 스캔들 종류(연애·성인 루머·돈·폭력·유출·과거사·갑질·황당 사건 등)도, 매체 성격도, 제목 짜는 방식도, 진짜/반반/구라도 겹치지 않게 고루. cat은 속보·단독·연예·찌라시 중에서. 제목은 악랄한 낚시, 기사마다 제목 짜는 방식이 달라야 한다.\n- 본문 2~4문단, 문단마다 한두 문장. 익명 관계자 증언, 확인 안 된 정황, 어이없는 결론. 찌라시는 받은글 메신저 말투. 기사마다 사진 1장을 [사진: 이모지 2~6개 짧은 캡션] 한 줄로(이모지로 장면을 천박하고 웃기게, 기사마다 다른 조합).\n- 언론사·기자 이름은 지어낸 것.\n- 기사마다 댓글 8~12개. 댓글러마다 디시(갤러리마다 다름)·일베·메갈·워마드·더쿠·여시·인스티즈·네이트판·에펨·루리웹·엠팍·블라인드·에타·카페·맘카페·트위터(X)·오타쿠 커뮤 중 서로 다른 커뮤 말투로 부딪치게, 유행어·밈도 매번 다르게. 음지 커뮤 말투: 반말·초성체·비속어·병맛 드립·밈·말장난·받아치기, 일베식 어미와 메갈식 미러링 말투도 섞어 서로 싸우게(말투만, 현실 성별·지역·집단 멸칭은 금지). 진지한 댓글은 조롱당한다. 악플·조리돌림·음모론·편 가르기 싸움·기자 욕·쉴드 치다 역풍. 공감 1위는 제일 독하거나 제일 웃긴 댓글. 댓글끼리 말투와 드립이 하나도 겹치지 않게. 닉은 아이디 앞 네 글자에 별표 네 개로 가린 꼴.\n- 클린봇: 댓글 중 욕설·인신공격·성적 농담이 센 것에는 clean을 true로 둔다(화면에서 가려 두고, 눌러야 보이게 함). 수위를 낮추지 말고 그대로 쓰되 표시만 한다. 기사마다 2~4개쯤.\n- 댓글 이모지는 어울리는 댓글에만(조롱·비꼼·과몰입용으로, 사람마다 버릇이 다르게). 쓰는 양은 아래 주사위 줄을 따른다. 모든 댓글에 이모지가 붙으면 실패다. 기사 사진 캡션의 이모지 2~6개는 그대로 둔다.\n- 노트 인물(NPC)이 몰래 댓글을 다는 일은 아주 가끔(전체에서 0~1개): 그 인물 성격·말투 그대로, by에 그 인물 정본명. 그 인물이 모르는 정보는 쓰지 않는다.\n- 이 세계 안의 황색 보도일 뿐 RP 본편 설정은 아니다. 실제 원문 사건의 결과를 뒤집어 단정하지는 않는다.\n- 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 내용, 현실의 특정 집단 혐오, 실존 인물·실존 언론사 이름.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"portal\":\"\",\"trends\":[{\"word\":\"\",\"state\":\"new\",\"related\":[\"\"],\"hits\":[{\"src\":\"\",\"title\":\"\",\"text\":\"\"}]}],\"articles\":[{\"cat\":\"\",\"title\":\"\",\"press\":\"\",\"reporter\":\"\",\"ago\":\"\",\"views\":0,\"fact\":\"\",\"proof\":\"\",\"body\":\"\",\"comments\":[{\"nick\":\"\",\"text\":\"\",\"likes\":0,\"dislikes\":0,\"ago\":\"\",\"by\":\"\",\"clean\":false}]}]}";
@@ -8466,7 +8473,7 @@
         <p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p>`;
     }
     const end = turnEnd(), up = recUpto(newsData);
-    return head + genCard() + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${newsData.turns}턴 시점에 만든 뉴스${newsData.from ? ` · ${newsData.from}~${newsData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="nwrange">다시 만들기</button>${end > up ? ` · <button class="linkbtn" data-act="nwupd"${busyNow ? ' disabled' : ''}>새 이야기 반영 (${up + 1}~${end}턴)</button>` : ''}</p>${sheet}${nav.bdImg ? `<div class="imgsheet" data-act="bdimgx"><img src="${nav.bdImg}" alt=""><small>길게 눌러 저장하세요</small></div>` : ''}`;
+    return head + genCard() + `<div class="bd">${bar}${inner}</div><p class="muted" style="text-align:center;margin:10px 0 4px">${newsData.turns}턴 시점에 만든 뉴스${newsData.from ? ` · ${newsData.from}~${newsData.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="nwrange">다시 만들기</button>${end > up ? ` · <button class="linkbtn" data-act="nwupd"${busyNow ? ' disabled' : ''}>새 이야기 반영 (${up + 1}~${end}턴)</button>` : ''}</p>${sheet}${devImgSheet()}`;
   }
   // ── 📚 나무위키 · 📺 실시간톡: 커뮤니티·뉴스와 같은 틀 ──
   const WIKI_PROMPT = "너는 RP 세계 안의 위키 사이트(나무위키 같은 집단 편집 위키)를 만든다. [기억 노트]나 [대화 원문]의 인물·사건·장소로 문서를 쓴다.\n- 이 지침에는 일부러 예시 문장을 넣지 않았다. 문서 제목·본문·드립·토론·편집 요약은 전부 이 이야기 디테일로 새로 짓는다. 상투 표현과 같은 드립을 되풀이하지 않는다.\n- 위키 이름 하나(지어낸 것, 실제 사이트 이름 금지).\n- 문서 6~8개: 노트 인물마다 하나, 큰 사건·장소·관계 문서 몇 개. kind는 인물|사건|장소|관계|밈.\n- 편집자들은 음지 커뮤 출신 위키러다: 정색한 백과사전체 흉내 속에 취소선 드립(~~지운 척하는 진심~~), 각주 드립, 카더라, 과몰입 TMI, 사소한 디테일 집착, 은근한 비꼼, 고자극 가십을 섞는다. 노골적인 성행위 묘사는 쓰지 않는다.\n- 문서마다 sections 3~5개(개요·상세·논란 및 사건 사고·어록·여담 같은 위키식 목차를 문서마다 다르게). 본문 문장 끝에 [1]처럼 각주 번호를 달고, notes에 각주 내용. 각주 일부는 근거: (N턴) \"원문 15~60자 그대로\"(대사든 지문이든 원문 그대로). 나머지 각주는 드립·카더라·편집자 사담.\n- 논란 및 사건 사고 칸은 서사 속 씨앗을 악의적으로 부풀린 의혹과 아예 지어낸 골때리는 루머를 섞는다(루머는 루머라고 써 둔다).\n- talk(토론) 4~8줄: 문서 한 줄 표현을 두고 편집자들이 음지 말투(디시·일베·메갈·더쿠·에펨 등 서로 다른 말투)로 싸운다. 비속어·조롱 세게, 현실 성별·지역·집단 멸칭은 금지.\n- history(편집 역사) 4~6줄: 편집 전쟁·반달·되돌림·보호 요청이 보이게. who는 아이피나 위키 닉, what은 편집 요약.\n- lock은 보호 상태 한 단어(없으면 빈 칸).\n- 유저(사용자 캐릭터)도 문서가 있고, 비난·조롱·편들기·악플·루머 대상이 되는 것까지 다 열려 있다. 다만 유저의 속마음·대사는 지어내지 않고 겉으로 보인 일로만. 편집자·토론 참가자로 유저를 쓰지 않는다.\n- 노트 인물(NPC)이 몰래 편집하거나 토론에 끼는 일은 아주 가끔(전체에서 0~1개): by에 그 인물 정본명, 그 인물 성격 그대로, 모르는 정보는 쓰지 않는다.\n- 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 내용, 현실 집단 혐오, 실존 인물·사이트 이름.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"site\":\"\",\"docs\":[{\"title\":\"\",\"kind\":\"\",\"lock\":\"\",\"summary\":\"\",\"sections\":[{\"h\":\"\",\"body\":\"\"}],\"notes\":[\"\"],\"talk\":[{\"nick\":\"\",\"text\":\"\",\"by\":\"\"}],\"history\":[{\"who\":\"\",\"what\":\"\",\"ago\":\"\",\"by\":\"\",\"clean\":false}]}]}";
@@ -10824,7 +10831,7 @@
     if (nav.pickKind === 'room') { const hl = histList || [];
       if (busyNow && genProg) return '<div class="rg-wait"><i></i><span>회귀 준비 중…</span></div>'; // 돌아가는 동그라미만
       const nowT = (snapshot?.note?.turns || 0) + freshTurns();
-      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b>턴 직접 정하기</b><small>정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값)</small></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>${busyNow ? '준비 중…' : '회귀'}</button></div></section>` + (u => u && noteMemory() === u.after ? row('rgundo', hl.length - 1, '방금 한 회귀 취소', `${new Date(u.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 회귀 전 노트로 · 임신 기록도 그때로`) : '')(hl.length && isRg(hl[hl.length - 1]) ? hl[hl.length - 1] : null) + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0 && h.from < nowT && !isRg(h)).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
+      return `<section class="nf" style="padding:4px 16px"><div class="srow" style="border-bottom:0"><div><b class="rg-t">턴 직접 정하기${SHEET_Q('턴 직접 정하기', ['정리한 턴이 아니면 그 앞 노트에 그 턴까지 AI로 한 번 더 정리해요(정리 한 번 값).', '그 뒤 일은 회귀 전 칸에 남아요.'])}</b></div><input type="number" inputmode="numeric" min="1" max="${Math.max(1, nowT - 1)}" data-out="rgturn" placeholder="예: 15" style="width:76px"><button class="btn pri" data-act="rgturn"${busyNow ? ' disabled' : ''}>${busyNow ? '준비 중…' : '회귀'}</button></div></section>` + (u => u && noteMemory() === u.after ? row('rgundo', hl.length - 1, '방금 한 회귀 취소', `${new Date(u.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 회귀 전 노트로 · 임신 기록도 그때로`) : '')(hl.length && isRg(hl[hl.length - 1]) ? hl[hl.length - 1] : null) + (hl.length ? '' : emptyBox('이 기기엔 이 방 정리 기록이 없어요 · 턴을 넣으면 처음부터 그 턴까지 정리해서 돌아가요')) + hl.map((h, i) => [h, i]).filter(([h]) => h.from > 0 && h.from < nowT && !isRg(h)).sort((x, y) => y[0].from - x[0].from || new Date(y[0].at) - new Date(x[0].at)).filter(([h], k, A) => !k || A[k - 1][0].from !== h.from).map(([h, i]) => row('rgroom', i, `1~${h.from}턴 때로 회귀`, `${new Date(h.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric' })} · ${h.from + 1}턴부터 지금까지 일은 회귀 전으로`)).join(''); }
     const L = nav.gsList || []; if (!L.length) return emptyBox('드라이브에 백업이 없어요.');
     return L.map(x => row(nav.pickKind === 'regress' ? 'gsfromr' : 'gsfrom', x.chat, esc(x.title) + (x.here ? ' · 이 방' : ''), esc(x.when))).join('');
   }
@@ -11002,7 +11009,7 @@
     if (nav.view === 'run') { title = '정리하기'; sub = '무엇을 · 누가 정리할지 골라요'; }
     if (nav.view === 'edit' || nav.view === 'pvEdit') { title = nav.key + ' 편집'; sub = nav.view === 'pvEdit' ? '넣기 전 결과 고치기' : '저장된 노트 고치기'; }
     if (nav.view === 'preview') { title = '새 기억 확인'; sub = '확인하고 넣어 주세요'; }
-    if (nav.view === 'pick') { title = nav.pickKind === 'room' ? '회귀 · 이 방' : nav.pickKind === 'regress' ? '회귀 · 드라이브' : '드라이브 백업'; sub = nav.pickKind === 'room' ? '돌아갈 때를 골라요 · 그 뒤 일은 회귀 전 칸에 남아요' : '고르면 미리보기로 가요'; }
+    if (nav.view === 'pick') { title = nav.pickKind === 'room' ? '회귀 · 이 방' : nav.pickKind === 'regress' ? '회귀 · 드라이브' : '드라이브 백업'; sub = nav.pickKind === 'room' ? '돌아갈 때를 골라요' : '고르면 미리보기로 가요'; }
     if (nav.view === 'changes') { title = '회차별 바뀐 것'; sub = '정리할 때마다 무엇이 바뀌었는지'; }
     if (nav.view === 'notes') { title = '노트 관리'; sub = '고치기 · 채팅에 넣고 빼기를 한 곳에서'; }
     if (nav.view === 'ltm') { title = '장기기억'; sub = '크랙 자체 기억 · 노트에서 덜어 낸 옛 사건'; }
@@ -11136,7 +11143,7 @@
   let autoMiss = null; // 못 돈 자동 정리 { c: 방, upto: 정리 지점, t: 알림 글, x: 창을 닫음 } · 정리 지점이 바뀌면(정리되면) 저절로 사라져요
   const missOn = () => !!autoMiss && !autoBusy && !busyNow && nav.view !== 'preview' && autoMiss.c === chatIdFromPath() && !!snapshot && autoMiss.upto === (snapshot.note?.upto || '');
   function missPaint() { const on = missOn(), box = out('automiss'), show = on && !autoMiss.x; box.classList.toggle('on', show);
-    if (show && box.dataset.t !== autoMiss.t) { box.dataset.t = autoMiss.t; box.innerHTML = `<b>${esc(autoMiss.t)}</b><small>누르면 이어서 정리해서 바로 넣어요</small><button class="btn pri" data-act="autonow">지금 바로 정리</button><button class="x" data-act="automissx" aria-label="닫기">✕</button>`; } }
+    if (show && box.dataset.t !== autoMiss.t) { box.dataset.t = autoMiss.t; box.innerHTML = `<b>${esc(autoMiss.t)}</b>${/^안전/.test(autoMiss.t) ? '<small>다른 AI 채팅에 붙여 넣어 정리할 수 있어요</small><button class="btn pri" data-act="runsheet" data-arg="other">다른 AI로 정리</button>' : '<small>누르면 이어서 정리해서 바로 넣어요</small><button class="btn pri" data-act="autonow">지금 바로 정리</button>'}<button class="x" data-act="automissx" aria-label="닫기">✕</button>`; } }
   // 같은 방 자동 정리는 탭 하나만: 잠금은 탭이 닫히거나 꺼지면 저절로 풀려요 · 잠금을 못 얻으면 다른 탭이 도는 중 · free: 멈춘 정리를 풀 때 잠금도 풀어요
   async function autoSum(force = false) { const c = chatIdFromPath(); if (!c) return; if (!navigator.locks) return autoSum1(force); let got = false;
     try { return await navigator.locks.request('joamemory-auto:' + c, { ifAvailable: true }, l => { got = true; return l ? Promise.race([autoSum1(force), new Promise(ok => { autoSum.free = ok; })]) : undefined; }); } catch (e) { if (got) throw e; return autoSum1(force); } }
@@ -11173,7 +11180,7 @@
       pageToast(aw ? '아까 정리한 걸 이어서 넣는 중이에요…' : cut ? '정리가 끊겨서 다시 하는 중이에요 · 한 번만 다시 해요' : freshTurns() + '턴이 쌓여서 기억을 갱신하는 중이에요…');
       draft = null; if (aw) await setValue('away:' + chatId, ''); await run('new', aw ? { pasted: aw.raw, ext: aw } : {});
       if (chatIdFromPath() !== chatId) return; // 방을 나갔으면 결과는 보관해 뒀어요
-      if (!draft) await rest(3, '자동 정리가 안 됐어요'); // run은 실패를 알림만 띄우고 끝내서, 결과가 없으면 여기서 3턴 쉬어요
+      if (!draft) await (run.blocked === chatId + '|' + upto ? rest(1e6, '안전 필터에 막혔어요') : rest(3, '자동 정리가 안 됐어요')); // run은 실패를 알림만 띄우고 끝내서, 결과가 없으면 여기서 3턴 쉬어요
       // 자동 정리는 확인 화면에서 멈추지 않고 바로 넣어요(멈추면 다음 자동 정리도 줄줄이 멈춰서) · 걸리는 게 있으면 알림 + 오류 기록에 남겨요 · 정리 기록에서 되돌릴 수 있어요
       if (draft && nav.view === 'preview') {
         for (const x of draft.dropped || []) { if (x.done) continue; // 확인 화면이 없어서 빠진 줄은 묻지 않고 그 항목 끝에 되살려요(dropback과 같은 방식)
@@ -11559,7 +11566,6 @@
     const nameWords = new Set(namesIn(prev).flatMap(nm => personAlias(nm)).map(a => a.toLowerCase()));
     const words = t => [...new Set((String(t).match(/[가-힣A-Za-z0-9]{2,}/g) || []).map(w => w.length > 2 && /[가-힣]$/.test(w) ? w.slice(0, -1) : w).filter(w => w.length >= 2 && !nameWords.has(w.toLowerCase())))];
     const sq = t => String(t).replace(/\s+/g, '');
-    const grams = t => { const x = sq(t).replace(/[\p{P}\p{S}]/gu, ''), g = new Set(); for (let i = 0; i < x.length - 1; i++) g.add(x.slice(i, i + 2)); return g; };
     const dice = (a, b) => { const A = grams(a), B = grams(b); let c = 0; for (const x of A) if (B.has(x)) c++; return A.size + B.size ? 2 * c / (A.size + B.size) : 0; };
     // 보내는 것 = 고쳐도 되는 것(이 밖의 칸·항목을 AI가 쓰면 버려요)
     const allowed = new Map(), sent = new Map();
@@ -11638,7 +11644,7 @@
     runningMode = mode; // 정리 중 동그라미 색(처음부터 정리는 초록)
     if (mode === 'rebuild' && !opts.pasted && !opts.chunk && !confirm('채팅 전체를 처음부터 읽어서 노트를 새로 만들어요. 대화가 길면 비용과 시간이 꽤 들어요. 할까요?')) return;
     busyNow = true; busyRoom = chatId; render(); toast('대화를 읽는 중이에요…');
-    let raw0 = null, keepAway = null; // keepAway: 방을 나갔으면 AI 답을 보관하고 true
+    run.blocked = ''; let raw0 = null, keepAway = null; // keepAway: 방을 나갔으면 AI 답을 보관하고 true
     try {
       const snap = await readSinceLastNote(chatId); if (chatIdFromPath() !== chatId) return;
       snapshot = snap; const n = snapshot.note;
@@ -11700,6 +11706,7 @@
       let delta = (mode === 'new' || mode === 'review' || mode === 'tidy') && !!base; // 형식 맞추기도 바뀐 항목만 받아 끼워요(노트 전체를 갈아 끼우지 않음)
       const tidyNote = mode === 'tidy' ? TIDY_RULE : '';
       if (noFull && mode !== 'rebuild') sub += ' ⚠ 이 기기에 근거가 든 전체본이 없어서(다른 기기에서 정리했거나 구글 백업이 없음) 채팅 속 노트로 이어 정리했어요. 예전 사건의 근거·명대사는 이번 결과에 빠질 수 있어요.';
+      const recOut = opts.export && !tidyNote && !reviewIn ? (t => t && t + '\n\n위 %% 줄은 코드블록 안, ===NOTE END=== 바로 앞에 적는다.')(recTails()) : '';
       if (opts.export && opts.all) {
         // 전부 받기: 묶음마다 파일 하나(따로따로). 1번 = 안내·지침·기존 기억·첫 구간 / 2번부터 = 이어지는 구간 로그만 / 마지막 = 노트 전체를 쓰라는 안내 + 출력 안내.
         //   같은 AI 대화창에 1번부터 차례로 올리면 중간엔 짧은 메모만, 마지막 파일에서 노트 전체를 써요 → 그 답 하나만 붙여 넣으면 전체 턴이 들어가요.
@@ -11716,7 +11723,7 @@
           // 파일마다 정리 지침을 다시 넣어요: 1번 파일에만 있으면 파일이 늘수록 AI가 앞 지침을 놓쳐요
           const body = i === 0 ? EXT_HEAD + '\n\n' + head + `\n════════ 정리 지침 ════════\n\n${sys}\n\n════════ 정리할 자료 ════════\n\n${buildInput(dropProofLines(base), g, fixed, edited, f0, base)}`
             : head + `\n════════ 정리 지침 ════════\n\n${sys}\n\n════════ 정리할 자료 ════════\n\n` + (i === N - 1 ? buildInput(dropProofLines(base), g, fixed, edited, f0, base) : '[새 RP 로그]\n' + buildInput('', g, '', [], f0).split('[새 RP 로그]\n').pop()); // 마지막 파일은 노트를 쓰는 파일이라 기존 기억도 다시
-          files.push({ name: `조아메모리-${String(i + 1).padStart(2, '0')}of${N}-${f0}~${t1}턴.txt`, text: body + '\n\n════════ 자료 끝 ════════' + (i === N - 1 ? '\n\n' + EXT_TAIL : '') });
+          files.push({ name: `조아메모리-${String(i + 1).padStart(2, '0')}of${N}-${f0}~${t1}턴.txt`, text: body + (i === N - 1 ? recOut : '') + '\n\n════════ 자료 끝 ════════' + (i === N - 1 ? '\n\n' + EXT_TAIL : '') });
         });
         await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '', chunk: !!opts.chunk, step: false, all: true }));
         nav.extFiles = files;
@@ -11729,7 +11736,7 @@
       if (opts.export) {
         // 다른 AI 채팅에 붙여 넣을 정리 요청: 지침 + 입력 + 출력 안내. 파일로 받고 클립보드에도 복사.
         //   나눠서(opts.step): 이번 묶음만 담아요. 요청마다 지금 노트가 들어 있어 어느 AI·새 대화창에서도 따로 돼요. 불러오면 노트에 합쳐 넣고 다음 묶음으로.
-        const text = EXT_HEAD + `\n\n════════ 정리 지침 ════════\n\n${await buildSystem(delta)}\n\n════════ 정리할 자료 ════════\n\n${buildInput(dropProofLines(base), msgs, fixed, edited, from, base)}${tidyNote}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL;
+        const text = EXT_HEAD + `\n\n════════ 정리 지침 ════════\n\n${await buildSystem(delta)}\n\n════════ 정리할 자료 ════════\n\n${buildInput(dropProofLines(base), msgs, fixed, edited, from, base)}${tidyNote}${recOut}\n\n════════ 자료 끝 ════════\n\n` + EXT_TAIL;
         await setValue('ext:' + chatId, JSON.stringify({ mode, uptoId, turns, from, sub, noteUpto: n?.upto || '', chunk: !!opts.chunk, step: !!opts.step }));
         let copied = false; if (!opts.file) try { await navigator.clipboard.writeText(text); copied = true; } catch (_) {}
         if (!copied) downloadText(opts.step ? `조아메모리-나눠서-${from}~${turns}턴.txt` : `조아메모리-정리요청-${turns}턴.txt`, text);
@@ -11742,7 +11749,7 @@
       if (opts.pasted != null) {
         // 내보낼 때 기준(어디까지·몇 턴)을 그대로 씁니다. 그 사이 새 대화가 쌓였어도 다음 정리 때 이어져요.
         try { const ext = opts.ext || JSON.parse(String(await getValue('ext:' + chatId, '') || 'null')); if (ext && ext.mode === mode && ext.noteUpto === (n?.upto || '')) { ({ uptoId, turns, from, sub } = ext); if (ext.all) delta = false; } } catch (_) {}
-        raw = normalizeImported(opts.pasted);
+        raw = pregTake(loveTake(normalizeImported(opts.pasted)));
         proofsHidden = !!delta; // 내보낼 때 근거를 빼고 보냈어요 → 합칠 때도 키로 정리한 것과 똑같이(사건 지우기 막기·옛 근거 안 붙이기)
         if (!delta) raw = dropPeopleProof(raw); // 노트 전체를 받은 답: 날짜로그·인물·장소 근거는 빼고 저장(바뀐 것만 받은 답은 mergeNote가 빼요)
         if (!opts.ext) sub = '다른 AI로 정리한 결과예요. ' + sub;
@@ -11827,7 +11834,8 @@
         source: squash(whole.map(m => stripBlocks(msgText(m))).join(' ')),
       };
       nav.view = 'preview'; quiet(); if (!isOpen() && !autoBusy) pageToast('정리가 끝났어요 · 조아메모리를 열어 확인하고 넣어 주세요');
-    } catch (e) { toast('정리 실패 · ' + e.message, 'err'); }
+    } catch (e) { toast('정리 실패 · ' + e.message, 'err');
+      if (e.blocked && chatIdFromPath() === chatId) { run.blocked = chatId + '|' + (snapshot?.note?.upto || ''); if (!autoBusy && !chunkRun) { nav.hasKey = true; nav.runBy = 'file'; nav.runMode = 'new'; nav.view = 'run'; toast('구글 안전 필터가 보낸 글을 막았어요. ①을 눌러 복사한 뒤 제미나이 같은 AI 채팅에 붙여 넣고, 그 답을 ②로 넣어 주세요.', 'err'); } } }
     finally { busyNow = false; if (!autoBusy) busyRoom = ''; render(); }
   }
 
@@ -12677,11 +12685,11 @@
       }
       case 'autonow': return autoSum(true);
       case 'automissx': if (autoMiss) autoMiss.x = true; return missPaint();
-      case 'runsheet': {
+      case 'runsheet': { if (arg === 'other' && !isOpen()) toggleSheet();
         const m = String(await getValue('model', DEFAULT_MODEL));
         nav.modelLabel = MODELS.flatMap(([g, l]) => l.map(([id, lb]) => [id, `${g} ${lb}`])).find(([id]) => id === m)?.[1] || m;
         nav.hasKey = !!String(await getValue(keyOf(m), '')).trim();
-        nav.runBy = nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
+        nav.runBy = arg !== 'other' && nav.hasKey && String(await getValue('runBy', 'api')) !== 'file' ? 'api' : 'file';
         nav.runMode = ['chunk', 'rebuild'].includes(arg) ? arg : 'new'; nav.chunkSize = String(await getValue('chunkSize', '50'));
         // 키가 있으면 '정리하기'는 고르는 창 없이 바로 이어서 정리합니다. 키가 없거나 '다른 방법'을 누를 때만 창을 띄워요.
         if (nav.hasKey && !arg) return run('new');
