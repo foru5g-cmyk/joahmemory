@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.19
+// @version      6.0.20
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -943,7 +943,9 @@
     mem = noPast(mem);
     const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB), logs = itemBlocks(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').items.map(x => P_DAY(x.lines[0])).filter(x => x != null);
     const heads = [...String(nowB || '').matchAll(/^[\s⇒→\-▸•*]*(\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2})\s+\d{1,2}:\d{2}/gm)].map(m => P_DAY(m[1])).filter(x => x != null);
-    if (d != null) return Math.max(d, ...[...logs, ...heads].filter(x => P_GAP(d, x) != null)); // 장면이 여럿이면 늦은 것 · 날짜로그에 더 늦은 날이 있어도 그날 // 현재상태 날짜가 안 고쳐졌어도 날짜로그에 더 늦은 날이 있으면 그날이 오늘
+    if (d != null) { const now = Math.max(d, ...heads.filter(x => P_GAP(d, x) != null)); // 현재상태에 장면이 여럿이면 늦은 것
+      for (const m of [...(snapshot?.all || [])].reverse().filter(m => msgRole(m) === 'assistant').slice(0, 3)) { const hd = headTxt(stripBlocks(msgText(m))), x = /년차|\d{4}\s*(?:[.\-/·]|[년年])/.test(hd) ? P_DAY2(hd) : null; if (x == null) continue; return P_GAP(now, x) > 0 && x - now <= 400 ? x : now; } // 정리가 현재상태 날짜를 안 고쳤으면 마지막 답 머리말 날짜 · shortcut: 연도 없는 머리말·머리말이 더 이른 날(회귀)이면 노트 날짜를 믿어요, 그런 방에서 틀리면 해 맞추기를 넣기
+      return now; }
     const all = [...String(mem || '').matchAll(/\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
     if (all.length) { const z = logs[logs.length - 1], same = z == null ? [] : all.filter(x => P_GAP(z, x) != null); return Math.max(...(same.length ? same : all)); } // 년차·연도가 섞였으면 마지막 사건과 같은 꼴에서
     // 노트가 없거나 날짜가 없으면(정리 전·앱 방식) 대화에서 바로: 최근 AI 답 머리말의 날짜(돈 안 듦)
@@ -5351,7 +5353,7 @@
     .cr-b{height:min(430px,calc(var(--vvh,100vh) - 150px));scrollbar-width:thin;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}.cr-list{margin:0 -4px;padding:0 4px;display:block}.cr-p{display:flex;align-items:flex-start;background:var(--paper);border:1px solid var(--rule);border-radius:16px;margin-bottom:8px}.cr-p.on{border-color:var(--acc);box-shadow:inset 0 0 0 .5px var(--acc)}.cr-pk{flex:1;min-width:0;border:0;background:none;padding:12px 4px 12px 14px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}.cr-pk b{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:700}.cr-p:not(.on) em{display:none}.cr-pk em{font-style:normal;font-size:11px;font-weight:700;color:#fff;background:var(--acc);border-radius:99px;padding:2px 8px}.cr-pk small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--graphite)}.cr-pk b i{font-style:normal;font-size:12.5px;font-weight:500;color:var(--graphite)}.cr-r{flex:none;display:flex;align-items:center;padding:5px 6px 0 0}.cr-fv{border:0;background:none;padding:9px 7px;font-size:16px;line-height:1;color:var(--rule);cursor:pointer}.cr-fv[aria-pressed="true"]{color:var(--acc)}.cr-e{border:0;background:none;padding:10px 8px;font:inherit;font-size:12px;font-weight:600;color:var(--graphite);cursor:pointer}.cr-e.del{color:#D7263D}
     .cr-in{border:0;border-bottom:1px solid var(--rule);border-radius:0;background:none;outline:0;box-shadow:none;padding:6px 0 10px;margin-bottom:10px;font:inherit;font-size:16px;font-weight:600;color:var(--ink);width:100%}.cr-in.n{font-weight:500;color:var(--ink2)}@media (hover:hover) and (pointer:fine){.cr-in.n{font-size:14px}}.cr-ta{flex:1;min-height:120px;width:100%;border:0;background:none;outline:0;box-shadow:none;resize:none;padding:2px 8px 2px 0;margin:0;font:inherit;font-size:16px;line-height:1.75;color:var(--ink);scrollbar-width:thin;border-radius:0}.cr-box input:focus,.cr-box textarea:focus{outline:0;box-shadow:none}.cr-box .cr-in:focus{border-color:var(--acc)}@media (hover:hover) and (pointer:fine){.cr-ta{font-size:14.5px}}.cr-f{flex:none;display:flex;justify-content:space-between;margin:8px 0 0;font-size:12px;color:var(--graphite)}.cr-f{align-items:center}.cr-f b{font-size:12px;font-weight:600}.cr-f .over{color:#D7263D}.cr-bs{flex:none;display:grid;grid-template-columns:108px 1fr;gap:8px;margin-top:12px}.cr-bs button{height:46px;border:0;border-radius:14px;padding:0;white-space:nowrap;font:inherit;font-size:14px;font-weight:600;background:var(--mist);color:var(--ink2);cursor:pointer}.cr-bs button:disabled{opacity:.55}.cr-bs .p{background:var(--acc);color:#fff}.cr-bar{display:flex;justify-content:space-between;align-items:center;position:absolute;left:16px;right:16px;bottom:16px;background:var(--ink);color:var(--paper);border-radius:14px;box-shadow:0 8px 22px rgba(30,20,60,.2);padding:4px 6px 4px 16px;font-size:13px}.cr-bar button{border:0;background:none;padding:10px;font:inherit;font-weight:600;color:#CBBDFF;cursor:pointer}
     .hlogo{width:24px;height:25px;margin-left:6px;vertical-align:-4px;transform:rotate(-12deg)}.hic.hweb::after{display:none} /* 5.8.77 머리: 이름 옆 작은 아이콘 · 웹 모드 스위치 */
-    .wd-tiles{gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:20px}.wd-tiles>.wd-tile{border:0;border-radius:0;background:transparent}.wd-tiles>.wd-tile+.wd-tile{border-left:1px solid var(--rule)} /* 자동 정리·채팅에 넣는 기억을 한 카드로 */
+    .wd-tiles{gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:20px}.wd-tiles>.wd-tile{border:0;border-radius:0;background:transparent;box-shadow:none}.wd-tiles>.wd-tile+.wd-tile{border-left:1px solid var(--rule)} /* 자동 정리·채팅에 넣는 기억을 한 카드로 */
     .cast-row.hcard,.nrules.hcard{background:var(--paper);border:1px solid var(--rule);border-radius:20px}.cast-row.hcard{padding:14px 12px;margin-left:0;margin-right:0}.nrules.hcard{padding:4px 16px;margin-bottom:6px}.nrules.hcard>li:last-child{border-bottom:0} /* 홈 등장인물·최근 바뀐 것도 흰 카드로(바탕에 그냥 놓이면 덜 읽혀서) */
     .wd-tile small{display:block;font-size:12px;font-weight:700;color:var(--graphite);margin-bottom:4px}
     .wd-tile b{font-size:30px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums;line-height:1}
@@ -5364,7 +5366,7 @@
     .ncomp .h3,.ncomp .comp-h{margin-top:0}
     @media (max-width:340px){.wd-tiles{grid-template-columns:1fr}.wd-tiles>.wd-tile+.wd-tile{border-left:0;border-top:1px solid var(--rule)}}
     /* ── 고급 마감: 카드에 아주 옅은 그림자 · 숫자는 고정폭 ── */
-    .hero2,.ncomp,.tl-up,.tl-mem,.tl-story,.inj-card,.wd-tile,.tline li:not(.side){box-shadow:0 1px 2px rgba(34,30,46,.04),0 8px 24px rgba(34,30,46,.05)}
+    .hero2,.ncomp,.tl-up,.tl-mem,.tl-story,.inj-card,.wd-tile,.wd-tiles,.tline li:not(.side){box-shadow:0 1px 2px rgba(34,30,46,.04),0 8px 24px rgba(34,30,46,.05)}
     .wd-tile b,.comp-n b{font-variant-numeric:tabular-nums}
     .btn,.wd-tile,.inj-card,nav.top button{transition:background-color .18s,color .18s,box-shadow .18s,transform .12s}
     .btn.pri:hover{background:var(--acc-ink);border-color:var(--acc-ink)}
@@ -11196,11 +11198,15 @@
     if (cleaned !== text) await writeMessage(chatId, id, cleaned, page && !page.some(m => parseMore(m)?.of === id) ? [] : null);
   }
   // AI가 답에 따라 쓴 우리 노트 앞줄 · 그 줄부터 끝까지는 롤플 글이 아니에요
-  const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_NOTE|END OF NOTE)/, leakSeen = { c: '', at: 0 };
-  async function cutLeak(chatId, m, carrierId) { const id = msgId(m); if (!id || id === carrierId) return; const t = msgText(await readMessage(chatId, id));
+  const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_NOTE|MEMO_STY|END OF NOTE)/, leakSeen = { c: '', at: 0 };
+  // 옛 화면이 뜬 까닭 찾기(뜬 그때 한 번): 페이지가 어떻게 열렸는지 · 크랙이 쓰는 주소를 브라우저 저장분으로 받아 옛것인지
+  async function staleWhy(chatId, id) { const nav = performance.getEntriesByType?.('navigation')[0]?.type || '모름', how = staleWhy.bf ? '얼려 둔 화면을 되살림' : ({ reload: '새로고침', back_forward: '뒤로·앞으로', navigate: '새로 엶' }[nav] || nav); let kept = '저장분 확인 못 함';
+    try { const r = await fetch(API_A + chatId + '/messages?limit=20', { cache: 'force-cache', headers: { Authorization: 'Bearer ' + token(), platform: 'web', Accept: 'application/json' } }), j = await r.json(), top = msgId(((j?.data || j)?.messages || [])[0]); kept = top === id ? '브라우저 저장분은 최신(화면만 옛것)' : '브라우저가 옛 목록을 저장해 두고 그걸 줌'; } catch (_) {}
+    return '열린 방식 ' + how + ' · ' + kept + ' · 자리 비운 ' + Math.round((away.len || 0) / 6e4) + '분' + (IS_STAY ? ' · Stay' : ''); }
+  async function cutLeak(chatId, m, carrierId) { const id = msgId(m); if (!id || id === carrierId) return; const raw = msgText(await readMessage(chatId, id)), t = raw.replace(STY_RE, ''); // 온전한 문체 덩어리는 그것만 떼요(같은 줄의 글은 그대로)
     if ((t.match(V3_RE) || []).length || t.search(MORE_RE) >= 0 || chatIdFromPath() !== chatId) return; // 끝까지 온전한 노트 덩어리면 우리가 넣은 진짜 노트라 둬요
-    const i = t.search(LEAK_RE); if (i < 0) return; const next = t.slice(0, i).trimEnd(); if (!next.trim()) return logErr('노트', '답 전체가 노트 안내라 안 지움 · 다시 생성해 주세요', chatId);
-    await writeRaw(chatId, id, next); logErr('노트', 'AI가 따라 쓴 노트 안내를 답에서 지움 · ' + (t.length - next.length) + '자', chatId); }
+    const i = t.search(LEAK_RE); if (i < 0 && t === raw) return; const next = (i < 0 ? t : t.slice(0, i)).trimEnd(); if (!next.trim()) return logErr('노트', '답 전체가 노트 안내라 안 지움 · 다시 생성해 주세요', chatId);
+    await writeRaw(chatId, id, next); logErr('노트', 'AI가 따라 쓴 노트 안내를 답에서 지움 · ' + (raw.length - next.length) + '자', chatId); }
   async function moveSty(chatId, old) { if (moveSty.busy || moving || busyNow || chatIdFromPath() !== chatId) return; moveSty.busy = true;
     try { if (moveSty.off = String(await getValue('styMove', '')) === 'off') return; for (const m of old) { const id = msgId(m); if (chatIdFromPath() !== chatId || moving || busyNow || (moveSty.done ||= new Set()).has(id)) continue; moveSty.done.add(id);
       const t = msgText(await readMessage(chatId, id)), next = t.replace(STY_RE, ''); if (next !== t && next.trim() && chatIdFromPath() === chatId) { await pagePatch(editUrls(chatId, id)[0], next, false); if (!sameText(msgText(await readMessage(chatId, id)), next)) throw new Error('저장했는데 글이 안 바뀜'); } } } // 쓰기 바로 전에 다시 읽어 숨긴 글만 떼요
@@ -11500,7 +11506,7 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
-      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; logErr('화면', '크랙 화면이 옛 대화를 보여 줌 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); pageToast('크랙 화면이 옛 대화를 보여 주고 있어요 · 지워진 게 아니에요 · 새로고침해 주세요'); }, 8000); } } // 화면이 옛 대화인지 한 번 봐요
+      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; logErr('화면', (IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 뜸 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); pageToast((IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 떴어요(조아와 상관없어요) · 대화는 그대로예요 · 새로고침해 주세요'); staleWhy(chatId, id).then(w => logErr('화면', '옛 화면 진단 · ' + w, chatId)).catch(() => {}); }, 8000); } } // 화면이 옛 대화인지 한 번 봐요
       { const L = snap.all || [], end = L[L.length - 1], seen = leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5; // 쓰는 중에 새는 걸 봤거나 · 새로고침·다른 기기라 못 봤어도 마지막 답에 새어 나온 줄이 있으면
         if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && (seen || injectOn && !busyNow && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end)))) { if (seen) leakSeen.c = ''; (cutLeak.seen ||= new Set()).add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
       // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
@@ -13413,7 +13419,7 @@
   root.addEventListener('click', e => { if (e.target.closest?.('label')?.querySelector('input[type=file]')) filePick = true; }, true);
   const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || !awayLong() || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh.stale?.clear(); refresh().then(openAuto); }; // 돌아오면 크랙 화면이 옛 대화(얼려 둔 탭)인지도 다시 봐요
   document.addEventListener('visibilitychange', comeBack);
-  window.addEventListener('pageshow', comeBack);
+  window.addEventListener('pageshow', e => { staleWhy.bf = !!e.persisted; comeBack(); });
   window.addEventListener('focus', comeBack);
   // 새 답이 다 올라오면(말풍선 목록이 바뀌고 8초 동안 조용하면) 다시 읽어요. 노트가 밀려났으면 refresh가 자동 옮기기를 해요.
   //   창을 안 열고 계속 채팅해도 노트가 크랙 AI가 읽는 최근 대화 안에 머물게. 답 하나에 한 번만(15초 간격).
