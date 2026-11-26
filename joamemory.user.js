@@ -54,7 +54,7 @@
   //       MEMO_NOTE_END"
   //   공백 4칸이 없으면 "## 제목"이나 "- 항목" 줄에서 덩어리가 끊겨 화면에 보입니다. 탭은 크랙 화면에서 노트가 보여서 안 씀(읽기만 받아요).
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g; // 5.9.5부터 HTML 주석(<!--…-->)으로 써요 · 예전 [//]: # "…" 꼴도 읽어요
-  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다..
+  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다.
   // 노트가 한 답변(100KB)에 안 들어가면 뒷부분만 바로 다음 AI 답변(전)에 이 덩어리로 넣습니다(writeMessage). of= 앞부분이 든 답변 ID.
   //   [//]: # "MEMO_NOTE_MORE of=<ID> at=<시각>
   //       (노트 뒷부분)
@@ -11141,7 +11141,7 @@
     if (cleaned !== text) await writeMessage(chatId, id, cleaned, page && !page.some(m => parseMore(m)?.of === id) ? [] : null);
   }
   // AI가 답에 따라 쓴 우리 노트 앞줄 · 그 줄부터 끝까지는 롤플 글이 아니에요
-  const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_(?:NOTE|STY)|END OF NOTE)/, leakSeen = { c: '', at: 0 };
+  const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_NOTE|END OF NOTE)/, leakSeen = { c: '', at: 0 };
   async function cutLeak(chatId, m, carrierId) { const id = msgId(m); if (!id || id === carrierId) return; const t = msgText(await readMessage(chatId, id));
     if ((t.match(V3_RE) || []).length || t.search(MORE_RE) >= 0 || chatIdFromPath() !== chatId) return; // 끝까지 온전한 노트 덩어리면 우리가 넣은 진짜 노트라 둬요
     const i = t.search(LEAK_RE); if (i < 0) return; const next = t.slice(0, i).trimEnd(); if (!next.trim()) return logErr('노트', '답 전체가 노트 안내라 안 지움 · 다시 생성해 주세요', chatId);
@@ -11313,7 +11313,7 @@
     WS.prototype.send = function (data) {
       if (this.readyState === 1) liveSock.set(this.url, this);
       if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return; // AI가 답을 쓰는 중인지(형광펜이 다 쓴 뒤에 칠하게)
-        if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n'); leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600); /* 조각이 글 전체든 새로 붙은 몇 글자든: 이어 붙인 끝부분에서 찾아요(표식이 두 조각에 걸쳐 와도) */ if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} } // 우리 노트 앞줄(※ 표기·[기억 노트 ··MEMO_NOTE)을 따라 쓰기 시작하면 크랙의 생성 중단(stop)을 대신 보내요 · 서버가 다 쓴 뒤라 값은 나갔을 수 있어요 // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
+        if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = stripBlocks(p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n')); /* 우리가 넣은 노트·문체 덩어리(내 메시지에 실려 올 수 있어요)는 빼고 봐요 */ leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600); /* 조각이 글 전체든 새로 붙은 몇 글자든: 이어 붙인 끝부분에서 찾아요(표식이 두 조각에 걸쳐 와도) */ if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} } // 우리 노트 앞줄(※ 표기·[기억 노트 ··MEMO_NOTE)을 따라 쓰기 시작하면 크랙의 생성 중단(stop)을 대신 보내요 · 서버가 다 쓴 뒤라 값은 나갔을 수 있어요 // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
       const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath(); if (f0) lastFrame.p = data;
       if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; try { sessionStorage.setItem('jm_sent', JSON.stringify({ c: sendSeen.c, said: sendSeen.said })); } catch (_) {} }
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
