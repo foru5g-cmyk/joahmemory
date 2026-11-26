@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.13
+// @version      6.0.14
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -54,7 +54,7 @@
   //       MEMO_NOTE_END"
   //   공백 4칸이 없으면 "## 제목"이나 "- 항목" 줄에서 덩어리가 끊겨 화면에 보입니다. 탭은 크랙 화면에서 노트가 보여서 안 씀(읽기만 받아요).
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g; // 5.9.5부터 HTML 주석(<!--…-->)으로 써요 · 예전 [//]: # "…" 꼴도 읽어요
-  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다...
+  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다..
   // 노트가 한 답변(100KB)에 안 들어가면 뒷부분만 바로 다음 AI 답변(전)에 이 덩어리로 넣습니다(writeMessage). of= 앞부분이 든 답변 ID.
   //   [//]: # "MEMO_NOTE_MORE of=<ID> at=<시각>
   //       (노트 뒷부분)
@@ -11445,8 +11445,8 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
-      if (leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5) { const L = snap.all || [], end = L[L.length - 1]; if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { leakSeen.c = ''; cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
-      else if (injectOn && !busyNow) { const L = snap.all || [], end = L[L.length - 1]; if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end))) { cutLeak.seen.add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } } // 새로고침해서 지켜본 페이지가 없어진 경우도
+      { const L = snap.all || [], end = L[L.length - 1], seen = leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5; // 쓰는 중에 새는 걸 봤거나 · 새로고침·다른 기기라 못 봤어도 마지막 답에 새어 나온 줄이 있으면
+        if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && (seen || injectOn && !busyNow && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end)))) { if (seen) leakSeen.c = ''; (cutLeak.seen ||= new Set()).add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
       // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
       { const L = snap.all || [], end = L[L.length - 1]; if (sceneOn && injectOn && !IS_STAY && !moveSty.off && sentHere(chatId) && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { const old = L.filter(m => msgRole(m) === 'user').slice(0, -1).filter(m => msgText(m).includes('MEMO_STY ')).slice(-2); if (old.length) setTimeout(() => moveSty(chatId, old), 5000); } }
       const talked = snap.all.some(m => msgRole(m) === 'user'); // 아직 아무 말도 안 한 새 방은 드라이브에 이 방 것이 있을 수 없어요 → 아무것도 안 찾아요
