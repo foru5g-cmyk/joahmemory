@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.15
+// @version      6.0.16
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -54,7 +54,7 @@
   //       MEMO_NOTE_END"
   //   공백 4칸이 없으면 "## 제목"이나 "- 항목" 줄에서 덩어리가 끊겨 화면에 보입니다. 탭은 크랙 화면에서 노트가 보여서 안 씀(읽기만 받아요).
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g; // 5.9.5부터 HTML 주석(<!--…-->)으로 써요 · 예전 [//]: # "…" 꼴도 읽어요
-  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다.
+  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다...
   // 노트가 한 답변(100KB)에 안 들어가면 뒷부분만 바로 다음 AI 답변(전)에 이 덩어리로 넣습니다(writeMessage). of= 앞부분이 든 답변 ID.
   //   [//]: # "MEMO_NOTE_MORE of=<ID> at=<시각>
   //       (노트 뒷부분)
@@ -2196,8 +2196,7 @@
   const crLim = () => crs.ext ? 2000 : 500, crBase = k => k ? crPre?.[k - 1]?.t || '' : crs.note, crText = k => crs.draft[k] ?? crBase(k);
   const crDrop = () => { if (crs) crs.profs = crs.edit = crs.undo = crs.q = null; };
   const crM = id => crMeta?.[id] || {}, crSort = s => { const fav = p => crM(p.id).f ? 1 : 0, was = new Map((s.profs || []).map((p, i) => [p.id, i])), at = p => was.get(p.id) ?? 999; if (!s.profs) s.top = s.prof; s.profs = [...(crAll || [])].sort((a, b) => (b.id === s.top) - (a.id === s.top) || fav(b) - fav(a) || (s.profs ? at(a) - at(b) : 0)); }; // 창을 열 때 정한 자리를 지켜요(지금 것 → 즐겨찾기 → 나머지 · 별을 누른 것만 움직여요)
-  // 크랙 메뉴에도 새로고침 없이 보이게: '다시 연결됨' 신호를 한 번 주면 크랙이 방 정보를 새로 읽어요(바꾼 게 있을 때 창을 닫으면 한 번)
-  const crFlush = () => { if (crs?.dirty && !crs.picking && !crs.saving) { crs.dirty = false; window.dispatchEvent(new Event('online')); } };
+  const crFlush = () => { if (crs) crs.dirty = false; }; // 크랙에 '다시 연결됨' 가짜 신호는 안 보내요(아이폰 사파리에서 옛 대화가 다시 보이는 일과 겹쳐서) · 크랙 메뉴의 프로필은 새로고침하면 바뀌어요
   const crSlots = p => [0, 1, 2].map(i => ({ t: String(p?.[i]?.t || ''), at: Number(p?.[i]?.at) || 0 }));
   async function crLocal() { if (crMeta) return; const get = async k => { try { return JSON.parse(String(await getValue(k, '') || 'null')); } catch (_) { return null; } }; const [m, p] = [await get('crmeta'), await get('crpre')]; crMeta = m && typeof m === 'object' ? m : {}; crPre = crSlots(p); }
   const crKeep = async () => { await setValue('crmeta', JSON.stringify(crMeta)); await setValue('crpre', JSON.stringify(crPre)); };
@@ -11448,6 +11447,7 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
+      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; logErr('화면', '크랙 화면이 옛 대화를 보여 줌 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); pageToast('크랙 화면이 옛 대화를 보여 주고 있어요 · 지워진 게 아니에요 · 새로고침해 주세요'); }, 8000); } } // 화면이 옛 대화인지 한 번 봐요
       { const L = snap.all || [], end = L[L.length - 1], seen = leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5; // 쓰는 중에 새는 걸 봤거나 · 새로고침·다른 기기라 못 봤어도 마지막 답에 새어 나온 줄이 있으면
         if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && (seen || injectOn && !busyNow && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end)))) { if (seen) leakSeen.c = ''; (cutLeak.seen ||= new Set()).add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
       // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
@@ -13358,7 +13358,7 @@
   let backAt = 0, filePick = false;
   // 폰은 파일 고르는 창에서 돌아올 때도 '돌아옴'이 먼저 와요 → 그때 다시 그리면 파일 칸이 바뀌어 고른 파일을 놓쳐요
   root.addEventListener('click', e => { if (e.target.closest?.('label')?.querySelector('input[type=file]')) filePick = true; }, true);
-  const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || !awayLong() || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh().then(openAuto); };
+  const comeBack = () => { if (document.visibilityState !== 'visible') return; if (filePick) { filePick = false; backAt = Date.now(); return; } if (!chatIdFromPath() || busyNow || (loading && !stuckLoad()) || !awayLong() || Date.now() - backAt < 5000) return; backAt = Date.now(); refresh.stale?.clear(); refresh().then(openAuto); }; // 돌아오면 크랙 화면이 옛 대화(얼려 둔 탭)인지도 다시 봐요
   document.addEventListener('visibilitychange', comeBack);
   window.addEventListener('pageshow', comeBack);
   window.addEventListener('focus', comeBack);
