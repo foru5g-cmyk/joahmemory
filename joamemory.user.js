@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.23
+// @version      6.0.24
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1414,7 +1414,7 @@
     // 이야기에서 아기가 태어나면 수첩엔 지문에 나온 것만 적어요(주사위로 정해 둔 탯줄·몸무게·고비 같은 건 지문에 없으면 안 적음)
     const lab = big.find(e => e.k === 'labor');
     if (lab && !bornNow && preg.shown.labor == null && ((preg.fired.labor != null && preg.fired.labor <= turn) || ((p.cs || preg.csSaid) && wk >= 37 && /수술실|수술\s*(?:하러|받으러|들어|준비|당일|시작)|입원|분만실/.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said)))) todo.push('아기가 태어나면(정해진 결과): ' + lab.res);
-    if (bornNow && lab && preg.shown.labor == null) { preg.shown.labor = turn; const kept = pBornSaid(lab.res, lastAi + '\n' + said, pPeople(mem).map(x => x.name)); preg.log.push({ w: wk, t: '출산' + (kept.length ? ' · ' + kept.join(' · ') : ''), at: turn, res: 1 }); }
+    if (bornNow && preg.shown.labor == null) { preg.shown.labor = turn; const kept = lab ? pBornSaid(lab.res, lastAi + '\n' + said, pPeople(mem).map(x => x.name)) : []; preg.log.push({ w: wk, t: '출산' + (kept.length ? ' · ' + kept.join(' · ') : ''), at: turn, res: 1 }); }
     if (bornNow) { // 이야기에서 아기가 태어난 턴: 주수·검진 줄 대신 태어난 아기 모습만 넣어요(누구를 닮았는지가 지문에 나오게 · 아빠 후보가 여럿이면 이름은 안 적고 외모로만)
       L.length = 1; L.push(`※ 임신 · 이번 장면에서 아기가 태어남(주수·검진 이야기는 꺼내지 않음) · 태어난 아기: ${p.sex.map((s, i) => (p.n > 1 ? P_ORD[i] + ' ' : '') + (s === '남' ? '아들' : '딸') + ' · ' + babyLooks(p, i)).join(' / ')}${preg.father && !(preg.fatherCands?.length > 1) ? ' · 아빠 ' + preg.father : ''} — 아기 모습은 장면 안에서 눈에 보이는 대로 풀어 쓰기`);
       pregOut = L; pregSig = L.join('\n'); pregSave(); return; }
