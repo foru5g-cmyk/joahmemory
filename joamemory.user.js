@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.1
+// @version      6.0.11
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5091,7 +5091,7 @@
     details.spgrp>summary span{font-size:12.5px;color:var(--graphite)}
     details.spgrp>summary::after{content:"›";color:var(--pencil);font-size:18px;transition:transform .15s}
     details.spgrp[open]>summary::after{transform:rotate(90deg)}
-    .sprow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:0 0 10px 44px}
+    .sprow{padding:0 0 12px 44px}.sp-h{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin-bottom:5px}.sp-h .reg-tag{margin-left:0;vertical-align:0}
     .sprow .addrs{margin:0}.spto{font-size:13.5px;color:var(--graphite);white-space:nowrap}
     .chg-ev.none{font-size:11.5px;color:var(--graphite);opacity:.8}
     .addrw{position:relative;display:inline-block}
@@ -5932,7 +5932,7 @@
   const pillHtml = state => { const [bg, fg] = KSTYLE[state] || KSTYLE['모름']; return `<span class="pill" style="background:${bg};color:${fg}">${esc(state)}</span>`; };
   // 인지: 사람마다 얼굴 · 이름 · 상태 한 줄, 그 아래 설명 · 사람 사이는 얇은 선
   const factBody = f => { const row = (face, head, body = '') => `<div class="kw-r">${face}<div><p class="kw-h">${head}</p>${body}</div></div>`;
-    return `<div class="kw">${f.who.map(w => row(avatar(w.name), `${nameChip(w.name)} ${pillHtml(w.state)}`, (w.note ? `<p class="kw-t">${esc(w.note)}</p>` : '') + quoteHtml(w.quote, w.tr))).join('')}${f.hide.map(h => { const [x, y] = h.split(/\s*→\s*/), m = String(y || '').match(/^(.*?)\s*[(（](.*)[)）]\s*$/), to = m ? m[1] : y; return row('<span class="kw-l">🔒</span>', y ? `${nameChip(x.trim())}<i class="nar">→</i>${to.split(/\s*,\s*/).map(v => nameChip(v.trim())).join(', ')} <small>숨김</small>` : esc(h), m ? `<p class="kw-t">${esc(m[2])}</p>` : ''); }).join('')}${f.extra.map(x => row('<span class="kw-l">·</span>', '', `<p class="kw-t">${esc(x)}</p>`)).join('')}</div>` + quoteHtml(f.quote, f.tr); };
+    return `<div class="kw">${f.who.map(w => row(avatar(w.name), `${nameChip(w.name)} ${pillHtml(w.state)}`, (w.note ? `<p class="kw-t">${esc(w.note)}</p>` : '') + quoteHtml(w.quote, w.tr))).join('')}${f.hide.map(h => { const [x, y] = h.split(/\s*→\s*/), g = [...String(y || '').matchAll(/[(（]([^()（）]*)[)）]/g)].map(v => v[1].trim()).filter(Boolean), to = String(y || '').replace(/\s*[(（][^()（）]*[)）]/g, '').trim(); return row('<span class="kw-l">🔒</span>', y ? `${nameChip(x.trim())}<i class="nar">→</i>${to.split(/\s*,\s*/).map(v => nameChip(v.trim())).join(', ')} <small>숨김</small>` : esc(h), g.length ? `<p class="kw-t">${esc(g.join(' · '))}</p>` : ''); }).join('')}${f.extra.map(x => row('<span class="kw-l">·</span>', '', `<p class="kw-t">${esc(x)}</p>`)).join('')}</div>` + quoteHtml(f.quote, f.tr); };
   // 자각 표시는 두 글자로: 자각 / 무자각 / 부정 / 숨김 (예전 표현 자각함·모름도 같은 말로 보여요)
   const AWARE = { '자각함': '자각', '자각': '자각', '모름': '무자각', '무자각': '무자각', '부정': '부정', '숨김': '숨김' };
   // 인물 카드의 관계 줄: 끝의 "(자각)"은 알약으로, "(변화: 계기)"는 전환 줄이 있으면 겹치니 빼고 없을 때만 한 줄로
@@ -6344,7 +6344,7 @@
   function injLogHtml() { // 주입 기록
     const RES = { written: '새로 골라 넣음', same: '바뀐 것 없음', ready: '답이 온 뒤 미리 골라 넣은 기억 그대로', generating: '다른 곳에서 답 쓰는 중 · 건너뜀', busy: '정리 중 · 건너뜀', timeout: '시간이 걸려 그냥 보냄', fail: '실패 · 그냥 보냄', 'no-full': '이 기기에 전체 기억 없음', 'no-note': '노트 없음', 'no-carrier': '넣을 답변 없음', moved: '방을 옮김' };
     const hm = t => new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
-    const inOk = x => ['written', 'same', 'ready'].includes(x.res), logRow = x => `<li class="il-${x.res === 'written' ? 'on' : inOk(x) ? 'same' : 'skip'}"><span class="il-t">${hm(x.at)}</span><div><b>${x.kind === 'reroll' ? '↻ 다시 쓰기' : esc(x.said ? '“' + x.said + '”' : '보냄')}</b>
+    const inOk = x => ['written', 'same', 'ready'].includes(x.res), logRow = x => `<li class="il-${x.res === 'written' ? 'on' : inOk(x) ? 'same' : 'skip'}"><span class="il-t">${hm(x.at)}</span><div><b>${x.kind === 'reroll' ? '↻ 다시 쓰기' : esc(x.said ? (t => /^["“'‘「『]/.test(t) ? t : '“' + t + '”')(String(x.said).replace(/\(shortcut:[0-9a-f]+:([^)]*)\)/g, '/$1')) : '보냄')}</b>
       <small>${RES[x.res] || esc(x.res)}${inOk(x) ? ` · ${fmt(x.chars)}자${x.pinned ? ` · 📌 ${x.pinned}` : ''}` : ''}</small>
       ${inOk(x) && !x.recalled?.length ? '<small class="il-rc">떠올린 옛일 없음 · 최근 사건·인물·현재상태만</small>' : x.recalled?.length && inOk(x) ? `<small class="il-rc">떠올림 · ${x.recalled.map(t => esc(nSplitTitle(t)[1])).join(' · ')}</small>` : ''}</div></li>`;
     const logs = [...injLog].reverse();
@@ -10077,7 +10077,7 @@
       return seg + descHtml('know') + `<div class="meta"><span>정보 ${fs.length}개 · 눌러서 펼치기</span></div>` +
         (fs.length ? '<div class="pl-set">' + fs.map(f => {
           const faces = f.who.length ? `<span class="kf">${f.who.slice(0, 6).map(x => `<span class="kf-a${x.state === '알고 있음' ? '' : ' dim'}" title="${esc(x.name + ' · ' + x.state)}">${avatar(x.name)}</span>`).join('')}</span>` : '';
-          return fold(`${f.hide.length ? '<span class="kf-lock" title="숨기는 사람이 있어요">🔒</span>' : ''}<b>${esc(f.title)}</b>${faces}`, f.hide.length ? f.hide.map(h => h.replace(/\s*[(（].*[)）]\s*$/, '')).join(' · ') + ' 숨김' : (f.who.map(x => `${x.name} ${x.state}`).join(' · ') || f.content), (f.content ? `<p class="kw-c">${esc(f.content)}</p>` : '') + factBody(f)); }).join('') + '</div>' : emptyBox('숨기거나 모르는 정보가 생기면 여기에 정리돼요.'));
+          return fold(`${f.hide.length ? '<span class="kf-lock" title="숨기는 사람이 있어요">🔒</span>' : ''}<b>${esc(f.title)}</b>${faces}`, f.hide.length ? f.hide.map(h => h.replace(/\s*[(（][^()（）]*[)）]/g, '').trim()).join(' · ') + ' 숨김' : (f.who.map(x => `${x.name} ${x.state}`).join(' · ') || f.content), (f.content ? `<p class="kw-c">${esc(f.content)}</p>` : '') + factBody(f)); }).join('') + '</div>' : emptyBox('숨기거나 모르는 정보가 생기면 여기에 정리돼요.'));
     }
     if (which === 'speech') {
       const sp = pairs('호칭·말투').filter(x => String(x.text).trim()); // 호칭·말투가 안 적힌 관계 줄은 빼요
@@ -10087,7 +10087,7 @@
         (who.length ? '<div class="pl-card">' + who.map(nm => { const rows = sp.filter(x => x.from === nm);
           const open = false;
           return `<details class="spgrp"${open ? ' open' : ''}><summary>${avatar(nm)}<b>${esc(nm)}</b><span>${rows.length}명</span></summary>${rows.map(x => { const c = speechChips(x.text);
-            return `<div class="sprow"><span class="spto">${esc(josa(x.to, '을', '를'))} 부를 때</span>${addrHtml(c)}${regTag(c)}${(m => m ? ` <span class="reg-tag">${esc(m[1])}</span>` : c.extra ? `<p class="item-sub">${esc(c.extra)}</p>` : '')(String(c.extra).match(/^[(（]([^()（）]{1,12})[)）]$/))}</div>`; }).join('')}</details>`; }).join('') + '</div>'
+            const m = String(c.extra).match(/^[(（]([^()（）]{1,12})[)）]$/); return `<div class="sprow"><div class="sp-h"><span class="spto">${esc(josa(x.to, '을', '를'))} 부를 때</span>${regTag(c)}${m ? `<span class="reg-tag">${esc(m[1])}</span>` : ''}</div>${addrHtml(c)}${!m && c.extra ? `<p class="item-sub">${esc(c.extra)}</p>` : ''}</div>`; }).join('')}</details>`; }).join('') + '</div>'
           : emptyBox('호칭·말투 정보가 없어요.'));
     }
     if (which === 'outfit') {
@@ -11146,6 +11146,12 @@
     if (seen && !sameText(text, seen)) return;
     if (cleaned !== text) await writeMessage(chatId, id, cleaned, page && !page.some(m => parseMore(m)?.of === id) ? [] : null);
   }
+  // AI가 답에 따라 쓴 우리 노트 앞줄 · 그 줄부터 끝까지는 롤플 글이 아니에요
+  const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_(?:NOTE|STY)|END OF NOTE)/, leakSeen = { c: '', at: 0 };
+  async function cutLeak(chatId, m, carrierId) { const id = msgId(m); if (!id || id === carrierId) return; const t = msgText(await readMessage(chatId, id));
+    if ((t.match(V3_RE) || []).length || chatIdFromPath() !== chatId) return; // 끝까지 온전한 노트 덩어리면 우리가 넣은 진짜 노트라 둬요
+    const i = t.search(LEAK_RE); if (i < 0) return; const next = t.slice(0, i).trimEnd(); if (!next.trim()) return logErr('노트', '답 전체가 노트 안내라 안 지움 · 다시 생성해 주세요', chatId);
+    await writeRaw(chatId, id, next); logErr('노트', 'AI가 따라 쓴 노트 안내를 답에서 지움 · ' + (t.length - next.length) + '자', chatId); }
   async function moveSty(chatId, old) { if (moveSty.busy || moving || busyNow || chatIdFromPath() !== chatId) return; moveSty.busy = true;
     try { if (moveSty.off = String(await getValue('styMove', '')) === 'off') return; for (const m of old) { const id = msgId(m); if (chatIdFromPath() !== chatId || moving || busyNow || (moveSty.done ||= new Set()).has(id)) continue; moveSty.done.add(id);
       const t = msgText(await readMessage(chatId, id)), next = t.replace(STY_RE, ''); if (next !== t && next.trim() && chatIdFromPath() === chatId) { await pagePatch(editUrls(chatId, id)[0], next, false); if (!sameText(msgText(await readMessage(chatId, id)), next)) throw new Error('저장했는데 글이 안 바뀜'); } } } // 쓰기 바로 전에 다시 읽어 숨긴 글만 떼요
@@ -11303,6 +11309,7 @@
     const orig = WS.prototype.send, sendQ = new Map(); sendSeen.on = true; // sendQ: 방마다 보내기 순서
     const parseFrame = raw => { if (typeof raw !== 'string') return null; const m = /^42(\/[^,]+,)?(\d*)(\[.*)$/s.exec(raw); if (!m) return null;
       try { const a = JSON.parse(m[3]); return Array.isArray(a) && typeof a[0] === 'string' ? { event: a[0], payload: a[1] } : null; } catch (_) { return null; } };
+    const lastFrame = {}; // 마지막으로 보낸 크랙 프레임(생성 중단을 같은 꼴로 보내려고)
     const liveSock = new Map(); // 주소별로 지금 살아 있는 연결(핑 등 아무 프레임이나 보낼 때 기억)
     const held = new Set(), heard = new WeakSet(); // 기억을 넣느라 잡고 있는 메시지들 · heard: 받는 글을 듣고 있는 연결
     const flushHeld = () => { for (const j of [...held]) { if (j.sent) continue; j.sent = true; held.delete(j); if (j.ctl) j.ctl.dead = true; const to = j.sock.readyState === 1 ? j.sock : liveSock.get(j.sock.url)?.readyState === 1 ? liveSock.get(j.sock.url) : j.sock;
@@ -11312,8 +11319,8 @@
     WS.prototype.send = function (data) {
       if (this.readyState === 1) liveSock.set(this.url, this);
       if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return; // AI가 답을 쓰는 중인지(형광펜이 다 쓴 뒤에 칠하게)
-        if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); } else if (s.includes('"characterMessageGenerating"')) penGenAt = Date.now(); }); } catch (_) {} } // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
-      const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath();
+        if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n'); leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600); /* 조각이 글 전체든 새로 붙은 몇 글자든: 이어 붙인 끝부분에서 찾아요(표식이 두 조각에 걸쳐 와도) */ if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} } // 우리 노트 앞줄(※ 표기·[기억 노트 ··MEMO_NOTE)을 따라 쓰기 시작하면 크랙의 생성 중단(stop)을 대신 보내요 · 서버가 다 쓴 뒤라 값은 나갔을 수 있어요 // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
+      const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath(); if (f0) lastFrame.p = data;
       if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; try { sessionStorage.setItem('jm_sent', JSON.stringify({ c: sendSeen.c, said: sendSeen.said })); } catch (_) {} }
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
@@ -11444,6 +11451,7 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
+      if (leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5) { const L = snap.all || [], end = L[L.length - 1]; if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { leakSeen.c = ''; cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
       // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
       { const L = snap.all || [], end = L[L.length - 1]; if (sceneOn && injectOn && !IS_STAY && !moveSty.off && sentHere(chatId) && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { const old = L.filter(m => msgRole(m) === 'user').slice(0, -1).filter(m => msgText(m).includes('MEMO_STY ')).slice(-2); if (old.length) setTimeout(() => moveSty(chatId, old), 5000); } }
       const talked = snap.all.some(m => msgRole(m) === 'user'); // 아직 아무 말도 안 한 새 방은 드라이브에 이 방 것이 있을 수 없어요 → 아무것도 안 찾아요
