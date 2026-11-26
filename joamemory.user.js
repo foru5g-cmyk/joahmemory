@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.22
+// @version      6.0.23
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -927,7 +927,7 @@
   const P_DAY = s => { s = String(s || ''); const re = /(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\.(\d{1,2})\.(\d{1,2})/, m = s.match(re) || (/^[\s▸\[-]*['‘’]?\d{2}\s*[.\/년-]/.test(s) ? yy4(s.slice(0, 40)).match(re) : null); if (!m) return null; // 글에서 먼저 나온 날짜 · 현재상태 아래쪽에 적힌 옛일('1년차 12.27')이 맨 앞의 오늘 날짜를 밀어내지 않게
     return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]); }; // 연도 없는 이야기: 1년차 = 2900년
   // 답에서 '지금 날짜'로 볼 글: 맨 위 머리말·맨 아래 상태칸의 날짜만(지문·대사 속 기념일·약속 날짜는 안 봐요) · 없으면 ''
-  const HEAD_DATE = /\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\s*(?:[.\-/·]|[년年]\s*·?)\s*\d{1,2}\s*(?:[.\-/·]|[월月]\s*·?)\s*\d{1,2}\s*[일日]?|\d{1,2}\s*[월月]\s*·?\s*\d{1,2}\s*[일日]/g;
+  const HEAD_DATE = /\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\s*(?:[.\-/·]|[년年](?:[\s·|｜]|🗓|📅|️){0,6})\s*\d{1,2}\s*(?:[.\-/·]|[월月]\s*·?)\s*\d{1,2}\s*[일日]?|\d{1,2}\s*[월月]\s*·?\s*\d{1,2}\s*[일日]/g;
   const HEAD_PROSE = /[다요죠까네지군구나라자어아야해][.!?…~]+[\s*_"”’」』❞)]*$|^[\s*_]*["“「『❝]|["”」』❞][\s*_.]*$|^(?=.{30})[^가-힣]*[a-z][.!?…]+[\s*_]*$/;
   const HEAD_NOT = /(?:기념일|생일|디데이|D-?\s?day|D-\d+|약속|예정|마감|기한|출생|결혼|기일|데뷔|입사|만난|사귄|첫|시작일|다음|지난|어제|내일|모레|과거|회상|작년|내년)[^|\n]{0,12}$/i, HEAD_AFT = /^(?:은|는|이|가|을|를|의|에|엔|까지|부터|도|로|마다|날|생|쯤)|^[^|\n\d]{0,8}(?:까지|예정|기념일|생일|마감|기일|약속|디데이)/;
   // 『2026년 11월 23일』처럼 괄호 따옴표로 감싼 머리말은 벗겨서 봐요 · 문장으로 끝나면 대사라 그대로 · 큰따옴표는 연도 있는 날짜로 시작할 때만
@@ -1150,14 +1150,14 @@
     let at = day; // 그 말이 나온 때의 날짜(그 뒤에 넘어간 시간은 빼요)
     for (const m of [...(snap?.fresh || [])].filter(isChat).reverse()) {
       if (preg.fixId && msgId(m) === preg.fixId) return; // 주수를 직접 고쳤으면 그 전 대화의 'N주'는 안 따라요
-      if (msgRole(m) !== 'user') { at -= pSkip(stripBlocks(msgText(m))); continue; } // AI가 쓴 'N주'는 안 따라요(주수는 우리가 넣어 준 것이라 다르면 AI가 틀린 것) · 유저가 쓴 말만
+      if (msgRole(m) !== 'user') { const t = stripBlocks(msgText(m)), hd = headTxt(t), x = /년차|\d{4}\s*(?:[.\-/·]|[년年])/.test(hd) ? P_DAY2(hd) : null; if (x != null && P_GAP(x, day) != null && x <= day) at = x; else at -= pSkip(t); continue; } // 그 말 바로 뒤 AI 답 머리말에 날짜가 있으면 그날로(시간이 흐른 뒤에도 'N주'를 오늘에 다시 붙이지 않게) // AI가 쓴 'N주'는 안 따라요(주수는 우리가 넣어 준 것이라 다르면 AI가 틀린 것) · 유저가 쓴 말만
       const t = stripBlocks(msgText(m)), w = pregWeeksSaid(t, pregOwn(noteMemory() || '', preg.who)); if (!w) { at -= pSkip(t); continue; } // 다른 인물의 주수("유라는 지금 20주래")는 안 따라요
       if (Math.floor((at - preg.start) / 7) !== w) { preg.start = at - w * 7; preg.why = `대화에서 '${w}주'라고 나와서 맞췄어요`; preg.w0 = Math.min(preg.w0 ?? w, w); pregSave(); }
       return;
     }
   }
   const P_NOYEAR = 2900;
-  const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\s*(?:[.\-/·]|[년年]\s*·?)\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]);
+  const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\s*(?:[.\-/·]|[년年](?:[\s·|｜]|🗓|📅|️){0,6})\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]);
     const yy = yy4(s).match(/(\d{4})\.(\d{2})\.(\d{2})/); if (yy) return P_UTC(+yy[1], +yy[2], +yy[3]);
     const md = s.match(/(\d{1,2})\s*[월月]\s*·?\s*(\d{1,2})\s*[일日]/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
   const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
@@ -1384,7 +1384,8 @@
     if (!preg.csSaid && /제왕\s*절개|수술\s*날짜/.test(lastAi + '\n' + said) && !/제왕\s*절개\S*\s*(?:안|않|말고|필요\s*없)/.test(lastAi + '\n' + said)) preg.csSaid = 1;
     const bornAi = chat.filter(m => msgRole(m) === 'assistant').slice(-3).map(m => stripBlocks(msgText(m))).filter(t => !/꿈|악몽|상상|회상|떠올|기억\s*속|\bdream/i.test(t)).join('\n'); // 최근 AI 답 3개(수첩이 늦게 따라와도 잡게) · 꿈·회상이 나오는 답은 빼요
     const kgs = [...String(big.find(e => e.k === 'labor')?.res || '').matchAll(/(\d+\.\d)kg/g)].map(m => m[1]), kgSaid = preg.fired?.labor != null && kgs.length > 0 && kgs.every(k => new RegExp('(?<![0-9.])' + k.replace('.', '\\.') + '\\s*(?:kg|킬로)').test(bornAi)); // 진통 때 넘겨준 몸무게가 답에 나오면 태어난 것(쌍둥이는 둘 다)
-    const bornNow = !preg.endNext && wk >= 20 && (kgSaid || (p.n === 1 && P_BORN.test(bornAi + '\n' + said))) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + said); if (bornNow) preg.endNext = { kind: '출산', dayN: day, why: '', turn, born: 1 }; // 리롤하면 아직 안 끝난 걸로(새로 보낼 때 끝내요)
+    const bSaid = [said, (u => u ? stripBlocks(msgText(u)) : '')(chat.filter(m => msgRole(m) === 'user').pop())].filter(Boolean).join(' '); // 보낸 말 + 대화의 마지막 유저 말(앱 방식이었거나 웹 모드를 늦게 켜서 그 턴을 못 본 출산도 다음에 잡게)
+    const bornNow = (!said && preg.endNext?.born && preg.endNext.turn === turn) || (!preg.endNext && wk >= 20 && (kgSaid || (p.n === 1 && P_BORN.test(bornAi + '\n' + bSaid))) && !/낳기\s*싫|안\s*낳|못\s*낳|낳을\s*거|낳으면|낳게\s*되면/.test(lastAi + '\n' + bSaid)); if (bornNow && !preg.endNext) preg.endNext = { kind: '출산', dayN: day, why: '', turn, born: 1 }; // 보낸 말로 태어난 걸 안 턴은 답이 온 뒤 다시 볼 때도 태어난 턴으로(AI 답에 '태어났다'가 없어도 수첩·채팅 줄이 주수로 되돌아가지 않게) // 리롤하면 아직 안 끝난 걸로(새로 보낼 때 끝내요)
     if (preg.endNext && (preg.endNext.turn < turn || (preg.endNext.born && said && !bornNow))) { pregArchive(preg.endNext.kind, preg.endNext.dayN, preg.endNext.why); return; } // 결과를 들은 다음 턴에 기록을 지우고 '지난 기록'에 한 줄만 남겨요
     if (preg.ended) { pregSave(); return; }
     const anyShown = Object.keys(preg.shown).some(k => /^c\d/.test(k) && preg.shown[k] >= 0) || (preg.w0 || 0) > 8, twinKnown = p.n > 1 && anyShown && (!p.hideTwin || preg.twinAt != null) ? p.n : 0;
@@ -1414,6 +1415,9 @@
     const lab = big.find(e => e.k === 'labor');
     if (lab && !bornNow && preg.shown.labor == null && ((preg.fired.labor != null && preg.fired.labor <= turn) || ((p.cs || preg.csSaid) && wk >= 37 && /수술실|수술\s*(?:하러|받으러|들어|준비|당일|시작)|입원|분만실/.test(chat.slice(-2).map(m => stripBlocks(msgText(m))).join('\n') + '\n' + said)))) todo.push('아기가 태어나면(정해진 결과): ' + lab.res);
     if (bornNow && lab && preg.shown.labor == null) { preg.shown.labor = turn; const kept = pBornSaid(lab.res, lastAi + '\n' + said, pPeople(mem).map(x => x.name)); preg.log.push({ w: wk, t: '출산' + (kept.length ? ' · ' + kept.join(' · ') : ''), at: turn, res: 1 }); }
+    if (bornNow) { // 이야기에서 아기가 태어난 턴: 주수·검진 줄 대신 태어난 아기 모습만 넣어요(누구를 닮았는지가 지문에 나오게 · 아빠 후보가 여럿이면 이름은 안 적고 외모로만)
+      L.length = 1; L.push(`※ 임신 · 이번 장면에서 아기가 태어남(주수·검진 이야기는 꺼내지 않음) · 태어난 아기: ${p.sex.map((s, i) => (p.n > 1 ? P_ORD[i] + ' ' : '') + (s === '남' ? '아들' : '딸') + ' · ' + babyLooks(p, i)).join(' / ')}${preg.father && !(preg.fatherCands?.length > 1) ? ' · 아빠 ' + preg.father : ''} — 아기 모습은 장면 안에서 눈에 보이는 대로 풀어 쓰기`);
+      pregOut = L; pregSig = L.join('\n'); pregSave(); return; }
     if (soft.length) L.push(`※ 임신 · 지금 장면에 어울리면 곁들이기: ${soft.join(' / ')}`);
     if (todo.length) L.push(`※ 임신 · 지금 쓸 응답(마지막 유저 메시지에 대한 답)에 반드시 넣기: ${todo.join(' / ')} — 지금 장면 흐름 안에서 자연스럽게 · 짧은 메모라서 문장을 그대로 옮기지 말고, 이 이야기가 쓰는 언어(영어로 진행되면 영어)와 시대·인물 말투에 맞춰 대사·지문으로 풀어 쓰기`);
     pregOut = sceneOn ? L : L.filter(l => !l.startsWith('※ 임신 · 지금 장면에 어울리면')); pregSig = pregOut.join('\n'); // 앱 방식: 턴마다 바뀌는 '곁들이기' 줄은 빼요(그때마다 노트를 다시 써서)
@@ -1574,7 +1578,7 @@
   const P_MARK = /보조개|쌍꺼풀|주근깨|눈물점|곱슬머리|곱슬|덧니|긴\s*속눈썹/g;
   function babyLooks(p, i) {
     const mem = noteMemory() || '', blk = n => { const b = (splitSections(mem).find(x => x.key === '인물')?.body || '').split('【').find(x => x.split('】')[0].includes(n)); return b || ''; };
-    const mom = preg.who || '엄마', dad = preg.father || '아빠', tm = blk(mom), td = preg.father ? blk(preg.father) : '';
+    const mom = preg.who || '엄마', dad = preg.father && !(preg.fatherCands?.length > 1) ? preg.father : '아빠', tm = blk(mom), td = preg.father ? blk(preg.father) : ''; // 아빠 후보가 여럿이면 이름 대신 '아빠'(외모로만 짐작하게)
     const from = (re, k) => { const a = (tm.match(re) || [])[0], b = (td.match(re) || [])[0]; if (!a && !b) return null; const useDad = b && (!a || pR('lk' + k + i) < 0.5); return [(useDad ? b : a).replace(/\s+/g, ' '), useDad ? dad : mom]; };
     const out = [], h = from(P_HAIR, 'h'), e = from(P_EYE, 'e');
     if (h) out.push(`${h[0]}(${h[1]})`); if (e) out.push(`${e[0]}(${e[1]})`);
@@ -1991,10 +1995,10 @@
       if (!loveThin(await loveOf(chatId))) return false;
       await setValue('love:' + chatId, x.j); await setValue('lbchk:' + chatId, '1'); logErr('연동', '분기한 방 · ' + ctx.from.slice(0, 8) + '… 방의 ' + (x.turn || ctx.at) + '턴 연애 기록을 복사'); return true;
     } finally { w.delete(chatId); } }
-  async function loveLoad(c) { const L0 = await loveOf(c); loveChat = c; love = L0; // 읽은 뒤에 방 번호와 기록을 같이 바꿔요(읽는 사이 저장이 끼어 앞 방 기록이 이 방에 써지지 않게)
+  async function loveLoad(c) { const L0 = await loveOf(c), same = loveChat === c; loveChat = c; love = L0; // 읽은 뒤에 방 번호와 기록을 같이 바꿔요(읽는 사이 저장이 끼어 앞 방 기록이 이 방에 써지지 않게)
     if (love?.log?.length && !love.solvedBack) { love.solvedBack = 1; let o = null; try { o = JSON.parse(String(await getValue('lovesnap:' + c, '') || 'null')); } catch (_) {} // 예전에 풀린 일 찾기(한 번): 사본에서 안 풀림이던 일이 지금 닫혀 있으면 풀림
       const was = new Set(); for (const x of o?.list || []) { try { for (const e of JSON.parse(x.j).log || []) if (e.open) was.add((e.w || '') + '|' + e.t); } catch (_) {} } if (love.undo) try { for (const e of JSON.parse(love.undo).log || []) if (e.open) was.add((e.w || '') + '|' + e.t); } catch (_) {}
-      for (const e of love.log) if (!e.open && was.has((e.w || '') + '|' + e.t)) e.solved = true; await setValue('love:' + c, JSON.stringify(love)); } loveOut = []; loveSig = ''; loveMode = String(await getValue('loveMode', 'off')) === 'on';
+      for (const e of love.log) if (!e.open && was.has((e.w || '') + '|' + e.t)) e.solved = true; await setValue('love:' + c, JSON.stringify(love)); } if (!same) { loveOut = []; loveSig = ''; } loveMode = String(await getValue('loveMode', 'off')) === 'on';
     if (love?.cycles?.length) { const seen = new Set(), keep = love.cycles.filter(t => { const w = (t.match(/(?:·\s*)?([^·\s]+)와 (헤어짐|다시 사귐)/) || []); if (w[2] === '헤어짐') seen.add(w[1]); if (w[2] === '다시 사귐') { if (!seen.has(w[1])) return false; seen.delete(w[1]); } return true; }); if (keep.length !== love.cycles.length) { love.cycles = keep; if (love.startBy === 'again') { love.start = null; love.startBy = ''; } loveSave(); } }
     if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } }
   // 정리 AI가 사이 이름을 '연인·심부름꾼'·'전 연인·직장 후배'처럼 둘 붙여 쓰기도 해서 조각마다 봐요
@@ -11226,7 +11230,7 @@
   // AI가 답에 따라 쓴 우리 노트 앞줄 · 그 줄부터 끝까지는 롤플 글이 아니에요
   const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_NOTE|MEMO_STY|END OF NOTE)/, leakSeen = { c: '', at: 0 };
   // 옛 화면이 뜬 까닭 찾기(뜬 그때 한 번): 페이지가 어떻게 열렸는지 · 크랙이 쓰는 주소를 브라우저 저장분으로 받아 옛것인지
-  const staleMid = id => { const born = parseInt(String(id).slice(0, 8), 16) * 1000, gap = performance.timeOrigin - born; return gap > 0 && gap < 18e4; }; // 답이 만들어지기 시작한 지 3분 안에 연 화면(메시지 번호 앞 8자리가 만든 시각) = 답이 나오는 중에 새로고침 .
+  const staleMid = id => { const born = parseInt(String(id).slice(0, 8), 16) * 1000, gap = performance.timeOrigin - born; return gap > 0 && gap < 18e4; }; // 답이 만들어지기 시작한 지 3분 안에 연 화면(메시지 번호 앞 8자리가 만든 시각) = 답이 나오는 중에 새로고침
   async function staleWhy(chatId, id) { const nav =performance.getEntriesByType?.('navigation')[0]?.type || '모름', how = staleWhy.bf ? '얼려 둔 화면을 되살림' : ({ reload: '새로고침', back_forward: '뒤로·앞으로', navigate: '새로 엶' }[nav] || nav); let kept = '저장분 확인 못 함';
     try { const r = await fetch(API_A + chatId + '/messages?limit=20', { cache: 'force-cache', headers: { Authorization: 'Bearer ' + token(), platform: 'web', Accept: 'application/json' } }), j = await r.json(), top = msgId(((j?.data || j)?.messages || [])[0]); kept = top === id ? '브라우저 저장분은 최신(화면만 옛것)' : '브라우저가 옛 목록을 저장해 두고 그걸 줌'; } catch (_) {}
     return '열린 방식 ' + how + (staleMid(id) ? ' · 답이 나오는 중에 엶' : '') + ' · ' + kept + ' · 자리 비운 ' + Math.round((away.len || 0) / 6e4) + '분' + (IS_STAY ? ' · Stay' : ''); }
@@ -11356,9 +11360,10 @@
     { const chat = snap.all.filter(isChat); if (kind === 'send' && msgRole(chat[chat.length - 1]) === 'user') return 'generating'; }
     let whole = await wholeOf(chatId, n);
     if (!whole && !n.sel) { await saveFull(chatId, n.upto, n.memory, n.turns, n.at); whole = n.memory; } // 채팅 노트가 전체(본판·처음)면 먼저 이 기기에 저장
-    if (whole) pregTick(snap, whole, kind === 'send' ? said : ''); const once = await onceTick(chatId, snap, kind === 'reroll' ? 1 : 0); loveTick(chatId, snap, kind === 'send' ? said : '', kind === 'reroll' ? 1 : 0); const pregNew = !!once || onceStale || pregSig !== (preg?.sig ?? '') || (!!love && loveSig !== (love.sig ?? ''));
+    if (whole) pregTick(snap, whole, kind === 'send' ? said : ''); const once = await onceTick(chatId, snap, kind === 'reroll' ? 1 : 0); loveTick(chatId, snap, kind === 'send' ? said : '', kind === 'reroll' ? 1 : 0); let pregNew = !!once || onceStale || pregSig !== (preg?.sig ?? '') || (!!love && loveSig !== (love.sig ?? ''));
     if (!whole) return 'no-full'; // 고른 일부만 있고 전체본이 없는 기기는 다시 고를 수 없어요(지금 든 것 그대로)
     // 답이 온 뒤 미리 골라 넣어 둔 기억이 그대로 쓸 만하면 기다리지 않고 바로 보내요 · 보낸 말이 아직 안 넣은 옛일을 꺼냈을 때만 새로 골라요
+    { const c0 = snap.all.find(m => msgId(m) === n.carrierId), t0 = c0 ? ((msgText(c0).match(V3_RE) || []).pop() || '') + ((msgText(snap.all.find(m => parseMore(m)?.of === n.carrierId) || {}).match(MORE_RE) || []).pop() || '') : ''; if (!pregNew && t0 && [...pregOut, ...(loveChat === chatId ? loveOut : [])].some(l => !t0.includes(l.slice(0, 24)))) pregNew = true; } // 임신·연애 줄이 노트에 실제로 없으면 다시 써요(다른 길로 노트를 고쳐 쓰다 빠졌는데 저장한 서명은 같아서 계속 안 들어가던 것)
     if (!pregNew && !n.moreLost && kind === 'send' && said && n.sel && (b => b !== null && (b <= 2 || msgId(pickCarrier(snap.all) || {}) === n.carrierId))(behindOf(snap)) && injCtx.lastAi && injCtx.lastAi === msgId([...snap.all].reverse().find(m => msgRole(m) === 'assistant') || {})) {
       const keep = injCtx, inj0 = lastInj, before = new Set(lastInj?.keys || []); injCtx = { ...keep, said: String(said) }; injSaidHits = new Set();
       try { selectInjection(whole); } catch (_) {}
@@ -11374,7 +11379,9 @@
     if (!carrier) return 'no-carrier';
     // 같은 자리에 같은 내용이면 저장하지 않고 바로 보내요(5만 자 노트는 두 답변에 나뉘어 있어 글 전체 대신 고른 내용으로 비교)
     const picked = selectInjection(whole);
-    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(sceneOn ? [] : styLines(),((msgText(carrier).match(V3_RE) || []).pop() || '') + ((msgText((snapshot?.all || []).find(m => parseMore(m)?.of === msgId(carrier)) || {}).match(MORE_RE) || []).pop() || '')); // 노트가 커서 뒷부분(문체 보정 줄 포함)이 다음 답에 나뉘어 있으면 그것까지 봐요(안 보면 늘 다르다고 보고 새로고침마다 노트를 다시 씀) · 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
+    const noteTxt = ((msgText(carrier).match(V3_RE) || []).pop() || '') + ((msgText((snapshot?.all || []).find(m => parseMore(m)?.of === msgId(carrier)) || {}).match(MORE_RE) || []).pop() || '');
+    const styOk = ((l, t) => l.length ? l.every(x => t.includes(x.slice(0, 40))) && (t.match(/※ - /g) || []).length === l.length - 1 : !t.includes('※ 문체 보정'))(sceneOn ? [] : styLines(), noteTxt);
+    // 노트가 커서 뒷부분(문체 보정 줄 포함)이 다음 답에 나뉘어 있으면 그것까지 봐요(안 보면 늘 다르다고 보고 새로고침마다 노트를 다시 씀) · 노트 한 벌만 봐요(옛 꼴 사본까지 세면 줄 수가 2배) · 문체 보정이 끝났거나 바뀌었으면(고쳐져서 빠진 항목 포함) 다시 써요
     if (styOk && !pregNew && !n.moreLost && msgId(carrier) === n.carrierId && chatShape(stripProof(picked)) === chatShape(n.memory) && !!n.sel === !lastInj.all && !!n.web === sceneOn) return 'same';
     const cur = msgId(carrier) === n.carrierId && !msgText(carrier) ? await readMessage(chatId, msgId(carrier)) : carrier; // 목록에 글이 있으면 다시 안 읽어요
     const next = stripBlocks(msgText(cur)).trimEnd() + buildBlock(whole, n.upto, n.turns, n.at || undefined, n.by || '');
