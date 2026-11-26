@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.24
+// @version      6.0.25
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1160,14 +1160,14 @@
   const P_DAY2 = s => { s = String(s || ''); const m = s.match(/(\d{1,3})\s*년차\s*(\d{1,2})[.\/](\d{1,2})|(\d{4})\s*(?:[.\-/·]|[년年](?:[\s·|｜]|🗓|📅|️){0,6})\s*(\d{1,2})\s*(?:[.\-/·]|[월月]\s*·?)\s*(\d{1,2})/); if (m) return m[1] ? P_UTC(2899 + +m[1], +m[2], +m[3]) : P_UTC(+m[4], +m[5], +m[6]);
     const yy = yy4(s).match(/(\d{4})\.(\d{2})\.(\d{2})/); if (yy) return P_UTC(+yy[1], +yy[2], +yy[3]);
     const md = s.match(/(\d{1,2})\s*[월月]\s*·?\s*(\d{1,2})\s*[일日]/); return md && +md[1] >= 1 && +md[1] <= 12 ? Math.round(Date.UTC(P_NOYEAR, md[1] - 1, +md[2]) / 864e5) : null; };
-  const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; let cur = d;
+  const pregDay = (mem, snap) => { const d = storyDay(mem); if (d == null) return null; const nd = P_DAY(splitSections(noPast(mem) || '').find(x => x.key === '현재상태')?.body) ?? d; let cur = nd; // 노트 날짜에서 걸어가요(storyDay가 이미 마지막 답 날짜면 그 앞의 '며칠 뒤'를 또 더하지 않게)
     for (const m of (snap?.fresh || []).filter(isChat)) { const t = stripBlocks(msgText(m)), hd = msgRole(m) === 'assistant' ? headTxt(t) : ''; let x = P_DAY2(hd); // AI 답 머리말·상태칸의 날짜
       const noYr = x != null && !/년차|\d{4}\s*(?:[.\-/·]|[년年])/.test(hd); // 년도가 적힌 날짜는 그대로(반년 넘게 건너뛴 이야기를 작년으로 착각하지 않게)
       if (noYr) { const md = new Date(x * 864e5), at = (y => Math.round(Date.UTC(y, md.getUTCMonth(), md.getUTCDate()) / 864e5)), y0 = new Date(cur * 864e5).getUTCFullYear(); // 년도 없는 머리말('09월 22일')은 지금 노트의 해(2년차·2026년 등)에 맞춰 읽어요
         x = at(y0); if (x < cur - 180) x = at(y0 + 1); // 12월→1월로 넘어가면 다음 해
         else if (x > cur + 180) x = at(y0 - 1); } // 1월에 '12월 31일'(회상 등)이 나오면 지난해 · 1년 건너뛰지 않게
-      if (x != null && x >= d - 3 && x <= d + 400) cur = Math.max(cur, x); else cur += pSkip(t); }
-    return cur; };
+      if (x != null && x >= nd - 3 && x <= nd + 400) cur = x; else cur += pSkip(t); }
+    return Math.max(cur, d); };
   // 태아 쪽 경우의 수(현실보다 살짝 높게): 염색체 이상 종류 · 정밀초음파 구조 이상 · 작은 소견 · 성장 지연 · 양수 · 탯줄 · 큰 아기 · 태동 감소
   const P_CHROM = [['다운 증후군(21번 염색체)', 0.7], ['에드워드 증후군(18번 염색체)', 0.2], ['파타우 증후군(13번 염색체)', 0.1]];
   const P_SERIOUS = [
