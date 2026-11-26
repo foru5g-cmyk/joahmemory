@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.20
+// @version      6.0.21
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1067,7 +1067,7 @@
   const P_UNAWARE = /모르고|모름|몰라|모른다|모르는|눈치\s*(?:못|채지|를\s*못)/; // 본인은 모름
   const P_INNER = /역겨워짐|눈물이 터짐|화장실을 너무 자주|미치도록 당김|생생한 꿈|하필 화장실|자리를 박차고|약속·일정을 망칠/; // 유저 캐릭터의 행동·감정·욕구가 필요한 일(유저 몫이라 뺌)
   const P_FEEL = /쇠 맛|먹은 게 다 올라오|으슬으슬|머리가 핑|내려앉는 느낌|선홍색 피|미칠 듯 가려|자꾸 가려움|두통이 잦음|가스가 차고|치질이|좌골신경통|다리가 근질|눈이 뻑뻑|아래가 묵직|침이 자꾸|화끈거림|^변비|찌릿함|소변이 찔끔|갈비뼈 쪽을|생리 예정일|속이 쓰리고|처음으로 태동|딸꾹질하는|손목이 저리고|콕콕 쑤시고|쥐가 남|피가 비치고|피가 살짝|뭉치며 아파|뭉쳤다 풀림|태동이 유난히|아기가 그쪽을 참|두통이 심하고|진통이 시작|어지러워 휘청|하루 종일 평소보다 조용/; // 몸에 생기는 감각: 짧게 쓰고 멈춤 // 본인만 느끼거나 본인 행동이 필요한 일
-  const P_BORN = /(?:첫째|둘째|셋째|넷째|막내)(?:를|을)?\s*(?:출산|낳)(?!\s*(?:예정|을|할|하면|하게|하기|으면|기|게|지|았을|았던|던))|(?:아기|아이|애기|쌍둥이|딸|아들)[가이은는]?\s*(?:태어났|태어나\s*있|세상에\s*나왔)|출산(?:했|을\s*마쳤|이\s*끝났)|분만(?:했|을\s*마쳤|이\s*끝났)|응애|무사히\s*낳|아기를\s*낳았|낳았다|첫\s*울음|(?:갓|방금|막)\s*태어난|태어난\s*(?:아기|아이|애기|딸|아들|쌍둥이)[가이은는를을의]|(?:아기|아이|애기)[가이의]?\s*(?:첫\s*)?울음(?:을|이)\s*터|탯줄을\s*(?:자르|잘랐)|\bgave birth\b|\b(?:baby|son|daughter|twins)\s+(?:is|was|were)\s+born\b/i; // 이야기에서 아기가 태어남
+  const P_BORN = /(?:첫째|둘째|셋째|넷째|막내)(?:를|을)?\s*(?:출산|낳)(?!\s*(?:예정|을|할|하면|하게|하기|으면|기|게|지|았을|았던|던))|(?:아기|아이|애기|쌍둥이|딸|아들)[가이은는]?\s*(?:태어났|태어나\s*있|세상에\s*나왔)|출산(?:을\s*)?(?:했|마쳤)|출산이\s*끝났|분만(?:했|을\s*마쳤|이\s*끝났)|응애|무사히\s*낳|아기를\s*낳았|낳았다|첫\s*울음|(?:갓|방금|막)\s*태어난|태어난\s*(?:아기|아이|애기|딸|아들|쌍둥이)[가이은는를을의]|(?:아기|아이|애기)[가이의]?\s*(?:첫\s*)?울음(?:을|이)\s*터|탯줄을\s*(?:자르|잘랐)|\bgave birth\b|\b(?:baby|son|daughter|twins)\s+(?:is|was|were)\s+born\b/i; // 이야기에서 아기가 태어남
   // AI에게 줄 땐 짧은 말로만(완성된 문장을 주면 그대로 베껴서 매번 똑같아요) · 긴 글은 수첩·거름망용
   const P_SHORT = { '특정 냄새에 갑자기 입덧이 올라옴': '냄새 입덧', '아랫배가 콕콕 쑤시고 땅김': '아랫배가 콕콕 땅김', '갑자기 코피가 남(임신으로 혈관이 예민해져서)': '코피', '참을 수 없이 졸려서 아무 데서나 꾸벅꾸벅 졺': '쏟아지는 졸음', '몸이 미열처럼 따끈함(초기 임신 체온 상승)': '미열', '입안에서 쇠 맛이 계속 돎': '입안의 쇠 맛', '안색이 창백하고 쉽게 지쳐 보임': '창백함·쉽게 지침', '좋아하던 냄새에 속이 메슥거려 안색이 변함': '냄새에 메슥거림', '가슴이 붓고 예민해져 닿으면 저도 모르게 움찔함': '가슴이 붓고 예민함', '자꾸 하품이 나고 말하다가 멍해짐': '잦은 하품·멍해짐', '생리 예정일이 지났는데 소식이 없음': '생리가 늦음', '속옷에 피가 살짝 비치다 금방 멈춤': '살짝 비친 피', '좋아하던 음식이 갑자기 역겨워짐': '좋아하던 음식이 역겨움', '감정이 널뛰어서 사소한 일(광고·노래·말 한마디)에 눈물이 터짐': '감정 기복·눈물', '갑자기 어지러워 휘청함': '어지러움', '화장실을 너무 자주 가게 됨': '잦은 화장실', '양치하다 잇몸에서 피가 남': '잇몸 출혈', '한밤중에 특정 음식이 미치도록 당김': '한밤의 음식 당김', '이상하게 생생한 꿈을 꿈': '생생한 꿈', '밤에 다리에 쥐가 남': '다리 쥐', '얼굴에 기미가 올라오거나 피부가 뒤집어짐': '피부 변화', '속이 쓰리고 신물이 올라옴': '속쓰림', '처음으로 태동이 느껴짐(뽀글뽀글, 꿈틀)': '첫 태동', '태동이 유난히 세게 참 · 하필 조용한 순간에': '센 태동', '배에 손을 대거나 목소리가 들리면 아기가 그쪽을 참': '손·목소리에 반응하는 태동', '발목과 손이 붓기 시작함': '부종', '배꼽이 튀어나옴': '튀어나온 배꼽', '허리와 골반(치골)이 아파 걷기 불편함': '허리·골반 통증', '배가 단단하게 뭉쳤다 풀림(가진통)': '가진통', '배 때문에 자세가 불편해 잠을 설침': '불편한 잠자리', '배에 튼살이 보이기 시작함': '튼살', '숨이 차서 계단 몇 개에도 헉헉댐': '숨참', '아기가 딸꾹질하는 게 배 너머로 느껴짐': '아기 딸꾹질', '손목이 저리고 손이 부어 물건을 놓침': '손목 저림', '중요한 순간(대화·약속·일하는 중)에 하필 화장실이 급해짐': '급한 화장실', '사람 많은 곳에서 냄새에 입덧이 올라와 자리를 박차고 나감': '사람 많은 곳에서 입덧', '갑자기 몸이 무거워 약속·일정을 망칠 위기': '무거운 몸·일정 차질', '곁의 NPC가 밤에 배에 대고 몰래 말을 걸거나 노래를 불러 줌': 'NPC가 배에 말을 걺', '아직 임신을 모르던 사람이 임신 흔적을 보고 알게 됨': '누군가 임신을 알게 됨', '곁의 NPC와 사소한 일로 다툼 — 호르몬 탓에 평소보다 날카로움': 'NPC와 다툼', '곁의 NPC가 과보호 모드': 'NPC의 과보호', '곁의 NPC가 한밤중 야식 심부름을 다녀옴(구하기 어려운 음식)': 'NPC의 야식 심부름', '곁의 NPC가 태명 이야기를 꺼냄': '태명 이야기', '곁의 NPC가 몰래 아기 물건(옷·신발·인형)을 사 옴': 'NPC가 아기 물건을 사 옴', '모르는 사람(가게 주인·이웃 할머니)이 배를 보고 참견하거나 축하하며 덤을 줌': '낯선 사람의 참견·축하', '처음 보는 사람이 허락 없이 배를 만지려 함': '낯선 사람의 손길', '배 모양을 보고 누군가 아들이다·딸이다 장담함': '성별 장담', '주변 사람이 임신을 눈치챔 — 소문이 돎': '주변의 눈치·소문', '가족(부모·형제)에게서 연락이 옴 — 임신 이야기가 나옴': '가족 연락', '전에 입던 옷이 안 맞음': '안 맞는 옷', '누가 자리를 양보함': '자리 양보', '조심할 것을 듣고 곁의 NPC가 호들갑을 떪': 'NPC의 호들갑', '곁의 NPC가 아기 맞을 준비를 하자고 함': '아기 맞을 준비', '출산 준비를 미리 하자는 이야기가 나옴': '출산 준비', '태몽 이야기가 나옴(본인 아닌 가족·NPC가 꾼 꿈)': '태몽', '갑자기 피가 비치고 아랫배가 심하게 아픔': '출혈과 복통', '속옷에 피가 살짝 비침': '살짝 비친 피', '아기가 하루 종일 평소보다 조용함(태동이 뜸함)': '뜸한 태동', '배가 규칙적으로 뭉치며 아파 옴(조산 기미)': '조산 기미', '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음': '심한 두통·부종', '배가 살짝 티 나기 시작함': '배가 티 나기 시작함', '누가 봐도 임신한 배가 됨': '누가 봐도 임신한 배', '배가 많이 불러 걸음걸이까지 달라짐': '만삭에 가까운 배', '진통이 시작됨(양수가 터짐)': '양수 터짐', '진통이 시작됨(배가 규칙적으로 아파 옴)': '진통 시작' };
   // 출산 기록: 주사위로 정해 둔 출산 결과(birthLine) 조각 중 그 장면 지문에 나온 것만 남겨요
@@ -1127,10 +1127,12 @@
     // 순서: '지금·현재·벌써·이제 N주'(차·째 없어도 · "실종 당시 4주였고 지금 9주 정도"는 9주) → 'N주 차·째' → '임신 N주'(지난 일 '4주였'은 빼고)
     //   차·째 없이 읽는 건 숫자로 쓴 것만('사주' 같은 낱말이 안 걸리게) · 임신 얘기가 있는 글에서만('지금 6주 과정 듣는 중'이 안 걸리게)
     //   기간을 말한 것(3주 전·2주 동안·8주 남았어)은 주수가 아니라서 안 읽어요 · 4~42주만 받아요
-    const DUR = /^\s*(?:전|뒤|후|간|동안|만에|만의|일|년|치|연속|남았|남은|남아|[가이나]\s*지나|[가이나]\s*지났)/, PAST = /^\s*(?:였|이었)/, talk = /임신|태아|아기|애기|입덧|주수|산부인과|초음파|예정일/.test(t);
+    const DUR = /^\s*(?:전|뒤|후|간|동안|만에|만의|일|년|치|연속|남았|남은|남아|[가이나]\s*지나|[가이나]\s*지났)/, PAST = /^\s*(?:였|이었)/, talk = /임신|태아|아기|애기|입덧|주수|산부인과|초음파|예정일|만삭|태동|배가\s*(?:부르|불러|나오|나왔)/.test(t);
     const k = [...(talk ? [[/(?:지금|현재|벌써|이제)[^\n.!?]{0,12}?(\d{1,2})\s*주/g, DUR]] : []),
+      [/(?<!지\s{0,2})(\d{1,2})\s*주\s*(?:차|째)?\s*[가이]?\s*(?:됐|되었|넘었|접어들|들어섰)/g], // 'N주가 됐다'('만난 지 N주'는 빼요)
       [/(?:임신|태아|아기|지금|벌써|이제)[^\n.!?]{0,12}?(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)/g], [/(\d{1,2}|[일이삼사오육칠팔구십]{1,3})\s*주\s*(?:차|째)(?:예요|에요|네요|입니다|래|야|군요|쯤|정도)/g],
-      ...(weak ? [[/(?:임신|태아)[^\n.!?]{0,8}?(\d{1,2})\s*주/g, DUR, PAST]] : [])]
+      ...(weak ? [[/(?:임신|태아)[^\n.!?]{0,8}?(\d{1,2})\s*주/g, DUR, PAST]] : []),
+      ...(weak && talk ? [[/(?<![\d지]\s{0,2})(\d{1,2})\s*주(?:\s*차|째)?(?![\d일])/g, DUR, PAST]] : [])] // 임신 얘기 글에 숫자로만 쓴 'N주'(맨 나중에 봐요)
       .map(([re, ...no]) => [...t.matchAll(re)].find(m => { const w = koNum(m[1]), rest = t.slice(m.index + m[0].length); return w >= 4 && w <= 42 && !no.some(x => x.test(rest)) && !(own && pregOther(t, m.index + m[0].lastIndexOf(m[1]), own)); })).find(Boolean);
     const e = t.toLowerCase().match(/\b(\d{1,2}|(?:twenty|thirty|forty)(?:-[a-z]+)?|[a-z]+teen|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\s+(?:along|pregnant)/);
     const w = k ? koNum(k[1]) : e ? enNum(e[1]) : null;
@@ -1257,7 +1259,7 @@
   const babyLook = (p, i) => { const a = Math.floor(pR('look' + i) * P_LOOK.length), b = (a + 1 + Math.floor(pR('look2' + i) * (P_LOOK.length - 1))) % P_LOOK.length, who = k => pR('lp' + i + k) < 0.5 ? '엄마' : '아빠';
     return `${P_LOOK[a]}은 ${who('a')}, ${P_LOOK[b]}은 ${who('b')} 닮음`.replace(/([가-힣])은 /g, (m, c) => ((c.charCodeAt(0) - 0xac00) % 28 ? c + '은 ' : c + '는 ')); };
   function birthLine(p, world) { return birthLine0(p, world) + (preg.genes?.length ? ' · 핏줄: ' + p.genes.map((gs, i) => (p.n > 1 ? P_ORD[i] + ' ' : '') + [gs.length ? '받음 ' + gs.map(g => `${g.t}(${g.from} 쪽)`).join(', ') : '', (m => m.length ? '안 받음 ' + m.map(g => `${g.t}(${g.from} 쪽)`).join(', ') : '')(preg.genes.filter(g => !gs.includes(g)))].filter(Boolean).join(' · ')).join(' / ') : '') + // 안 받은 것도 적어요(안 적으면 AI가 알아서 귀·꼬리를 붙일 수 있어서)
- (preg.father ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? P_ORD[i] + ': ' : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
+ (preg.father && !(preg.fatherCands?.length > 1) ? ` · 아빠 ${preg.father}` : '') + ' · ' + p.sex.map((s, i) => (p.n > 1 ? P_ORD[i] + ': ' : '') + babyLooks(p, i)).join(' / ') + (p.crisis ? ` · 출산 뒤 산모가 피를 많이 흘려 한동안 위독했음(${world === 'modern' ? '수혈·처치로 고비를 넘김' : world === 'old' ? '의원이 밤새 지켜 겨우 고비를 넘김' : '치유사가 겨우 살려 냄'})` : '') + (p.ndeath ? ` · 아기가 ${world === 'modern' ? '태어난 뒤 상태가 나빠져 끝내' : '며칠을 넘기지 못하고'} 세상을 떠남` : p.weak ? ' · 아기가 약해 며칠 고비를 넘김' : ''); }
   function birthLine0(p, world) {
     const base = (p.labor < 32 ? 0.5 + (p.labor - 24) * 0.14 : p.labor < 37 ? 1.5 + (p.labor - 32) * 0.25 : p.n > 2 ? 1.8 : p.n > 1 ? 2.3 : 2.9) + (p.fgr ? -0.5 : p.macro ? 0.9 : 0);
     const extra = [p.struct ? '태어나 보니 ' + p.struct.split(' — ')[0] : '', p.abn ? josa(p.chrom.split('(')[0].trim(), '으로', '로') + ' 태어남' : '', p.serious ? p.serious[3] : '', p.cord ? '탯줄이 감겨 있었지만 무사함' : ''].filter(Boolean).join(' · ');
@@ -1510,7 +1512,7 @@
     if (preg.userOff && !preg.on) return false; // 직접 끄거나 기록을 지웠으면 대화에서 임신 얘기가 나와도 다시 안 켜요(직접 켤 때까지)
     if (preg.start != null && !preg.wkFix && /관계 미상이라/.test(preg.why || '')) { preg.wkFix = 1; const day = pregDay(mem, snap), sn = !preg.fixId && day != null ? pregWeeksNote(mem, day, preg.who) : null; // 주수를 못 찾아 5주로 어림했던 방: 노트에 주수가 적혀 있으면 한 번만 그걸로 맞춰요(직접 고친 주수는 안 건드림)
       if (sn && Math.floor((sn.d - preg.start) / 7) !== sn.w) { preg.start = sn.d - sn.w * 7; preg.w0 = Math.min(preg.w0 ?? sn.w, sn.w); preg.why = `노트에 '${sn.w}주'라고 적혀 있어서 맞췄어요`; } pregSave(); }
-    if (preg.start != null) { if (preg.father == null || preg.dadV !== 3) { const first = preg.dadV !== 3; preg.dadV = 3; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; } // dadV: 아빠 찾는 방식이 바뀌면 한 번 다시 찾아요
+    if (preg.start != null) { if (preg.father == null || preg.dadV !== 4 && !preg.dadFix) { const first = preg.dadV !== 4; preg.dadV = 4; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; } // dadV: 아빠 찾는 방식이 바뀌면 한 번 다시 찾아요
     if (pregMaleNo(mem)) return false; // 유저 캐릭터가 남자면 이야기·주사위로는 안 켜요(직접 시작·작가 설정만)
     // 임신 시작: 정리 AI가 알려 주거나(%%임신시작), 대화에 임신을 밝힌 말이 나오면 AI에 한 번 물어서(pregGate) · 노트 낱말로는 안 찾아요
     { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(P_SYN(stripBlocks(msgText(m)))); } // 유저 말 + AI 답(유저 캐릭터가 보낸 문자·대사로 나오기도 해요)
@@ -1555,12 +1557,13 @@
     if (preg?.start == null) return '';
     const ps = pPeople(mem), cd = preg.start + 14, all = pregKitRels(mem), found = preg.start + (preg.w0 || 5) * 7, w = new Map();
     let rels = all.filter(r => Math.abs(r.d - cd) <= 14); if (!rels.length) rels = all.filter(r => r.d <= found && found - r.d <= 56); // 주수가 관계 날짜와 어긋나게 잡혔으면 임신을 안 날 전 8주 안의 관계로
-    const has = nameIn;
+    const has = nameIn, day = {};
     for (const r of rels) { // 상대가 적힌 관계('X와 관계')는 X만 · 상대를 모르는 관계는 관계 말이 나온 문장에 온이름이 한 명만 있을 때 그 사람(줄임 이름·여러 이름으로는 안 골라요)
       const wi = (String(r.t).match(/^([^\n·]+?)와 관계/) || [])[1]?.trim(), ss = String(r.t).split(/\n+|(?<=[.!?。])\s+/).filter(s => P_SEX.test(s)).join('\n');
       if (wi && ps.some(p => p.me && has(wi, p.name))) continue; // 상대 자리에 유저 캐릭터 이름이 적힌 건 못 써요
-      const ex = wi ? ps.filter(p => !p.me && p.name === wi) : [], c = ex.length ? ex : wi ? ps.filter(p => !p.me && has(wi, p.name)) : ps.filter(p => !p.me && ss.includes(p.name)), m0 = c.filter(p => p.male).length ? c.filter(p => p.male) : c.filter(p => !p.female);
-      const m = wi ? (m0.length ? m0.slice(0, 1) : c.length ? [] : [{ name: wi }]) : m0.length === 1 ? m0 : []; for (const p of m) w.set(p.name, (w.get(p.name) || 0) + Math.max(0.01, -Math.log(1 - Math.min(0.99, kitChance(r.t))))); }
+      const grp = wi && P_GRP.test(wi) ?(day[r.d] ??= blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').filter(b => P_DAY(b.title) === r.d).map(b => [b.title, ...b.lines].join('\n')).join('\n')) : null; // 상대가 '세 사람'처럼 여럿으로 적힌 관계는 그날 사건에 나온 사람들로
+      const ex = wi && !grp ? ps.filter(p => !p.me && p.name === wi) : [], c = grp != null ? ps.filter(p => !p.me && grp.includes(p.name)) : ex.length ? ex : wi ? ps.filter(p => !p.me && has(wi, p.name)) : ps.filter(p => !p.me && ss.includes(p.name)), m0 = c.filter(p => p.male).length ? c.filter(p => p.male) : c.filter(p => !p.female);
+      const m = grp != null ? m0 : wi ? (m0.length ? m0.slice(0, 1) : c.length ? [] : [{ name: wi }]) : m0.length === 1 ? m0 : []; for (const p of m) w.set(p.name, (w.get(p.name) || 0) + Math.max(0.01, -Math.log(1 - Math.min(0.99, kitChance(r.t))))); }
     const cands = [...w.keys()]; if (!cands.length) return '';
     let x = pR('dad') * [...w.values()].reduce((a, v) => a + v, 0), name = cands[0]; for (const [n, v] of w) { if ((x -= v) < 0) { name = n; break; } }
     return { name, cands };
@@ -1611,8 +1614,10 @@
   const P_PAST = /지난\s*(?:번|밤|주|날)|며칠\s*전|\d+\s*일\s*전|일주일\s*전|\d+\s*주\s*전|전날|그날\s*(?:밤\s*)?(?:이후|뒤|의)|떠올|기억|생각나|이후로|뒤로/;
   // 날짜로그 관계 사건은 키가 있으면 AI가 읽어요: 유저 캐릭터 본인이 했는지 · 상대 · 피임 · 횟수(사건마다 한 번만 묻고 preg.relAi에 둬요)
   //   낱말로만 보면 남의 관계(그남과 내연녀)·이름 없는 문장·다른 문장의 콘돔을 잘못 세요 · 답이 오기 전엔 낱말로 봐요
-  const P_REL_PROMPT = '롤플레이 날짜로그 사건이나 대화 원문마다(원문은 [유저 캐릭터]를 너·당신으로 부르기도 한다) [유저 캐릭터] 본인이 그 사건에서 실제로 성관계를 했는지 판단한다. 다른 인물끼리 한 관계, 남의 관계를 알게 되거나 목격한 것, 떠올리거나 말로 꺼낸 지난 관계, 하려다 멈춘 것은 false. 했으면 상대 이름(사건에 쓰인 이름 그대로)·피임·횟수·그중 질내사정 횟수를 원문대로. JSON 하나만: {"rels":[{"i":번호,"mine":true,"with":"상대 이름","prot":"콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름","times":1,"in":0}]}';
-  const P_REL_TXT = { 콘돔: '콘돔을 끼고', '콘돔 찢어짐': '콘돔이 찢어짐', 피임약: '피임약을 먹음', 사후피임약: '사후피임약', 질외사정: '질외 사정', 질내사정: '피임 없이 질내 사정', '피임 안 함': '피임 없이' };
+  const P_REL_PROMPT = '롤플레이 날짜로그 사건이나 대화 원문마다(원문은 [유저 캐릭터]를 너·당신으로 부르기도 한다) [유저 캐릭터] 본인이 그 사건에서 실제로 성관계를 했는지 판단한다. 다른 인물끼리 한 관계, 남의 관계를 알게 되거나 목격한 것, 떠올리거나 말로 꺼낸 지난 관계, 하려다 멈춘 것은 false. 했으면 상대 이름(사건에 쓰인 이름 그대로)·피임·횟수·그중 질내사정 횟수를 원문대로. 상대가 여럿이면 상대마다 따로 한 줄씩(같은 번호로, 이름은 한 사람씩). 한 상대와 피임이 다른 관계가 섞여 있으면 피임이 가장 약했던 쪽으로 적는다. JSON 하나만: {"rels":[{"i":번호,"mine":true,"with":"상대 이름","prot":"콘돔|콘돔 찢어짐|피임약|사후피임약|질외사정|질내사정|피임 안 함|모름","times":1,"in":0}]}';
+  const P_REL_RANK = ['피임약', '사후피임약', '콘돔', '질외사정', '모름', '콘돔 찢어짐', '피임 안 함', '질내사정']; // 뒤로 갈수록 임신 가능성이 큰 쪽
+  const P_GRP = /^(?:[두세네]|둘|셋|넷|여러|모든|모두)\s*(?:사람|명|남자)?$/; // 상대 자리에 이름 대신 '세 사람'처럼 뭉쳐 적힌 것
+  const P_REL_TXT = {콘돔: '콘돔을 끼고', '콘돔 찢어짐': '콘돔이 찢어짐', 피임약: '피임약을 먹음', 사후피임약: '사후피임약', 질외사정: '질외 사정', 질내사정: '피임 없이 질내 사정', '피임 안 함': '피임 없이' };
   // 관계 상대: 'X와 관계'로 적힌 이름 · 없으면 글에 나온 (유저 캐릭터가 아닌) 인물 한 명 · 모르면 ''
   const pRelWho = (t, mem) => { const w = (String(t).match(/^([^\n·]+?)와 관계/) || [])[1]?.trim(); if (w) return w; if (pRelWho.m !== mem) { pRelWho.m = mem; pRelWho.p = pPeople(mem).filter(p => !p.me); } return (pRelWho.p.find(p => nameIn(t, p.name)) || {}).name || ''; }; // 인물 목록은 노트가 바뀔 때만 다시 만들어요(큰 노트에서 관계마다 노트 전체를 다시 쪼개지 않게 · 아이폰 느려짐 방지)
   const relAiText = (r, src) => [`${r.with || ''}와 관계`, P_REL_TXT[r.prot] || '', r.times > 1 ? `여러 번(${r.times}번)` : '', r.in > 0 ? `질내 ${r.in}번` : '', (src.match(/배란일|배란기|가임기|생리\s*중|생리하는\s*날|생리\s*기간|안전한\s*날|안전일/) || [''])[0]].filter(Boolean).join(' · ');
@@ -1636,7 +1641,11 @@
       const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL; if (!String(await getValue(keyOf(m), '')).trim()) return;
       const r = parseJsonLoose(await askModel(P_REL_PROMPT, `[유저 캐릭터] ${who}\n\n` + todo.map((x, i) => `[${i}] ${x.src.slice(0, 1500)}`).join('\n\n'), '🍼관계 확인', true));
       const list = r?.rels; if (!preg || pregChat !== cid) return; if (!Array.isArray(list)) throw new Error('AI 답에 관계 목록이 없어요');
-      preg.relAi ||= {}; for (const a of list) { const x = todo[a?.i]; if (x) preg.relAi[x.k] = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0, ...(x.b ? { b: 1 } : {}) }; }
+      preg.relAi ||= {}; const got = new Set(); // 상대가 여럿인 사건은 상대마다 한 줄씩 와요: 첫 줄이 그 사건의 답, 둘째부터는 more에(다섯 명까지)
+      for (const a of list) { const x = todo[a?.i]; if (!x) continue; const v = { mine: a.mine === true, with: String(a.with || '').slice(0, 30), prot: a.prot || '모름', times: Number(a.times) || 1, in: Number(a.in) || 0 }, p = preg.relAi[x.k];
+        if (!got.has(x.k) || (v.mine && !p?.mine)) { got.add(x.k); preg.relAi[x.k] = { ...v, g2: 1, ...(x.b ? { b: 1 } : {}) }; }
+        else if (v.mine && v.with) { const o = [p, ...(p.more || [])].find(y => y.with === v.with), rk = y => P_REL_RANK.indexOf(y.prot); // 같은 상대가 또 오면 피임이 약한 쪽을 남기고 횟수는 큰 쪽
+          if (o) Object.assign(o, { prot: rk(v) > rk(o) ? v.prot : o.prot, times: Math.max(o.times, v.times), in: Math.max(o.in, v.in) }); else if ((p.more?.length || 0) < 5) (p.more ||= []).push(v); } }
       for (const k of Object.keys(preg.relAi)) if (preg.relAi[k].b && !fresh.has(k)) delete preg.relAi[k]; // 말풍선 답은 정리되면 다시 안 봐요(임신 기록과 턴별 사본이 계속 커지지 않게)
       for (const x of todo) if (!preg.relAi[x.k]) (pregRelAsk.failed ||= new Set()).add(x.k); // 답에 빠진 사건은 굳히지 않고 다음 접속에 다시 물어요
       pregSave(); if (isOpen()) render();
@@ -1648,8 +1657,8 @@
     const mine = t => mine0(t).split('\n').filter(l => l && !P_PAST.test(l)).join('\n'); // 지난 관계를 떠올린 줄은 그날 관계로 안 쳐요
     for (const b of blocksOf(splitSections(mem).find(x => x.key === '날짜로그')?.body || '')) { const src = [b.title, ...b.lines].join('\n'), d = P_DAY(b.title); if (d == null) continue;
       const fx = preg?.relFix?.[pKey(src)], ai = pregHasKey && P_SEX.test(src) ? preg?.relAi?.[pKey(src)] : null;
-      if (fx) { if (fx.mine) out.push({ d: fx.d ?? d, t: relAiText({ ...(ai || {}), ...fx }, src), sure: 1 }); continue; } // 유저가 고친 게 먼저(✏️ 관계 기록 고치기)
-      if (ai) { if (ai.mine) out.push({ d, t: relAiText(ai, src), sure: 1 }); if (ai.mine && ai.in == null && preg && !pregRelAsk.failed?.has(pKey(src))) todo.push({ k: pKey(src), src, d }); continue; } // 질내 횟수가 없는 예전 답은 한 번 더 물어요
+      if (fx) { if (fx.mine) { out.push({ d: fx.d ?? d, t: relAiText({ ...(ai || {}), ...fx }, src), sure: 1 }); for (const y of ai?.more || []) out.push({ d: fx.d ?? d, t: relAiText(y, src), sure: 1 }); } continue; } // 유저가 고친 게 먼저(✏️ 관계 기록 고치기) · 고친 건 첫 상대 줄
+      if (ai) { if (ai.mine) for (const y of [ai, ...(ai.more || [])]) out.push({ d, t: relAiText(y, src), sure: 1 }); if (ai.mine && (ai.in == null || !ai.g2 && P_GRP.test(ai.with)) && preg && !pregRelAsk.failed?.has(pKey(src))) todo.push({ k: pKey(src), src, d }); continue; } // 질내 횟수가 없는 예전 답·상대가 '세 사람'처럼 뭉쳐 적힌 예전 답은 한 번 더 물어요
       if (preg?.rels?.some(r => r.d === d)) continue; // 정리 AI가 그날 관계를 이미 적어 줬어요(아래에서 넣어요) · 다시 안 물어요
       if (pregHasKey && P_SEX.test(src) && preg && !pregRelAsk.failed?.has(pKey(src))) { todo.push({ k: pKey(src), src, d }); continue; } // 키가 있으면 낱말로 안 세요(남의 관계·옛 관계가 섞여서) · AI 답이 오면 그걸로
       const t = mine(src); if (t) out.push({ d, t }); }
@@ -1661,7 +1670,7 @@
       // 키가 있으면 관계 낱말이 든 아직 정리 안 된 말풍선도 AI가 읽어요(날짜로그 사건과 같은 요청에 · 말풍선마다 한 번 · 유저 캐릭터 본인 관계만)
       //   낱말로만 보면 '단테가 그녀 안에…'처럼 엄마가 '그녀·너'로 나온 문장을 남의 관계로 버려서, 정리 전엔 최근 관계를 못 잡고 예전 사건만 떴어요 · 답이 오기 전엔 낱말 그대로
       if (pregHasKey && preg && (!m.status || m.status === 'end') && P_SEX.test(t)) { const src = t.slice(0, 1500), k = pKey(src), ai = preg.relAi?.[k]; bub.add(k); // 다 쓴 말풍선만(쓰는 중인 답은 글이 늘 때마다 또 묻게 돼서 · 쓰는 중엔 낱말 그대로)
-        if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) { const tt = relAiText(ai, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { const L = same.t.split('\n'), q = L.findIndex(l => tt.startsWith(l)); if (q >= 0) L[q] = tt; else if (!L.some(l => l.startsWith(tt))) L.push(tt); same.t = L.join('\n'); same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } if (x == null && cur != null) for (const p of t.split(/\n+|(?<=[.!?。])\s+/)) cur += pSkip(p); continue; } // AI가 아니라면 낱말로도 안 세요 · AI가 판단한 말풍선도 '일주일 뒤' 같은 날짜 넘김은 세요(뒤 장면 날짜가 안 밀리게) · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
+        if (ai) { const d = cur ?? base; if (ai.mine && d != null && (base == null || base - d <= 42)) for (const y of [ai, ...(ai.more || [])]) { const tt = relAiText(y, src), same = out.find(y => y.d === d && (s => !s.a || !s.b || s.a === s.b)({ a: pRelWho(y.t, mem), b: pRelWho(tt, mem) })); if (same) { const L = same.t.split('\n'), q = L.findIndex(l => tt.startsWith(l)); if (q >= 0) L[q] = tt; else if (!L.some(l => l.startsWith(tt))) L.push(tt); same.t = L.join('\n'); same.sure = 1; } else out.push({ d, t: tt, sure: 1 }); } if (x == null && cur != null) for (const p of t.split(/\n+|(?<=[.!?。])\s+/)) cur += pSkip(p); continue; } // AI가 아니라면 낱말로도 안 세요 · AI가 판단한 말풍선도 '일주일 뒤' 같은 날짜 넘김은 세요(뒤 장면 날짜가 안 밀리게) · 같은 날이라도 상대가 다르면 따로(두 남자면 각각)
         if (!pregRelAsk.failed?.has(k) && !todo.some(y => y.k === k)) todo.push({ k, src, b: 1 }); }
       for (const p of x != null ? [t] : t.split(/\n+|(?<=[.!?。])\s+/)) { // 문장 순서대로: '관계 → 일주일 뒤'면 관계는 건너뛰기 전 날짜
         if (x == null && cur != null) cur += pSkip(p);
@@ -3786,17 +3795,25 @@
   const easeStyle = document.createElement('style');
   easeStyle.textContent = ''
     // 폰에서 크랙 채팅 양옆 여백 줄이기: 바깥 칸(px-5 sm:px-10) 20→8px, 말풍선 안쪽(px-5 py-4) 20→14px
-    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10:is(.jm-col,:has([data-message-id],[data-message-group-id])){padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10:is(.jm-col,:has([data-message-id],[data-message-group-id])) .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide :has(>.max-w-\\[1660px\\]):has([data-message-id],[data-message-group-id]){row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}}@supports (-moz-appearance:none){.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:20px!important}}'
+    + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10.jm-col{padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10.jm-col .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide .jm-rg{row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}html.jm-wide.jm-wide.cmu-wide main div[class*="px-5"]:not(.jm-col):not(.py-4){padding-left:1.25rem!important;padding-right:1.25rem!important}html.jm-wide.jm-wide.cmu-wide main div:is([class*="max-w-[768px]"],[class*="max-w-screen-md"],[class*="max-w-3xl"],[class*="max-w-4xl"],[class*="max-w-5xl"]),html.jm-wide.jm-wide.cmu-wide [data-cmu-wide-box="1"]{max-width:100%!important}}@supports (-moz-appearance:none){.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:20px!important}}'
     + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}html.jm-hh [class*="group/header"]>.transition-transform{transform:none!important;translate:none!important}}' // 폰 웹 맨 위 ☰ 크랙 줄만 숨기고, 크랙이 밀어 올려 숨기는 방 제목 줄은 늘 보이게 · 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
+    + '@media (max-width:639px){.jm-wide [class*="bottom-[145px]"][class*="min-w-[34px]"]{bottom:121px!important;right:4px!important;transform:scale(.74);transform-origin:right bottom;opacity:.75}}' // 넓게 볼 때 말풍선 ⋯ 단추를 가리지 않게 크랙의 위로 가기 단추를 작게·구석으로
+    + 'html.jm-tap :is([data-message-id],[data-message-group-id]){touch-action:manipulation}' // 톡톡 수정을 켰을 때 말풍선 두 번 톡톡이 화면 확대로 안 가게
     + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로);
   document.documentElement.appendChild(easeStyle);
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
+  let tapEditOn = false; getValue('tapEdit', 'off').then(v => { tapEditOn = String(v) === 'on'; document.documentElement.classList.toggle('jm-tap', tapEditOn); }); // 설정 › 화면 › 말풍선 톡톡 수정
   getValue('hideHead', 'on').then(v => document.documentElement.classList.toggle('jm-hh', String(v) !== 'off')); // 설정 › 화면 › 폰에서 위 메뉴 숨기기
   { let ty = null, t0 = null, moved = false; // 폰: 채팅을 위아래 어느 쪽으로든 밀면 맨 위 줄 숨김(옛 글 보러 올려도 안 튀어나와요) · 방 제목 줄 빈 곳을 누르면 다시 보임
     addEventListener('touchstart', e => { ty = t0 = e.touches[0]?.clientY ?? null; moved = false; }, { passive: true });
     addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (t0 != null && y != null && Math.abs(y - t0) > 10) moved = true; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
-    addEventListener('touchend', e => { const t = e.changedTouches[0], h = document.documentElement; if (!moved && t && t.clientY < 96 && (h.classList.contains('jm-hidehead') || scrollY > 0) && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, { passive: true }); // 아이폰: 빈 곳을 누르면 click이 안 올 때가 있어서 손 뗄 때도 봐요
-    addEventListener('click', e => { const h = document.documentElement; if ((h.classList.contains('jm-hidehead') || scrollY > 0) && e.clientY < 96 && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, true); } // 단추를 누른 건 빼요 · 채팅을 맨 위로 끌어올리지 않아요(폰은 채팅째 스크롤돼서 몇 턴 전 대화가 나와 턴이 사라진 것처럼 보였어요) // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
+    addEventListener('touchend', e => { tapEdit(e); const t = e.changedTouches[0], h = document.documentElement; if (!moved && t && t.clientY < 96 && (h.classList.contains('jm-hidehead') || scrollY > 0) && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, { passive: true }); // 아이폰: 빈 곳을 누르면 click이 안 올 때가 있어서 손 뗄 때도 봐요
+    let tapG = null, tapN = 0, tapT = 0, tapAt = 0; const tapBtn = (root, sel, txt) => [...root.querySelectorAll(sel)].find(x => x.textContent.trim() === txt); // 말풍선 두 번 톡톡(컴퓨터는 두 번 누르기) = 크랙 ⋯ › 수정 · 수정 중 세 번 톡톡톡 = 수정 완료(크랙 단추를 대신 눌러 줘요)
+    const tapEdit = e => { const touch = !!e.touches; if (!tapEditOn || (touch ? moved || e.touches.length : Date.now() - tapAt < 700 || e.detail < 2)) return; if (touch) tapAt = Date.now(); const g = e.target.closest?.('[data-message-group-id],[data-message-id]'); if (!g || e.target.closest('a,button,[role=button],input,summary,img,video')) { tapN = 0; return; }
+      if (!touch) tapN = e.detail - 1; else if (g !== tapG || e.timeStamp - tapT > 400) tapN = 0; tapG = g; tapT = e.timeStamp; tapN++; const ed = g.querySelector('[contenteditable="true"]');
+      if (ed && tapN === 3) { tapN = 0; tapBtn(g, 'button', '수정 완료')?.click(); }
+      else if (!ed && tapN === 2) { tapN = 0; const b = g.querySelector('button[aria-label="메시지 옵션"]'); if (b) setTimeout(() => { b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, isPrimary: true })); setTimeout(() => tapBtn(document, '[role=menuitem]', '수정')?.click(), 250); }, 350); } }; // 손 뗀 뒤 따라오는 누름이 메뉴를 닫지 않게 조금 기다렸다 열어요
+    addEventListener('click', e => { tapEdit(e); const h = document.documentElement; if ((h.classList.contains('jm-hidehead') || scrollY > 0) && e.clientY < 96 && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, true); } // 단추를 누른 건 빼요 · 채팅을 맨 위로 끌어올리지 않아요(폰은 채팅째 스크롤돼서 몇 턴 전 대화가 나와 턴이 사라진 것처럼 보였어요) // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
   // 크랙 수정창은 긴 답(8천 자 넘음)의 뒷부분만 보여 줘요 → 노트 머리줄 없이 끝줄만 보이면 앞 답 글·노트 앞부분이 잘린 것이라, 그대로 저장하면 지워져서 막아요
   addEventListener('click', e => { const b = e.target.closest?.('button'); if (!b || b.textContent.trim() !== '수정 완료') return;
     let box = b; while (box && !box.querySelector?.('[contenteditable="true"]')) box = box.parentElement;
@@ -3822,31 +3839,32 @@
     inlineBtn.classList.toggle('jm-masked', mask.on);
     maskPaint();
   }
-  function maskPaint() { // 화면 글자에서 이름 찾기: 크랙 채팅 로그만 · '조아메모리 창도'를 켜면 창 안도(설정 칸은 빼고)
+  function maskPaint(dirty) { // 화면 글자에서 이름 찾기: 크랙 채팅 로그만 · '조아메모리 창도'를 켜면 창 안도(설정 칸은 빼고) · dirty: 글이 바뀐 말풍선들(주면 그 안만 다시 찾고 나머지는 찾아 둔 그대로)
     if (!MASK_OK) return;
-    const out = [];
-    if ((mask.on || mask.cap) && mask.names.length) {
+    const on = (mask.on || mask.cap) && mask.names.length, p0 = on && dirty?.size && mask.ranges ? [...dirty].filter(b => b.isConnected) : null, part = p0 && p0.filter(b => !p0.some(o => o !== b && o.contains(b)));
+    const out = part ? mask.ranges.filter(r => r.startContainer.isConnected && !part.some(b => b.contains(r.startContainer))) : [];
+    if (on) {
       const re = new RegExp(mask.names.map(reEsc).join('|'), 'gi'); // 영어는 대소문자 안 가려요(Nana = nana = NANA)
       const ok = (n, inPanel) => { const p = n.parentElement; return !!p && !p.closest('script,style,textarea,input,noscript') && (inPanel ? !p.closest('[data-sec]') : !!p.closest('[data-message-id],[data-message-group-id],' + TH_AI)); }; // 채팅: 말풍선 안 글자만 · 창: 설정 칸([data-sec])은 빼요
-      for (const [top, inPanel] of [[document.body, false], ...(mask.panel ? [[root, true]] : [])]) {
+      for (const [top, inPanel] of part ? part.map(b => [b, false]) : [[document.body, false], ...(mask.panel ? [[root, true]] : [])]) {
         const w = document.createTreeWalker(top, NodeFilter.SHOW_TEXT, { acceptNode: n => ok(n, inPanel) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
         for (let n; (n = w.nextNode());) { const t = n.data; if (t.length < 2) continue; re.lastIndex = 0;
           for (let m; (m = re.exec(t));) { const r = new Range(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); out.push(r); } } }
     }
     mask.ranges = out; CSS.highlights.set('jm-mask', new Highlight(...(PEN_OV ? [] : out)));
-    maskLay();
+    maskLay(part);
   }
   // 아이폰 사파리: 칠(Highlight)이 일부 이름에만 먹어서(형광펜과 같은 문제) 말풍선 안에 가림 상자를 직접 얹어요 · 바뀐 게 있을 때만 다시 그려 깜빡이지 않게
   const MASK_L = 'jm-mask-l';
   const bgOf = el => { for (; el; el = el.parentElement) { const b = getComputedStyle(el).backgroundColor; if (b && b !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(b)) return b; } return '#fff'; };
-  function maskLay() {
+  function maskLay(part) { // part: 그 말풍선들의 가림 상자만 다시 놓아요(자리 재기는 무거워서)
     if (!PEN_OV && !((mask.on || mask.cap) && mask.mode === 'emoji')) { [...document.querySelectorAll('.' + MASK_L), ...root.querySelectorAll('.' + MASK_L)].forEach(l => l.remove()); return; }
     const by = new Map(), lay = mask.on || mask.cap, emo = mask.mode === 'emoji';
     if (lay) for (const r of mask.ranges) { const pe = r.startContainer.parentElement, box = pe?.closest(TH_AI + ',' + TH_ME) || pe?.closest('[data-message-id],[data-message-group-id]') || (root.contains(pe) ? pe.closest('p,li,div,section,summary,h5,td') : null); if (box) (by.get(box) || by.set(box, []).get(box)).push(r); }
     [...document.querySelectorAll('.' + MASK_L), ...root.querySelectorAll('.' + MASK_L)].forEach(l => { if (!by.has(l.parentElement)) l.remove(); });
     const c = /^#[0-9a-f]{3,8}$/i.test(mask.color) ? mask.color : '#1F1D27';
     const st = mask.mode === 'blur' ? 'background:rgba(40,36,60,.18);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)' : `background:${c}`;
-    for (const [box, rs] of by) {
+    for (const [box, rs] of by) { if (part?.length && !part.some(b => b.contains(box) || box.contains(b))) continue;
       if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
       box.style.isolation = 'isolate';
       let l = box.querySelector(':scope>.' + MASK_L); if (!l) { l = document.createElement('div'); l.className = MASK_L; box.appendChild(l); }
@@ -3855,11 +3873,12 @@
       const h = html.join(''); if (l.__h !== h) { l.__h = h; l.innerHTML = h; } }
   }
   let maskLT = 0; const maskLater = () => { if (!(mask.on || mask.cap)) return; clearTimeout(maskLT); maskLT = setTimeout(maskLay, 200); }; // 글은 그대로인데 자리만 밀렸을 때(그림이 늦게 뜸·접힌 칸 펼침·창 크기 바뀜): 찾아 둔 이름 자리에 가림 상자만 다시 놓아요
-  const maskSoon = () => { if (!(mask.on || mask.cap) || mask.t) return; mask.t = setTimeout(() => { mask.t = 0; maskPaint(); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
+  const maskSoon = b => { if (!(mask.on || mask.cap)) return; if (b && !mask.full) (mask.dirty ||= new Set()).add(b); else { mask.full = 1; mask.dirty = null; } if (mask.t) return; mask.t = setTimeout(() => { mask.t = 0; const d = mask.full ? null : mask.dirty; mask.full = 0; mask.dirty = null; maskPaint(d); }, 60); }; // 바뀌면 바로(0.06초) · 그사이 또 바뀌어도 밀리지 않게
   new MutationObserver(ms => { if (!chatIdFromPath() && document.documentElement.classList.contains('jm-hidehead')) document.documentElement.classList.remove('jm-hidehead'); // 채팅방을 나가면 맨 위 ☰ 크랙 줄을 다시 보여요(메뉴 누르게)
-    { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); }
+    { const col = document.querySelector('[data-message-group-id],[data-message-id]')?.closest('.px-5.sm\\:px-10'); if (col && !col.classList.contains('jm-col')) col.classList.add('jm-col'); const rg = col?.parentElement; if (rg && !rg.classList.contains('jm-rg') && rg.querySelector(':scope>.max-w-\\[1660px\\]')) rg.classList.add('jm-rg'); } // 넓게 보기 CSS가 :has() 없이 이 표시만 보게
     if (themeCss.textContent) thNv();
-    if (ms.every(m => m.target === themeCss || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; maskSoon();
+    if (ms.every(m => m.target === themeCss || m.target.closest?.('.jm-pen-l,.jm-mask-l') || [...m.addedNodes, ...m.removedNodes].every(n => n.classList?.contains('jm-pen-l') || n.classList?.contains('jm-mask-l')) && (m.addedNodes.length || m.removedNodes.length))) return; { const bs = ms.map(m => (m.target.nodeType === 1 ? m.target : m.target.parentElement)?.closest?.('[data-message-id],[data-message-group-id]')); if (bs.every(Boolean)) bs.forEach(maskSoon); else maskSoon(); } // 답이 나오는 동안은 글이 바뀐 말풍선만 다시 찾아요(화면 전체를 0.06초마다 훑지 않게)
+    if (theme.re) for (const m of ms) { let b = (m.target.nodeType === 1 ? m.target : m.target.parentElement)?.closest?.(TH_AI + ',' + TH_AIN); if (!b) penChk = true; for (; b; b = b.parentElement?.closest(TH_AI + ',' + TH_AIN)) penChg.add(b); } // 형광펜: 어느 말풍선 글이 바뀌었는지만 적어 둬요
     if (theme.re && !penGenNow() && Date.now() - (penPaint.at || 0) > 120 && ms.some(m => (m.target.nodeType === 1 ? m.target : m.target.parentElement)?.closest?.(TH_AI + ',' + TH_AIN))) { penPaint.at = Date.now(); clearTimeout(theme.t); theme.t = 0; penPaint(); } // 크랙이 말풍선을 새로 그리면 같은 화면 프레임 안에 바로 다시 칠해요(0.15초 기다리면 그사이 형광펜이 꺼졌다 켜져 보여요)
     else penSoon(); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] }); // 새 답·방 옮김 · 조아메모리 창 열고 닫기(class) · 조아메모리 화면은 render()에서
   async function maskToggle() { await setValue('maskUse', mask.on ? 'off' : 'on'); await maskLoad();
@@ -3892,6 +3911,7 @@
     for (let e = a?.parentElement; e; e = e.parentElement) if (e.matches('.stick-to-bottom div.items-center.px-5')) on.add(e);
     document.querySelectorAll('.jm-nv').forEach(e => { if (!on.has(e)) e.classList.remove('jm-nv'); });
     on.forEach(e => { if (!e.classList.contains('jm-nv')) e.classList.add('jm-nv'); }); }
+  let penChg = new Set(), penChk = true; // 글이 바뀐 말풍선들 · 말풍선 밖이 바뀌어 전부 견줘 볼지(그 밖엔 찾아 둔 걸 글도 안 읽고 그대로 써요)
   let penBox = new WeakMap(), penDirty = new Set(), penAll = true; // 형광펜: 말풍선마다 찾아 둔 대사 자리 · 이번에 다시 그릴 말풍선 · 전부 다시
   async function themeLoad() {
     theme.on = String(await getValue('thOn', String(await getValue('thPen', 'off')) === 'on' || String(await getValue('thBub', '')) ? 'on' : 'off')) === 'on'; // 테마 켜기(처음엔 꺼짐 = 크랙 그대로 · 색이나 형광펜을 고르면 켜져요) · 스위치가 생기기 전에 형광펜·색을 골라 둔 사람은 켜진 채로
@@ -3919,10 +3939,11 @@
   }
   let penGenAt = 0; const penGenNow = () => penGenAt && Date.now() - penGenAt < 10000; // penGenAt: 크랙이 AI 답 조각을 마지막으로 보낸 때(답이 끝나면 0 · 신호를 놓쳐도 10초 뒤엔 풀려요)
   function penPaint() { // 대사 형광펜: AI 말풍선 글자에서 기호 사이를 찾아 칠해요 · 문단마다 글자 조각을 이어 붙여 찾아요(대사 안에 굵은 글씨·기울임이 섞여 조각이 나뉘어도 칠해지게)
-    if (!MASK_OK) return; const out = [], all = penAll; penAll = false; penDirty = new Set();
+    if (!MASK_OK) return; const out = [], all = penAll, chk = penChk, chg = penChg; penAll = false; penChk = false; penChg = new Set(); penDirty = new Set();
     const boxes = theme.re ? [...document.querySelectorAll(TH_AI + ',' + TH_AIN)] : [], live = penGenNow() ? boxes[boxes.length - 1] : null; // AI가 쓰는 중인 마지막 말풍선은 다 쓴 뒤에 칠해요(쓰는 중에 칠했다가 크랙이 말풍선을 새로 그리면 한 번 깜빡여요)
-    if (theme.re) for (const box of boxes) { if (live && (box === live || box.contains(live) || live.contains(box))) continue;
-      const key = theme.re.source + '\u0000' + box.textContent, c = penBox.get(box); if (!all && c && c.k === key && c.rs.every(r => r.startContainer.isConnected && r.endContainer.isConnected)) { out.push(...c.rs); continue; } // 크랙이 글자 칸을 새로 만들었으면(글은 같아도) 다시 찾아요
+    if (theme.re) for (const box of boxes) { if (live && (box === live || box.contains(live) || live.contains(box))) { if (chg.has(box)) penChg.add(box); continue; } // 쓰는 중이라 건너뛴 말풍선은 다 쓴 뒤에 다시 보게 표시를 남겨요
+      const c = penBox.get(box), alive = !all && c && c.rs.every(r => r.startContainer.isConnected && r.endContainer.isConnected); if (alive && !chk && !chg.has(box)) { out.push(...c.rs); continue; } // 안 바뀐 말풍선은 글을 읽지도 않아요
+      const key = theme.re.source + '\u0000' + box.textContent; if (alive && c.k === key) { out.push(...c.rs); continue; } // 크랙이 글자 칸을 새로 만들었으면(글은 같아도) 다시 찾아요
       const from = out.length; penDirty.add(box);
       const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT); let txt = '', map = [], blk = null;
       const flush = () => { theme.re.lastIndex = 0; for (let m; (m = theme.re.exec(txt));) { const a = m.index, z = a + m[0].length;
@@ -4611,7 +4632,10 @@
     :is(.pc-tt,.pc-gt,.pc-ch) .c0{background:#E3F0FF;color:#2a5ea8}:is(.pc-tt,.pc-gt,.pc-ch) .c1{background:#FFE6EC;color:#b33a5c}:is(.pc-tt,.pc-gt,.pc-ch) .c2{background:#EAF7E6;color:#3c7a32}:is(.pc-tt,.pc-gt,.pc-ch) .c3{background:#FFF3D6;color:#9a6a10}:is(.pc-tt,.pc-gt,.pc-ch) .c4{background:#EEE8FF;color:#5a40b0}.pc-gt .c0{background:#7BC6FF}.pc-gt .c1{background:#FF8AB3}.pc-gt .c2{background:#8ED68A}.pc-gt .c3{background:#FFC857}.pc-gt .c4{background:#B3A3F0}
     .pc-ch>div{display:grid;grid-template-columns:minmax(60px,30%) 1fr auto;gap:8px;align-items:center;margin:7px 0;font-size:12.5px}.pc-ch i{height:18px;border-radius:5px;min-width:4px}.pc-ch .c0{background:#FF8A5B}.pc-ch .c1{background:#FFC857}.pc-ch .c2{background:#7BC6FF}.pc-ch .c3{background:#8ED68A}.pc-ch .c4{background:#C9C3DD}.pc-ch b{font-size:12px}
     .pc-kb{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#F6F7FB;padding:8px;border-radius:8px}.pc-kb b{display:block;font-size:11.5px;color:#666;margin:0 0 5px 2px}.pc-kb p{margin:0 0 5px;background:#fff;border-radius:7px;padding:7px 8px;font-size:12px;line-height:1.4;box-shadow:0 1px 3px rgba(0,0,0,.08)}.pc-kb p.dn{opacity:.6;text-decoration:line-through}
-    .pc-vc{background:#1f2026;border-radius:8px;padding:8px}.pc-vc>div{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.pc-vc figure{position:relative;margin:0;aspect-ratio:4/3;border-radius:7px;background:#2f3440;display:grid;place-items:center}.pc-vc figure.sp{outline:3px solid #3ddc84}.pc-vc figure>span{font-size:40px;font-family:var(--emoji)}.pc-vc figcaption{position:absolute;left:5px;bottom:5px;font-size:11px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px}.pc-vc-c{margin:8px 2px 0;color:#ccc;font-size:12px;line-height:1.5}
+    .pc-vc{background:#1f2026;border-radius:8px;padding:8px}.pc-vc>div{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.pc-vc>.n3{grid-template-columns:repeat(3,1fr)}
+.pc-vc>.n3 figure>span{font-size:30px}
+.pc-desk.on>:not(.pc-win){visibility:hidden}.pc-vc figure{position:relative;margin:0;aspect-ratio:4/3;border-radius:7px;background:#2f3440;display:grid;place-items:center}.pc-vc figure.sp{outline:3px solid #3ddc84}.pc-vc figure>span{font-size:40px;font-family:var(--emoji)}.pc-vc figcaption{position:absolute;left:5px;bottom:5px;font-size:11px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px}.pc-vc-c{margin:8px 2px 0;color:#ccc;font-size:12px;line-height:1.5}.pc-vc-c+.pc-vc-c{margin-top:4px}.pc-vc-c b{color:#fff;margin-right:5px}
     .pc-rp{font-size:12.5px}.pc-rp-s{margin:0 0 8px auto;border-collapse:collapse;font-size:11px;text-align:center}.pc-rp-s td{border:1px solid #555;min-width:52px;padding:3px}.pc-rp-s tr+tr td{height:38px}.pc-rp-s b.ok{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 3px;border:2px solid #d0342c;border-radius:50%;color:#d0342c;font-size:11px;transform:rotate(-8deg)}.pc-rp-s b.no{color:#d0342c;transform:rotate(6deg);display:inline-block}.pc-rp h4{text-align:center;letter-spacing:.06em;line-height:1.35;word-break:keep-all;margin:0 0 8px;font-size:16px}.pc-rp dl{display:grid;grid-template-columns:fit-content(38%) 1fr;margin:0;border-top:2px solid #333}.pc-rp dt,.pc-rp dd{margin:0;padding:6px 8px;border-bottom:1px solid #ddd}.pc-rp dt{background:#f5f5f7;font-weight:700;overflow-wrap:anywhere}.pc-rp-v{text-align:right;color:#d0342c;font-weight:900;margin:8px 0 0}
     .pc-og{text-align:center;font-size:12px}.pc-og>div:last-child{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:20px;position:relative}.pc-og>div:last-child::before{content:'';position:absolute;top:-10px;left:15%;right:15%;border-top:1.5px solid #c9c3dd}.pc-og div>div,.pc-og>.top{display:inline-block;border:1.5px solid #c9c3dd;border-radius:10px;padding:6px 10px;min-width:88px;background:#fff}.pc-og>.top{border-color:#7B61D9;background:#F4F0FF}.pc-og b{display:block;font-size:13px}.pc-og small{color:#777;font-size:11px}
     .pc-id{margin:4px auto;width:210px;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.18);text-align:center;background:#fff}.pc-id>p:first-child{margin:0;background:linear-gradient(135deg,#243B55,#141E30);color:#fff;padding:9px;font-size:11px;letter-spacing:.2em;font-weight:700}.pc-id>span{display:grid;place-items:center;width:90px;height:100px;margin:12px auto 8px;border-radius:8px;background:#EEF2F7;font-size:56px;font-family:var(--emoji)}.pc-id>b{display:block;font-size:17px}.pc-id>small{color:#666;font-size:12px}.pc-id>i{display:block;margin:10px auto 12px;width:150px;height:24px;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px,#111 4px 5px,#fff 5px 8px)}.pc-id-m{margin:0;background:#FFF6D6;font-size:11.5px;color:#7a5a00;padding:6px}
@@ -7899,7 +7923,7 @@
     const T = x.timetable; if (T && typeof T === 'object') { const dy = cells(T.days).map(t => String(t).trim()).filter(Boolean).slice(0, 7); h += `<div class="pc-tt" style="--n:${dy.length || 5}"><span></span>${dy.map(t => `<b>${S(t)}</b>`).join('')}${A(T.slots).slice(0, 8).map(r => { const c = cells(r?.cells); return `<i>${S(r?.time)}</i>` + dy.map((_, j) => { const t = String(c[j] ?? '').trim(); return t ? `<span class="c${parseInt(fxH(t), 36) % 5}">${S(t)}</span>` : '<span></span>'; }).join(''); }).join('')}</div>`; }
     const C = x.chart; if (C && typeof C === 'object') { const bs = A(C.bars).filter(b => b && typeof b === 'object').slice(0, 8), mx = Math.max(1, ...bs.map(b => Math.abs(Number(b.value) || 0))); h += `<div class="pc-ch">${C.sub ? `<p class="pc-meta">${S(C.sub)}</p>` : ''}${bs.map((b, i) => `<div><span>${S(b.label)}</span><i style="width:${Math.round(Math.abs(Number(b.value) || 0) / mx * 100)}%" class="c${i % 5}"></i><b>${S(b.value)}${S(C.unit)}</b></div>`).join('')}</div>`; }
     const B = x.board; if (B && typeof B === 'object') h += `<div class="pc-kb">${[['todo', '할 일'], ['doing', '하는 중'], ['done', '끝']].map(([k, l]) => `<div><b>${l} ${A(B[k]).length}</b>${A(B[k]).map(t => `<p${k === 'done' ? ' class="dn"' : ''}>${S(t)}</p>`).join('')}</div>`).join('')}</div>`;
-    const V = x.meet; if (V && typeof V === 'object') h += `<div class="pc-vc"><div>${A(V.people).slice(0, 6).map(p => { p = p && typeof p === 'object' ? p : { name: p }; const st = String(p.state || ''); return `<figure class="${/말하/.test(st) ? 'sp' : ''}"><span>${/카메라/.test(st) ? '⬛' : F(p.name, p.emoji)}</span><figcaption>${S(p.name)}${/음소거/.test(st) ? ' 🔇' : ''}${st && !/음소거/.test(st) ? ' · ' + S(st) : ''}</figcaption></figure>`; }).join('')}</div>${A(V.chat).length ? `<p class="pc-vc-c">💬 ${A(V.chat).map(S).join(' · ')}</p>` : ''}</div>`;
+    const V = x.meet; if (V && typeof V === 'object') h += `<div class="pc-vc"><div${A(V.people).length > 2 ? ' class="n3"' : ''}>${A(V.people).slice(0, 6).map(p => { p = p && typeof p === 'object' ? p : { name: p }; const st = String(p.state || ''); return `<figure class="${/말하/.test(st) ? 'sp' : ''}"><span>${/카메라/.test(st) ? '⬛' : F(p.name, p.emoji)}</span><figcaption>${S(p.name)}${/음소거/.test(st) ? ' 🔇' : ''}${st && !/음소거/.test(st) ? ' · ' + S(st) : ''}</figcaption></figure>`; }).join('')}</div>${A(V.chat).flatMap(t => String(t ?? '').split(/\s+·\s+(?=[^:：·]{1,24}[:：]\s)/)).map((t, i) => { const m = t.match(/^([^:：]{1,24})[:：]\s*([\s\S]*)$/); return `<p class="pc-vc-c">${i ? '' : '💬 '}${m ? `<b>${S(m[1])}</b>${S(m[2])}` : S(t)}</p>`; }).join('')}</div>`;
     const R = x.report; if (R && typeof R === 'object') h += `<div class="pc-rp"><table class="pc-rp-s"><tr>${A(R.sign).map(g => `<td>${S(g?.role)}</td>`).join('')}</tr><tr>${A(R.sign).map(g => `<td>${g?.ok === false ? '<b class="no">반려</b>' : `<b class="ok">${S(g?.name || '✓')}</b>`}</td>`).join('')}</tr></table><h4>${S(R.head || '보 고 서')}</h4><dl>${A(R.fields).map(r => { const c = cells(r); return `<dt>${S(c[0])}</dt><dd>${S(c.slice(1).join('|'))}</dd>`; }).join('')}</dl>${R.verdict ? `<p class="pc-rp-v">${S(R.verdict)}</p>` : ''}</div>`;
     const O = x.org; if (O && typeof O === 'object') { const nd = (p, top) => { p = p && typeof p === 'object' ? p : { name: p }; return `<div class="${top ? 'top' : ''}"><b>${F(p.name, p.emoji)} ${S(p.name)}</b><small>${S(p.role)}</small></div>`; }; h += `<div class="pc-og">${O.top ? nd(O.top, true) : ''}<div>${A(O.members).slice(0, 8).map(p => nd(p)).join('')}</div></div>`; }
     const G = x.gantt; if (G && typeof G === 'object') { const dy = cells(G.days).map(t => String(t).trim()).filter(Boolean).slice(0, 14), n = dy.length || 7, cl = v => Math.min(n, Math.max(1, Math.round(Number(v) || 1))), td = Number(G.today) >= 1 ? cl(G.today) : 0; h += `<div class="pc-gt" style="--n:${n}"><span></span>${dy.map((t, i) => `<b${i + 1 === td ? ' class="td"' : ''}>${S(t)}</b>`).join('')}${A(G.tasks).slice(0, 8).map((k, i) => { const a = cl(k?.from), z = Math.max(a, cl(k?.to)); return `<i style="grid-row:${i + 2}">${S(k?.name)}</i><span class="c${i % 5}" style="grid-row:${i + 2};grid-column:${a + 1}/${z + 2}"></span>`; }).join('')}</div>`; }
@@ -8030,7 +8054,7 @@
       const icons = pcOwn(d).map((x, i) => `<button class="pc-ic" data-act="pcgo" data-arg="own:${i}"><i>${esc(String(x.icon || '🧩').slice(0, 8))}</i><span>${esc(x.name || x.title || '')}</span></button>`).join('') + PC_APPS.filter(([, , , has]) => has(d)).map(([k, l, e]) => `<button class="pc-ic" data-act="pcgo" data-arg="${k}"><i>${e}</i><span>${l}</span></button>`).join('')
         + desk.map((x, i) => `<button class="pc-ic" data-act="pcgo" data-arg="file:${i}"><i>${FILE_ICON[x.kind] || '📄'}</i><span>${esc(x.name)}</span></button>`).join('');
       const sticky = (d.sticky || []).map(s => `<p class="pc-sticky">${esc(s)}</p>`).join('');
-      inner = `${bar}<div class="pc-desk" style="--wb:${bg};--wf:${fg}"><span class="pc-wall">${esc(d.wallpaper || '')}</span><div class="pc-icons${sticky ? ' stk' : ''}">${icons}</div>${sticky ? `<div class="pc-stk">${sticky}</div>` : ''}${w}</div>`;
+      inner = `${bar}<div class="pc-desk${w ? ' on' : ''}" style="--wb:${bg};--wf:${fg}"><span class="pc-wall">${esc(d.wallpaper || '')}</span><div class="pc-icons${sticky ? ' stk' : ''}">${icons}</div>${sticky ? `<div class="pc-stk">${sticky}</div>` : ''}${w}</div>`;
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 컴퓨터${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="pc">이미지로 저장</button> · <button class="linkbtn" data-act="pcmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button>${turnEnd() > recUpto(rec) ? ` · <button class="linkbtn" data-act="pcupd" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>새 이야기 반영 (${recUpto(rec) + 1}~${turnEnd()}턴)</button>` : ''}</p>` : '';
     return devSeg() + genCard() + picker + `<div class="pc"><div class="pc-screen">${inner}</div></div><i class="pc-stand"></i>` + foot
@@ -11021,6 +11045,7 @@
       + box(nav.themeOpen ? themeHtml() : `
         ${sRow('말풍선 턴 번호', sw('badges'))}
         ${sRow('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
+        ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 수정 중에 세 번 하면 수정 완료')}
         ${sRow('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
         ${sRow('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
@@ -11200,9 +11225,10 @@
   // AI가 답에 따라 쓴 우리 노트 앞줄 · 그 줄부터 끝까지는 롤플 글이 아니에요
   const LEAK_RE = /(?:^|\n)[^\n]*(?:※\s*표기|\[기억\s*노트|MEMO_NOTE|MEMO_STY|END OF NOTE)/, leakSeen = { c: '', at: 0 };
   // 옛 화면이 뜬 까닭 찾기(뜬 그때 한 번): 페이지가 어떻게 열렸는지 · 크랙이 쓰는 주소를 브라우저 저장분으로 받아 옛것인지
-  async function staleWhy(chatId, id) { const nav = performance.getEntriesByType?.('navigation')[0]?.type || '모름', how = staleWhy.bf ? '얼려 둔 화면을 되살림' : ({ reload: '새로고침', back_forward: '뒤로·앞으로', navigate: '새로 엶' }[nav] || nav); let kept = '저장분 확인 못 함';
+  const staleMid = id => { const born = parseInt(String(id).slice(0, 8), 16) * 1000, gap = performance.timeOrigin - born; return gap > 0 && gap < 18e4; }; // 답이 만들어지기 시작한 지 3분 안에 연 화면(메시지 번호 앞 8자리가 만든 시각) = 답이 나오는 중에 새로고침 .
+  async function staleWhy(chatId, id) { const nav =performance.getEntriesByType?.('navigation')[0]?.type || '모름', how = staleWhy.bf ? '얼려 둔 화면을 되살림' : ({ reload: '새로고침', back_forward: '뒤로·앞으로', navigate: '새로 엶' }[nav] || nav); let kept = '저장분 확인 못 함';
     try { const r = await fetch(API_A + chatId + '/messages?limit=20', { cache: 'force-cache', headers: { Authorization: 'Bearer ' + token(), platform: 'web', Accept: 'application/json' } }), j = await r.json(), top = msgId(((j?.data || j)?.messages || [])[0]); kept = top === id ? '브라우저 저장분은 최신(화면만 옛것)' : '브라우저가 옛 목록을 저장해 두고 그걸 줌'; } catch (_) {}
-    return '열린 방식 ' + how + ' · ' + kept + ' · 자리 비운 ' + Math.round((away.len || 0) / 6e4) + '분' + (IS_STAY ? ' · Stay' : ''); }
+    return '열린 방식 ' + how + (staleMid(id) ? ' · 답이 나오는 중에 엶' : '') + ' · ' + kept + ' · 자리 비운 ' + Math.round((away.len || 0) / 6e4) + '분' + (IS_STAY ? ' · Stay' : ''); }
   async function cutLeak(chatId, m, carrierId) { const id = msgId(m); if (!id || id === carrierId) return; const raw = msgText(await readMessage(chatId, id)), t = raw.replace(STY_RE, ''); // 온전한 문체 덩어리는 그것만 떼요(같은 줄의 글은 그대로)
     if ((t.match(V3_RE) || []).length || t.search(MORE_RE) >= 0 || chatIdFromPath() !== chatId) return; // 끝까지 온전한 노트 덩어리면 우리가 넣은 진짜 노트라 둬요
     const i = t.search(LEAK_RE); if (i < 0 && t === raw) return; const next = (i < 0 ? t : t.slice(0, i)).trimEnd(); if (!next.trim()) return logErr('노트', '답 전체가 노트 안내라 안 지움 · 다시 생성해 주세요', chatId);
@@ -11506,7 +11532,7 @@
       crumbOn(ck, '방 읽기 · 옛 노트 지우기'); { const c = snap.note; // 옛 노트가 앞 답에 남아 있으면 지워요(최신 노트가 지워지면 옛 노트가 되살아나요) · 이어 붙인 뒷부분은 둬요 · 답마다 한 번
         if (c && !c.parked && injectOn && !busyNow) for (const m of snap.all || []) { const id = msgId(m), o = id !== c.carrierId && parseNote(m); /* 정리 지점이 같은 건 옮기는 중인 같은 노트라 둬요 */ if (!o || o.parked || o.upto === c.upto || Date.parse(o.at) > Date.parse(c.at) || parseMore(m)?.of === c.carrierId || (refresh.oldNote ||= new Set()).has(id)) continue;
           refresh.oldNote.add(id); dropOldNote(chatId, id, msgText(m)).then(() => logErr('노트', '앞 답에 남은 옛 노트를 지움')).catch(() => {}); } }
-      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; logErr('화면', (IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 뜸 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); pageToast((IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 떴어요(조아와 상관없어요) · 대화는 그대로예요 · 새로고침해 주세요'); staleWhy(chatId, id).then(w => logErr('화면', '옛 화면 진단 · ' + w, chatId)).catch(() => {}); }, 8000); } } // 화면이 옛 대화인지 한 번 봐요
+      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; logErr('화면', (IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 뜸 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); const mid = staleMid(id), typing = [...document.querySelectorAll('.ProseMirror,[data-message-group-id] [contenteditable="true"]')].some(x => x.textContent.trim()); let again = false; try { again = mid && !typing && localStorage.getItem('jm_stalere') !== id; if (again) localStorage.setItem('jm_stalere', id); } catch (_) { again = false; } if (again) setTimeout(() => location.reload(), 1500); pageToast(again ? '답이 나오는 중에 새로고침해서 새 답이 화면에 없어요 · 다 나와서 한 번 다시 열게요' : mid ? '답이 나오는 중에 새로고침해서 새 답이 화면에 없어요 · 이제 다 나왔으니 한 번 더 새로고침해 주세요' : (IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 떴어요(조아와 상관없어요) · 대화는 그대로예요 · 새로고침해 주세요'); staleWhy(chatId, id).then(w => logErr('화면', '옛 화면 진단 · ' + w, chatId)).catch(() => {}); }, 8000); } } // 화면이 옛 대화인지 한 번 봐요
       { const L = snap.all || [], end = L[L.length - 1], seen = leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5; // 쓰는 중에 새는 걸 봤거나 · 새로고침·다른 기기라 못 봤어도 마지막 답에 새어 나온 줄이 있으면
         if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && (seen || injectOn && !busyNow && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end)))) { if (seen) leakSeen.c = ''; (cutLeak.seen ||= new Set()).add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
       // 문체 보정도 노트처럼 옮겨 와요: 새 메시지엔 보낼 때 붙으니 앞 메시지에 남은 것을 떼요(마지막 내 메시지는 리롤에 쓰여 둬요) · 이 페이지에서 내가 보낸 방만 · 답마다 둘까지 · 노트를 다 옮긴 뒤(5초) · 아이폰은 안 해요
@@ -12166,6 +12192,7 @@
     { const bd = ui('[data-set="badges"]'); if (bd) await setValue('badges', bd.checked ? 'on' : 'off'); } // 테마 화면이 열려 있으면 편의 스위치가 화면에 없어요
     { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
     { const m = ui('[data-set="maskOn"]'); if (m && (m.checked ? 'on' : 'off') !== (mask.on ? 'on' : 'off')) { await setValue('maskUse', m.checked ? 'on' : 'off'); await maskLoad(); const o = ui('.mopts'); if (o) o.hidden = !mask.on; } }
+    { const w = ui('[data-set="tapEdit"]'); if (w) { await setValue('tapEdit', w.checked ? 'on' : 'off'); tapEditOn = w.checked; document.documentElement.classList.toggle('jm-tap', w.checked); } }
     { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
     { const w = ui('[data-set="capShow"]'); if (w) { await setValue('capShow', w.checked ? 'on' : 'off'); capShow = w.checked; if (!capShow) { if (cap.on) capOff(); capBtn.remove(); } else placeCapBtn(); } }
     for (const k of ['firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
@@ -12183,6 +12210,7 @@
     const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
     const mo = ui('[data-set="maskOn"]'); if (mo) mo.checked = mask.on;
     const cs = ui('[data-set="capShow"]'); if (cs && !cs.dataset.filled) { cs.checked = capShow; cs.dataset.filled = '1'; }
+    const te = ui('[data-set="tapEdit"]'); if (te && !te.dataset.filled) { te.checked = String(await getValue('tapEdit', 'off')) === 'on'; te.dataset.filled = '1'; }
     const hh = ui('[data-set="hideHead"]'); if (hh && !hh.dataset.filled) { hh.checked = String(await getValue('hideHead', 'on')) !== 'off'; hh.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
   }
@@ -12641,7 +12669,7 @@
         const ap = v.match(/^\s*(\d{1,3})\s*(년|개월|달|주)\s*(반)?\s*(?:전|째|정도|쯤)?\s*$/), apDays = ap ? Math.round(+ap[1] * ({ 년: 365, 개월: 30.4, 달: 30.4, 주: 7 }[ap[2]]) + (ap[3] ? ({ 년: 182, 개월: 15, 달: 15, 주: 3 }[ap[2]]) : 0)) : 0;
         const n = ap ? (day != null ? day - apDays : null) : /^\s*\d{1,5}\s*일?\s*$/.test(v) ? (day != null ? day - parseInt(v, 10) + 1 : null) : P_DAY2(v); if (n == null) return toast(day == null && /^\s*\d/.test(v) ? '이야기 날짜를 몰라서 숫자로는 못 정해요 · 날짜로 적어 주세요' : '날짜를 읽지 못했어요 · 2026.03.14처럼 적어 주세요', 'info', 3500);
         if (br) { love.broke = n; love.brokeApprox = !!ap; } else { love.start = n; love.startBy = 'user'; love.startApprox = !!ap; } loveSave(); return keepScroll(render); }
-      case 'pregdadset': { if (!preg?.start) return; preg.father = arg; preg.fatherCands = []; preg.dadV = 3; preg.dadFix = 1; nav.dadAll = false; pregSave(); render(); return toast(arg ? '아빠를 ' + arg + '(으)로 정했어요' : '아빠를 모름으로 정했어요', 'ok', 2500); } // 직접 고른 아빠는 관계 기록을 고쳐도 안 바꿔요
+      case 'pregdadset': { if (!preg?.start) return; preg.father = arg; preg.fatherCands = []; preg.dadV = 4; preg.dadFix = 1; nav.dadAll = false; pregSave(); render(); return toast(arg ? '아빠를 ' + arg + '(으)로 정했어요' : '아빠를 모름으로 정했어요', 'ok', 2500); } // 직접 고른 아빠는 관계 기록을 고쳐도 안 바꿔요
       case 'pregsex': { if (!preg?.start) return; const s = pregPlan().sex, k = (s.reduce((a, x) => a * 2 + (x === '여'), 0) + 1) % (1 << s.length); // 아들↔딸(쌍둥이는 네 가지를 돌아가며)
         preg.sexFix = s.map((_, i) => (k >> (s.length - 1 - i)) & 1 ? '여' : '남');
         for (const x of preg.log || []) if (/^성별을 알게 됨/.test(x.t)) x.t = '성별을 알게 됨: ' + preg.sexFix.map(v => v === '남' ? '아들' : '딸').join('·'); // 지나온 일 기록도 같이
