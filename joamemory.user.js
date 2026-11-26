@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.21
+// @version      6.0.22
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3798,7 +3798,7 @@
     + '@media (max-width:639px){.jm-wide .px-5.sm\\:px-10.jm-col{padding-left:8px!important;padding-right:8px!important}.jm-wide .px-5.sm\\:px-10.jm-col .px-5.py-4{padding-left:14px!important;padding-right:14px!important}.jm-wide .pointer-events-auto.bg-bg_screen:has(.ProseMirror){width:calc(100% - 16px)!important}.jm-wide :is([data-message-id],[data-message-group-id]) .wrtn-markdown>:is(:last-child,:has(+.memo-note-hidden:last-child)){margin-bottom:0!important}.jm-wide .jm-rg{row-gap:0!important}.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:8px!important}html.jm-wide.jm-wide.cmu-wide main div[class*="px-5"]:not(.jm-col):not(.py-4){padding-left:1.25rem!important;padding-right:1.25rem!important}html.jm-wide.jm-wide.cmu-wide main div:is([class*="max-w-[768px]"],[class*="max-w-screen-md"],[class*="max-w-3xl"],[class*="max-w-4xl"],[class*="max-w-5xl"]),html.jm-wide.jm-wide.cmu-wide [data-cmu-wide-box="1"]{max-width:100%!important}}@supports (-moz-appearance:none){.jm-wide .flex-col-reverse>.w-full:first-child>.mb-5{margin-bottom:20px!important}}'
     + '@media (max-width:767px){html.jm-hh.jm-hidehead .shrink-0:has(>.grid>.md\\:hidden a[href="/"]){display:none!important}html.jm-hh [class*="group/header"]>.transition-transform{transform:none!important;translate:none!important}}' // 폰 웹 맨 위 ☰ 크랙 줄만 숨기고, 크랙이 밀어 올려 숨기는 방 제목 줄은 늘 보이게 · 맨 위 '☰ 크랙 🔔' 줄: 내려 읽을 땐 숨기고 위로 쓸면 다시(아래 터치 리스너)
     + '@media (max-width:639px){.jm-wide [class*="bottom-[145px]"][class*="min-w-[34px]"]{bottom:121px!important;right:4px!important;transform:scale(.74);transform-origin:right bottom;opacity:.75}}' // 넓게 볼 때 말풍선 ⋯ 단추를 가리지 않게 크랙의 위로 가기 단추를 작게·구석으로
-    + 'html.jm-tap :is([data-message-id],[data-message-group-id]){touch-action:manipulation}' // 톡톡 수정을 켰을 때 말풍선 두 번 톡톡이 화면 확대로 안 가게
+    + 'html.jm-tap :is([data-message-id],[data-message-group-id]){touch-action:manipulation}html.jm-tapping [data-radix-popper-content-wrapper]{opacity:0!important}' // 톡톡 수정을 켰을 때 말풍선 두 번 톡톡이 화면 확대로 안 가게
     + '#memo-note-inline{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#memo-note-inline.jm-masked::after{content:"🙈";position:absolute;right:-7px;top:-8px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #7B61D9;font-size:11px;line-height:17px;text-align:center}' // 이름 가리기 켜짐 표시(하트 크기는 그대로);
   document.documentElement.appendChild(easeStyle);
   getValue('wideChat', 'on').then(v => document.documentElement.classList.toggle('jm-wide', String(v) !== 'off'));
@@ -3808,11 +3808,12 @@
     addEventListener('touchstart', e => { ty = t0 = e.touches[0]?.clientY ?? null; moved = false; }, { passive: true });
     addEventListener('touchmove', e => { const y = e.touches[0]?.clientY; if (t0 != null && y != null && Math.abs(y - t0) > 10) moved = true; if (ty == null || y == null || Math.abs(y - ty) < 30 || !chatIdFromPath()) return; document.documentElement.classList.add('jm-hidehead'); ty = null; }, { passive: true });
     addEventListener('touchend', e => { tapEdit(e); const t = e.changedTouches[0], h = document.documentElement; if (!moved && t && t.clientY < 96 && (h.classList.contains('jm-hidehead') || scrollY > 0) && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, { passive: true }); // 아이폰: 빈 곳을 누르면 click이 안 올 때가 있어서 손 뗄 때도 봐요
-    let tapG = null, tapN = 0, tapT = 0, tapAt = 0; const tapBtn = (root, sel, txt) => [...root.querySelectorAll(sel)].find(x => x.textContent.trim() === txt); // 말풍선 두 번 톡톡(컴퓨터는 두 번 누르기) = 크랙 ⋯ › 수정 · 수정 중 세 번 톡톡톡 = 수정 완료(크랙 단추를 대신 눌러 줘요)
-    const tapEdit = e => { const touch = !!e.touches; if (!tapEditOn || (touch ? moved || e.touches.length : Date.now() - tapAt < 700 || e.detail < 2)) return; if (touch) tapAt = Date.now(); const g = e.target.closest?.('[data-message-group-id],[data-message-id]'); if (!g || e.target.closest('a,button,[role=button],input,summary,img,video')) { tapN = 0; return; }
-      if (!touch) tapN = e.detail - 1; else if (g !== tapG || e.timeStamp - tapT > 400) tapN = 0; tapG = g; tapT = e.timeStamp; tapN++; const ed = g.querySelector('[contenteditable="true"]');
-      if (ed && tapN === 3) { tapN = 0; tapBtn(g, 'button', '수정 완료')?.click(); }
-      else if (!ed && tapN === 2) { tapN = 0; const b = g.querySelector('button[aria-label="메시지 옵션"]'); if (b) setTimeout(() => { b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, isPrimary: true })); setTimeout(() => tapBtn(document, '[role=menuitem]', '수정')?.click(), 250); }, 350); } }; // 손 뗀 뒤 따라오는 누름이 메뉴를 닫지 않게 조금 기다렸다 열어요
+    let tapG = null, tapN = 0, tapT = 0, tapAt = 0; const tapBtn = (root, sel, txt) => [...root.querySelectorAll(sel)].find(x => x.textContent.trim() === txt); // 말풍선 두 번 톡톡(컴퓨터는 두 번 누르기) = 크랙 ⋯ › 수정 · 수정 중엔 수정 칸 밖을 두 번 = 수정 완료(크랙 단추를 대신 눌러 줘요)
+    const tapEdit = e => { const touch = !!e.touches; if (!tapEditOn || (touch ? moved || e.touches.length : Date.now() - tapAt < 700 || e.detail < 2)) return; if (touch) tapAt = Date.now(); const SEL = '[data-message-group-id],[data-message-id]', t = e.target, ed = document.querySelector(':is(' + SEL + ') [contenteditable="true"]'), g = ed ? ed.closest(SEL) : t.closest?.(SEL), zone = ed ? (g.contains(t) || t.closest?.('.jm-col') ? 'out' : null) : g; // 수정 중이면 채팅 칸 어디든(수정 칸 안은 빼고) · 아니면 그 말풍선
+      if (!zone || !t.closest || t.closest('a,button,[role=button],input,textarea,summary,img,video,.ProseMirror,#memo-note-host') || ed?.contains(t)) { tapN = 0; return; } // 수정 칸 안을 누르는 건 글 고르기라 안 세요
+      if (!touch) tapN = e.detail - 1; else if (zone !== tapG || e.timeStamp - tapT > 400) tapN = 0; tapG = zone; tapT = e.timeStamp; tapN++;
+      if (ed && tapN === 2) { tapN = 0; tapBtn(g, 'button', '수정 완료')?.click(); }
+      else if (!ed && tapN === 2) { tapN = 0; const b = g.querySelector('button[aria-label="메시지 옵션"]'); if (b) setTimeout(() => { b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, isPrimary: true })); let n = 0; const H = document.documentElement, go = () => { const it = tapBtn(document, '[role=menuitem]', '수정'); if (it) it.click(); if (it || ++n > 24) setTimeout(() => H.classList.remove('jm-tapping'), it ? 300 : 0); else setTimeout(go, 50); }; H.classList.add('jm-tapping'); go(); }, 350); } }; // 메뉴는 안 보이게 열고 '수정'이 뜨는 대로 바로 눌러요(1.2초 안에 못 찾으면 메뉴를 그대로 보여 줘요) // 손 뗀 뒤 따라오는 누름이 메뉴를 닫지 않게 조금 기다렸다 열어요
     addEventListener('click', e => { tapEdit(e); const h = document.documentElement; if ((h.classList.contains('jm-hidehead') || scrollY > 0) && e.clientY < 96 && !e.target.closest?.('a,input,textarea,button,[role=button],#memo-note-inline')) { h.classList.remove('jm-hidehead'); if (scrollY < 120) scrollTo(0, 0); } }, true); } // 단추를 누른 건 빼요 · 채팅을 맨 위로 끌어올리지 않아요(폰은 채팅째 스크롤돼서 몇 턴 전 대화가 나와 턴이 사라진 것처럼 보였어요) // 위 96px 안을 누르면 다시 보임(갤럭시는 제목 줄이 크게 잡히고 줄 전체가 버튼일 때가 있어서 · 아이폰은 제목 줄까지 밀려 올라가도 그 자리를 누르면 돼요)
   // 크랙 수정창은 긴 답(8천 자 넘음)의 뒷부분만 보여 줘요 → 노트 머리줄 없이 끝줄만 보이면 앞 답 글·노트 앞부분이 잘린 것이라, 그대로 저장하면 지워져서 막아요
   addEventListener('click', e => { const b = e.target.closest?.('button'); if (!b || b.textContent.trim() !== '수정 완료') return;
@@ -11045,7 +11046,7 @@
       + box(nav.themeOpen ? themeHtml() : `
         ${sRow('말풍선 턴 번호', sw('badges'))}
         ${sRow('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
-        ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 수정 중에 세 번 하면 수정 완료')}
+        ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 다 고쳤으면 수정 칸 밖을 두 번 톡톡 하면 수정 완료')}
         ${sRow('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
         ${sRow('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
