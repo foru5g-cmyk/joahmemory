@@ -941,10 +941,10 @@
   const P_STR = d => { const x = new Date(d * 864e5); if (x.getUTCFullYear() >= 2900) return (x.getUTCFullYear() - 2899) + '년차 ' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); return String(x.getUTCFullYear()).padStart(4, '0') + '.' + String(x.getUTCMonth() + 1).padStart(2, '0') + '.' + String(x.getUTCDate()).padStart(2, '0'); };
   function storyDay(mem) {
     mem = noPast(mem);
-    const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB);
-    if (d != null) return d;
+    const nowB = splitSections(mem || '').find(x => x.key === '현재상태')?.body, d = P_DAY(nowB) ?? P_DAY2(nowB), logs = itemBlocks(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').items.map(x => P_DAY(x.lines[0])).filter(x => x != null);
+    if (d != null) return Math.max(d, ...logs.filter(x => P_GAP(d, x) != null)); // 현재상태 날짜가 안 고쳐졌어도 날짜로그에 더 늦은 날이 있으면 그날이 오늘
     const all = [...String(mem || '').matchAll(/\d{1,3}\s*년차\s*\d{1,2}[.\/]\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2}/g)].map(m => P_DAY(m[0])).filter(x => x != null);
-    if (all.length) { const ds = itemBlocks(splitSections(mem).find(x => x.key === '날짜로그')?.body || '').items.map(x => P_DAY(x.lines[0])).filter(x => x != null), z = ds[ds.length - 1], same = z == null ? [] : all.filter(x => P_GAP(z, x) != null); return Math.max(...(same.length ? same : all)); } // 년차·연도가 섞였으면 마지막 사건과 같은 꼴에서
+    if (all.length) { const z = logs[logs.length - 1], same = z == null ? [] : all.filter(x => P_GAP(z, x) != null); return Math.max(...(same.length ? same : all)); } // 년차·연도가 섞였으면 마지막 사건과 같은 꼴에서
     // 노트가 없거나 날짜가 없으면(정리 전·앱 방식) 대화에서 바로: 최근 AI 답 머리말의 날짜(돈 안 듦)
     for (const m of [...(snapshot?.all || [])].reverse()) { if (msgRole(m) !== 'assistant') continue; const x = P_DAY2(headTxt(stripBlocks(msgText(m)))); if (x != null) return x; }
     return null;
@@ -7222,6 +7222,9 @@
     for (const k of ['gsUrl', 'gsKey']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
     nav.gsOn = !!String(await getValue('gsUrl', '')).trim();
     await gsTest();
+    const c = chatIdFromPath(); if (!nav.gsOn || !c || !/^연결됨/.test(nav.gsSt || '')) return; // 연결되면 이 방을 드라이브로 다시 찾아요: 연결 전에 찾아서 '없음'으로 끝낸 분기·전체 기억·임신·연애 확인을 지우고 바로 읽어요
+    await setValue('brchk:' + c, ''); await setValue('brtry:' + c, '0'); brRun.n.delete(c); pregBranchSeen.delete(c); loveBranch.seen?.delete(c); for (const k of [...gsTried]) if (k.includes(c)) gsTried.delete(k);
+    refresh().catch(() => {});
   }
   async function gsCopyCode() {
     let copied = false; try { await navigator.clipboard.writeText(GS_CODE); copied = true; } catch (_) {}
@@ -12778,7 +12781,7 @@
       case 'gspick': { try { toast('드라이브에서 이 방과 맞는 백업을 찾는 중…'); const items = await gsList(), t = roomTitle(), cid = chatIdFromPath(), c = snapshot?.note, when = a => a ? new Date(a).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
         const others = items.filter(x => x.chat !== cid), found = [];
         if (arg === 'all') { nav.gsPick = others.map(x => ({ ...x, when: when(x.at), note: '제목 다름 · 직접 확인' })).slice(0, 20); nav.gsPickAll = true; quiet(); render(); return; }
-        for (const x of others.filter(x => x.title === t).slice(0, 8)) { try { const r = await gsCall({ action: 'load', chat: x.chat }); const d = JSON.parse(r.data || 'null'); if (!d?.memory || d.turns !== c?.turns) continue;
+        for (const x of others.filter(x => x.title && t && (x.title === t || t.includes(x.title) || x.title.includes(t))).slice(0, 8)) /* 분기하며 이름을 붙였어도(리커버 → 리커버 분기방) 찾아요 */ { try { const r = await gsCall({ action: 'load', chat: x.chat }); const d = JSON.parse(r.data || 'null'); if (!d?.memory || d.turns !== c?.turns) continue;
           const exact = (d.noteAt || d.at) === c.at; found.push({ ...x, when: when(x.at), exact, note: exact ? '정리 시각까지 같음 · 분기한 방 같아요' : `1~${d.turns}턴 · 턴 수 같음` }); } catch (_) {} }
         nav.gsPick = found.sort((a, b) => b.exact - a.exact); nav.gsPickAll = false; quiet(); render(); }
         catch (e) { toast(e.message, 'err', 7000); } return; }
