@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.16
+// @version      6.0.17
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -54,7 +54,7 @@
   //       MEMO_NOTE_END"
   //   공백 4칸이 없으면 "## 제목"이나 "- 항목" 줄에서 덩어리가 끊겨 화면에 보입니다. 탭은 크랙 화면에서 노트가 보여서 안 씀(읽기만 받아요).
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g; // 5.9.5부터 HTML 주석(<!--…-->)으로 써요 · 예전 [//]: # "…" 꼴도 읽어요
-  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다...
+  // AI가 노트를 따라 쓰다 출력 한도에서 잘린 사본(시작만 있고 끝이 없음)도 그 자리부터 지웁니다.
   // 노트가 한 답변(100KB)에 안 들어가면 뒷부분만 바로 다음 AI 답변(전)에 이 덩어리로 넣습니다(writeMessage). of= 앞부분이 든 답변 ID.
   //   [//]: # "MEMO_NOTE_MORE of=<ID> at=<시각>
   //       (노트 뒷부분)
@@ -4599,7 +4599,19 @@
     .pc-ic i{font-style:normal;font-size:30px;line-height:1;font-family:var(--emoji)}
     .pc-ic span{font-size:11.5px;line-height:1.3;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.5);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .pc-stk{position:absolute;right:12px;bottom:28px;display:flex;flex-direction:column;gap:8px;max-width:150px}
+    .pc-icons.stk{padding-right:170px}
     .pc-sticky{margin:0;padding:8px 10px;background:#FFF3A3;color:#4a4220;font-size:12px;line-height:1.45;box-shadow:0 3px 8px rgba(0,0,0,.2);transform:rotate(-1.5deg)}
+    .pc-sl{display:flex;flex-direction:column;gap:10px}.pc-sl section{position:relative;aspect-ratio:16/9;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center;gap:4px;overflow:hidden;background:var(--sb);color:var(--sf)}.pc-sl small{position:absolute;right:12px;top:8px;font-size:11px;opacity:.7}.pc-sl em{font-style:normal;font-size:30px;font-weight:900;line-height:1.1;color:var(--sa)}.pc-sl h4{margin:0;font-size:17px;font-weight:800;line-height:1.3}.pc-sl p{margin:0;font-size:12.5px;opacity:.85}.pc-sl ul{margin:4px 0 0;padding-left:18px;font-size:12.5px;line-height:1.6}
+    .pc-sl.t-b{--sb:linear-gradient(135deg,#FF7A3D,#FFC23D);--sf:#fff;--sa:#fff}.pc-sl.t-c{--sb:#F4F6FA;--sf:#1d2433;--sa:#3B6FD8}.pc-sl.t-d{--sb:#1E1B2E;--sf:#fff;--sa:#FFC23D}.pc-sl.t-k{--sb:linear-gradient(120deg,#FFE9F2,#EEE6FF);--sf:#4a2a44;--sa:#E0559A}
+    .pc-po{position:relative;margin:2px auto;max-width:300px;background:#F3E6C8;border:3px solid #3a2a14;padding:14px 16px;text-align:center;color:#3a2a14;font-family:Georgia,serif}.pc-po small{font-size:11px;letter-spacing:.3em}.pc-po h4{margin:2px 0 10px;font-size:28px;font-weight:900;letter-spacing:.08em;line-height:1.1}.pc-po-ph{display:grid;place-items:center;width:110px;height:110px;margin:0 auto 10px;border:2px solid #3a2a14;background:#e8d6ae;font-size:64px;font-family:var(--emoji)}.pc-po p{margin:2px 0;font-size:13px;line-height:1.5}.pc-po strong{display:block;margin:8px 0 2px;font-size:24px}.pc-po .pc-po-sm{font-size:11px;opacity:.85}.pc-po-st{position:absolute;right:10px;top:96px;transform:rotate(-14deg);border:3px solid #C0362C;color:#C0362C;padding:2px 8px;font-size:13px;background:rgba(243,230,200,.7)}
+    .pc-tt,.pc-gt{display:grid;grid-template-columns:40px repeat(var(--n),1fr);gap:3px;font-size:11.5px;align-items:center}.pc-tt b,.pc-gt b{text-align:center;color:#777;font-weight:700}.pc-tt i,.pc-gt i{font-style:normal;color:#888;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pc-tt span{min-height:30px;border-radius:6px;padding:4px 5px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}.pc-gt{grid-template-columns:80px repeat(var(--n),1fr)}.pc-gt span{height:16px;border-radius:4px}.pc-gt b.td{color:#e5484d}
+    :is(.pc-tt,.pc-gt,.pc-ch) .c0{background:#E3F0FF;color:#2a5ea8}:is(.pc-tt,.pc-gt,.pc-ch) .c1{background:#FFE6EC;color:#b33a5c}:is(.pc-tt,.pc-gt,.pc-ch) .c2{background:#EAF7E6;color:#3c7a32}:is(.pc-tt,.pc-gt,.pc-ch) .c3{background:#FFF3D6;color:#9a6a10}:is(.pc-tt,.pc-gt,.pc-ch) .c4{background:#EEE8FF;color:#5a40b0}.pc-gt .c0{background:#7BC6FF}.pc-gt .c1{background:#FF8AB3}.pc-gt .c2{background:#8ED68A}.pc-gt .c3{background:#FFC857}.pc-gt .c4{background:#B3A3F0}
+    .pc-ch>div{display:grid;grid-template-columns:minmax(60px,30%) 1fr auto;gap:8px;align-items:center;margin:7px 0;font-size:12.5px}.pc-ch i{height:18px;border-radius:5px;min-width:4px}.pc-ch .c0{background:#FF8A5B}.pc-ch .c1{background:#FFC857}.pc-ch .c2{background:#7BC6FF}.pc-ch .c3{background:#8ED68A}.pc-ch .c4{background:#C9C3DD}.pc-ch b{font-size:12px}
+    .pc-kb{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#F6F7FB;padding:8px;border-radius:8px}.pc-kb b{display:block;font-size:11.5px;color:#666;margin:0 0 5px 2px}.pc-kb p{margin:0 0 5px;background:#fff;border-radius:7px;padding:7px 8px;font-size:12px;line-height:1.4;box-shadow:0 1px 3px rgba(0,0,0,.08)}.pc-kb p.dn{opacity:.6;text-decoration:line-through}
+    .pc-vc{background:#1f2026;border-radius:8px;padding:8px}.pc-vc>div{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.pc-vc figure{position:relative;margin:0;aspect-ratio:4/3;border-radius:7px;background:#2f3440;display:grid;place-items:center}.pc-vc figure.sp{outline:3px solid #3ddc84}.pc-vc figure>span{font-size:40px;font-family:var(--emoji)}.pc-vc figcaption{position:absolute;left:5px;bottom:5px;font-size:11px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px}.pc-vc-c{margin:8px 2px 0;color:#ccc;font-size:12px;line-height:1.5}
+    .pc-rp{font-size:12.5px}.pc-rp-s{margin:0 0 8px auto;border-collapse:collapse;font-size:11px;text-align:center}.pc-rp-s td{border:1px solid #555;min-width:52px;padding:3px}.pc-rp-s tr+tr td{height:38px}.pc-rp-s b.ok{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 3px;border:2px solid #d0342c;border-radius:50%;color:#d0342c;font-size:11px;transform:rotate(-8deg)}.pc-rp-s b.no{color:#d0342c;transform:rotate(6deg);display:inline-block}.pc-rp h4{text-align:center;letter-spacing:.3em;margin:0 0 8px;font-size:17px}.pc-rp dl{display:grid;grid-template-columns:64px 1fr;margin:0;border-top:2px solid #333}.pc-rp dt,.pc-rp dd{margin:0;padding:6px 8px;border-bottom:1px solid #ddd}.pc-rp dt{background:#f5f5f7;font-weight:700}.pc-rp-v{text-align:right;color:#d0342c;font-weight:900;margin:8px 0 0}
+    .pc-og{text-align:center;font-size:12px}.pc-og>div:last-child{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:20px;position:relative}.pc-og>div:last-child::before{content:'';position:absolute;top:-10px;left:15%;right:15%;border-top:1.5px solid #c9c3dd}.pc-og div>div,.pc-og>.top{display:inline-block;border:1.5px solid #c9c3dd;border-radius:10px;padding:6px 10px;min-width:88px;background:#fff}.pc-og>.top{border-color:#7B61D9;background:#F4F0FF}.pc-og b{display:block;font-size:13px}.pc-og small{color:#777;font-size:11px}
+    .pc-id{margin:4px auto;width:210px;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.18);text-align:center;background:#fff}.pc-id>p:first-child{margin:0;background:linear-gradient(135deg,#243B55,#141E30);color:#fff;padding:9px;font-size:11px;letter-spacing:.2em;font-weight:700}.pc-id>span{display:grid;place-items:center;width:90px;height:100px;margin:12px auto 8px;border-radius:8px;background:#EEF2F7;font-size:56px;font-family:var(--emoji)}.pc-id>b{display:block;font-size:17px}.pc-id>small{color:#666;font-size:12px}.pc-id>i{display:block;margin:10px auto 12px;width:150px;height:24px;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px,#111 4px 5px,#fff 5px 8px)}.pc-id-m{margin:0;background:#FFF6D6;font-size:11.5px;color:#7a5a00;padding:6px}
     .pc-sticky:nth-child(2n){transform:rotate(1.2deg);background:#FFD8E4}
     .pc-win{position:absolute;inset:10px;display:flex;flex-direction:column;background:#fff;border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.35);overflow:hidden;color:#1d1d1f}
     .pc-wt{flex:none;display:flex;align-items:center;gap:6px;padding:8px 10px;background:#ececf0;border-bottom:1px solid #d9d9de}
@@ -7841,7 +7853,16 @@
     autofix: ['자동고침 사전', '🔤', 'rows', '등록해 둔 말 → 바뀌는 말. 직업·말버릇·자주 틀리는 것이 보임'],
     spam: ['스팸 규칙', '🚫', 'rows', '걸러 내기로 정한 말·사람·물건과 까닭, 예외로 둔 것'],
     blocked: ['차단된 페이지', '⛔', 'rows', '회사·학교·가족이 막아 둔 곳에 들어가려던 기록과 차단 까닭, 돌아가려던 꾀'],
-    slide: ['발표 자료', '🖥️', 'rows', '한 장에 한 줄씩. 남을 설득하려고 만든 진지한 자료, 주제가 엉뚱함'],
+    slide: ['발표 자료', '🖥️', 'slides', '남을 설득하려고 만든 진지한 발표 슬라이드, 주제가 엉뚱함'],
+    poster: ['만들다 만 포스터', '🖼️', 'poster', '현상수배·초대장·실종 전단·공연 포스터·모집 공고·분실물 중 이 인물이 만들 법한 것. 진지한데 내용이 사소함'],
+    week: ['주간 시간표', '🗓️', 'timetable', '한 주를 칸으로 짠 시간표. 칸 이름에 속마음이 섞임'],
+    chart: ['엑셀 차트', '📉', 'chart', '돈·시간·마음을 숫자로 나눈 막대 차트. 항목 이름이 웃김'],
+    kanban: ['할 일 보드', '📌', 'kanban', '작은 일을 프로젝트처럼 할 일·하는 중·끝으로 나눈 보드'],
+    meet: ['화상회의', '🎥', 'meet', '화상회의 화면과 채팅창. 누가 음소거·카메라 끔인지 보이고 회의 주제는 사소함'],
+    report: ['결재 보고서', '🗂️', 'report', '윗사람에게 올린 보고서와 결재 칸. 도장 대신 반려가 찍히기도 함'],
+    org: ['조직도', '🧑‍💼', 'org', '주변 사람들을 회사처럼 나눈 조직도. 직책 이름에 본심이 보임'],
+    gantt: ['일정표', '📆', 'gantt', '이번 주 일을 막대로 그린 일정표. 미룬 일은 막대가 밀림'],
+    idcard: ['신분증', '🪪', 'idcard', '이 사람이 들고 다닐 신분증·명함·출입증 같은 것 한 장. 맨 밑 메모에 사연'],
     postpone: ['미룬 업데이트', '🔄', 'rows', '알림을 미룬 시각과 그때 하고 있던 일, 고른 버튼'],
     pulse: ['심박수 기록', '💓', 'rows', '시각·심박수·그때 있었던 일. 본인이 적은 까닭은 딴소리'],
     cowork: ['문서 댓글', '🗒️', 'chat', '같이 쓰는 문서에서 글자 하나·칸 하나를 두고 동료와 벌인 댓글'],
@@ -7853,7 +7874,31 @@
   };
   const PC_SHAPE = { chat: '{"title":"","app":"어디서(가상)","time":"","thread":[{"me":true,"text":""},{"me":false,"text":""}]}', steps: '{"title":"","to":"보내려던 곳(있으면)","time":"","steps":["먼저 쓴 것","바꾼 것"],"final":"끝에 남은 것(안 보냈거나 없으면 빈칸)"}',
     takes: '{"title":"","time":"","takes":["한 번에 녹음된 말(끊긴 곳·딴소리까지)"],"after":"그 뒤 어떻게 했는지"}', table: '{"title":"","cols":"칸|칸|칸","rows":["값|값|값"],"note":"맨 밑에 적은 한 줄"}(줄마다 칸 수를 cols와 같게)',
-    qa: '{"title":"","time":"","qa":[{"q":"","a":"","note":"망설인 흔적(있으면)"}],"result":"","after":"결과를 보고 한 짓"}', note: '{"title":"","time":"","body":"여러 줄","note":"덧붙은 한 줄(있으면)"}', rows: '{"title":"","items":["시각이나 순서 · 내용"],"note":"끝에 적은 한 줄(있으면)"}' };
+    qa: '{"title":"","time":"","qa":[{"q":"","a":"","note":"망설인 흔적(있으면)"}],"result":"","after":"결과를 보고 한 짓"}', note: '{"title":"","time":"","body":"여러 줄","note":"덧붙은 한 줄(있으면)"}', rows: '{"title":"","items":["시각이나 순서 · 내용"],"note":"끝에 적은 한 줄(있으면)"}',
+    slides: '{"title":"","theme":"밝음|차분함|어두움|귀여움","slides":[{"head":"제목","sub":"작은 글(있으면)","big":"크게 보일 숫자·한 낱말(있으면)","points":["한 줄"]}],"note":""}(3~5장)',
+    poster: '{"title":"파일 이름","poster":{"kind":"현상수배|초대장|실종 전단|공연|모집|분실물","head":"큰 글자","emoji":"이모지 하나","lines":["한 줄"],"big":"현상금·날짜 등 크게","small":"맨 밑 작은 글씨","stamp":"도장 글(있으면)"}}',
+    timetable: '{"title":"","timetable":{"days":"월|화|수|목|금","slots":[{"time":"09","cells":"칸|칸|칸|칸|칸(빈 칸은 비움)"}]},"note":""}(3~5줄)',
+    chart: '{"title":"","chart":{"sub":"목표·기간 한 줄","unit":"%","bars":[{"label":"","value":40}]},"note":""}(막대 3~6개)',
+    kanban: '{"title":"","board":{"todo":[""],"doing":[""],"done":[""]},"note":""}(칸마다 1~4개)',
+    meet: '{"title":"회의 이름","time":"00:47:12","meet":{"people":[{"name":"","emoji":"","state":"말하는 중|음소거|카메라 끔|(비움)"}],"chat":["이름: 말"]}}(2~6명 · 채팅 1~4줄)',
+    report: '{"title":"파일 이름","report":{"head":"보고서 제목","sign":[{"role":"담당","name":"","ok":true}],"fields":["항목|내용"],"verdict":"승인|반려|보류(있으면)"}}',
+    org: '{"title":"","org":{"top":{"name":"","emoji":"","role":""},"members":[{"name":"","emoji":"","role":""}]},"note":""}(2~6명)',
+    gantt: '{"title":"","gantt":{"days":"월|화|수|목|금|토|일","tasks":[{"name":"","from":1,"to":3}],"today":4},"note":""}(일 3~6개 · from·to·today는 1부터 센 칸 번호)',
+    idcard: '{"title":"파일 이름","card":{"org":"소속","emoji":"","name":"","role":"직책","no":"번호","memo":"맨 밑 메모"}}' };
+  const PC_VIS = ['slides', 'poster', 'timetable', 'chart', 'kanban', 'meet', 'report', 'org', 'gantt', 'idcard']; // 글 말고 화면으로 보이는 꼴 · 켤 때마다 한두 개는 꼭 넣어요
+  // 보는 꼴 그리기: 칸이 비거나 꼴이 어긋나도 있는 것만 그려요
+  function pcVis(x) { const A = v => Array.isArray(v) ? v : [], S = v => esc(String(v ?? '').trim()), cells = r => Array.isArray(r) ? r : String(r ?? '').split('|'), E = v => { const t = String(v || '').trim(); let g = ''; try { g = [...new Intl.Segmenter().segment(t)][0]?.segment || ''; } catch (_) { g = [...t].slice(0, 2).join(''); } return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(g) ? S(g) : ''; }; /* 이모지 한 개만 · 글이 오면 비워요(칸 밖으로 안 넘치게) */ let h = '';
+    if (A(x.slides).length) { const th = { '밝음': 'b', '차분함': 'c', '어두움': 'd', '귀여움': 'k' }[String(x.theme || '').trim()] || 'c'; h += `<div class="pc-sl t-${th}">${A(x.slides).slice(0, 8).map((p, i) => { p = p && typeof p === 'object' ? p : { head: p }; return `<section><small>${i + 1} / ${A(x.slides).length}</small>${p.big ? `<em>${S(p.big)}</em>` : ''}<h4>${S(p.head)}</h4>${p.sub ? `<p>${S(p.sub)}</p>` : ''}${A(p.points).length ? `<ul>${A(p.points).map(t => `<li>${S(t)}</li>`).join('')}</ul>` : ''}</section>`; }).join('')}</div>`; }
+    const P = x.poster; if (P && typeof P === 'object') h += `<div class="pc-po"><small>${S(P.kind)}</small><h4>${S(P.head)}</h4>${P.emoji ? `<span class="pc-po-ph">${E(P.emoji)}</span>` : ''}${P.stamp ? `<b class="pc-po-st">${S(P.stamp)}</b>` : ''}${A(P.lines).map(t => `<p>${S(t)}</p>`).join('')}${P.big ? `<strong>${S(P.big)}</strong>` : ''}${P.small ? `<p class="pc-po-sm">${S(P.small)}</p>` : ''}</div>`;
+    const T = x.timetable; if (T && typeof T === 'object') { const dy = cells(T.days).map(t => String(t).trim()).filter(Boolean).slice(0, 7); h += `<div class="pc-tt" style="--n:${dy.length || 5}"><span></span>${dy.map(t => `<b>${S(t)}</b>`).join('')}${A(T.slots).slice(0, 8).map(r => { const c = cells(r?.cells); return `<i>${S(r?.time)}</i>` + dy.map((_, j) => { const t = String(c[j] ?? '').trim(); return t ? `<span class="c${parseInt(fxH(t), 36) % 5}">${S(t)}</span>` : '<span></span>'; }).join(''); }).join('')}</div>`; }
+    const C = x.chart; if (C && typeof C === 'object') { const bs = A(C.bars).filter(b => b && typeof b === 'object').slice(0, 8), mx = Math.max(1, ...bs.map(b => Math.abs(Number(b.value) || 0))); h += `<div class="pc-ch">${C.sub ? `<p class="pc-meta">${S(C.sub)}</p>` : ''}${bs.map((b, i) => `<div><span>${S(b.label)}</span><i style="width:${Math.round(Math.abs(Number(b.value) || 0) / mx * 100)}%" class="c${i % 5}"></i><b>${S(b.value)}${S(C.unit)}</b></div>`).join('')}</div>`; }
+    const B = x.board; if (B && typeof B === 'object') h += `<div class="pc-kb">${[['todo', '할 일'], ['doing', '하는 중'], ['done', '끝']].map(([k, l]) => `<div><b>${l} ${A(B[k]).length}</b>${A(B[k]).map(t => `<p${k === 'done' ? ' class="dn"' : ''}>${S(t)}</p>`).join('')}</div>`).join('')}</div>`;
+    const V = x.meet; if (V && typeof V === 'object') h += `<div class="pc-vc"><div>${A(V.people).slice(0, 6).map(p => { p = p && typeof p === 'object' ? p : { name: p }; const st = String(p.state || ''); return `<figure class="${/말하/.test(st) ? 'sp' : ''}"><span>${/카메라/.test(st) ? '⬛' : E(p.emoji || '🙂')}</span><figcaption>${S(p.name)}${/음소거/.test(st) ? ' 🔇' : ''}${st && !/음소거/.test(st) ? ' · ' + S(st) : ''}</figcaption></figure>`; }).join('')}</div>${A(V.chat).length ? `<p class="pc-vc-c">💬 ${A(V.chat).map(S).join(' · ')}</p>` : ''}</div>`;
+    const R = x.report; if (R && typeof R === 'object') h += `<div class="pc-rp"><table class="pc-rp-s"><tr>${A(R.sign).map(g => `<td>${S(g?.role)}</td>`).join('')}</tr><tr>${A(R.sign).map(g => `<td>${g?.ok === false ? '<b class="no">반려</b>' : `<b class="ok">${S(g?.name || '✓')}</b>`}</td>`).join('')}</tr></table><h4>${S(R.head || '보 고 서')}</h4><dl>${A(R.fields).map(r => { const c = cells(r); return `<dt>${S(c[0])}</dt><dd>${S(c.slice(1).join('|'))}</dd>`; }).join('')}</dl>${R.verdict ? `<p class="pc-rp-v">${S(R.verdict)}</p>` : ''}</div>`;
+    const O = x.org; if (O && typeof O === 'object') { const nd = (p, top) => { p = p && typeof p === 'object' ? p : { name: p }; return `<div class="${top ? 'top' : ''}"><b>${p.emoji ? E(p.emoji) + ' ' : ''}${S(p.name)}</b><small>${S(p.role)}</small></div>`; }; h += `<div class="pc-og">${O.top ? nd(O.top, true) : ''}<div>${A(O.members).slice(0, 8).map(p => nd(p)).join('')}</div></div>`; }
+    const G = x.gantt; if (G && typeof G === 'object') { const dy = cells(G.days).map(t => String(t).trim()).filter(Boolean).slice(0, 14), n = dy.length || 7, cl = v => Math.min(n, Math.max(1, Math.round(Number(v) || 1))), td = Number(G.today) >= 1 ? cl(G.today) : 0; h += `<div class="pc-gt" style="--n:${n}"><span></span>${dy.map((t, i) => `<b${i + 1 === td ? ' class="td"' : ''}>${S(t)}</b>`).join('')}${A(G.tasks).slice(0, 8).map((k, i) => { const a = cl(k?.from), z = Math.max(a, cl(k?.to)); return `<i style="grid-row:${i + 2}">${S(k?.name)}</i><span class="c${i % 5}" style="grid-row:${i + 2};grid-column:${a + 1}/${z + 2}"></span>`; }).join('')}</div>`; }
+    const D = x.card; if (D && typeof D === 'object') h += `<div class="pc-id"><p>${S(D.org)}</p><span>${E(D.emoji || '🙂')}</span><b>${S(D.name)}</b><small>${S(D.role)}${D.no ? ' · ' + S(D.no) : ''}</small><i></i>${D.memo ? `<p class="pc-id-m">${S(D.memo)}</p>` : ''}</div>`;
+    return h; }
   // 슴슴한 것: 켤 때마다 둘만
   const PC_PLAIN = { mail: '"mail":[{"box":"받은편지함|보낸편지함|임시보관함","from":"","to":"","subject":"","body":"","time":"","unread":false}]', browser: '"browser":{"tabs":[{"title":"","site":"","body":""}],"history":[{"title":"","site":"","time":"","secret":false,"body":""}]}', docs: '"docs":[{"name":"이름.확장자","folder":"","date":"","body":""}]',
     calendar: '"calendar":[{"title":"","date":"","time":"","note":""}]', photos: '"photos":[{"emoji":"🌃","photo":"찍힌 것(10자 안팎)","date":""}]', watch: '"watch":[{"title":"","channel":"","note":"왜 봤는지","time":""}]', cart: '"cart":[{"item":"","price":"","note":"안 산 이유"}]' };
@@ -7865,12 +7910,14 @@
   // 켤 때마다: 재밌는 것 3~5개(다른 인물에게 나온 것 · 지난번에 나온 것은 뒤로 · 같은 꼴은 둘까지) + 그 인물만의 프로그램 2~3개 · 칸마다 1~3개 · 소재와 웃기는 방식도 따로
   function pcRoll(past = [], lastApps = [], usedApps = []) {
     const want = 3 + Math.floor(Math.random() * 3), own = dice([2, 2, 3]), all = Object.keys(PC_FUN), late = k => lastApps.includes(k) ? 2 : usedApps.includes(k) ? 1 : 0, order = [0, 1, 2].flatMap(n => pcDeal(all.filter(k => late(k) === n), 99)), kinds = {}, apps = [];
-    for (const k of order) { const t = PC_FUN[k][2]; if (apps.length < want && (kinds[t] || 0) < 2) { kinds[t] = (kinds[t] || 0) + 1; apps.push(k); } }
+    const vis = 1 + Math.floor(Math.random() * 2); for (const k of order.filter(k => PC_VIS.includes(PC_FUN[k][2])).slice(0, vis)) { kinds[PC_FUN[k][2]] = 1; apps.push(k); } // 보는 꼴(슬라이드·포스터·차트 등) 한두 개는 꼭
+    for (const k of order) { const t = PC_FUN[k][2]; if (!apps.includes(k) && apps.length < want && (kinds[t] || 0) < (PC_VIS.includes(t) ? 1 : 2)) { kinds[t] = (kinds[t] || 0) + 1; apps.push(k); } }
     const topics = pcDeal(PC_TOPIC, apps.length * 2), tones = pcDeal([...PC_TONE, ...PC_TONE], apps.length * 2), plain = pcDeal(Object.keys(PC_PLAIN), 2), lock = Math.random() < 0.6, trash = Math.random() < 0.5, cnt = () => dice([1, 1, 1, 2, 2, 3]);
     const text = '\n\n[이번에 넣을 칸 — 만들 때마다 주사위로 뽑힘. 개수를 따르고, 소재·웃기는 방식은 둘 중 이 인물에게 맞는 쪽을 고른다]\n- "own":[{"name":"프로그램 이름(10자 안팎)","icon":"이모지 하나", 이어서 아래 꼴 하나의 칸들}] 이 인물만의 프로그램 ' + own + '개 · 직업·기술·취미·사는 곳·비밀·최근 겪은 일에서 이 사람 컴퓨터에만 있을 프로그램을 새로 짓는다. 누구 컴퓨터에나 있을 것(일기·메모·녹음·검색)과 아래 칸·다른 인물 컴퓨터에 나온 것은 안 된다. 꼴은 하나씩 다르게: ' + pcDeal(Object.values(PC_SHAPE), own + 1).join(' / ') + '\n' + apps.map((k, i) => { const [nm, , t, how] = PC_FUN[k]; return '- "' + k + '":[' + PC_SHAPE[t] + '] ' + nm + ' ' + cnt() + '개 · ' + how + ' · 소재: ' + topics[i * 2] + ' 또는 ' + topics[i * 2 + 1] + ' · 웃기는 방식: ' + [...new Set([tones[i * 2], tones[i * 2 + 1]])].join(' 또는 '); }).join('\n')
       + '\n' + plain.map(k => '- ' + PC_PLAIN[k] + ' · ' + cnt() + '개(무난하게, 짧게)').join('\n')
       + (trash ? '\n- "trash":[{"name":"지운 파일 이름","body":"","note":"왜 지웠는지"}] · ' + cnt() + '개' : '') + (lock ? '\n- "locked":{"hint":"","pw":"","files":[{"name":"","body":"남에게 안 보여 줄 내용"}]} · pw는 이야기에 나온 날짜·이름·물건에서 고른 짧은 말 하나, hint는 pw를 그대로 말하지 않되 이야기를 아는 사람은 풀 수 있게' : '')
-      + '\n- 길이: thread 4~10줄, steps 3~6, takes 2~5, 표 3~6줄, qa 2~4, items 3~8, body 3~10줄. 소재가 이 인물·시대에 안 맞으면 가까운 것으로 바꾼다.'
+      + '\n- 보는 꼴(슬라이드·포스터·시간표·차트·보드·회의·보고서·조직도·일정표·신분증)은 이 사람의 나이·직업·사는 곳·시대에 맞는 모습으로 바꿔 쓴다. 이름도 그에 맞게.'
+      + '\n- 길이: thread 4~10줄, steps 3~6, takes 2~5, 표 3~6줄, qa 2~4, items 3~8, body 3~10줄, 슬라이드 3~5장, 시간표 3~5줄, 막대 3~6개. 소재가 이 인물·시대에 안 맞으면 가까운 것으로 바꾼다.'
       + (past.length ? '\n- 지난번에 이미 쓴 것(같은 소재·같은 웃음·비슷한 제목 금지): ' + past.join(' / ') : '')
       + '\n- 성격이 먼저(꼭 지킴): 주사위와 성격이 부딪히면 성격을 따른다. 노트를 아는 사람이 읽고 바로 이 사람이라고 알아볼 만해야 한다. 혼자 있는 곳이라 속마음은 평소보다 드러나도 되지만 말투·말버릇·가치관·아는 것·체면·감정의 크기는 그대로이고, 과장은 조금만 한다. 말수 적은 사람은 적은 말로, 점잖은 사람은 점잖은 채로 웃긴다. 우스워지려고 성격에 없는 취미·버릇·애교·주접·유치함을 붙이지 않고, 무거운 일(상처·죽음·트라우마)을 우스갯거리로 만들지 않는다.'
       + '\n- 언어(꼭 지킴): 이 인물이 대화에서 외국어로 말하면 위 모든 칸(제목·묻고 답한 말·표의 칸과 값·목록·메일·검색·포스트잇·파일·휴지통·잠긴 폴더)을 그 언어로 쓴다. 한 줄짜리는 뒤에 (한국어 번역), 여러 줄 글은 맨 끝에 (전체 번역) 한 번. 이 지침이 한국어라고 한국어로 쓰지 않는다. 한국어로 말하는 인물은 한국어로만. pw는 번역 없이 하나로.';
@@ -7966,7 +8013,7 @@
           + arr(x.takes).map((t, i) => `<div class="pc-tk"><b>▶ 녹음 ${i + 1}</b>${txt(t)}</div>`).join('')
           + (col.length ? `<div class="pc-sh"><table><thead><tr>${col.map(h => `<th>${esc(String(h).trim())}</th>`).join('')}</tr></thead><tbody>${arr(x.rows).map(row).join('')}</tbody></table></div>` : '')
           + arr(x.qa).map((m, i) => `<div class="pc-tk"><b>Q${i + 1}. ${esc(m?.q ?? m)}</b><p>✔ ${esc(m?.a ?? '')}</p>${m?.note ? `<small>${esc(m.note)}</small>` : ''}</div>`).join('') + (x.result ? `<p class="pc-ed last">${esc(x.result)}</p>` : '')
-          + (x.body ? txt(x.body) : '') + arr(x.items).map(t => `<div class="pc-tk"><p>${esc(t && typeof t === 'object' ? Object.values(t).join(' · ') : t)}</p></div>`).join('')
+          + pcVis(x) + (x.body ? txt(x.body) : '') + arr(x.items).map(t => `<div class="pc-tk"><p>${esc(t && typeof t === 'object' ? Object.values(t).join(' · ') : t)}</p></div>`).join('')
           + [x.after, x.note].filter(Boolean).map(t => `<p class="pc-end">${esc(t)}</p>`).join(''), own ? 'home' : 'fun:' + a); }
       else if (scr === 'locked') w = nav.pcOpen === who
         ? win('🔓 잠긴 폴더', list((d.locked?.files || []).map(x => [esc(x.name), esc(String(x.body || '').slice(0, 40))]), 'lockv'))
@@ -7975,7 +8022,7 @@
       const icons = pcOwn(d).map((x, i) => `<button class="pc-ic" data-act="pcgo" data-arg="own:${i}"><i>${esc(String(x.icon || '🧩').slice(0, 8))}</i><span>${esc(x.name || x.title || '')}</span></button>`).join('') + PC_APPS.filter(([, , , has]) => has(d)).map(([k, l, e]) => `<button class="pc-ic" data-act="pcgo" data-arg="${k}"><i>${e}</i><span>${l}</span></button>`).join('')
         + desk.map((x, i) => `<button class="pc-ic" data-act="pcgo" data-arg="file:${i}"><i>${FILE_ICON[x.kind] || '📄'}</i><span>${esc(x.name)}</span></button>`).join('');
       const sticky = (d.sticky || []).map(s => `<p class="pc-sticky">${esc(s)}</p>`).join('');
-      inner = `${bar}<div class="pc-desk" style="--wb:${bg};--wf:${fg}"><span class="pc-wall">${esc(d.wallpaper || '')}</span><div class="pc-icons">${icons}</div>${sticky ? `<div class="pc-stk">${sticky}</div>` : ''}${w}</div>`;
+      inner = `${bar}<div class="pc-desk" style="--wb:${bg};--wf:${fg}"><span class="pc-wall">${esc(d.wallpaper || '')}</span><div class="pc-icons${sticky ? ' stk' : ''}">${icons}</div>${sticky ? `<div class="pc-stk">${sticky}</div>` : ''}${w}</div>`;
     }
     const foot = rec ? `<p class="muted" style="text-align:center;margin:10px 0 0">${rec.turns}턴 시점에 만든 컴퓨터${rec.from ? ` · ${rec.from}~${rec.to}턴 대화 참고` : ''} · <button class="linkbtn" data-act="devimg" data-arg="pc">이미지로 저장</button> · <button class="linkbtn" data-act="pcmake" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>다시 만들기</button>${turnEnd() > recUpto(rec) ? ` · <button class="linkbtn" data-act="pcupd" data-arg="${esc(who)}"${busyNow ? ' disabled' : ''}>새 이야기 반영 (${recUpto(rec) + 1}~${turnEnd()}턴)</button>` : ''}</p>` : '';
     return devSeg() + genCard() + picker + `<div class="pc"><div class="pc-screen">${inner}</div></div><i class="pc-stand"></i>` + foot
