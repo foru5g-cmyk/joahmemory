@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.17
+// @version      6.0.18
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -7910,7 +7910,7 @@
   // 켤 때마다: 재밌는 것 3~5개(다른 인물에게 나온 것 · 지난번에 나온 것은 뒤로 · 같은 꼴은 둘까지) + 그 인물만의 프로그램 2~3개 · 칸마다 1~3개 · 소재와 웃기는 방식도 따로
   function pcRoll(past = [], lastApps = [], usedApps = []) {
     const want = 3 + Math.floor(Math.random() * 3), own = dice([2, 2, 3]), all = Object.keys(PC_FUN), late = k => lastApps.includes(k) ? 2 : usedApps.includes(k) ? 1 : 0, order = [0, 1, 2].flatMap(n => pcDeal(all.filter(k => late(k) === n), 99)), kinds = {}, apps = [];
-    const vis = 1 + Math.floor(Math.random() * 2); for (const k of order.filter(k => PC_VIS.includes(PC_FUN[k][2])).slice(0, vis)) { kinds[PC_FUN[k][2]] = 1; apps.push(k); } // 보는 꼴(슬라이드·포스터·차트 등) 한두 개는 꼭
+    const vis = 1 + Math.floor(Math.random() * 2), vo = order.filter(k => PC_VIS.includes(PC_FUN[k][2])); if (Math.random() < 0.2 && !lastApps.includes('meet')) vo.unshift(...vo.splice(vo.indexOf('meet'), 1)); /* 화상회의는 세 번에 한 번꼴(바로 전에 나왔으면 빼고) */ for (const k of vo.slice(0, vis)) { kinds[PC_FUN[k][2]] = 1; apps.push(k); } // 보는 꼴(슬라이드·포스터·차트 등) 한두 개는 꼭
     for (const k of order) { const t = PC_FUN[k][2]; if (!apps.includes(k) && apps.length < want && (kinds[t] || 0) < (PC_VIS.includes(t) ? 1 : 2)) { kinds[t] = (kinds[t] || 0) + 1; apps.push(k); } }
     const topics = pcDeal(PC_TOPIC, apps.length * 2), tones = pcDeal([...PC_TONE, ...PC_TONE], apps.length * 2), plain = pcDeal(Object.keys(PC_PLAIN), 2), lock = Math.random() < 0.6, trash = Math.random() < 0.5, cnt = () => dice([1, 1, 1, 2, 2, 3]);
     const text = '\n\n[이번에 넣을 칸 — 만들 때마다 주사위로 뽑힘. 개수를 따르고, 소재·웃기는 방식은 둘 중 이 인물에게 맞는 쪽을 고른다]\n- "own":[{"name":"프로그램 이름(10자 안팎)","icon":"이모지 하나", 이어서 아래 꼴 하나의 칸들}] 이 인물만의 프로그램 ' + own + '개 · 직업·기술·취미·사는 곳·비밀·최근 겪은 일에서 이 사람 컴퓨터에만 있을 프로그램을 새로 짓는다. 누구 컴퓨터에나 있을 것(일기·메모·녹음·검색)과 아래 칸·다른 인물 컴퓨터에 나온 것은 안 된다. 꼴은 하나씩 다르게: ' + pcDeal(Object.values(PC_SHAPE), own + 1).join(' / ') + '\n' + apps.map((k, i) => { const [nm, , t, how] = PC_FUN[k]; return '- "' + k + '":[' + PC_SHAPE[t] + '] ' + nm + ' ' + cnt() + '개 · ' + how + ' · 소재: ' + topics[i * 2] + ' 또는 ' + topics[i * 2 + 1] + ' · 웃기는 방식: ' + [...new Set([tones[i * 2], tones[i * 2 + 1]])].join(' 또는 '); }).join('\n')
