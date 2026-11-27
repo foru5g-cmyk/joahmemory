@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.31
+// @version      6.0.32
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -4069,12 +4069,12 @@
   //    전체 대화를 순서대로 세서, 사용자 메시지마다 턴이 하나씩 올라갑니다. 노트의 턴 수에 맞춰 보정해요.
   let turnMap = new Map(), turnMapRoom = '', turnMapAt = 0, noteTurns = 0, badgeMiss = new Set();
   let turnBase = null; // 보정 전 턴 번호(메시지 ID → 턴). 같은 방에서 이어 셀 때 써요
-  async function readAll(chatId, maxPages = MAX_PAGES) {
+  async function readAll(chatId, maxPages = MAX_PAGES, slim = null) { // slim: 쪽마다 메시지를 줄여서 들고 있어요(폰에서 큰 글 전체를 안 쥐게)
     const out = []; let cursor = '';
     try { for (let page = 0; page < maxPages; page++) {
       if (page === 4 || (page && page % 20 === 0)) crumbOn('all', '대화 전체 읽기 ' + page + '쪽째(1쪽 50개)');
       const { list, next } = await listPage(chatId, cursor);
-      out.push(...list);
+      out.push(...(slim ? list.map(slim) : list));
       if (!(cursor = next)) break;
     } } finally { crumbOff('all'); }
     const list = liveLine(sortOld(out)).filter(isChat);
@@ -11047,7 +11047,7 @@
       </div>`;
   }
 
-  // 설정 › 화면 › HUD에 연도 넣기: HUD 한 줄을 붙이고 날짜를 고르면 이 방 AI 답 머리말(위·아래 8줄)의 같은 꼴 날짜에 연도를 붙여요 · 컴퓨터만(대화 전체를 읽어서)
+  // 설정 › 화면 › HUD에 연도 넣기: HUD 한 줄을 붙이고 날짜를 고르면 이 방 AI 답 머리말(위·아래 8줄)의 같은 꼴 날짜에 연도를 붙여요 · 읽을 때 답마다 머리·끝 8줄만 남겨요(폰이 안 튕기게)
   //   고치기 직전에 그 답을 다시 읽어 그 줄이 그대로일 때만 바꿔요 · 바꾼 줄(앞·뒤)만 'hudbak:방'에 남겨 되돌리기에 써요
   const HY_TOK = /\d{4}\s*(?:년|[.\/-])\s*\d{1,2}\s*(?:월|[.\/-])\s*\d{1,2}(?:\s*일)?|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}[.\/]\d{1,2}(?![\d:])/g, HY_YR = /^\d{4}\s*(?:년|[.\/-])\s*/;
   const hy = { chat: '', txt: '', sel: 0, y: 0, wrap: true, fix: false, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1, busy: '', bak: 0 };
@@ -11069,7 +11069,6 @@
       out.push({ k, id: msgId(msg), line: f.line, newLine: f.line.slice(0, f.m.index) + rep + f.line.slice(f.m.index + f.m[0].length), old: f.m[0], rep, y: yy, had, chg, back, skip }); });
     return out; }
   function hyPvHtml() {
-    if (IS_STAY) return '';
     if (hy.busy) return `<p class="hy-busy">${/\//.test(hy.busy) ? '바꾸는 중 ' + esc(hy.busy) + ' · 끝날 때까지 이 방에서 채팅하지 말아 주세요' : esc(hy.busy) + '…'}</p>`;
     if (!hyToks()[hy.sel]) return '';
     if (!hy.msgs) return `<button class="btn" data-act="hyread">미리보기 만들기</button><small>이 방 대화 전체를 읽어요(긴 방은 몇십 초)</small>`;
@@ -11087,7 +11086,6 @@
     return `<div class="hy-tok">${h + esc(hy.txt.slice(at))}</div><small>날짜를 누르면 골라져요 · 고른 꼴만 바꿔요</small>`; };
   function hySheetHtml() {
     const q = SHEET_Q('HUD에 연도 넣기', ['이 방 AI 답 머리말의 날짜에 연도를 붙여요. 본문은 안 건드려요.', '12월 다음에 1월이 오면 다음 해로 올려요. 며칠만 앞으로 돌아간 답(회상·리롤)은 해를 안 넘기고 ⚠️로 보여 줘요.', '미리보기에서 연도를 누르면 그 답부터 끝까지 그 연도로 다시 세요.']);
-    if (IS_STAY) return sheetBox('HUD에 연도 넣기', q, '<div class="hy"><small>대화 전체를 읽어야 해서 컴퓨터에서만 돼요(아이폰은 튕길 수 있어요).</small></div>');
     return sheetBox('HUD에 연도 넣기', q, `<div class="hy">
       <div><h5>1. HUD 한 줄 붙여 넣기 · 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div></div>
       <div><h5>2. 넣을 연도</h5><div class="hy-row"><input type="number" data-hud="y" value="${hy.y}"><span>년부터</span></div>
@@ -11097,7 +11095,8 @@
   const hyPaint = (all = false) => { if (!ui('.hy')) return; if (all) { const y = out('main').scrollTop; render(); out('main').scrollTop = y; return; } const tw = ui('.hy-tw'); if (tw) tw.innerHTML = hyTokHtml(); const pv = ui('.hy-pv'); if (pv) pv.innerHTML = hyPvHtml(); };
   async function hyOpen() { const c = chatIdFromPath(); if (hy.chat !== c) { Object.assign(hy, { chat: c, sel: 0, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1 }); const d = storyDay(noteMemory() || ''), sy = d == null ? 0 : new Date(d * 864e5).getUTCFullYear(); hy.y = sy && sy < P_NOYEAR ? sy : new Date().getFullYear(); }
     try { hy.bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')).length; } catch (_) { hy.bak = 0; } }
-  async function hyRead() { const c = hy.chat; if (hy.busy) return; hy.busy = '대화 읽는 중'; hyPaint(); try { const l = await readAll(c); if (hy.chat !== c) return; hy.cut = l.cut; hy.msgs = l.filter(m => msgRole(m) === 'assistant'); } catch (e) { toast('대화를 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { hy.busy = ''; } hyPaint(); }
+  const hySlim = m => { if (msgRole(m) !== 'assistant') return { ...m, content: '', message: '' }; const L = stripBlocks(msgText(m)).split('\n').filter(x => x.trim()); return { ...m, content: (L.length > 16 ? [...L.slice(0, 8), ...L.slice(-8)] : L).join('\n'), message: '' }; }; // 머리·끝 8줄만(hyFind가 보는 곳)
+  async function hyRead() { const c = hy.chat; if (hy.busy) return; hy.busy = '대화 읽는 중'; hyPaint(); try { const l = await readAll(c, MAX_PAGES, hySlim); if (hy.chat !== c) return; hy.cut = l.cut; hy.msgs = l.filter(m => msgRole(m) === 'assistant'); } catch (e) { toast('대화를 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { hy.busy = ''; } hyPaint(); }
   async function hyWrite(list, back) { // list: [id, 지금 줄, 바꿀 줄] · 그 답을 다시 읽어 지금 줄이 그대로일 때만 써요
     const c = hy.chat, done = []; let miss = 0;
     for (const [i, [id, from, to]] of list.entries()) { if (chatIdFromPath() !== c) break; hy.busy = `${i + 1}/${list.length}`; hyPaint();
