@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.35
+// @version      6.0.36
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -8614,8 +8614,8 @@
   // ── 📚 나무위키 · 📺 실시간톡: 커뮤니티·뉴스와 같은 틀 ──
   const WIKI_PROMPT = "너는 RP 세계 안의 위키 사이트(나무위키 같은 집단 편집 위키)를 만든다. [기억 노트]나 [대화 원문]의 인물·사건·장소로 문서를 쓴다.\n- 이 지침에는 일부러 예시 문장을 넣지 않았다. 문서 제목·본문·드립·토론·편집 요약은 전부 이 이야기 디테일로 새로 짓는다. 상투 표현과 같은 드립을 되풀이하지 않는다.\n- 위키 이름 하나(지어낸 것, 실제 사이트 이름 금지).\n- 문서 6~8개: 노트 인물마다 하나, 큰 사건·장소·관계 문서 몇 개. kind는 인물|사건|장소|관계|밈.\n- 편집자들은 음지 커뮤 출신 위키러다: 정색한 백과사전체 흉내 속에 취소선 드립(~~지운 척하는 진심~~), 각주 드립, 카더라, 과몰입 TMI, 사소한 디테일 집착, 은근한 비꼼, 고자극 가십을 섞는다. 노골적인 성행위 묘사는 쓰지 않는다.\n- 문서마다 sections 3~5개(개요·상세·논란 및 사건 사고·어록·여담 같은 위키식 목차를 문서마다 다르게). 본문 문장 끝에 [1]처럼 각주 번호를 달고, notes에 각주 내용. 각주 일부는 근거: (N턴) \"원문 15~60자 그대로\"(대사든 지문이든 원문 그대로). 나머지 각주는 드립·카더라·편집자 사담.\n- 논란 및 사건 사고 칸은 서사 속 씨앗을 악의적으로 부풀린 의혹과 아예 지어낸 골때리는 루머를 섞는다(루머는 루머라고 써 둔다).\n- talk(토론) 4~8줄: 문서 한 줄 표현을 두고 편집자들이 음지 말투(디시·일베·메갈·더쿠·에펨 등 서로 다른 말투)로 싸운다. 비속어·조롱 세게, 현실 성별·지역·집단 멸칭은 금지.\n- history(편집 역사) 4~6줄: 편집 전쟁·반달·되돌림·보호 요청이 보이게. who는 아이피나 위키 닉, what은 편집 요약.\n- lock은 보호 상태 한 단어(없으면 빈 칸).\n- 유저(사용자 캐릭터)도 문서가 있고, 비난·조롱·편들기·악플·루머 대상이 되는 것까지 다 열려 있다. 다만 유저의 속마음·대사는 지어내지 않고 겉으로 보인 일로만. 편집자·토론 참가자로 유저를 쓰지 않는다.\n- 노트 인물(NPC)이 몰래 편집하거나 토론에 끼는 일은 아주 가끔(전체에서 0~1개): by에 그 인물 정본명, 그 인물 성격 그대로, 모르는 정보는 쓰지 않는다.\n- 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 내용, 현실 집단 혐오, 실존 인물·사이트 이름.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"site\":\"\",\"docs\":[{\"title\":\"\",\"kind\":\"\",\"lock\":\"\",\"summary\":\"\",\"sections\":[{\"h\":\"\",\"body\":\"\"}],\"notes\":[\"\"],\"talk\":[{\"nick\":\"\",\"text\":\"\",\"by\":\"\"}],\"history\":[{\"who\":\"\",\"what\":\"\",\"ago\":\"\",\"by\":\"\",\"clean\":false}]}]}";
   const WIKI_MORE = "\n\n[이번엔 '새 이야기 반영']\n- 이미 있는 위키에 [새로 나온 대화]의 일을 반영한다. 기존 문서 중 바뀐 문서는 같은 title로 sections를 덧붙이거나 고친 전체 문서로, 새로 생길 만한 문서는 새로 쓴다(바뀐 문서·새 문서만 2~4개). history에는 이번 편집이 맨 위에 보이게.\n- JSON은 {\"docs\":[...]} 하나만(문서 모양은 위와 같다).";
-  const LIVE_PROMPT = "너는 RP를 드라마로 보고 실시간으로 떠드는 시청자 채팅방을 만든다. [대화 원문]/[기억 노트]의 이번 회차 장면을 시청자들이 지금 막 보고 있다.\n- 이 지침에는 일부러 예시 문장을 넣지 않았다. 채팅·드라마 제목·클립 제목은 전부 이 이야기 디테일로 새로 짓는다. 상투 표현·같은 드립을 되풀이하지 않는다.\n- 드라마 제목 하나(이 이야기에 어울리게 지어낸 것), 이번 화 부제 하나, 시청률(rating, 소수점 한 자리 %). [이어서 방송]이면 제목·부제는 빈 칸으로 두고 앞 채팅 흐름을 이어 간다. [바로 앞 채팅] 끝에 검열된 자막(▒▒ 검열됨)이 있으면, 첫 반응 몇 줄은 검열·모자이크에 대한 불만, 모자이크 너머 상상, 방송 심의 드립으로 시작한다(노골적인 묘사는 쓰지 않는다).\n- chat은 이번에 보내는 턴 범위를 처음부터 끝까지 순서대로, 개난장판으로. 채팅은 원문을 따라간다: 원문의 턴마다 반응 포인트가 될 줄을 1~3줄씩(빠뜨리는 턴 없이) 순서대로 골라 자막 줄로 넣는다. 자막의 절반 이상은 지문이다: 인물이 어떻게 행동하는지(표정·눈빛·몸짓·손동작·거리·숨·침묵·분위기) 보이는 줄을 대사보다 많이 고르고, 대사는 꼭 터질 줄만. 지문 자막 뒤엔 그 행동을 하나하나 실황 중계하고 해석하고 놀리는 반응이 붙는다. 자막 줄 {\"line\":\"원문 그대로 15~80자\",\"kind\":\"대사|지문\",\"turn\":원문 턴 번호,\"rate\":그 순간 분당 시청률(소수점 한 자리 %)}로 넣고(시청률은 터지는 줄에서 확 오르고 지루한 줄에서 떨어진다), 그 바로 뒤에 시청자들이 5~10줄씩 그 대사·행동에 반응한다: 방금 나온 대사를 그대로 따라 치며 조롱하기, 말투 비틀어 패러디, 밈으로 만들기, 오글거린다고 비명, 지문 속 행동 하나하나 실황 중계, 짤 박제 선언, 성대모사 도배. 이야기가 어떻게 흘러가는지 시청자 반응만 봐도 보이게. 자막은 원문을 고치지 말고 그대로. 단 원문에 수위 높은 성적인 장면이 있으면 노골적인 부분은 옮기지 않고 그 행동을 에둘러 한 줄로 요약한 자막(앞에 🔞)으로 쓰고, 시청자는 비명·드립·암시로 반응한다(노골적인 묘사 금지). 터지는 줄엔 채팅·후원이 몰리고, 밋밋한 줄은 조용하게(줄마다 반응 크기가 확 달라야 한다). 나머지는 시청자 채팅 한 줄씩: 고자극 음지 말투(디시·일베·메갈·더쿠·여시·에펨·인스티즈·트위터(X)·오타쿠 커뮤 등 서로 다른 말투), 과몰입·비명·커플 이름 짓기·작가 욕·배우 외모 품평·다음 전개 예측·악플·싸움·병맛 드립·밈. 시청자 유형을 섞는다: 인물한테 훈수 두는 사람, 남 말 안 듣고 지 말만 하는 사람, 같은 말 도배하는 도배충, 뒷북, 스포 하는 척, 정주행 중이라는 사람, 화면 밖 TMI. 말 짧게, 같은 사람도 여러 번 나온다.\n- 후원 줄은 아주 가끔(이번에 보내는 턴 범위 전체에서 0~1개, 진짜 터지는 장면에만): {\"donate\":금액,\"nick\":\"\",\"text\":\"\"} 꼴로 별풍선·후원이 터지며 짧은 요구나 드립(장면 다시 보여 줘, 키스신 가자, 작가 정신 차려 등을 이 장면에 맞게 새 말로). 금액은 1천~10만 사이 제각각, 큰 후원엔 채팅이 들썩인다. 현실 성별·지역·집단 멸칭은 금지, 노골적인 성행위 묘사 금지.\n- 닉네임은 거의 겹치지 않게: 줄 수만큼 다양하게, 커뮤 닉 스타일(영문 아이디·초성·드립 닉·고닉·숫자 붙은 닉·팬 닉·안티 닉 등)을 섞는다. 같은 사람이 여러 번 나올 땐 같은 닉으로.\n- 시청자 중엔 야한 단어만 도배하는 음담패설러(단어 도배·드립 수준, 노골적인 묘사는 쓰지 않음)와 일부러 반대로 말하고 커플 까고 싸움 붙이고 뜬금 홍보하는 분탕러도 섞여 있다. 다른 시청자들이 강퇴·신고·무시로 반응한다.\n- 채팅에 이모지를 자주 섞고, 가끔(5턴에 2~4번) 큰 스티커 이모티콘 줄 {\"sticker\":\"이모지 1~3개\"}도 날린다. 장면 감정에 맞게 매번 다른 조합.\n- 원문 장면에 딱 붙어 반응한다: 대사 한 줄, 지문 속 행동·물건·표정에 바로 반응해 \"그 장면\"을 알아보게.\n- 노트 인물(NPC)을 연기하는 배우나 그 인물 본인이 몰래 채팅에 끼는 일도 가끔(0~2줄): by에 인물 정본명.\n- 자막에는 [USER] 쪽 대사·지문(유저 캐릭터의 말과 행동)도 원문 그대로 들어간다. 유저 대사에도 오글거린다·설렌다·답답하다·사이다다·찌질하다·명대사다 등 반응을 매번 다르게 단다.\n- 꼭 들어갈 것: 맥락 없는 뜬금 드립, 밈·유행어, 터지는 장면에서 다 같이 비명 지르고 같은 말 연달아 치는 집단 흥분, 비속어, 커뮤 특유의 과몰입. 조용한 장면에선 딴소리가 늘어난다.\n- 반응의 결: 대놓고 조롱, 비꼼, 은근한 놀림과 돌려 까기, 과몰입 응원이 한 줄 안에서도 부딪친다. 말투는 디시·일베·메갈·워마드·더쿠·여시·에펨·인스티즈·트위터(X)·오타쿠 커뮤 등 서로 다른 커뮤 말투와 음지 말투를 섞는다(현실 성별·지역·집단 멸칭은 금지).\n- 유저(사용자 캐릭터)도 드라마 주인공으로 응원·비난·조롱·훈수·악플·편 가르기의 대상이 되는 것까지 다 열려 있다. 다만 채팅을 쓰지 않는다. 유저의 속마음·대사를 지어내지 않는다.\n- 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 내용, 현실 집단 혐오, 실존 인물·방송사 이름.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"drama\":\"\",\"sub\":\"\",\"rating\":0,\"chat\":[{\"line\":\"\",\"kind\":\"대사\",\"turn\":0,\"rate\":0},{\"nick\":\"\",\"text\":\"\",\"by\":\"\"},{\"donate\":0,\"nick\":\"\",\"text\":\"\"},{\"sticker\":\"\"}],\"clips\":[{\"title\":\"\",\"views\":0}]}";
-  const LIVE_REPLY = "너는 RP 드라마 실시간 채팅방의 시청자들이다. [채팅]의 흐름과 방금 [내 채팅]을 보고 바로 받아치는 채팅을 쓴다.\n- 이 지침에는 예시 문장이 없다. 이 채팅 내용에 딱 붙는 새 말로. [채팅]에 나온 말·드립을 되풀이하지 않는다.\n- 3~7줄. 고자극 음지 말투(서로 다른 커뮤 말투 · 트위터(X)·오타쿠 커뮤 말투도): 맞장구·시비·놀림·드립 받기·과몰입·싸움·훈수·지 말만 하기·도배. 아주 드물게(대부분 0줄) 후원 줄 {\"donate\":금액,\"nick\":\"\",\"text\":\"\"}도. 현실 성별·지역·집단 멸칭 금지, 노골적인 성행위 묘사 금지.\n- 내 채팅을 쓴 사람은 익명 시청자다. 그 사람 말을 대신 더 쓰지 않는다. 유저(사용자 캐릭터)의 대사·속마음을 지어내지 않는다.\n- 아주 가끔(0~1줄) 노트 인물이 몰래 끼면 by에 정본명.\n[출력] JSON 배열 하나만: [{\"nick\":\"\",\"text\":\"\",\"by\":\"\"}] (후원은 {\"donate\":0,\"nick\":\"\",\"text\":\"\"})";
+  const LIVE_PROMPT = "너는 RP를 드라마로 보고 실시간으로 떠드는 시청자 채팅방을 만든다. [대화 원문]/[기억 노트]의 이번 회차 장면을 시청자들이 지금 막 보고 있다.\n- 이 지침에는 일부러 예시 문장을 넣지 않았다. 채팅·드라마 제목·클립 제목은 전부 이 이야기 디테일로 새로 짓는다. 상투 표현·같은 드립을 되풀이하지 않는다.\n- 드라마 제목 하나(이 이야기에 어울리게 지어낸 것), 이번 화 부제 하나, 시청률(rating, 소수점 한 자리 %). [이어서 방송]이면 제목·부제는 빈 칸으로 두고 앞 채팅 흐름을 이어 간다. [바로 앞 채팅] 끝에 검열된 자막(▒▒ 검열됨)이 있으면, 첫 반응 몇 줄은 검열·모자이크에 대한 불만, 모자이크 너머 상상, 방송 심의 드립으로 시작한다(노골적인 묘사는 쓰지 않는다).\n- chat은 이번에 보내는 턴 범위를 처음부터 끝까지 순서대로, 개난장판으로. 채팅은 원문을 따라간다: 원문의 턴마다 반응 포인트가 될 줄을 1~3줄씩(빠뜨리는 턴 없이 · 이번에 보내는 범위 전체로 자막이 최소 4줄은 되게, 턴이 적으면 턴마다 더 골라) 순서대로 골라 자막 줄로 넣는다. 자막의 절반 이상은 지문이다: 인물이 어떻게 행동하는지(표정·눈빛·몸짓·손동작·거리·숨·침묵·분위기) 보이는 줄을 대사보다 많이 고르고, 대사는 꼭 터질 줄만. 지문 자막 뒤엔 그 행동을 하나하나 실황 중계하고 해석하고 놀리는 반응이 붙는다. 자막 줄 {\"line\":\"원문 그대로 15~80자\",\"kind\":\"대사|지문\",\"turn\":원문 턴 번호,\"rate\":그 순간 분당 시청률(소수점 한 자리 %)}로 넣고(시청률은 터지는 줄에서 확 오르고 지루한 줄에서 떨어진다), 그 바로 뒤에 시청자들이 꼭 5~10줄씩 그 대사·행동에 반응한다(자막 하나에 반응 두세 줄로 끝내지 않는다 · 모자라면 자막 수를 줄여서라도 반응을 채운다): 방금 나온 대사를 그대로 따라 치며 조롱하기, 말투 비틀어 패러디, 밈으로 만들기, 오글거린다고 비명, 지문 속 행동 하나하나 실황 중계, 짤 박제 선언, 성대모사 도배. 이야기가 어떻게 흘러가는지 시청자 반응만 봐도 보이게. 자막은 원문을 고치지 말고 그대로. 단 원문에 수위 높은 성적인 장면이 있으면 노골적인 부분은 옮기지 않고 그 행동을 에둘러 한 줄로 요약한 자막(앞에 🔞)으로 쓰고, 시청자는 비명·드립·암시로 반응한다(노골적인 묘사 금지). 터지는 줄엔 채팅·후원이 몰리고, 밋밋한 줄은 조용하게(줄마다 반응 크기가 확 달라야 한다). 나머지는 시청자 채팅 한 줄씩: 고자극 음지 말투(디시·일베·메갈·더쿠·여시·에펨·인스티즈·트위터(X)·오타쿠 커뮤 등 서로 다른 말투), 과몰입·비명·커플 이름 짓기·작가 욕·배우 외모 품평·다음 전개 예측·악플·싸움·병맛 드립·밈. 시청자 유형을 섞는다: 인물한테 훈수 두는 사람, 남 말 안 듣고 지 말만 하는 사람, 같은 말 도배하는 도배충, 뒷북, 스포 하는 척, 정주행 중이라는 사람, 화면 밖 TMI. 말 짧게, 같은 사람도 여러 번 나온다.\n- 후원 줄은 아주 가끔(이번에 보내는 턴 범위 전체에서 0~1개, 진짜 터지는 장면에만): {\"donate\":금액,\"nick\":\"\",\"text\":\"\"} 꼴로 별풍선·후원이 터지며 짧은 요구나 드립(장면 다시 보여 줘, 키스신 가자, 작가 정신 차려 등을 이 장면에 맞게 새 말로). 금액은 1천~10만 사이 제각각, 큰 후원엔 채팅이 들썩인다. 현실 성별·지역·집단 멸칭은 금지, 노골적인 성행위 묘사 금지.\n- 닉네임은 거의 겹치지 않게: 줄 수만큼 다양하게, 커뮤 닉 스타일(영문 아이디·초성·드립 닉·고닉·숫자 붙은 닉·팬 닉·안티 닉 등)을 섞는다. 같은 사람이 여러 번 나올 땐 같은 닉으로.\n- 시청자 중엔 야한 단어만 도배하는 음담패설러(단어 도배·드립 수준, 노골적인 묘사는 쓰지 않음)와 일부러 반대로 말하고 커플 까고 싸움 붙이고 뜬금 홍보하는 분탕러도 섞여 있다. 다른 시청자들이 강퇴·신고·무시로 반응한다.\n- 채팅에 이모지를 자주 섞고, 가끔(5턴에 2~4번) 큰 스티커 이모티콘 줄 {\"sticker\":\"이모지 1~3개\"}도 날린다. 장면 감정에 맞게 매번 다른 조합.\n- 원문 장면에 딱 붙어 반응한다: 대사 한 줄, 지문 속 행동·물건·표정에 바로 반응해 \"그 장면\"을 알아보게.\n- 노트 인물(NPC)을 연기하는 배우나 그 인물 본인이 몰래 채팅에 끼는 일도 가끔(0~2줄): by에 인물 정본명.\n- 자막에는 [USER] 쪽 대사·지문(유저 캐릭터의 말과 행동)도 원문 그대로 들어간다. 유저 대사에도 오글거린다·설렌다·답답하다·사이다다·찌질하다·명대사다 등 반응을 매번 다르게 단다.\n- 꼭 들어갈 것: 맥락 없는 뜬금 드립, 밈·유행어, 터지는 장면에서 다 같이 비명 지르고 같은 말 연달아 치는 집단 흥분, 비속어, 커뮤 특유의 과몰입. 조용한 장면에선 딴소리가 늘어난다.\n- 반응의 결: 대놓고 조롱, 비꼼, 은근한 놀림과 돌려 까기, 과몰입 응원이 한 줄 안에서도 부딪친다. 말투는 디시·일베·메갈·워마드·더쿠·여시·에펨·인스티즈·트위터(X)·오타쿠 커뮤 등 서로 다른 커뮤 말투와 음지 말투를 섞는다(현실 성별·지역·집단 멸칭은 금지).\n- 유저(사용자 캐릭터)도 드라마 주인공으로 응원·비난·조롱·훈수·악플·편 가르기의 대상이 되는 것까지 다 열려 있다. 다만 채팅을 쓰지 않는다. 유저의 속마음·대사를 지어내지 않는다.\n- 쓰지 않는 것: 미성년자(또는 나이가 확실하지 않은 인물)에 대한 성적인 내용, 현실 집단 혐오, 실존 인물·방송사 이름.\n[출력] JSON 하나만. 설명·코드블록 금지.\n{\"drama\":\"\",\"sub\":\"\",\"rating\":0,\"chat\":[{\"line\":\"\",\"kind\":\"대사\",\"turn\":0,\"rate\":0},{\"nick\":\"\",\"text\":\"\",\"by\":\"\"},{\"donate\":0,\"nick\":\"\",\"text\":\"\"},{\"sticker\":\"\"}],\"clips\":[{\"title\":\"\",\"views\":0}]}";
+  const LIVE_REPLY = "너는 RP 드라마 실시간 채팅방의 시청자들이다. [채팅]의 흐름과 방금 [내 채팅]을 보고 바로 받아치는 채팅을 쓴다.\n- 이 지침에는 예시 문장이 없다. 이 채팅 내용에 딱 붙는 새 말로. [채팅]에 나온 말·드립을 되풀이하지 않는다.\n- 6~12줄(여러 사람이 우르르 받고, 그중 몇은 서로 받아친다). 고자극 음지 말투(서로 다른 커뮤 말투 · 트위터(X)·오타쿠 커뮤 말투도): 맞장구·시비·놀림·드립 받기·과몰입·싸움·훈수·지 말만 하기·도배. 아주 드물게(대부분 0줄) 후원 줄 {\"donate\":금액,\"nick\":\"\",\"text\":\"\"}도. 현실 성별·지역·집단 멸칭 금지, 노골적인 성행위 묘사 금지.\n- 내 채팅을 쓴 사람은 익명 시청자다. 그 사람 말을 대신 더 쓰지 않는다. 유저(사용자 캐릭터)의 대사·속마음을 지어내지 않는다.\n- 아주 가끔(0~1줄) 노트 인물이 몰래 끼면 by에 정본명.\n[출력] JSON 배열 하나만: [{\"nick\":\"\",\"text\":\"\",\"by\":\"\"}] (후원은 {\"donate\":0,\"nick\":\"\",\"text\":\"\"})";
   const jsonOf = key => async chatId => { try { return JSON.parse(String(await getValue(key + chatId, 'null')) || 'null'); } catch (_) { return null; } };
   const wikiOf = jsonOf('wiki:'), liveOf = jsonOf('live:');
   let wikiData = null, liveData = null;
@@ -9580,7 +9580,7 @@
     try {
       const prev = upd ? ['', '[드라마] ' + upd.drama, '[지난 화] ' + upd.eps.map(e => e.no + '화 ' + e.sub).join(' / ')] : [];
       const base = snapshot.note ? ['[기억 노트]', dropProofLines(noteMemory())] : [];
-      const cut = Math.min(to, from + 4), log = await rangeLogText(chatId, from, cut, '이번에 보낼 턴 ' + from + '~' + cut + ' — 채팅은 이 턴들을 순서대로', 60000);
+      const cut = Math.min(to, from + 2), log = await rangeLogText(chatId, from, cut, '이번에 보낼 턴 ' + from + '~' + cut + ' — 채팅은 이 턴들을 순서대로', 60000);
       const data = parseJsonLoose(await askModelRetry(withRules(LIVE_PROMPT, etcRoll()), [etcWho('채팅'), '', ...base, log, ...prev].join('\n'), '📺실시간톡'));
       if (!(data.chat || []).length) throw new Error('채팅이 오지 않았어요. 한 번 더 눌러 주세요.');
       const ep = { no: upd ? upd.eps.length + 1 : 1, from, to, pos: cut + 1, sub: data.sub || '', rating: data.rating || 0, chat: data.chat, clips: data.clips || [] };
@@ -9606,9 +9606,9 @@
   async function liveMore(n) {
     const chatId = chatIdFromPath(), ep = liveData?.eps?.[n]; if (!chatId || !ep || lvFetching) return;
     lvFetching = true;
-    if (ep.pos && ep.pos <= ep.to) { // 다음 5턴 방송
-      // 거절된 구간은 한 턴씩(slowTo까지), 그 밖엔 5턴씩
-      const a = ep.pos, b = Math.min(ep.to, ep.slowTo >= a ? a : a + 4);
+    if (ep.pos && ep.pos <= ep.to) { // 다음 3턴 방송
+      // 거절된 구간은 한 턴씩(slowTo까지), 그 밖엔 3턴씩(많으면 자막마다 반응이 줄어요)
+      const a = ep.pos, b = Math.min(ep.to, ep.slowTo >= a ? a : a + 2);
       try {
         const tail = ep.chat.slice(-20).map(c => c.line ? '[자막] ' + c.line : (c.nick || '시청자') + ': ' + (c.text || '')).join('\n');
         const log = await rangeLogText(chatId, a, b, '이번에 보낼 턴 ' + a + '~' + b + ' — 채팅은 이 턴들을 순서대로', 60000);
@@ -9634,9 +9634,9 @@
     try {
       const recent = ep.chat.slice(-35).map(c => c.line ? '[자막] ' + c.line : c.scene ? '[장면] ' + c.scene : (c.donate ? '[후원 ' + c.donate + '원] ' : '') + (c.nick || '시청자') + ': ' + c.text).join('\n');
       const scenes = ep.chat.filter(c => c.scene || c.line).map(c => c.line || c.scene).join(' / ');
-      const raw = await askModel(LIVE_MORE, [ep.ended ? '[방송 끝남] 방금 이번 화가 끝났다 — 엔딩 직후 여운·총평·명장면 투표·다음 화 예측·아쉬움 채팅으로' : '', '[드라마] ' + liveData.drama + ' ' + ep.no + '화 ' + ep.sub, '[이번 화 장면] ' + scenes, '[최근 채팅]', recent, '', snapshot?.note ? '[기억 노트]\n' + dropProofLines(noteMemory()) : ''].join('\n'), '📺채팅 이어짐');
+      const raw = await askModel(LIVE_MORE, [ep.ended ? '[방송 끝남] 방금 이번 화가 끝났다 — 이번엔 20~30줄 말고 딱 5줄만: 엔딩 직후 여운·총평·명장면·다음 화 예측·아쉬움' : '', '[드라마] ' + liveData.drama + ' ' + ep.no + '화 ' + ep.sub, '[이번 화 장면] ' + scenes, '[최근 채팅]', recent, '', snapshot?.note ? '[기억 노트]\n' + dropProofLines(noteMemory()) : ''].join('\n'), '📺채팅 이어짐');
       let list; try { const t = String(raw), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { list = []; }
-      ep.chat.push(...(Array.isArray(list) ? list : []).slice(0, 35).filter(r => r && (r.text || r.sticker)).map(r => r.sticker ? { sticker: r.sticker } : ({ nick: r.nick || '시청자', text: r.text, by: r.by || '', donate: Number(r.donate) || 0 })));
+      ep.chat.push(...(Array.isArray(list) ? list : []).slice(0, ep.ended ? 5 : 35).filter(r => r && (r.text || r.sticker)).map(r => r.sticker ? { sticker: r.sticker } : ({ nick: r.nick || '시청자', text: r.text, by: r.by || '', donate: Number(r.donate) || 0 })));
       await setValue('live:' + chatId, JSON.stringify(liveData));
     } catch (e) { nav.lvPause = true; toast('채팅 이어 받기 멈춤 · ' + e.message, 'err'); }
     finally { lvFetching = false; }
@@ -9653,15 +9653,15 @@
       box.querySelector('.lv-wait')?.remove(); box.insertAdjacentHTML('beforeend', lvLine(c, shown, n)); nav.lvShownBy[n] = shown + 1;
       if (c.line && Number(c.rate)) { const el = out('lvRate'); if (el) el.innerHTML = lvRateHtml(lvRateAt(ep, shown + 1)); }
       if (near) box.scrollTop = box.scrollHeight;
-      const next = ep.chat[shown + 1], quick = next && c.nick && next.nick === c.nick;
-      lvTimer = setTimeout(lvTick, quick ? 700 : c.line || c.scene ? 3500 : 1200 + Math.random() * 1800); return;
+      const next = ep.chat[shown + 1], quick = next && c.nick && next.nick === c.nick, hot = ep.chat.slice(Math.max(0, shown - 3), shown).some(x => x.line || x.scene || x.mine); // 자막·내 채팅 바로 뒤엔 우르르, 그다음엔 느긋하게
+      lvTimer = setTimeout(lvTick, quick ? 1100 : c.line || c.scene ? 4000 : hot ? 600 + Math.random() * 600 : 1500 + Math.random() * 1500); return;
     }
     const left = ep.pos && ep.pos <= ep.to;
     if (!left && ep.pos && !ep.ended && !lvFetching) { // 고른 턴을 다 봤음 → 엔딩
       ep.ended = true; lvMoreN = 0; ep.chat.push({ end: ep.no + '화 끝' }); nav.lvShownBy[n] = ep.chat.length; setValue('live:' + chatIdFromPath(), JSON.stringify(liveData)); keepView(); // 다음 화 카드가 바로 보이게
       lvTimer = setTimeout(lvTick, 800); return;
     }
-    if (!nav.lvPause && !lvFetching && (left || lvMoreN < (ep.ended ? 2 : 5)) && !lvTyping) {
+    if (!nav.lvPause && !lvFetching && (left || lvMoreN < (ep.ended ? 1 : 5)) && !lvTyping) {
       if (!box.querySelector('.lv-wait')) box.insertAdjacentHTML('beforeend', '<p class="lv-msg lv-wait"><span class="dots"><i></i><i></i><i></i></span></p>');
       liveMore(n).then(() => { lvTimer = setTimeout(lvTick, 300); }); return;
     }
@@ -9675,13 +9675,13 @@
     // 내 채팅은 아직 안 흘러온 줄 뒤가 아니라 지금 보이는 곳 바로 다음에(답도 그 뒤에)
     const at = Math.min(lvShown(n) ?? ep.chat.length, ep.chat.length);
     ep.chat.splice(at, 0, { nick: '나', text, mine: true }); nav.lvShownBy[n] = at + 1; lvTyping = true; if (input) input.value = '';
-    await setValue('live:' + chatId, JSON.stringify(liveData)); keepView(); setTimeout(() => { const c = out('lvChat'); if (c) c.scrollTop = c.scrollHeight; out('lvMsg')?.focus({ preventScroll: true }); }, 30);
+    keepView(); setValue('live:' + chatId, JSON.stringify(liveData)).catch(() => {}); /* 먼저 보여 주고 저장(아이폰은 저장이 느려요) */ setTimeout(() => { const c = out('lvChat'); if (c) c.scrollTop = c.scrollHeight; out('lvMsg')?.focus({ preventScroll: true }); }, 30);
     try {
       const recent = ep.chat.slice(Math.max(0, at - 29), at + 1).map(c => c.line ? '[자막] ' + c.line : c.scene ? '[장면] ' + c.scene : (c.nick || '시청자') + ': ' + c.text).join('\n');
       const raw = await askModel(LIVE_REPLY, ['[드라마] ' + liveData.drama + ' ' + ep.no + '화 ' + ep.sub, '[채팅]', recent, '[내 채팅] ' + text, '', snapshot?.note ? '[기억 노트]\n' + dropProofLines(noteMemory()) : ''].join('\n'), '📺채팅');
       let list; try { const t = String(raw), a = t.indexOf('['), b = t.lastIndexOf(']'); list = JSON.parse(t.slice(a, b + 1)); } catch (_) { throw new Error('답을 읽지 못했어요'); }
       const mineAt = ep.chat.findIndex(c => c.mine && c.text === text), put = (mineAt >= 0 ? mineAt : at) + 1;
-      const replies = (Array.isArray(list) ? list : []).slice(0, 8).map(r => ({ nick: r.nick || '시청자', text: r.text || '', by: r.by || '', donate: Number(r.donate) || 0 }));
+      const replies = (Array.isArray(list) ? list : []).slice(0, 14).map(r => ({ nick: r.nick || '시청자', text: r.text || '', by: r.by || '', donate: Number(r.donate) || 0 }));
       let p = put; for (const r of replies) {
         const sub = ep.chat.findIndex((c, i) => i >= put && (c.line || c.end)); // 다음 자막
         if (sub >= 0 && p >= sub && p - put >= 2) p = sub + 1; // 자막이 너무 밀리지 않게 남은 답은 자막 뒤로
