@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.32
+// @version      6.0.33
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1232,6 +1232,7 @@
   }
   function pregChecks(p, world) { // [주, 검진 이름, 결과]
     const twin = p.n > 1, A = twin ? '아기 ' + P_CNT[p.n] : '아기', one = twin ? '한 아이' : '아기', J = a => a.filter(Boolean).join(' · ');
+    const ong = w => J([p.fgr ? `${one}가 여전히 작음` : '', p.oligo ? '양수가 여전히 적음' : p.poly ? '양수가 여전히 많음' : '', p.previa ? '전치태반 그대로 → 제왕절개' : '', p.gdm ? '혈당 관리 계속' : '', p.pe && p.peW <= w ? '임신중독증 → 혈압 계속 봄' : '']); // 30주 뒤 검진에도 남은 문제는 계속 말해요(한 번 듣고 '잘 크고 있음'으로 덮이지 않게)
     if (world === 'modern') return [
       [6, '첫 초음파 · 심장 소리', twin ? (p.hideTwin ? '아기 하나로 보임' : `아기집에서 심장 소리가 ${P_CNT[p.n]} — ${P_MULT[p.n]}`) : '잘 뛰고 있음 · 정상'],
       [12, '목둘레 검사 · 1차 기형아 검사', p.abn ? `1차 기형아 검사 고위험(${p.chrom.split('(')[0]} 위험이 높게 나옴) → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함` : p.fp ? '1차 기형아 검사 고위험 판정 → 니프티(혈액)나 양수검사를 권함 · 할지는 본인이 정함' : '1차 기형아 검사 저위험 · 정상'],
@@ -1240,9 +1241,9 @@
       [26, '임신성 당뇨 검사', p.gdm ? '임신성 당뇨 판정 → 식단 관리·혈당 재기' : '당뇨 검사 정상'],
       ...(preg?.planV === 2 ? [[28, '입체 초음파', (twin ? (p.n > 2 ? '세 아이 ' : '두 아이 ') : '') + '얼굴이 보임 · 누구 닮았는지는 장면에 맞게']] : []), // 머리색 같은 건 초음파로 안 보여서 출산 때 닮은 곳은 안 씀
       [30, '정기 검진', J([p.breech ? (twin ? '한 아이가 거꾸로(역아)' : '역아(아기가 거꾸로)') + ' → 아직 돌 수 있음' : '아기 자리 좋음', p.fgr ? `${one}가 주수보다 작음(성장 지연) → 2주마다 크기 보기` : '', p.oligo ? '양수가 적음 → 물 많이 마시고 자주 보기' : p.poly ? '양수가 많음 → 자주 보기' : '', p.lowP ? (p.previa ? '태반이 자궁 입구를 덮음(전치태반) → 제왕절개 예정' : '태반이 올라가서 괜찮아짐') : '', p.cpc ? '뇌 물혹이 사라짐' : '', p.serious ? '큰 병원 추적: ' + p.serious[2] : '', p.minor ? '전에 본 신장 소견 좋아짐' : ''])],
-      [34, '정기 검진', p.pe && p.peW <= 34 ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기 권함' : J([p.serious ? `${p.serious[0]} 때문에 큰 병원에서 낳을 준비 · 신생아 집중치료실 자리 확인` : '', p.fgr ? `${one}가 여전히 작음 → 일찍 낳는 것도 이야기함` : '', p.macro ? '아기가 주수보다 큼' : '']) || A + ' 잘 크고 있음'],
-      [36, '막달 검진', J([p.breech ? (p.breechStay ? '여전히 역아 → 제왕절개 날짜 잡기' : '역아였던 아기가 돌아옴') : A + ' 머리가 아래로 내려옴', p.cord ? '탯줄이 목에 한 번 감겨 있음 · 대부분 괜찮아서 지켜보기' : '', p.macro ? '아기가 커서(추정 3.8kg 넘음) 분만 방법 이야기가 나옴' : ''])],
-      ...[37, 38, 39, 40, 41].map(w => [w, '막달 검진', p.cs || preg?.csSaid ? '수술 날짜에 맞춰 준비 · 아기 상태 좋음' : w >= 40 ?'예정일 근처 · 유도분만 이야기가 나옴' : '자궁문이 조금씩 열리는 중']),
+      [34, '정기 검진', J([p.pe && p.peW <= 34 ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기 권함' : '', p.serious ? `${p.serious[0]} 때문에 큰 병원에서 낳을 준비 · 신생아 집중치료실 자리 확인` : '', p.fgr ? `${one}가 여전히 작음 → 일찍 낳는 것도 이야기함` : '', p.macro ? '아기가 주수보다 큼' : '', p.oligo ? '양수가 여전히 적음' : p.poly ? '양수가 여전히 많음' : '', p.previa ? '전치태반 그대로 → 제왕절개' : '', p.gdm ? '혈당 관리 계속' : '']) || A + ' 잘 크고 있음'],
+      [36, '막달 검진', J([p.breech ? (p.breechStay ? '여전히 역아 → 제왕절개 날짜 잡기' : '역아였던 아기가 돌아옴') : A + ' 머리가 아래로 내려옴', p.cord ? '탯줄이 목에 한 번 감겨 있음 · 대부분 괜찮아서 지켜보기' : '', p.macro ? '아기가 커서(추정 3.8kg 넘음) 분만 방법 이야기가 나옴' : '', ong(36)])],
+      ...[37, 38, 39, 40, 41].map(w => [w, '막달 검진', J([p.cs || preg?.csSaid ? '수술 날짜에 맞춰 준비' + (ong(w) ? '' : ' · 아기 상태 좋음') : w >= 40 ?'예정일 근처 · 유도분만 이야기가 나옴' : '자궁문이 조금씩 열리는 중', ong(w)])]),
     ];
     const dr = world === 'fantasy' ? '치유사' : '산파';
     return [
@@ -1266,20 +1267,20 @@
     return (p.cs || preg?.csSaid ? '제왕절개로 출산' : p.rapid ? '급속 분만으로 출산(병원에 가기 전에 나옴)' : '자연분만으로 출산') + ' · ' + p.sex.map((s, i) => s + '아 ' + Math.max(p.labor < 32 ? 0.5 : 1.2, base + pR('kg' + i) * (p.n > 1 ? 0.4 : 0.8)).toFixed(1) + 'kg').join(', ') + (p.labor < 28 ? ` · ${p.labor}주에 아주 일찍 나와 신생아 집중치료실에 2~3달 입원` : p.labor < 32 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 4~8주 입원` : p.labor < 35 ? ` · ${p.labor}주에 일찍 나와 신생아 집중치료실에 1~3주 입원` : extra ? '' : ' · 건강함') + (extra ? ' · ' + extra : '');
   }
   function pregBig(p, world) { // 큰일: 그 주가 되면 바로 '지금 일'로 · 결과는 병원에서
-    const out = [], until = p.loss ?? 99;
+    const out = [], until = p.loss ?? 99, ok = p.loss != null ? p.loss - 1 : 99; // ok: '아기는 괜찮음'으로 끝나는 일은 유산 전조 주 전까지만(괜찮다 듣고 바로 유산되지 않게)
     const why = p.loss == null ? '' : [['염색체 이상(누구 잘못도 아닌, 가장 흔한 이유)', '아기집만 있고 아기가 자라지 않음', '심장이 멈춤(이유를 알 수 없음)'], ['자궁경부가 일찍 열림(자궁경부 무력증)', '감염', '태반 문제'], ['탯줄이 꼬임', '태반이 일찍 떨어짐(태반 조기 박리)', '이유를 알 수 없음']][p.loss <= 12 ? 0 : p.loss <= 20 ? 1 : 2][Math.floor(pR('why') * 3)];
     if (p.loss != null && preg.fired?.loss == null) out.push({ k: 'lpre', w: Math.max(p.loss - 1, preg.w0 || 0), t: (p.loss <= 20 ? '유산' : '사산') + ' 전조 증상이 여러 가지로 나타나기 시작함', kw: /갈색|분비물|비치|비침|피가|출혈|묵직|당기|생리통|쑤시|쑤심|뻐근|허리|으슬|기운|입덧|덜해|사라|태동|통증|아랫배/,
-      res: world === 'modern' ? '초음파에서 아기가 주수보다 작고 심장 소리가 약함 → 무리하지 말고 일주일 뒤 다시 보자고 함' : '태기가 약하다며 절대 안정하라 함' }); // 유산 전조: 유산 한 주 전(같은 주면 유산보다 먼저) · 어떤 증상인지는 AI가 정해요
+      res: (L => L[Math.floor(pR('lpreR') * L.length)])(world !== 'modern' ? ['태기가 약하다며 절대 안정하라 함', '맥이 가늘고 고르지 않다며 탕약을 지어 주고 누워 지내라 함', '배 속 기운이 흔들린다며 바깥출입을 삼가라 함'] : p.loss <= 20 ? ['초음파에서 아기가 주수보다 작고 심장 소리가 약함 → 무리하지 말고 일주일 뒤 다시 보자고 함', '아기 심장 박동이 느리고 지난번보다 덜 자람 → 절대 안정하고 며칠 뒤 다시 보자고 함', '자궁 안에 피가 고여 있고 아기 심장 소리가 약함(절박유산) → 누워 지내며 일주일 뒤 다시 보자고 함'] : ['태동 검사에서 아기 심박이 자꾸 떨어짐 → 며칠 뒤 다시 보자고 함', '양수가 줄고 아기가 지난번보다 덜 자람 → 자주 보러 오라고 함', '초음파에서 아기 움직임이 적고 탯줄 혈류가 약함 → 큰 병원에 가 보라고 함']) }); // 유산 전조 · 소견은 임신마다 셋 중 하나(리롤해도 같음): 유산 한 주 전(같은 주면 유산보다 먼저) · 어떤 증상인지는 AI가 정해요
     if (p.loss != null) out.push({ k: 'loss', w: p.loss, t: '갑자기 피가 비치고 아랫배가 심하게 아픔', kw: /피가|출혈|하혈|피를 (흘|쏟)|배를 (움켜|부여)|아랫배가? ?(찢|끊|쥐어)/, why,
       res: (p.loss <= 20 ? (world === 'modern' ? '초음파에서 심장 소리가 안 잡힘 → 유산' : '태기가 끊어짐 → 유산') : (world === 'modern' ? '심장 소리가 없음 → 사산' : '배 속 아기가 숨을 거둠 → 사산')) + ` (이유: ${why})`, end: p.loss <= 20 ? '유산' : '사산' });
-    if (p.spot && p.spotW < until && p.spotW !== p.loss) out.push({ k: 'spot', w: p.spotW, t: '속옷에 피가 살짝 비침', kw: /피가|출혈|비침|비쳤|피 ?얼룩/, res: world === 'modern' ? '초음파상 아기는 괜찮음 · 초기에 흔한 출혈이라 며칠 무리하지 말라고 함' : '태는 무사함 · 며칠 누워 지내라 함' });
+    if (p.spot && p.spotW < ok) out.push({ k: 'spot', w: p.spotW, t: '속옷에 피가 살짝 비침', kw: /피가|출혈|비침|비쳤|피 ?얼룩/, res: world === 'modern' ? '초음파상 아기는 괜찮음 · 초기에 흔한 출혈이라 며칠 무리하지 말라고 함' : '태는 무사함 · 며칠 누워 지내라 함' });
     const sg = p.serious && P_SER_SIGN[p.serious[0]]; if (sg && (world === 'modern' || !sg[3]) && sg[0] >= (preg.w0 || 0) && sg[0] < Math.min(p.labor, until)) out.push({ k: 'ser', w: sg[0], t: sg[1], kw: sg[2] });
-    if (p.quiet && p.quietW < Math.min(p.labor, until)) out.push({ k: 'quiet', w: p.quietW, t: '아기가 하루 종일 평소보다 조용함(태동이 뜸함)', kw: /태동이 ?(없|뜸|안|약|줄)|안 움직|움직이지/, res: world === 'modern' ? '태동 검사(NST) 결과 아기는 괜찮음 · 잠을 오래 잔 듯' : '배를 짚어 보더니 아기는 무사하다 함' });
+    if (p.quiet && p.quietW < Math.min(p.labor, ok)) out.push({ k: 'quiet', w: p.quietW, t: '아기가 하루 종일 평소보다 조용함(태동이 뜸함)', kw: /태동이 ?(없|뜸|안|약|줄)|안 움직|움직이지/, res: world === 'modern' ? '태동 검사(NST) 결과 아기는 괜찮음 · 잠을 오래 잔 듯' : '배를 짚어 보더니 아기는 무사하다 함' });
     if (p.threat && p.thrW < Math.min(p.labor, until)) out.push({ k: 'thr', w: p.thrW, t: '배가 규칙적으로 뭉치며 아파 옴(조산 기미)', kw: /뭉치|뭉쳤|진통|규칙적/, res: p.thrFail ? (world === 'modern' ? '조산 기미 → 수축 억제제를 맞았지만 잘 멈추지 않음 · 입원해서 지켜보기' : '해산 기운이 멈추지 않아 곧 낳을 수 있다 함') : world === 'modern' ? '조산 기미 → 수축 억제제를 맞고 며칠 입원하길 권함' : '해산이 이를 수 있으니 누워서 몸조리하라 함' });
     if (p.rib && p.ribW >= (preg.w0 || 0) && p.ribW < Math.min(p.labor, until)) out.push({ k: 'rib', w: p.ribW, t: '태동이 세서 갈비뼈 쪽이 결리고 숨 쉴 때 아픔', kw: /갈비|옆구리|결리|숨\s*쉴/, res: world === 'modern' ? '갈비뼈에 금이 감 · 아기 발차기 때문 · 출산하면 저절로 붙는다며 무리하지 말라 함' : '갈빗대가 상했다며 아기 발길질 탓이라 함 · 해산하면 낫는다 함' });
     if (p.pe && p.peW < Math.min(p.labor, until)) out.push({ k: 'pe', w: p.peW, t: '두통이 심하고 눈앞이 번쩍이며 얼굴·손이 많이 부음', kw: /두통|머리가 (깨질|지끈|아)|눈앞이|번쩍|부어|부종/, res: world === 'modern' ? '혈압이 높고 단백뇨 → 임신중독증, 입원해서 지켜보기' : '몸에 독기가 올랐다며 절대 안정하라 함' });
     // 중간 사건(아기는 무사 · 긴장만): 새 주사위 키라 진행 중인 임신의 다른 결과는 안 바뀌어요
-    const M = world === 'modern', mid = (k, pc, lo, hi, t, kw, res) => { if (pR(k) >= pc) return; const w = lo + Math.floor(pR(k + 'W') * (hi - lo + 1)); if (w >= (preg.w0 || 0) && w < Math.min(p.labor, until)) out.push({ k, w, t, kw, res }); };
+    const M = world === 'modern', mid = (k, pc, lo, hi, t, kw, res) => { if (pR(k) >= pc) return; const w = lo + Math.floor(pR(k + 'W') * (hi - lo + 1)); if (w >= (preg.w0 || 0) && w < Math.min(p.labor, ok)) out.push({ k, w, t, kw, res }); };
     if (p.sick === 2) mid('hg', 0.35, 7, 12, '입덧이 너무 심해져 먹은 게 다 올라오고 기운이 쭉 빠짐', /물도|못 (먹|넘기)|토하|게워|기운이/, M ? '탈수가 와서 수액을 맞음(임신오조) · 하루 이틀 입원' : '기력이 쇠했다며 미음과 탕약을 권함');
     mid('fever', 0.12, 8, 34, '갑자기 열이 오르고 온몸이 으슬으슬 쑤심', /열이|으슬|오한|몸살|기침/, M ? '독감 · 임산부도 먹을 수 있는 약을 받음 · 열이 내리면 아기는 괜찮음' : '고뿔 · 열을 내리는 순한 탕약을 받음');
     mid('fall', 0.1, 16, 34, '붐비는 곳에서 누가 세게 부딪혀 와 몸이 휘청함', /부딪|밀치|치이|휘청|넘어/, M ? '초음파상 아기 심장 잘 뜀 · 혹시 몰라 하루 지켜보자고 함' : '배 속 아기가 무사하다 함 · 며칠 누워 지내라 함');
@@ -1356,9 +1357,11 @@
       checks.filter(c => c[0] < wk - 4 && preg.shown['c' + c[0]] == null).forEach(skip); // 4주 넘게 지난 검진은 안 받은 걸로(16주에 병원 가서 6주 초음파를 찍은 걸로 적지 않게)
       const due = checks.filter(c => c[0] <= wk && c[0] >= wk - 4 && !(p.loss != null && preg.fired.loss != null && c[0] >= p.loss) && (preg.shown['c' + c[0]] == null || preg.shown['c' + c[0]] === turn)).slice(-1); // 이번에 받는 건 가장 최근 검진 하나(그 전 것은 안 받은 걸로)
       checks.filter(c => c[0] < (due[0]?.[0] ?? 0) && preg.shown['c' + c[0]] == null).forEach(skip);
+      const lpre = p.loss != null && preg.fired.loss == null && (wk >= p.loss - 1 || /자라지 않음/.test(big.find(e => e.k === 'loss')?.why || '')) && big.find(e => e.k === 'lpre'), ckR = c => lpre ? lpre.res : c[2]; // '아기가 자라지 않음' 유산이면 그 전 검진부터 작다고 들어요 // 유산이 코앞이면 검진도 '정상' 대신 전조 소견(건강하다 듣고 바로 유산되지 않게)
+      if (lpre && due.length && wk >= p.loss - 1) { preg.fired.lpre ??= turn; preg.shown.lpre ??= turn; } // 전조 주 전에 들은 건 전조 증상을 건너뛰지 않게
       if (miss.length) { preg.miss = { turn, t: [...new Set(miss)] }; heard(wk, '지난 검진 소견: ' + preg.miss.t.join(' · ')); }
-      due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; preg.ckW = { ...(preg.ckW || {}), ['c' + c[0]]: wk }; if (i >= due.length - 2) heard(wk, c[1] + ': ' + c[2]); } }); // 실제로 간 주수로 적어요
-      due.slice(-2).forEach(c => res.push((preg.ckW?.['c' + c[0]] ?? wk) + '주 ' + c[1] + ': ' + c[2]));
+      due.forEach((c, i) => { if (preg.shown['c' + c[0]] == null) { preg.shown['c' + c[0]] = turn; preg.ckW = { ...(preg.ckW || {}), ['c' + c[0]]: wk }; if (i >= due.length - 2) heard(wk, c[1] + ': ' + ckR(c)); } }); // 실제로 간 주수로 적어요
+      due.slice(-2).forEach(c => { if (!(lpre && res.includes(lpre.res))) res.push((preg.ckW?.['c' + c[0]] ?? wk) + '주 ' + c[1] + ': ' + ckR(c)); }); // 리롤 땐 위에서 전조 소견이 이미 들어가요
       if (preg.miss?.turn === turn) res.push('지난 검진 때 못 들은 것: ' + preg.miss.t.join(' · '));
       if (p.hideTwin && (preg.twinAt == null || preg.twinAt === turn) && due.some(c => c[0] >= 12)) { // 숨어 있던 쌍둥이가 밝혀짐(처음 초음파를 봤으면 '하나 더', 못 봤으면 그냥 둘)
         const t = Object.keys(preg.shown).some(k => /^c\d/.test(k) && +k.slice(1) < 12 && preg.shown[k] >= 0) ? '다시 보니 뒤에 숨어 있던 아기가 하나 더 — 쌍둥이였음' : '아기가 둘 — 쌍둥이';
