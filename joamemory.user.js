@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.34
+// @version      6.0.35
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -29,6 +29,8 @@
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
 // @connect      raw.githubusercontent.com
+// @connect      d394jeh9729epj.cloudfront.net
+// @connect      static.wrtn.ai
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -11480,26 +11482,31 @@
     return 'written';
   }
   (() => {
-    const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window, WS = W.WebSocket;
+    const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window, WS = W.WebSocket, de = document.documentElement;
     if (!WS?.prototype?.send) return;
+    // 아이폰 Userscripts처럼 조아가 페이지와 떨어진 곳에서 돌면 W를 고쳐도 크랙이 못 봐요 → 페이지 안에 작은 다리를 넣어 보내기를 넘겨받아요
+    const pw = tag => { const s = document.createElement('script'); s.textContent = tag; (document.head || de).appendChild(s); s.remove(); };
+    const tok = 'jm' + Math.random(); try { W.__jmProbe = tok; } catch (_) {} pw(`document.documentElement.setAttribute('data-jm-pw', window.__jmProbe || '-')`);
+    const bridge = de.getAttribute('data-jm-pw') === '-'; de.removeAttribute('data-jm-pw'); // 못 넣으면(null) 예전처럼 W를 고쳐요
     const orig = WS.prototype.send, sendQ = new Map(); // sendQ: 방마다 보내기 순서
+    const raw = (s, d) => s.raw ? s.raw(d) : orig.call(s, d);
     const parseFrame = raw => { if (typeof raw !== 'string') return null; const m = /^42(\/[^,]+,)?(\d*)(\[.*)$/s.exec(raw); if (!m) return null;
       try { const a = JSON.parse(m[3]); return Array.isArray(a) && typeof a[0] === 'string' ? { event: a[0], payload: a[1] } : null; } catch (_) { return null; } };
     const lastFrame = {}; // 마지막으로 보낸 크랙 프레임(생성 중단을 같은 꼴로 보내려고)
     const liveSock = new Map(); // 주소별로 지금 살아 있는 연결(핑 등 아무 프레임이나 보낼 때 기억)
     const held = new Set(), heard = new WeakSet(); // 기억을 넣느라 잡고 있는 메시지들 · heard: 받는 글을 듣고 있는 연결
     const flushHeld = () => { for (const j of [...held]) { if (j.sent) continue; j.sent = true; held.delete(j); if (j.ctl) j.ctl.dead = true; const to = j.sock.readyState === 1 ? j.sock : liveSock.get(j.sock.url)?.readyState === 1 ? liveSock.get(j.sock.url) : j.sock;
-      try { orig.call(to, j.data); logErr('보내기', '화면을 떠나서 기억을 다 넣기 전에 바로 보냄(이번 턴은 지난 기억 그대로)'); } catch (_) {} } };
+      try { raw(to, j.data); logErr('보내기', '화면을 떠나서 기억을 다 넣기 전에 바로 보냄(이번 턴은 지난 기억 그대로)'); } catch (_) {} } };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushHeld(); });
     window.addEventListener('pagehide', flushHeld);
-    WS.prototype.send = function (data) {
+    const hook = function (data) {
       sendSeen.on = true; // 크랙 연결이 실제로 이 send를 거칠 때만(아이폰 Userscripts는 페이지 연결을 못 잡아요)
       if (this.readyState === 1) liveSock.set(this.url, this);
       if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return; // AI가 답을 쓰는 중인지(형광펜이 다 쓴 뒤에 칠하게)
         if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = stripBlocks(p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n')); /* 우리가 넣은 노트·문체 덩어리(내 메시지에 실려 올 수 있어요)는 빼고 봐요 */ leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600); /* 조각이 글 전체든 새로 붙은 몇 글자든: 이어 붙인 끝부분에서 찾아요(표식이 두 조각에 걸쳐 와도) */ if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} } // 우리 노트 앞줄(※ 표기·[기억 노트 ··MEMO_NOTE)을 따라 쓰기 시작하면 크랙의 생성 중단(stop)을 대신 보내요 · 서버가 다 쓴 뒤라 값은 나갔을 수 있어요 // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
       const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath(); if (f0) lastFrame.p = data;
       if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; try { sessionStorage.setItem('jm_sent', JSON.stringify({ c: sendSeen.c, said: sendSeen.said })); } catch (_) {} }
-      if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return orig.call(this, data);
+      if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return raw(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
       if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / '); /* shortcut: 크랙 보내기 글자 한도를 몰라 합쳐서 2000자까지만 붙여요, 한도를 알게 되면 그 값으로 */ if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n[ ](# "MEMO_STY ' + st + '")' }]); } /* 줄을 띄우면 말풍선 아래에 빈 줄이 생겨서 바로 붙여요 */ // 문체 보정은 노트 대신 이 메시지 끝에 숨겨서(AI 바로 앞이라 잘 지켜요) · 다시 생성은 이미 붙은 걸 그대로 써요
       const job = { sock, data, sent: false }; held.add(job); if (document.visibilityState === 'hidden') { flushHeld(); return; } // 이미 숨겨진 화면이면 잡지 않고 바로
@@ -11512,9 +11519,26 @@
           const to = sock.readyState === 1 ? sock : liveSock.get(sock.url)?.readyState === 1 ? liveSock.get(sock.url) : null;
           if (!to) { pageToast('크랙 연결이 끊겨 이 메시지가 안 보내졌어요 · 다시 보내 주세요'); logErr('보내기', '기억을 넣는 사이 크랙 연결이 끊겨 메시지가 안 보내짐'); return; }
           if (to !== sock) logErr('보내기', '기억을 넣는 사이 크랙 연결이 바뀌어 새 연결로 보냄');
-          orig.call(to, data); });
+          raw(to, data); });
       sendQ.set(chatId, task.catch(() => {}));
     };
+    if (!bridge) { WS.prototype.send = hook; return; }
+    // 다리: 페이지가 보내려는 글을 jm-ws-send로 넘기고, 조아가 받았다고(data-jm-ack) 하면 jm-ws-go가 올 때까지 잡아 둬요 · 조아가 안 받으면 그대로 보내요
+    pw(`(() => { if (window.__jmWs) return; window.__jmWs = 1; const P = WebSocket.prototype, orig = P.send, ids = new WeakMap(), byId = new Map(), de = document.documentElement; let n = 0;
+      const fire = (t, o) => document.dispatchEvent(new CustomEvent(t, { detail: JSON.stringify(o) }));
+      P.send = function (data) { let id = ids.get(this); if (!id) { id = ++n; ids.set(this, id); byId.set(id, this);
+          this.addEventListener('message', e => { if (typeof e.data === 'string' && e.data.includes('characterMessage')) fire('jm-ws-in', { id, data: e.data }); });
+          this.addEventListener('close', () => setTimeout(() => byId.delete(id), 6e4)); }
+        if (typeof data !== 'string') return orig.call(this, data);
+        de.removeAttribute('data-jm-ack'); fire('jm-ws-send', { id, url: this.url, data }); if (de.getAttribute('data-jm-ack') !== String(id)) return orig.call(this, data); };
+      document.addEventListener('jm-ws-go', e => { let o; try { o = JSON.parse(e.detail); } catch (_) { return; } const s = byId.get(o.id), to = s && s.readyState === 1 ? s : [...byId.values()].reverse().find(x => x.url === o.url && x.readyState === 1);
+        if (to) orig.call(to, o.data); else fire('jm-ws-fail', {}); }); })();`);
+    const hs = new Map(), go = (id, url) => d => document.dispatchEvent(new CustomEvent('jm-ws-go', { detail: JSON.stringify({ id, url, data: d }) }));
+    document.addEventListener('jm-ws-send', e => { let o; try { o = JSON.parse(e.detail); } catch (_) { return; } de.setAttribute('data-jm-ack', String(o.id));
+      let h = hs.get(o.id); if (!h) { const L = []; h = { url: o.url, readyState: 1, raw: go(o.id, o.url), addEventListener: (t, fn) => { if (t === 'message') L.push(fn); }, L }; h.send = d => hook.call(h, d); hs.set(o.id, h); } // 연결 대신 쓰는 손잡이(끊김·바뀜은 페이지 쪽에서 살아 있는 연결로 보내요)
+      try { hook.call(h, o.data); } catch (err) { h.raw(o.data); logErr('보내기', '보내기 다리 오류 · ' + errMsg(err)); } });
+    document.addEventListener('jm-ws-in', e => { let o; try { o = JSON.parse(e.detail); } catch (_) { return; } for (const fn of hs.get(o.id)?.L || []) try { fn({ data: o.data }); } catch (_) {} });
+    document.addEventListener('jm-ws-fail', () => { pageToast('크랙 연결이 끊겨 이 메시지가 안 보내졌어요 · 다시 보내 주세요'); logErr('보내기', '기억을 넣는 사이 크랙 연결이 끊겨 메시지가 안 보내짐'); });
   })();
   // 웹 모드 바꾸기: 정리 주기·노트 크기도 그 모드 기본으로. save면 이 방 선택으로 저장(새 방 기본값도)
   async function applyScene(on, chatId, save) {
@@ -13324,6 +13348,8 @@
   const capIn = (iv, i) => iv.some(([a, z]) => i >= a && i < z);
   async function capImg(src) { // 말풍선 안 그림: 막히면(다른 사이트 그림) 빼요
     try { const res = await fetch(src, { mode: 'cors', credentials: 'omit' }); if (!res.ok) throw 0; return await createImageBitmap(await res.blob()); } catch (_) {}
+    if (gmRequest) try { const b = await new Promise(ok => { gmRequest({ method: 'GET', url: src, responseType: 'blob', timeout: 8000, onload: r => ok(r.status >= 200 && r.status < 300 ? r.response : null), onerror: () => ok(null), ontimeout: () => ok(null), onabort: () => ok(null) }); }); // 사파리는 그림 서버를 막아서 확장 프로그램으로 받아요
+      if (b) return await createImageBitmap(b instanceof Blob ? b : new Blob([b])); } catch (_) {}
     return new Promise(ok => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src + (src.includes('?') ? '&' : '?') + 'jmcap=1'; setTimeout(() => ok(null), 8000); });
   }
   function capBubble(b, names) { // 말풍선 하나 → 그릴 것 목록(말풍선 기준 좌표)
