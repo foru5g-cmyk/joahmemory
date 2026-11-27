@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.25
+// @version      6.0.26
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -19,7 +19,6 @@
 // @grant        GM_listValues
 // @grant        GM.listValues
 // @connect      crack-api.wrtn.ai
-// @connect      contents-api.wrtn.ai
 // @connect      generativelanguage.googleapis.com
 // @connect      api.anthropic.com
 // @connect      aiplatform.googleapis.com
@@ -2852,17 +2851,15 @@
   // ══════════════════════════════════════════════════════════════
   // 6. 크랙 대화 읽기 · Gemini 정리 · 메시지 수정
   // ══════════════════════════════════════════════════════════════
-  // 대화 목록 한 쪽(최신부터 50개). crack-api가 안 되면(404·405·5xx·네트워크) contents-api에서 같은 목록을 읽습니다.
-  const API_A = 'https://crack-api.wrtn.ai/crack-gen/v3/chats/', API_B = 'https://contents-api.wrtn.ai/character-chat/v3/chats/';
-  const serverDown = e => /HTTP (404|405|5\d\d)|네트워크|시간이 초과/.test(String(e?.message || e));
+  // 대화 목록 한 쪽(최신부터 50개). 옛 주소 contents-api는 늘 520이라 안 써요(11/27 확인).
+  const API_A = 'https://crack-api.wrtn.ai/crack-gen/v3/chats/';
   // 읽기는 페이지에서 바로(fetch · 0.1초): 확장 프로그램을 거치는 요청은 방을 열 때 4~10초씩 걸렸어요(오류 기록 '느림'으로 잼) · 안 되면(막힘·8초 넘음·로그인 틈) 그 뒤로는 예전 길만 써요
   let pageGetOff = false;
   async function pageGet(url) { const ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
     try { const r = await fetch(url, { signal: ac.signal, cache: 'no-store', headers: { Authorization: 'Bearer ' + token(), platform: 'web', Accept: 'application/json' } }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); } finally { clearTimeout(t); } }
   async function crackGet(path) {
     if (!pageGetOff) try { return await pageGet(API_A + path); } catch (e) { if (!/HTTP (401|403|429|5\d\d)/.test(String(e?.message))) pageGetOff = true; } // 서버가 잠깐 거절한 건 다음에 다시 · 그 밖(막힘)은 이 페이지에선 그만
-    try { return await crack('GET', API_A + path); }
-    catch (e) { if (!serverDown(e)) throw e; return crack('GET', API_B + path); }
+    return crack('GET', API_A + path);
   }
   async function listPage(chatId, cursor) {
     const res = await crackGet(`${chatId}/messages?limit=${READ_PAGE}` + (cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''));
@@ -3640,10 +3637,7 @@
     return { ok, bad };
   }
 
-  const editUrls = (chatId, id) => [ // 지금 크랙이 쓰는 주소 먼저(옛 주소 contents-api는 503이라 먼저 보내면 되는 길을 시험도 못 하고 UTF-8로 넘어가요)
-    `https://crack-api.wrtn.ai/crack-gen/v3/chats/${chatId}/messages/${id}`,
-    `https://contents-api.wrtn.ai/character-chat/v3/chats/${chatId}/messages/${id}`,
-  ];
+  const editUrls = (chatId, id) => [`https://crack-api.wrtn.ai/crack-gen/v3/chats/${chatId}/messages/${id}`]; // 옛 주소 contents-api는 늘 520이라 뺐어요(거기 실패가 진짜 오류를 가렸어요)
   async function readMessage(chatId, id) {
     const res = await crackGet(`${chatId}/messages/${id}`);
     return res?.data || res;
@@ -3699,34 +3693,37 @@
     // 빠른 길 먼저: 페이지에서 크랙 주소로 바로 써요(0.1초쯤 · 크랙 사이트가 자기 API를 부르는 것과 같은 길) · 확장 프로그램을 거치면 한 번 쓰는 데 몇 초씩 걸려요
     //   저장된 글이 보낸 글과 같을 때만 끝내요 · 서버가 거절했거나 글이 다르면 아래 예전 길이 그대로 다시 해요 · 전송 자체가 막힌 환경이면 이 페이지에선 예전 길만
     if (!pagePatchOff && nextText.length <= PAGE_PATCH_MAX) try { await pagePatch(editUrls(chatId, id)[0], nextText, utf16On && u16 < u8); if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true; } catch (e) { if (!(e.status >= 400)) pagePatchOff = true; }
-    let lastError = null;
+    let lastError = null, sent8 = false;
     for (const url of editUrls(chatId, id)) {
       if (utf16On && u16 < u8) {
-        let transient = false;
+        let transient = false, refused = false;
         for (const send of [patchUtf16, patchUtf16Fetch]) {
           try {
             await send(url, patchJson(nextText));
             if (sameText(msgText(await readMessage(chatId, id)), nextText)) return true;
+            refused = true; // 받았다면서 글이 다르게 저장됨
           } catch (e) {
             // 401·404·410·413·429(요청 몰림)·5xx·시간 초과는 UTF-16LE 탓이 아니라 다음 주소로. 그 밖의 4xx·전송 불가는 다음 방법(fetch) → 그래도 안 되면 UTF-8로.
             if ([401, 404, 410, 413, 429].includes(e.status) || e.status >= 500 || /시간이 초과/.test(e.message)) { lastError = e; transient = true; break; }
+            if (e.status >= 400) refused = true;
           }
         }
         if (transient) continue;
         // 끄기 전에 서버를 한 번 더 봅니다: 응답만 놓치고 실제로는 들어갔으면 성공.
         if (await savedAs(chatId, id, nextText)) return true;
-        utf16On = false;
+        if (refused) utf16On = false; // 서버가 UTF-16LE를 거절했을 때만 이 페이지에서 꺼요 · 망이 잠깐 끊긴 것(답 없음)은 이번만 UTF-8로 보내고 다음엔 다시 작게
+        else if (u8 > PATCH_MAX) { lastError = new Error('네트워크가 끊겨 노트를 못 보냈어요'); continue; }
         if (u8 > PATCH_MAX) throw new Error(`이 브라우저에서는 큰 노트를 넣을 수 없어요(UTF-16 전송 안 됨, ${Math.round(u8 / 1024)}KB / 100KB). 홈 › 간추리기로 노트를 줄이거나, 크롬(컴퓨터)에서 넣어 주세요.`);
       }
       try {
-        await crack('PATCH', url, { message: nextText });
+        sent8 = true; await crack('PATCH', url, { message: nextText });
         const check = await readMessage(chatId, id);
         if (sameText(msgText(check), nextText)) return true;
         lastError = new Error('저장 응답은 받았지만 내용이 바뀌지 않았어요.');
       } catch (e) { lastError = e; }
     }
     if (lastError && await savedAs(chatId, id, nextText)) return true;
-    const e = lastError || new Error('메시지를 수정하지 못했어요.'); e.message += ` · ${Math.round(Math.min(u8, utf16On ? u16 : u8) / 1024)}KB${utf16On ? '' : ' · UTF-8로 보냄'}`; throw e;
+    const e = lastError || new Error('메시지를 수정하지 못했어요.'); e.message += ` · ${Math.round((sent8 ? u8 : Math.min(u8, u16)) / 1024)}KB${sent8 ? ' · UTF-8로 보냄' : ''}`; throw e;
   }
   // 노트를 쓰는 길은 모두 여기로. 답변+노트가 100KB를 넘으면 노트 뒷부분(칸·항목 경계에서 자름)을 바로 다음 AI 답변(전)에 MEMO_NOTE_MORE로 넣어요.
   //   전전·전 둘 다 AI가 끝까지 읽는 걸 크랙에서 확인(2026.10.27, 둘 합쳐 약 9만 자). 압축·장기기억은 그대로 돌고, 그래도 넘칠 때만 나눠요.
