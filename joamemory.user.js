@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.37
+// @version      6.0.38
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10141,7 +10141,7 @@
     const yb = x => hy.edit === x.k ? `<input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">` : `<button class="linkbtn" data-act="hyedit" data-arg="${x.k}">${x.y}</button>`;
     let rows = '', hid = 0; const more = () => { if (hid) rows += `<p class="hy-c"><button class="linkbtn" data-act="hyall">⋯ ${hid}개 더 보기</button></p>`; hid = 0; };
     F.forEach((x, i) => { if (!(hy.all || i === 0 || x.chg || x.back || x.skip || hy.edit === x.k)) return void hid++;
-      const same = x.newLine === x.line && !x.skip, main = x.chg ? `${yb(x)}년으로 넘어감 🎉` : same ? `${esc(x.old)} · 그대로` : `${esc(x.old)} → ${yb(x)}년${i === 0 ? '부터' : ''}`;
+      const same = x.newLine === x.line && !x.skip, nw = /^\d{4}/.test(x.rep || '') ? yb(x) + esc(x.rep.slice(4)) : esc(x.rep || ''), main = x.chg ? `${nw} · 다음 해로 🎉` : same ? `${esc(x.old)} · 그대로` : `${esc(x.old)} → ${nw}${i === 0 ? '부터' : ''}`;
       const sub = x.back ? `${x.back}일쯤 앞으로 돌아감 · 해는 그대로 · <button class="linkbtn" data-act="hyskip" data-arg="${x.k}">${x.skip ? '되살리기' : '빼기'}</button>` : x.chg ? esc(x.old) : '';
       rows += `<div class="hy-it${x.back ? ' w' : ''}${x.skip ? ' off' : ''}"><i>#${x.k + 1}</i>${main}${sub ? `<em>${sub}</em>` : ''}</div>`; });
     more();
@@ -10153,13 +10153,16 @@
   function hySheetHtml() {
     const q = SHEET_Q('HUD에 연도 넣기', ['이 방 AI 답 머리말의 날짜에 연도를 붙여요. 본문은 안 건드려요.', '12월 다음에 1월이 오면 다음 해로 올려요. 며칠만 앞으로 돌아간 답(회상·리롤)은 해를 안 넘기고 ⚠️로 보여 줘요.', '미리보기에서 연도를 누르면 그 답부터 끝까지 그 연도로 다시 세요.']);
     return sheetBox('HUD에 연도 넣기', q, `<div class="hy">
-      <div><h5>HUD 한 줄 붙여 넣고 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div></div>
+      <div><h5>HUD 한 줄 붙여 넣고 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div>${hy.auto ? '<small>최근 AI 답에서 찾아 넣었어요 · 다르면 지우고 붙여 넣어요</small>' : ''}</div>
       <div class="hy-set"><div class="hy-row"><b>시작 연도</b><span><input type="number" data-hud="y" value="${hy.y}">년</span></div>
         ${sRow('12월 → 1월이면 다음 해', `<input type="checkbox" class="switch" data-hud="wrap"${hy.wrap ? ' checked' : ''}>`)}${sRow('이미 적힌 연도도 고치기', `<input type="checkbox" class="switch" data-hud="fix"${hy.fix ? ' checked' : ''}>`, '17XX처럼 잘못 적힌 연도도 시작 연도부터 다시 세요')}</div>
       <div class="hy-pv">${hyPvHtml()}</div>
       ${hy.bak ? `<button class="btn ghost" data-act="hyundo"${hy.busy ? ' disabled' : ''}>되돌리기 (${hy.bak}개)</button>` : ''}</div>`); }
   const hyPaint = (all = false) => { if (!ui('.hy')) return; if (all) { const y = out('main').scrollTop; render(); out('main').scrollTop = y; return; } const tw = ui('.hy-tw'); if (tw) tw.innerHTML = hyTokHtml(); const pv = ui('.hy-pv'); if (pv) pv.innerHTML = hyPvHtml(); };
-  async function hyOpen() { const c = chatIdFromPath(); if (hy.chat !== c) { Object.assign(hy, { chat: c, sel: 0, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1 }); const d = storyDay(noteMemory() || ''), sy = d == null ? 0 : new Date(d * 864e5).getUTCFullYear(); hy.y = sy && sy < P_NOYEAR ? sy : new Date().getFullYear(); }
+  const hyAuto = () => { for (const m of [...(snapshot?.all || [])].filter(m => msgRole(m) === 'assistant').slice(-6).reverse()) { const L = stripBlocks(msgText(m)).split('\n').map(x => x.trim()).filter(Boolean);
+    for (const l of new Set([...L.slice(0, 8), ...L.slice(-8)])) if (l.match(HY_TOK)) { hy.txt = l.slice(0, 200); hy.sel = Math.max(0, hyToks().findIndex(t => !HY_YR.test(t[0]))); hy.auto = true; return; } } };
+  async function hyOpen() { const c = chatIdFromPath(); if (hy.chat !== c) { Object.assign(hy, { chat: c, txt: '', auto: false, sel: 0, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1 }); const d = storyDay(noteMemory() || ''), sy = d == null ? 0 : new Date(d * 864e5).getUTCFullYear(); hy.y = sy && sy < P_NOYEAR ? sy : new Date().getFullYear(); }
+    if (!hy.txt.trim()) hyAuto();
     try { hy.bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')).length; } catch (_) { hy.bak = 0; } }
   const hySlim = m => { if (msgRole(m) !== 'assistant') return { ...m, content: '', message: '' }; const L = stripBlocks(msgText(m)).split('\n').filter(x => x.trim()); return { ...m, content: (L.length > 16 ? [...L.slice(0, 8), ...L.slice(-8)] : L).join('\n'), message: '' }; };
   async function hyRead() { const c = hy.chat; if (hy.busy) return; hy.busy = '대화 읽는 중'; hyPaint(); try { const l = await readAll(c, MAX_PAGES, hySlim); if (hy.chat !== c) return; hy.cut = l.cut; hy.msgs = l.filter(m => msgRole(m) === 'assistant'); } catch (e) { toast('대화를 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { hy.busy = ''; } hyPaint(); }
@@ -11340,7 +11343,7 @@
   root.addEventListener('input', e => { const el = e.target; if (!el.dataset?.nta) return;
     if (!e.isComposing && el.value.search(N_ARROW) >= 0) { const a = el.value.slice(0, el.selectionStart).replace(N_ARROW, '→'); el.value = a + el.value.slice(el.selectionStart).replace(N_ARROW, '→'); el.setSelectionRange(a.length, a.length); }
     nav.nedTxt = { k: el.dataset.nta, v: el.value }; if (el.scrollHeight > el.clientHeight) el.style.height = el.scrollHeight + 2 + 'px'; });
-  root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; if (e.target.dataset?.hud === 'txt') { hy.txt = e.target.value; hy.sel = Math.max(0, hyToks().findIndex(m => !HY_YR.test(m[0]))); hy.ov = {}; hy.skip = new Set(); hyPaint(); } });
+  root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; if (e.target.dataset?.hud === 'txt') { hy.txt = e.target.value; hy.auto = false; hy.sel = Math.max(0, hyToks().findIndex(m => !HY_YR.test(m[0]))); hy.ov = {}; hy.skip = new Set(); hyPaint(); } });
   root.addEventListener('input', e => { const el = e.target; if (el.classList?.contains('neta') && el.scrollHeight > el.clientHeight) el.style.height = el.scrollHeight + 2 + 'px'; });
   root.addEventListener('input', e => { if (e.target.dataset?.nq === undefined) return; nav.nq = e.target.value; const box = ui('.nq-res'); if (box) box.innerHTML = nFindHtml(); });
   root.addEventListener('input', e => {
