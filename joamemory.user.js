@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.33
+// @version      6.0.34
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -5631,13 +5631,13 @@
     .sty-note>summary{list-style:none;display:flex;justify-content:space-between;padding:14px 16px;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2)}
     .sty-note>summary::-webkit-details-marker{display:none}
     .sty-note pre{white-space:pre-wrap;font:inherit;font-size:12px;line-height:1.6;margin:0 12px 12px;padding:12px 14px;border-radius:12px;background:var(--mist);max-height:40vh;overflow:auto;color:var(--ink2)}
-    .hy{display:flex;flex-direction:column;gap:14px;padding:4px 2px 2px}.hy h5{margin:0 0 6px;font-size:12.5px;color:var(--graphite);font-weight:600}.hy small{display:block;margin-top:5px;font-size:12px;color:var(--graphite)}.hy textarea{min-height:0;height:auto;padding:10px 12px;font-size:16px;line-height:1.5;border-radius:12px}
-    .hy-tok{margin-top:8px;line-height:2.1;font-size:14px;word-break:break-all}.hy-tok button{border:0;border-radius:6px;padding:2px 6px;background:var(--sky);color:var(--ink);font:inherit;cursor:pointer}.hy-tok button[aria-pressed=true]{background:#7B61D9;color:#fff}
-    .hy-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}.hy input[type=number]{width:84px;height:38px;border:1.5px solid var(--rule);border-radius:12px;padding:0 10px;font-size:16px;font-weight:700;background:var(--paper);color:var(--ink)}
-    .hy-sum{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px;margin-bottom:6px}.hy-sum span{background:var(--mist);border-radius:99px;padding:3px 10px}.hy-busy{margin:0;font-size:13px;color:var(--ink2)}
-    .hy-it{display:grid;grid-template-columns:44px 1fr;gap:2px 8px;padding:7px 0;border-bottom:1px dashed var(--rule);font-size:13px}.hy-it>i{font-style:normal;color:var(--graphite);font-size:12px}.hy-it s{color:var(--pencil)}.hy-it.off{opacity:.45}.hy-it input[type=number]{width:76px;height:30px;font-size:16px}
-    .hy-it>span:not(.hy-w)>.linkbtn{padding:0 4px;color:var(--ink);background:var(--lilac);border-radius:4px;font-size:13px;font-weight:400;text-decoration:none}.hy-w{grid-column:2;font-size:11.5px;color:var(--bad)}.hy-w .linkbtn{padding:0 2px;font-size:11.5px}.hy-c{margin:4px 0;text-align:center}.hy .btn{width:100%;margin-top:10px}
-    .hy-yc{display:flex;align-items:center;gap:6px;background:#FFF5E6;border-radius:10px;padding:6px 10px;margin:6px 0;font-size:12.5px;color:#8A5A10}.hy-yc input[type=number]{width:76px;height:30px;border-color:#F0D3A6;font-size:16px}.hy-yc span{margin-left:auto}
+    .hy{display:flex;flex-direction:column;gap:18px;padding:4px 2px 2px}.hy h5{margin:0 0 8px;font-size:12px;color:var(--graphite);font-weight:600}.hy small{display:block;margin-top:6px;font-size:12px;color:var(--graphite)}.hy textarea{min-height:0;height:auto;padding:10px 12px;font-size:16px;line-height:1.5;border-radius:12px}
+    .hy-tok{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--mist);line-height:2.1;font-size:14px;word-break:break-all}.hy-tok button{border:0;border-radius:7px;padding:2px 7px;background:none;color:var(--ink);font:inherit;cursor:pointer;box-shadow:inset 0 0 0 1px var(--rule)}.hy-tok button[aria-pressed=true]{background:#7B61D9;color:#fff;font-weight:600;box-shadow:none}
+    .hy-set .srow,.hy-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--rule)}.hy-set>:last-child{border-bottom:0}.hy-row>span{display:flex;align-items:center;gap:6px;font-size:14px}.hy input[type=number]{width:84px;height:36px;border:1.5px solid var(--rule);border-radius:10px;padding:0 8px;font-size:16px;font-weight:700;text-align:center;background:var(--paper);color:var(--ink)}
+    .hy-sum{display:flex;align-items:baseline;gap:6px;font-size:14px;color:var(--ink)}.hy-sum b{font-size:24px;color:#7B61D9}.hy-sum small{margin:0 0 0 auto;text-align:right}.hy-busy{margin:0;font-size:13px;color:var(--ink2)}.hy-bar{height:8px;margin-top:10px;border-radius:99px;background:var(--mist);overflow:hidden}.hy-bar i{display:block;height:100%;border-radius:99px;background:#7B61D9;transition:width .3s}
+    .hy-list{display:flex;flex-direction:column;gap:10px;margin:14px 0 0 6px;padding-left:14px;border-left:2px solid var(--lilac)}.hy-it{position:relative;font-size:13.5px;color:var(--ink)}.hy-it::before{content:'';position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;background:#7B61D9}.hy-it.w::before{background:#E8A33A}.hy-it.off{opacity:.45}.hy-it>i{font-style:normal;color:var(--graphite);font-size:12px;margin-right:6px}
+    .hy-it em{display:block;margin-top:2px;font-style:normal;font-size:12px;color:var(--graphite)}.hy-it.w em{color:#B07A20}.hy-it .linkbtn{padding:0 2px;font-size:inherit;color:#7B61D9;text-decoration:none}.hy-it em .linkbtn{font-size:12px}.hy-it input[type=number]{width:76px;height:30px}
+    .hy-c{margin:10px 0 0;text-align:center}.hy-c .linkbtn{font-size:12.5px;color:var(--graphite);text-decoration:none}.hy .btn{width:100%;margin-top:14px}.hy-pv>small,.hy>small{text-align:center}
     .sty-pg{padding-bottom:45vh} /* 맨 아래 칸을 닫아도 페이지가 짧아져 튕기지 않게 아래 자리를 남겨요 */
   </style>
   <div class="under" data-act="close" aria-hidden="true"></div>
@@ -11072,39 +11072,45 @@
       out.push({ k, id: msgId(msg), line: f.line, newLine: f.line.slice(0, f.m.index) + rep + f.line.slice(f.m.index + f.m[0].length), old: f.m[0], rep, y: yy, had, chg, back, skip }); });
     return out; }
   function hyPvHtml() {
-    if (hy.busy) return `<p class="hy-busy">${/\//.test(hy.busy) ? '바꾸는 중 ' + esc(hy.busy) + ' · 끝날 때까지 이 방에서 채팅하지 말아 주세요' : esc(hy.busy) + '…'}</p>`;
+    if (hy.busy) { const m = hy.busy.match(/^(\d+)\/(\d+)$/); if (!m) return `<p class="hy-busy">${esc(hy.busy)}…</p>`;
+      const d = +m[1], t = +m[2], left = d ? Math.round((Date.now() - hy.t0) / d * (t - d) / 1000) : 0;
+      return `<div class="hy-sum">바꾸는 중 <b>${d}</b>/${t}<small>${d ? '남은 시간 약 ' + (left >= 60 ? Math.round(left / 60) + '분' : left + '초') : ''}</small></div><div class="hy-bar"><i style="width:${Math.round(d / t * 100)}%"></i></div><small>끝날 때까지 이 방에서 채팅하지 말아 주세요</small>`; }
     if (!hyToks()[hy.sel]) return '';
     if (!hy.msgs) return `<button class="btn" data-act="hyread">미리보기 만들기</button><small>이 방 대화 전체를 읽어요(긴 방은 몇십 초)</small>`;
     const P = hyPlan(), todo = P.filter(x => x.line && !x.skip && x.newLine !== x.line), F = P.filter(x => x.line);
-    let rows = '', hid = 0; const more = () => { if (hid) rows += `<p class="hy-c"><button class="linkbtn" data-act="hyall">⋯ ${hid}개 더</button></p>`; hid = 0; };
-    F.forEach((x, i) => { if (!(hy.all || i < 3 || x.chg || x.back || x.skip || hy.edit === x.k)) return void hid++; more();
-      if (x.chg) rows += `<div class="hy-yc">🎉 <b>#${x.k + 1}</b>부터 <input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">년 <span>틀리면 고치기</span></div>`;
-      const yr = hy.edit === x.k && !x.chg ? `<input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">` : `<button class="linkbtn" data-act="hyedit" data-arg="${x.k}">${esc(x.rep)}</button>`;
-      rows += `<div class="hy-it${x.skip ? ' off' : ''}"><i>#${x.k + 1}</i><span>${x.newLine === x.line && !x.skip ? `${esc(x.old)} · 그대로` : `<s>${esc(x.old)}</s> → ${yr}`}</span>${x.back ? `<span class="hy-w">⚠️ ${x.back}일쯤 앞으로 돌아감(회상?) · 해는 안 넘겨요 <button class="linkbtn" data-act="hyskip" data-arg="${x.k}">${x.skip ? '되살리기' : '빼기'}</button></span>` : x.skip ? `<span class="hy-w"><button class="linkbtn" data-act="hyskip" data-arg="${x.k}">되살리기</button></span>` : ''}</div>`; });
+    const yb = x => hy.edit === x.k ? `<input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">` : `<button class="linkbtn" data-act="hyedit" data-arg="${x.k}">${x.y}</button>`;
+    let rows = '', hid = 0; const more = () => { if (hid) rows += `<p class="hy-c"><button class="linkbtn" data-act="hyall">⋯ ${hid}개 더 보기</button></p>`; hid = 0; };
+    F.forEach((x, i) => { if (!(hy.all || i === 0 || x.chg || x.back || x.skip || hy.edit === x.k)) return void hid++;
+      const same = x.newLine === x.line && !x.skip, main = x.chg ? `${yb(x)}년으로 넘어감 🎉` : same ? `${esc(x.old)} · 그대로` : `${esc(x.old)} → ${yb(x)}년${i === 0 ? '부터' : ''}`;
+      const sub = x.back ? `${x.back}일쯤 앞으로 돌아감 · 해는 그대로 · <button class="linkbtn" data-act="hyskip" data-arg="${x.k}">${x.skip ? '되살리기' : '빼기'}</button>` : x.chg ? esc(x.old) : '';
+      rows += `<div class="hy-it${x.back ? ' w' : ''}${x.skip ? ' off' : ''}"><i>#${x.k + 1}</i>${main}${sub ? `<em>${sub}</em>` : ''}</div>`; });
     more();
-    return `<div class="hy-sum"><span>바뀔 답 <b>${todo.length}</b></span>${hy.fix ? '' : `<span>이미 연도 있음 ${F.filter(x => x.had).length}</span>`}<span>날짜 없음 ${P.length - F.length}</span></div>${hy.cut ? '<small>대화가 너무 길어 앞부분은 못 읽었어요</small>' : ''}
-      <div class="hy-list">${rows}</div><button class="btn" data-act="hygo"${todo.length ? '' : ' disabled'}>${todo.length}개 바꾸기</button><small>바꾼 줄은 기억해 둬서 되돌릴 수 있어요 · 답 수에 따라 몇 분 걸려요</small>`; }
+    return `<div class="hy-sum">바뀔 답 <b>${todo.length}</b>개<small>${hy.fix ? '' : `이미 연도 있음 ${F.filter(x => x.had).length} · `}날짜 없음 ${P.length - F.length}</small></div>${hy.cut ? '<small>대화가 너무 길어 앞부분은 못 읽었어요</small>' : ''}
+      <div class="hy-list">${rows}</div><button class="btn" data-act="hygo"${todo.length ? '' : ' disabled'}>${todo.length}개 바꾸기</button><small>바꾼 줄은 기억해 둬서 되돌릴 수 있어요</small>`; }
   const hyTokHtml = () => { const T = hyToks(); if (!hy.txt.trim()) return ''; if (!T.length) return '<small>날짜를 못 찾았어요 · 09월 22일 · 9.22 · 2026.09.22 같은 꼴이어야 해요</small>';
     let h = '', at = 0; T.forEach((m, i) => { h += esc(hy.txt.slice(at, m.index)) + `<button data-act="hypick" data-arg="${i}" aria-pressed="${i === hy.sel}">${esc(m[0])}</button>`; at = m.index + m[0].length; });
-    return `<div class="hy-tok">${h + esc(hy.txt.slice(at))}</div><small>날짜를 누르면 골라져요 · 고른 꼴만 바꿔요</small>`; };
+    return `<div class="hy-tok">${h + esc(hy.txt.slice(at))}</div>${T.length > 1 ? '<small>바꿀 날짜를 눌러 골라요</small>' : ''}`; };
   function hySheetHtml() {
     const q = SHEET_Q('HUD에 연도 넣기', ['이 방 AI 답 머리말의 날짜에 연도를 붙여요. 본문은 안 건드려요.', '12월 다음에 1월이 오면 다음 해로 올려요. 며칠만 앞으로 돌아간 답(회상·리롤)은 해를 안 넘기고 ⚠️로 보여 줘요.', '미리보기에서 연도를 누르면 그 답부터 끝까지 그 연도로 다시 세요.']);
     return sheetBox('HUD에 연도 넣기', q, `<div class="hy">
-      <div><h5>1. HUD 한 줄 붙여 넣기 · 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div></div>
-      <div><h5>2. 넣을 연도</h5><div class="hy-row"><input type="number" data-hud="y" value="${hy.y}"><span>년부터</span></div>
-        ${sRow('12월 → 1월이면 다음 해', `<input type="checkbox" class="switch" data-hud="wrap"${hy.wrap ? ' checked' : ''}>`)}${sRow('이미 적힌 연도도 고치기', `<input type="checkbox" class="switch" data-hud="fix"${hy.fix ? ' checked' : ''}>`, '17XX처럼 잘못 적힌 연도도 위 연도부터 다시 세서 바꿔요')}</div>
-      <div><h5>3. 이렇게 바뀌어요</h5><div class="hy-pv">${hyPvHtml()}</div></div>
+      <div><h5>HUD 한 줄 붙여 넣고 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div></div>
+      <div class="hy-set"><div class="hy-row"><b>시작 연도</b><span><input type="number" data-hud="y" value="${hy.y}">년</span></div>
+        ${sRow('12월 → 1월이면 다음 해', `<input type="checkbox" class="switch" data-hud="wrap"${hy.wrap ? ' checked' : ''}>`)}${sRow('이미 적힌 연도도 고치기', `<input type="checkbox" class="switch" data-hud="fix"${hy.fix ? ' checked' : ''}>`, '17XX처럼 잘못 적힌 연도도 시작 연도부터 다시 세요')}</div>
+      <div class="hy-pv">${hyPvHtml()}</div>
       ${hy.bak ? `<button class="btn ghost" data-act="hyundo"${hy.busy ? ' disabled' : ''}>되돌리기 (${hy.bak}개)</button>` : ''}</div>`); }
   const hyPaint = (all = false) => { if (!ui('.hy')) return; if (all) { const y = out('main').scrollTop; render(); out('main').scrollTop = y; return; } const tw = ui('.hy-tw'); if (tw) tw.innerHTML = hyTokHtml(); const pv = ui('.hy-pv'); if (pv) pv.innerHTML = hyPvHtml(); };
   async function hyOpen() { const c = chatIdFromPath(); if (hy.chat !== c) { Object.assign(hy, { chat: c, sel: 0, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1 }); const d = storyDay(noteMemory() || ''), sy = d == null ? 0 : new Date(d * 864e5).getUTCFullYear(); hy.y = sy && sy < P_NOYEAR ? sy : new Date().getFullYear(); }
     try { hy.bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')).length; } catch (_) { hy.bak = 0; } }
   const hySlim = m => { if (msgRole(m) !== 'assistant') return { ...m, content: '', message: '' }; const L = stripBlocks(msgText(m)).split('\n').filter(x => x.trim()); return { ...m, content: (L.length > 16 ? [...L.slice(0, 8), ...L.slice(-8)] : L).join('\n'), message: '' }; }; // 머리·끝 8줄만(hyFind가 보는 곳)
   async function hyRead() { const c = hy.chat; if (hy.busy) return; hy.busy = '대화 읽는 중'; hyPaint(); try { const l = await readAll(c, MAX_PAGES, hySlim); if (hy.chat !== c) return; hy.cut = l.cut; hy.msgs = l.filter(m => msgRole(m) === 'assistant'); } catch (e) { toast('대화를 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { hy.busy = ''; } hyPaint(); }
-  async function hyWrite(list, back) { // list: [id, 지금 줄, 바꿀 줄] · 그 답을 다시 읽어 지금 줄이 그대로일 때만 써요
-    const c = hy.chat, done = []; let miss = 0;
-    for (const [i, [id, from, to]] of list.entries()) { if (chatIdFromPath() !== c) break; hy.busy = `${i + 1}/${list.length}`; hyPaint();
-      try { const t = msgText(await readMessage(c, id)), at = t.indexOf(from); if (at < 0) { miss++; continue; } await writeRaw(c, id, t.slice(0, at) + to + t.slice(at + from.length)); done.push(back ? [id, to, from] : [id, from, to]); }
-      catch (e) { miss++; logErr('HUD 연도', errMsg(e), c); } }
+  async function hyWrite(list, back) { // list: [id, 지금 줄, 바꿀 줄] · 그 답을 다시 읽어 지금 줄이 그대로일 때만 써요 · 4개씩 같이(같은 답은 한 줄로 차례대로)
+    const c = hy.chat, done = [], groups = [...list.reduce((m, x) => m.set(x[0], [...(m.get(x[0]) || []), x]), new Map()).values()]; let miss = 0, n = 0, gi = 0;
+    hy.t0 = Date.now(); hy.busy = `0/${list.length}`; hyPaint();
+    const work = async () => { while (gi < groups.length && chatIdFromPath() === c) { for (const [id, from, to] of groups[gi++]) {
+      try { const t = msgText(await readMessage(c, id)), at = t.indexOf(from); if (at < 0) miss++; else { await writeRaw(c, id, t.slice(0, at) + to + t.slice(at + from.length)); done.push(back ? [id, to, from] : [id, from, to]); } }
+      catch (e) { miss++; logErr('HUD 연도', errMsg(e), c); }
+      hy.busy = `${++n}/${list.length}`; hyPaint(); } } };
+    await Promise.all([1, 2, 3, 4].map(work));
     hy.busy = ''; return { done, miss, cut: chatIdFromPath() !== c }; }
   async function hyGo() { const c = hy.chat; if (hy.busy || chatIdFromPath() !== c) return; const list = hyPlan().filter(x => x.line && !x.skip && x.newLine !== x.line).map(x => [x.id, x.line, x.newLine]); if (!list.length) return;
     let bak = []; try { bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')); } catch (_) {}
@@ -11476,7 +11482,7 @@
   (() => {
     const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window, WS = W.WebSocket;
     if (!WS?.prototype?.send) return;
-    const orig = WS.prototype.send, sendQ = new Map(); sendSeen.on = true; // sendQ: 방마다 보내기 순서
+    const orig = WS.prototype.send, sendQ = new Map(); // sendQ: 방마다 보내기 순서
     const parseFrame = raw => { if (typeof raw !== 'string') return null; const m = /^42(\/[^,]+,)?(\d*)(\[.*)$/s.exec(raw); if (!m) return null;
       try { const a = JSON.parse(m[3]); return Array.isArray(a) && typeof a[0] === 'string' ? { event: a[0], payload: a[1] } : null; } catch (_) { return null; } };
     const lastFrame = {}; // 마지막으로 보낸 크랙 프레임(생성 중단을 같은 꼴로 보내려고)
@@ -11487,6 +11493,7 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushHeld(); });
     window.addEventListener('pagehide', flushHeld);
     WS.prototype.send = function (data) {
+      sendSeen.on = true; // 크랙 연결이 실제로 이 send를 거칠 때만(아이폰 Userscripts는 페이지 연결을 못 잡아요)
       if (this.readyState === 1) liveSock.set(this.url, this);
       if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return; // AI가 답을 쓰는 중인지(형광펜이 다 쓴 뒤에 칠하게)
         if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = stripBlocks(p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n')); /* 우리가 넣은 노트·문체 덩어리(내 메시지에 실려 올 수 있어요)는 빼고 봐요 */ leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600); /* 조각이 글 전체든 새로 붙은 몇 글자든: 이어 붙인 끝부분에서 찾아요(표식이 두 조각에 걸쳐 와도) */ if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} } // 우리 노트 앞줄(※ 표기·[기억 노트 ··MEMO_NOTE)을 따라 쓰기 시작하면 크랙의 생성 중단(stop)을 대신 보내요 · 서버가 다 쓴 뒤라 값은 나갔을 수 있어요 // 글 조각이 올 때만(기다리는 동안엔 새 말풍선이 아직 없어서 앞 답의 형광펜이 지워져요)
