@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.30
+// @version      6.0.31
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -959,8 +959,8 @@
   const pAuto = mem => { const d = storyDay(mem), y = d == null ? null : new Date(d * 864e5).getUTCFullYear();
     if (y != null && y < P_NOYEAR) return y >= 1900 ? 'modern' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'old';
     const t = mem + '\n' + (snapshot?.all || []).slice(-6).map(m => stripBlocks(msgText(m)).slice(0, 400)).join('\n'); // 최근 머리말까지 같이 봐요(경복궁·별당 등)
-    return /센티넬|가이드|가이딩|헌터|각성자|게이트|던전|오메가|알파|이능/.test(t) ? 'modern' : pAuto0(t); };
-  const pAuto0 = mem => /조선|한양|궁궐|경복궁|창덕궁|별당|대감|마님|도령|양반|어의|의녀|세자|중전|전하|마마|오시|자시|축시|인시|묘시|진시|사시|미시|신시|유시|술시|해시/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
+    return /센티넬|가이드|가이딩|헌터|각성자|게이트|던전|오메가|알파|이능|휴대폰|핸드폰|스마트폰|폰을|카톡|문자를|아파트|지하철|버스|택시|편의점|카페|회사|출근|퇴근|대학|학교|병원|자동차|노트북|인스타|유튜브|부대|작전|헬기|소총|권총|군복|미군|기지/.test(t) ? 'modern' : pAuto0(t); }; // 'N년차'처럼 진짜 연도가 없으면 낱말로 · 현대 물건이 나오면 현대
+  const pAuto0 = mem => /조선|한양|궁궐|경복궁|창덕궁|별당|대감|마님|도령|양반|어의|의녀|세자|중전/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
   const P_WORLD = { modern: '현대', old: '옛날(조선 등)', fantasy: '판타지' };
   const P_DOC = { modern: '산부인과', old: '의원·산파', fantasy: '치유사' };
   const P_HOSP = { modern: /병원|산부인과|검진|초음파|진료|의사|분만실|응급실/, old: /의원|산파|진맥|어의|의녀|약방/, fantasy: /치유사|신전|진찰|치료소|산파|의사/ };
@@ -5628,6 +5628,13 @@
     .sty-note>summary{list-style:none;display:flex;justify-content:space-between;padding:14px 16px;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ink2)}
     .sty-note>summary::-webkit-details-marker{display:none}
     .sty-note pre{white-space:pre-wrap;font:inherit;font-size:12px;line-height:1.6;margin:0 12px 12px;padding:12px 14px;border-radius:12px;background:var(--mist);max-height:40vh;overflow:auto;color:var(--ink2)}
+    .hy{display:flex;flex-direction:column;gap:14px;padding:4px 2px 2px}.hy h5{margin:0 0 6px;font-size:12.5px;color:var(--graphite);font-weight:600}.hy small{display:block;margin-top:5px;font-size:12px;color:var(--graphite)}.hy textarea{min-height:0;height:auto;padding:10px 12px;font-size:16px;line-height:1.5;border-radius:12px}
+    .hy-tok{margin-top:8px;line-height:2.1;font-size:14px;word-break:break-all}.hy-tok button{border:0;border-radius:6px;padding:2px 6px;background:var(--sky);color:var(--ink);font:inherit;cursor:pointer}.hy-tok button[aria-pressed=true]{background:#7B61D9;color:#fff}
+    .hy-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}.hy input[type=number]{width:84px;height:38px;border:1.5px solid var(--rule);border-radius:12px;padding:0 10px;font-size:16px;font-weight:700;background:var(--paper);color:var(--ink)}
+    .hy-sum{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px;margin-bottom:6px}.hy-sum span{background:var(--mist);border-radius:99px;padding:3px 10px}.hy-busy{margin:0;font-size:13px;color:var(--ink2)}
+    .hy-it{display:grid;grid-template-columns:44px 1fr;gap:2px 8px;padding:7px 0;border-bottom:1px dashed var(--rule);font-size:13px}.hy-it>i{font-style:normal;color:var(--graphite);font-size:12px}.hy-it s{color:var(--pencil)}.hy-it.off{opacity:.45}.hy-it input[type=number]{width:76px;height:30px;font-size:16px}
+    .hy-it>span:not(.hy-w)>.linkbtn{padding:0 4px;color:var(--ink);background:var(--lilac);border-radius:4px;font-size:13px;font-weight:400;text-decoration:none}.hy-w{grid-column:2;font-size:11.5px;color:var(--bad)}.hy-w .linkbtn{padding:0 2px;font-size:11.5px}.hy-c{margin:4px 0;text-align:center}.hy .btn{width:100%;margin-top:10px}
+    .hy-yc{display:flex;align-items:center;gap:6px;background:#FFF5E6;border-radius:10px;padding:6px 10px;margin:6px 0;font-size:12.5px;color:#8A5A10}.hy-yc input[type=number]{width:76px;height:30px;border-color:#F0D3A6;font-size:16px}.hy-yc span{margin-left:auto}
     .sty-pg{padding-bottom:45vh} /* 맨 아래 칸을 닫아도 페이지가 짧아져 튕기지 않게 아래 자리를 남겨요 */
   </style>
   <div class="under" data-act="close" aria-hidden="true"></div>
@@ -6548,7 +6555,7 @@
         if (!(cursor = next)) break;
       }
       etcQuiet = true;
-      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked', 'relkind']) await setValue(k + ':' + chatId, ''); relMemo = {}; relMemoChat = ''; tlDu = { c: '', v: { o: {}, m: [] } }; }
+      try { for (const k of [...BACKUP_KEYS, 'parked', 'ext', 'full', 'moved', 'seen', 'fullSkip', 'etcSkip', 'gsAsked', 'relkind', 'hudbak']) await setValue(k + ':' + chatId, ''); relMemo = {}; relMemoChat = ''; tlDu = { c: '', v: { o: {}, m: [] } }; }
       finally { etcQuiet = false; }
       const now = new Date().toISOString();
       await setValue('resetAt:' + chatId, now); await setValue('etcAt:' + chatId, now);
@@ -11040,6 +11047,72 @@
       </div>`;
   }
 
+  // 설정 › 화면 › HUD에 연도 넣기: HUD 한 줄을 붙이고 날짜를 고르면 이 방 AI 답 머리말(위·아래 8줄)의 같은 꼴 날짜에 연도를 붙여요 · 컴퓨터만(대화 전체를 읽어서)
+  //   고치기 직전에 그 답을 다시 읽어 그 줄이 그대로일 때만 바꿔요 · 바꾼 줄(앞·뒤)만 'hudbak:방'에 남겨 되돌리기에 써요
+  const HY_TOK = /\d{4}\s*(?:년|[.\/-])\s*\d{1,2}\s*(?:월|[.\/-])\s*\d{1,2}(?:\s*일)?|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}[.\/]\d{1,2}(?![\d:])/g, HY_YR = /^\d{4}\s*(?:년|[.\/-])\s*/;
+  const hy = { chat: '', txt: '', sel: 0, y: 0, wrap: true, fix: false, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1, busy: '', bak: 0 };
+  const hyToks = () => [...hy.txt.matchAll(HY_TOK)];
+  const hyRe = tok => new RegExp('(?<!\\d)(?:(\\d{4})\\s*(?:년|[.\\/-])\\s*)?' + tok.replace(HY_YR, '').split(/(\d+|\s+)/).filter(Boolean).map(p => /^\d+$/.test(p) ? '(\\d{1,2})' : /^\s+$/.test(p) ? '\\s*' : p.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')).join('') + '(?!\\d)');
+  const hyFind = (text, re) => { const L = stripBlocks(text).split('\n'), idx = [...L.keys()].filter(i => L[i].trim()); for (const i of new Set([...idx.slice(0, 8), ...idx.slice(-8)])) { const m = L[i].match(re); if (m && +m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31) return { line: L[i], m }; } return null; };
+  function hyPlan() {
+    const tok = hyToks()[hy.sel]?.[0]; if (!tok || !hy.msgs) return [];
+    const re = hyRe(tok), ko = /월/.test(tok), sep = (tok.replace(HY_YR, '').match(/\D/) || ['.'])[0], out = []; let y = +hy.y || 0, prev = null;
+    hy.msgs.forEach((msg, k) => { const f = hyFind(msgText(msg), re); if (!f) return out.push({ k, none: true });
+      const cur = Date.UTC(2001, f.m[2] - 1, +f.m[3]) / 864e5, had = f.m[1] ? +f.m[1] : null, skip = hy.skip.has(k), dt = prev == null ? 0 : cur - prev; let chg = false, back = 0, yy = y; // cur: 그해 몇째 날
+      if (hy.ov[k] != null) { y = yy = +hy.ov[k]; chg = true; prev = cur; }
+      else if (had && !hy.fix) { if (!skip) { y = yy = had; prev = cur; } }
+      else if (dt < -60 && hy.wrap) { if (!skip) { y = yy = y + 1; prev = cur; } chg = !skip; } // 12월 → 1월: 다음 해
+      else if (dt < 0) back = -dt; // 며칠 앞으로: 해는 그대로
+      else if (dt > 300) { back = prev + 365 - cur; yy = y - 1; } // 1월 초에 12월 말 얘기: 지난해(회상)
+      else if (!skip) prev = cur;
+      const date = f.m[0].replace(HY_YR, ''), rep = had && !hy.fix ? f.m[0] : ko ? `${yy}년 ${date}` : `${yy}${sep}${date}`;
+      out.push({ k, id: msgId(msg), line: f.line, newLine: f.line.slice(0, f.m.index) + rep + f.line.slice(f.m.index + f.m[0].length), old: f.m[0], rep, y: yy, had, chg, back, skip }); });
+    return out; }
+  function hyPvHtml() {
+    if (IS_STAY) return '';
+    if (hy.busy) return `<p class="hy-busy">${/\//.test(hy.busy) ? '바꾸는 중 ' + esc(hy.busy) + ' · 끝날 때까지 이 방에서 채팅하지 말아 주세요' : esc(hy.busy) + '…'}</p>`;
+    if (!hyToks()[hy.sel]) return '';
+    if (!hy.msgs) return `<button class="btn" data-act="hyread">미리보기 만들기</button><small>이 방 대화 전체를 읽어요(긴 방은 몇십 초)</small>`;
+    const P = hyPlan(), todo = P.filter(x => x.line && !x.skip && x.newLine !== x.line), F = P.filter(x => x.line);
+    let rows = '', hid = 0; const more = () => { if (hid) rows += `<p class="hy-c"><button class="linkbtn" data-act="hyall">⋯ ${hid}개 더</button></p>`; hid = 0; };
+    F.forEach((x, i) => { if (!(hy.all || i < 3 || x.chg || x.back || x.skip || hy.edit === x.k)) return void hid++; more();
+      if (x.chg) rows += `<div class="hy-yc">🎉 <b>#${x.k + 1}</b>부터 <input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">년 <span>틀리면 고치기</span></div>`;
+      const yr = hy.edit === x.k && !x.chg ? `<input type="number" data-hud="ov" data-k="${x.k}" value="${x.y}">` : `<button class="linkbtn" data-act="hyedit" data-arg="${x.k}">${esc(x.rep)}</button>`;
+      rows += `<div class="hy-it${x.skip ? ' off' : ''}"><i>#${x.k + 1}</i><span>${x.newLine === x.line && !x.skip ? `${esc(x.old)} · 그대로` : `<s>${esc(x.old)}</s> → ${yr}`}</span>${x.back ? `<span class="hy-w">⚠️ ${x.back}일쯤 앞으로 돌아감(회상?) · 해는 안 넘겨요 <button class="linkbtn" data-act="hyskip" data-arg="${x.k}">${x.skip ? '되살리기' : '빼기'}</button></span>` : x.skip ? `<span class="hy-w"><button class="linkbtn" data-act="hyskip" data-arg="${x.k}">되살리기</button></span>` : ''}</div>`; });
+    more();
+    return `<div class="hy-sum"><span>바뀔 답 <b>${todo.length}</b></span>${hy.fix ? '' : `<span>이미 연도 있음 ${F.filter(x => x.had).length}</span>`}<span>날짜 없음 ${P.length - F.length}</span></div>${hy.cut ? '<small>대화가 너무 길어 앞부분은 못 읽었어요</small>' : ''}
+      <div class="hy-list">${rows}</div><button class="btn" data-act="hygo"${todo.length ? '' : ' disabled'}>${todo.length}개 바꾸기</button><small>바꾼 줄은 기억해 둬서 되돌릴 수 있어요 · 답 수에 따라 몇 분 걸려요</small>`; }
+  const hyTokHtml = () => { const T = hyToks(); if (!hy.txt.trim()) return ''; if (!T.length) return '<small>날짜를 못 찾았어요 · 09월 22일 · 9.22 · 2026.09.22 같은 꼴이어야 해요</small>';
+    let h = '', at = 0; T.forEach((m, i) => { h += esc(hy.txt.slice(at, m.index)) + `<button data-act="hypick" data-arg="${i}" aria-pressed="${i === hy.sel}">${esc(m[0])}</button>`; at = m.index + m[0].length; });
+    return `<div class="hy-tok">${h + esc(hy.txt.slice(at))}</div><small>날짜를 누르면 골라져요 · 고른 꼴만 바꿔요</small>`; };
+  function hySheetHtml() {
+    const q = SHEET_Q('HUD에 연도 넣기', ['이 방 AI 답 머리말의 날짜에 연도를 붙여요. 본문은 안 건드려요.', '12월 다음에 1월이 오면 다음 해로 올려요. 며칠만 앞으로 돌아간 답(회상·리롤)은 해를 안 넘기고 ⚠️로 보여 줘요.', '미리보기에서 연도를 누르면 그 답부터 끝까지 그 연도로 다시 세요.']);
+    if (IS_STAY) return sheetBox('HUD에 연도 넣기', q, '<div class="hy"><small>대화 전체를 읽어야 해서 컴퓨터에서만 돼요(아이폰은 튕길 수 있어요).</small></div>');
+    return sheetBox('HUD에 연도 넣기', q, `<div class="hy">
+      <div><h5>1. HUD 한 줄 붙여 넣기 · 날짜 누르기</h5><textarea data-hud="txt" rows="2" placeholder="📅 09월 22일 (월) | 14:30 | 카페 앞">${esc(hy.txt)}</textarea><div class="hy-tw">${hyTokHtml()}</div></div>
+      <div><h5>2. 넣을 연도</h5><div class="hy-row"><input type="number" data-hud="y" value="${hy.y}"><span>년부터</span></div>
+        ${sRow('12월 → 1월이면 다음 해', `<input type="checkbox" class="switch" data-hud="wrap"${hy.wrap ? ' checked' : ''}>`)}${sRow('이미 적힌 연도도 고치기', `<input type="checkbox" class="switch" data-hud="fix"${hy.fix ? ' checked' : ''}>`, '17XX처럼 잘못 적힌 연도도 위 연도부터 다시 세서 바꿔요')}</div>
+      <div><h5>3. 이렇게 바뀌어요</h5><div class="hy-pv">${hyPvHtml()}</div></div>
+      ${hy.bak ? `<button class="btn ghost" data-act="hyundo"${hy.busy ? ' disabled' : ''}>되돌리기 (${hy.bak}개)</button>` : ''}</div>`); }
+  const hyPaint = (all = false) => { if (!ui('.hy')) return; if (all) { const y = out('main').scrollTop; render(); out('main').scrollTop = y; return; } const tw = ui('.hy-tw'); if (tw) tw.innerHTML = hyTokHtml(); const pv = ui('.hy-pv'); if (pv) pv.innerHTML = hyPvHtml(); };
+  async function hyOpen() { const c = chatIdFromPath(); if (hy.chat !== c) { Object.assign(hy, { chat: c, sel: 0, ov: {}, skip: new Set(), msgs: null, cut: false, all: false, edit: -1 }); const d = storyDay(noteMemory() || ''), sy = d == null ? 0 : new Date(d * 864e5).getUTCFullYear(); hy.y = sy && sy < P_NOYEAR ? sy : new Date().getFullYear(); }
+    try { hy.bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')).length; } catch (_) { hy.bak = 0; } }
+  async function hyRead() { const c = hy.chat; if (hy.busy) return; hy.busy = '대화 읽는 중'; hyPaint(); try { const l = await readAll(c); if (hy.chat !== c) return; hy.cut = l.cut; hy.msgs = l.filter(m => msgRole(m) === 'assistant'); } catch (e) { toast('대화를 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { hy.busy = ''; } hyPaint(); }
+  async function hyWrite(list, back) { // list: [id, 지금 줄, 바꿀 줄] · 그 답을 다시 읽어 지금 줄이 그대로일 때만 써요
+    const c = hy.chat, done = []; let miss = 0;
+    for (const [i, [id, from, to]] of list.entries()) { if (chatIdFromPath() !== c) break; hy.busy = `${i + 1}/${list.length}`; hyPaint();
+      try { const t = msgText(await readMessage(c, id)), at = t.indexOf(from); if (at < 0) { miss++; continue; } await writeRaw(c, id, t.slice(0, at) + to + t.slice(at + from.length)); done.push(back ? [id, to, from] : [id, from, to]); }
+      catch (e) { miss++; logErr('HUD 연도', errMsg(e), c); } }
+    hy.busy = ''; return { done, miss, cut: chatIdFromPath() !== c }; }
+  async function hyGo() { const c = hy.chat; if (hy.busy || chatIdFromPath() !== c) return; const list = hyPlan().filter(x => x.line && !x.skip && x.newLine !== x.line).map(x => [x.id, x.line, x.newLine]); if (!list.length) return;
+    let bak = []; try { bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')); } catch (_) {}
+    const r = await hyWrite(list, false); await setValue('hudbak:' + c, JSON.stringify(bak.concat(r.done))); hy.bak = bak.length + r.done.length; hy.msgs = null;
+    toast(`${r.done.length}개 바꿨어요${r.miss ? ` · ${r.miss}개는 그사이 글이 바뀌어서 건너뜀` : ''}${r.cut ? ' · 방을 옮겨서 멈췄어요' : ''}`, r.done.length ? 'ok' : 'info', 4500); hyPaint(true); }
+  async function hyUndo() { const c = hy.chat; if (hy.busy || chatIdFromPath() !== c) return; let bak = []; try { bak = JSON.parse(String(await getValue('hudbak:' + c, '') || '[]')); } catch (_) {} if (!bak.length) return;
+    const r = await hyWrite(bak.slice().reverse().map(([id, from, to]) => [id, to, from]), true), left = bak.filter(b => !r.done.some(d => d[0] === b[0] && d[1] === b[1] && d[2] === b[2]));
+    await setValue('hudbak:' + c, left.length ? JSON.stringify(left) : ''); hy.bak = left.length; hy.msgs = null;
+    toast(`${r.done.length}개 되돌렸어요${r.miss ? ` · ${r.miss}개는 그사이 글이 바뀌어서 그대로 둠` : ''}`, 'ok', 4500); hyPaint(true); }
+
   // 설정: 묶음별로 한 줄씩. 고르는 건 드롭다운, 켜고 끄는 건 스위치.
   // 설정: 모든 줄 = 왼쪽 이름 · 오른쪽 조작. 묶음 셋(정리 / AI / 칸·화면) + 정리 기록·도구 한 줄
   function settingsHtml() {
@@ -11056,6 +11129,7 @@
         ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 다 고쳤으면 수정 칸 밖을 두 번 톡톡 하면 수정 완료')}
         ${sRow('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
         ${sRow('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
+        <button type="button" class="srow throw" data-act="hudyr"><div><b>HUD에 연도 넣기</b><small>이 방 AI 답 머리말 날짜에 연도를 붙여요</small></div><em class="bk-chev">›</em></button>
         <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
         ${sRow('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}`)
       + box(`<div class="jump">
@@ -11160,7 +11234,7 @@
     const hadSheet = !!main.querySelector('.fx-sheet');
     const opened = new Set([...main.querySelectorAll('details[data-k][open]')].map(d => d.dataset.k)); // 다시 그려도 펼친 칸은 펼친 채로(노트를 다시 읽으면 닫혀 버려서 두 번 눌러야 했어요)
     const where = (nav.tab === 'now' ? 'people' : nav.tab) + '|' + (nav.view || ''), slid = render.where === where ? [...main.querySelectorAll(SLIDE)].filter(x => x.scrollLeft).map(x => [x.classList[0], [...main.getElementsByClassName(x.classList[0])].indexOf(x), x.scrollLeft]) : []; render.where = where;
-    main.innerHTML =nav.fbSheet ? fbSheetHtml() : devAskHtml() + packAskHtml() + etcAskHtml() + fullAskHtml() + (nav.view ? '' : nav.sheet === 'drive' ? gsSheetHtml() : nav.sheet === 'ai' ? aiSheetHtml() : nav.sheet === 'hw' ? hwSheetHtml() : '') + backRow + (nav.view === 'preview' ? previewHtml()
+    main.innerHTML =nav.fbSheet ? fbSheetHtml() : devAskHtml() + packAskHtml() + etcAskHtml() + fullAskHtml() + (nav.view ? '' : nav.sheet === 'drive' ? gsSheetHtml() : nav.sheet === 'ai' ? aiSheetHtml() : nav.sheet === 'hw' ? hwSheetHtml() : nav.sheet === 'hud' ? hySheetHtml() : '') + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -11280,6 +11354,7 @@
   const sendSeen = { on: false, c: '', said: null, ...(() => { try { return JSON.parse(sessionStorage.getItem('jm_sent')); } catch (_) {} })() }; // 새로고침해도 이 탭에 남아요(다른 기기·다른 탭엔 안 가요) · c: 이 기기가 마지막으로 보낸 방 · said: 그때 보낸 말(다시 생성은 null)
   const sentHere = chatId => { if (!sendSeen.on) return true; if (sendSeen.c !== chatId) return false; if (sendSeen.said == null) return true;
     const u = [...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user'); return !!u && stripBlocks(msgText(u)).trim() === sendSeen.said.trim(); };
+  const ansOk = () => { const m = (snapshot?.all || []).filter(isChat).pop(); return !!m && msgRole(m) === 'assistant' && (!m.status || m.status === 'end') && !!msgText(m).trim(); }; // 마지막이 다 나온 AI 답인지(답이 안 만들어졌거나 지우고 리롤하는 중이면 아니에요)
   let autoMiss = null; // 못 돈 자동 정리 { c: 방, upto: 정리 지점, t: 알림 글, x: 창을 닫음 } · 정리 지점이 바뀌면(정리되면) 저절로 사라져요
   const missOn = () => !!autoMiss && !autoBusy && !busyNow && nav.view !== 'preview' && autoMiss.c === chatIdFromPath() && !!snapshot && autoMiss.upto === (snapshot.note?.upto || '');
   function missPaint() { const on = missOn(), box = out('automiss'), show = on && !autoMiss.x; box.classList.toggle('on', show);
@@ -11287,14 +11362,15 @@
   // 같은 방 자동 정리는 탭 하나만: 잠금은 탭이 닫히거나 꺼지면 저절로 풀려요 · 잠금을 못 얻으면 다른 탭이 도는 중 · free: 멈춘 정리를 풀 때 잠금도 풀어요
   async function autoSum(force = false) { const c = chatIdFromPath(); if (!c) return; if (!navigator.locks) return autoSum1(force); let got = false;
     try { return await navigator.locks.request('joamemory-auto:' + c, { ifAvailable: true }, l => { got = true; return l ? Promise.race([autoSum1(force), new Promise(ok => { autoSum.free = ok; })]) : undefined; }); } catch (e) { if (got) throw e; return autoSum1(force); } }
-  const openAuto = () => { const m = (snapshot?.all || []).filter(isChat).pop(); if (!m?.status || m.status === 'end') return autoSum('open'); }; // 방을 열거나 돌아왔을 때 · 다 쓴 답일 때만
+  const openAuto = () => autoSum('open'); // 방을 열거나 돌아왔을 때 · 다 쓴 답인지는 autoSum1이 봐요
   async function autoSum1(force) { // force: '지금 바로 정리'를 직접 누름(쉬는 중이어도 해요) · 'open': 방을 열 때(끊긴 정리 알림만 보고, 아이폰은 저절로 안 돌려요)
     const open = force === 'open'; if (open) force = false;
     const chatId = chatIdFromPath();
-    if (!sceneOn || autoBusy || busyNow || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview') return;
+    if (!sceneOn || autoBusy || busyNow || hy.busy || !chatId || !snapshot || snapshot.note?.parked || nav.view === 'preview') return;
     let aw = null; try { aw = JSON.parse(String(await getValue('away:' + chatId, '') || 'null')); } catch (_) {} // 나가느라 못 넣은 정리 결과
     if (aw && (chatIdFromPath() !== chatId || !snapshot)) return; if (aw && aw.noteUpto !== (snapshot.note?.upto || '')) { aw = null; await setValue('away:' + chatId, ''); } // 그사이 다른 정리가 들어왔으면 버려요
     if (!aw && freshTurns() < cycle) return;
+    if (!force && !aw && !ansOk()) return; // 마지막 답이 다 나온 AI 답일 때만(크랙이 답을 못 만들었거나 쓰는 중이면 정리도 '정리할 때예요'도 안 해요)
     if (brRun.has(chatId)) return; // 분기 전 정리본을 찾는 중이면 기다려요(따라온 옛 노트 위에 정리하지 않게)
     const upto = snapshot.note?.upto || '', miss = (t, x) => { if (autoMiss?.c !== chatId || autoMiss.upto !== upto || autoMiss.t !== t) { const k = chatId + '|' + upto + '|' + t; let first = true; try { first = sessionStorage.getItem('jm_miss') !== k; if (first) sessionStorage.setItem('jm_miss', k); } catch (_) {} autoMiss = { c: chatId, upto, t, x: x && !first }; } repaintInline(); }; // 같은 이유로는 이 탭에서 한 번은 창을 띄우고(새로고침해도 또 안 띄워요) 그 뒤론 빨간 하트만
     const turns0 = freshTurns(), rest = async (n, t) => { await setValue('autoHold:' + chatId, JSON.stringify({ upto, fresh: turns0 + n - cycle, t })); autoMiss = null; miss(t); }; // n턴 쉬어요(답마다·새로고침마다 다시 불러 돈이 계속 나가지 않게)
@@ -12244,6 +12320,7 @@
   let thColT = 0;
   root.addEventListener('change', async e => {
     if (e.target.dataset?.thm) return; // 테마 › 대사 기호 입력칸은 '추가'를 누를 때 읽어요
+    { const h = e.target.dataset?.hud; if (h && h !== 'txt') { if (h === 'y') hy.y = +e.target.value || hy.y; else if (h === 'wrap' || h === 'fix') hy[h] = e.target.checked; else if (h === 'ov') { hy.ov[+e.target.dataset.k] = +e.target.value; hy.edit = -1; } return hyPaint(); } } // HUD에 연도 넣기
     if (e.target.dataset?.th && e.target.type === 'color') { const el = e.target; clearTimeout(thColT); thColT = setTimeout(() => themeSet(el.dataset.th, el.value, el), 250); return; }
     if (e.target.dataset?.th) return themeSet(e.target.dataset.th, e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value, null); // 편의 › 테마
     if (e.target.dataset?.mask) return maskInput(e.target); // 편의 › 이름 가리기(이름 추가·다른 색·이모지)
@@ -12285,7 +12362,7 @@
   root.addEventListener('input', e => { const el = e.target; if (!el.dataset?.nta) return;
     if (!e.isComposing && el.value.search(N_ARROW) >= 0) { const a = el.value.slice(0, el.selectionStart).replace(N_ARROW, '→'); el.value = a + el.value.slice(el.selectionStart).replace(N_ARROW, '→'); el.setSelectionRange(a.length, a.length); }
     nav.nedTxt = { k: el.dataset.nta, v: el.value }; if (el.scrollHeight > el.clientHeight) el.style.height = el.scrollHeight + 2 + 'px'; }); // 다시 그려져도 쓰던 글이 남게 · 글이 늘면 칸도 같이
-  root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; }); // ChatGPT 로그인 주소: 다시 그려져도 남게
+  root.addEventListener('input', e => { if (e.target.dataset?.out === 'gptback') nav.gptBack = e.target.value; if (e.target.dataset?.hud === 'txt') { hy.txt = e.target.value; hy.sel = Math.max(0, hyToks().findIndex(m => !HY_YR.test(m[0]))); hy.ov = {}; hy.skip = new Set(); hyPaint(); } }); // HUD에 연도 넣기: 붙여 넣은 HUD · 연도 없는 날짜를 먼저 골라 둬요 // ChatGPT 로그인 주소: 다시 그려져도 남게
   root.addEventListener('input', e => { const el = e.target; if (el.classList?.contains('neta') && el.scrollHeight > el.clientHeight) el.style.height = el.scrollHeight + 2 + 'px'; }); // 안드로이드 파이어폭스·아이폰 수정 칸: 글이 늘면 칸도 같이
   root.addEventListener('input', e => { if (e.target.dataset?.nq === undefined) return; nav.nq = e.target.value; const box = ui('.nq-res'); if (box) box.innerHTML = nFindHtml(); }); // 노트 관리 검색: 결과 칸만 다시 그려요(글자 칸을 다시 그리면 치던 글이 끊겨요)
   root.addEventListener('input', e => {
@@ -12915,6 +12992,14 @@
       case 'devrestore': return devChoose(true);
       case 'reset': return resetMemory();
       case 'hwsheet': nav.sheet = 'hw'; return render();
+      case 'hudyr': await hyOpen(); nav.sheet = 'hud'; return render();
+      case 'hypick': hy.sel = +arg; hy.ov = {}; hy.skip = new Set(); hy.edit = -1; return hyPaint();
+      case 'hyread': return hyRead();
+      case 'hyall': hy.all = true; return hyPaint();
+      case 'hyedit': hy.edit = +arg; hyPaint(); return ui(`.hy-it input[data-k="${arg}"]`)?.focus();
+      case 'hyskip': { const k = +arg; if (hy.skip.has(k)) hy.skip.delete(k); else hy.skip.add(k); return hyPaint(); }
+      case 'hygo': return hyGo();
+      case 'hyundo': return hyUndo();
       case 'tidyrun': if (!confirm('모양이 다른 항목만 우리 형식으로 맞춰요. 내용은 그대로예요.\nAI를 한 번 써요(정리 한 번 비용). 할까요?')) return; return run('tidy', { back: { tab: nav.tab, setTab: nav.setTab, sheet: 'hw' } }); // 넣은 뒤 확프연동으로 돌아와 ④를 이어서
       case 'extclean': return extClean();
       case 'go': { const mode = nav.runMode; nav.view = null; nav.tab = 'home'; return mode === 'chunk' || mode === 'chunkAll' ? runChunks(mode === 'chunkAll') : run(mode); }
@@ -13049,7 +13134,7 @@
     const over = snapshot ? Math.max(0, freshTurns() - cycle) : 0;
     const txt = !snapshot ? '' : over ? '+' + over : due ? '✓' : String(left);
     if (sceneOn) { // 웹 모드: 동그라미 그대로 · 상태는 움직임으로
-      const on = injectOn, spin = autoHere() || injPicking || busyHere(), late = !spin && (missOn() || autoSumOn && over > 0), acc = late ? '#FF3B30' : '#7B61D9'; // late: 자동 정리가 밀리거나 못 돎 → 빨간 하트
+      const on = injectOn, spin = autoHere() || injPicking || busyHere(), late = !spin && (missOn() || autoSumOn && over > 0 && ansOk()), acc = late ? '#FF3B30' : '#7B61D9'; // late: 자동 정리가 밀리거나 못 돎 → 빨간 하트
       const chars = lastInj?.chars || (snapshot?.note ? stripProof(noteMemory()).length : 0);
       const tip = !on ? '조아메모리 · 주입 꺼짐' : injPicking ? '조아메모리 · 기억 고르는 중' : autoHere() ? '조아메모리 · 자동 정리 중' : busyHere() ? '조아메모리 · 정리하는 중' : late ? `조아메모리 · ${missOn() ? autoMiss.t : '정리가 밀렸어요'}` : `조아메모리 · 채팅에 넣는 기억 ${fmt(chars)}자 · ${autoSumOn ? '자동 정리까지' : '다음 정리까지(수동)'} ${left}턴`;
       inlineBtn.setAttribute('aria-label', tip); inlineBtn.title = tip;
