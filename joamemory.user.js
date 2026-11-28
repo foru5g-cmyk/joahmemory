@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.38
+// @version      6.0.39
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3644,6 +3644,16 @@
       paintBadges();
     } catch (_) {  }
   }
+  const cpText = new Map();
+  function cpPut(el, id) { const o = el.querySelector('button[aria-label="메시지 옵션"]')?.closest('.dropdown-button'); if (!o || o.previousElementSibling?.classList?.contains('jm-cp')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'jm-cp'; b.setAttribute('aria-label', '전체 복사'); b.dataset.for = id;
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+    b.style.cssText = 'width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#9A9AA3;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:0 0 auto';
+    b.addEventListener('click', cpClick); o.before(b); }
+  async function cpClick(e) { e.preventDefault(); e.stopPropagation(); const id = e.currentTarget.dataset.for, c = chatIdFromPath();
+    let t = cpText.get(id); if (t == null) { const m = (snapshot?.all || []).find(x => msgId(x) === id); if (m) t = stripBlocks(msgText(m)).trim(); }
+    if (t == null) { try { t = stripBlocks(msgText(await readMessage(c, id))).trim(); if (cpText.size > 50) cpText.clear(); cpText.set(id, t); } catch (_) { pageToast('글을 못 읽었어요 · 다시 눌러 주세요'); return; } }
+    try { await navigator.clipboard.writeText(t); pageToast('복사했어요'); } catch (_) { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); pageToast(ok ? '복사했어요' : '한 번 더 눌러 주세요'); } }
   function paintBadges() {
     document.querySelectorAll('.memo-turn-badge').forEach(b => { const id = b.dataset.for; if (!turnMap.has(id)) b.remove(); });
     const unknown = [], known = [];
@@ -3653,7 +3663,7 @@
       const id = el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id');
       const info = turnMap.get(id);
       if (!info) { if (id) unknown.push({ id, el }); return; }
-      known.push(el);
+      known.push(el); cpPut(el, id);
       let b = [...el.children].find(c => c.classList?.contains('memo-turn-badge'));
       if (!b) { b = document.createElement('div'); b.className = 'memo-turn-badge'; el.prepend(b); }
       const done = info.turn <= noteTurns && noteTurns > 0;
@@ -4607,7 +4617,8 @@
     .nv .wear span{background:var(--nb);color:var(--ink)}
     .nrules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     /* 상태 탭 약속·습관·둘만의 것: 타임라인 카드와 같은 테두리 */
-    .st-card{border:1px solid var(--rule);border-radius:20px;padding:14px 16px 4px;margin:0 0 10px}.st-card .st-h{display:inline-block;background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:3px 12px;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:4px}
+    .st-card{border:1px solid var(--rule);border-radius:20px;padding:14px 16px 4px;margin:0 0 10px}.st-card>.srow{border-bottom:0}.st-card>.srow+.srow,.st-card>.srow+.mopts:not([hidden]){border-top:1px solid var(--rule)}.st-card .st-h{display:inline-block;background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:3px 12px;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:4px}
+    .nf-sum{margin:2px 0 8px;font-size:13px;color:var(--graphite)}.nf-busy{margin:12px 0;font-size:14px;color:var(--ink2);text-align:center}.nf-list{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;text-align:left}.nf-it{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:12px;padding:9px 10px;background:var(--paper);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;text-align:left;cursor:pointer}.nf-it>i{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#7B61D9;color:#fff;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}.nf-it.off{opacity:.5}.nf-it.off>i{background:none;border:1.5px solid var(--pencil)}.nf-it small{display:block;font-size:11px;color:var(--graphite)}.nf-it mark{background:var(--lilac);color:inherit;border-radius:4px;padding:0 2px}.nf-it b{display:block;margin-top:3px;font-size:12.5px;color:#7B61D9}.nf-it.off b{text-decoration:line-through;color:var(--graphite)}
     .nrules li{font-size:14px;line-height:1.55;color:var(--ink);padding:9px 0;border-bottom:1px solid var(--rule)}.nrules li:last-child{border-bottom:0}
 
     /* ── 인물 탭 ── */
@@ -10184,22 +10195,30 @@
     await setValue('hudbak:' + c, left.length ? JSON.stringify(left) : ''); hy.bak = left.length; hy.msgs = null;
     toast(`${r.done.length}개 되돌렸어요${r.miss ? ` · ${r.miss}개는 그사이 글이 바뀌어서 그대로 둠` : ''}`, 'ok', 4500); hyPaint(true); }
 
+  const swVal = {};
+  (async () => { for (const [k, d] of [['ltmAsk', 'on'], ['wideChat', 'on'], ['hideHead', 'on'], ['badges', 'on'], ['numFix', 'on']]) swVal[k] = String(await getValue(k, d)) !== 'off'; swVal.tapEdit = String(await getValue('tapEdit', 'off')) === 'on'; })().catch(() => {});
   function settingsHtml() {
-    const sw = key => `<input type="checkbox" class="switch" data-set="${key}">`;
+    const sw = key => `<input type="checkbox" class="switch" data-set="${key}"${swVal[key] ? ' checked' : ''}>`;
     const cur = ['mem', 'view', 'log'].includes(nav.setTab) ? nav.setTab : 'mem';
     const tabs = [['mem', '기억'], ['view', '화면'], ['log', '기록']];
     let i = 0; const box = body => { const k = tabs[i++][0]; return `<section data-sec="${k}"${k === cur ? '' : ' hidden'}>${body}</section>`; };
     const seg = `<div class="seg">${tabs.map(([k, l]) => `<button data-act="stab" data-arg="${k}" aria-pressed="${k === cur}">${l}</button>`).join('')}</div>`;
     return seg + box(memSetHtml() + (nav.etcSheet ? etcSheetHtml() : ''))
       + box(nav.themeOpen ? themeHtml() : `
-        ${sRow('말풍선 턴 번호', sw('badges'))}
-        ${sRow('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
-        ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 다 고쳤으면 수정 칸 밖을 두 번 톡톡 하면 수정 완료')}
-        ${sRow('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}
-        ${sRow('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
-        <button type="button" class="srow throw" data-act="hudyr"><div><b>HUD에 연도 넣기</b><small>이 방 AI 답 머리말 날짜에 연도를 붙여요</small></div><em class="bk-chev">›</em></button>
-        <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button>
-        ${sRow('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}`)
+        <div class="st-card"><div class="st-h">💬 말풍선</div>
+          ${sRow('말풍선 턴 번호', sw('badges'))}
+          ${sRow('말풍선 톡톡 수정', sw('tapEdit'), '말풍선을 두 번 톡톡(컴퓨터는 두 번 누르기) 하면 수정이 열려요 · 다 고쳤으면 수정 칸 밖을 두 번 톡톡 하면 수정 완료')}
+          <button type="button" class="srow throw" data-act="themeopen"><div><b>테마</b><small>${theme.bub || theme.pen ? 'AI 말풍선 색 · 대사 형광펜 · 켜짐' : 'AI 말풍선 색 · 대사 형광펜 · 꺼짐'}</small></div><span class="thmini">${theme.bub ? `<i style="background:${theme.bub}"></i>` : ''}${theme.pen ? `<i style="background:${theme.penc}"></i>` : ''}›</span></button></div>
+        <div class="st-card"><div class="st-h">📱 폰 화면</div>
+          ${sRow('폰에서 채팅 넓게', sw('wideChat'), '크랙 채팅 양옆 여백을 줄여요')}
+          ${sRow('폰에서 위 메뉴 숨기기', sw('hideHead'), '채팅을 밀면 맨 위 ☰ 크랙 줄이 숨어요 · 방 제목 줄 빈 곳을 누르면 다시 나와요')}</div>
+        <div class="st-card"><div class="st-h">📸 캡처</div>
+          ${sRow('말풍선 캡처 버튼', sw('capShow'), '입력창 ✳ / ☰ 옆 카메라 · 끄면 버튼이 안 보여요')}
+          ${sRow('캡처할 때 이름 가리기', sw('maskOn'), '채팅창 하트를 꾹 누르면 켜지고(하트에 🙈) 다시 꾹 누르면 꺼져요 · 짧게 누르면 조아메모리가 열려요')}${maskOptsHtml()}</div>
+        <div class="st-card"><div class="st-h">🛠 도구</div>
+          <button type="button" class="srow throw" data-act="hudyr"><div><b>HUD에 연도 넣기</b><small>이 방 AI 답 머리말 날짜에 연도를 붙여요</small></div><em class="bk-chev">›</em></button>
+          ${sRow('숫자 읽기 고치기', sw('numFix'), 'AI 답이 끝나면 틀린 게 확실한 숫자 읽기만 채팅 글에서 바로 고쳐요 · 열일곱 년 → 십칠 년 · 십칠 살 → 열일곱 살 · AI 안 써요')}
+          <button type="button" class="srow throw" data-act="numfixall"${busyNow ? ' disabled' : ''}><div><b>지난 답도 숫자 읽기 고치기</b><small>이 방 AI 답 전체에서 찾아 미리보기로 보여 줘요 · 아닌 건 빼고 고쳐요</small></div><em class="bk-chev">›</em></button></div>`)
       + box(`<div class="jump">
         <button data-act="injected"><b>들어간 노트 보기</b><span class="v">${spotOf(snapshot) || '직전 답변'}</span></button>
         <button data-act="history"><b>정리 기록 · 쓴 돈</b><span class="v">${usage.filter(r => !r.label).length ? `${usage.filter(r => !r.label).length}번 정리` : ''}</span></button>
@@ -10291,7 +10310,7 @@
     const hadSheet = !!main.querySelector('.fx-sheet');
     const opened = new Set([...main.querySelectorAll('details[data-k][open]')].map(d => d.dataset.k));
     const where = (nav.tab === 'now' ? 'people' : nav.tab) + '|' + (nav.view || ''), slid = render.where === where ? [...main.querySelectorAll(SLIDE)].filter(x => x.scrollLeft).map(x => [x.classList[0], [...main.getElementsByClassName(x.classList[0])].indexOf(x), x.scrollLeft]) : []; render.where = where;
-    main.innerHTML =nav.fbSheet ? fbSheetHtml() : devAskHtml() + packAskHtml() + etcAskHtml() + fullAskHtml() + (nav.view ? '' : nav.sheet === 'drive' ? gsSheetHtml() : nav.sheet === 'ai' ? aiSheetHtml() : nav.sheet === 'hw' ? hwSheetHtml() : nav.sheet === 'hud' ? hySheetHtml() : '') + backRow + (nav.view === 'preview' ? previewHtml()
+    main.innerHTML =nav.fbSheet ? fbSheetHtml() : devAskHtml() + packAskHtml() + etcAskHtml() + fullAskHtml() + (nav.view ? '' : nav.sheet === 'drive' ? gsSheetHtml() : nav.sheet === 'ai' ? aiSheetHtml() : nav.sheet === 'hw' ? hwSheetHtml() : nav.sheet === 'hud' ? hySheetHtml() : nav.sheet === 'numfix' ? nfSheetHtml() : '') + backRow + (nav.view === 'preview' ? previewHtml()
       : nav.view === 'edit' || nav.view === 'pvEdit' ? editHtml(nav.key)
       : nav.view === 'person' ? personHtml(nav.key)
       : nav.view === 'injected' ? injectedHtml()
@@ -10563,6 +10582,37 @@
     document.addEventListener('jm-ws-in', e => { let o; try { o = JSON.parse(e.detail); } catch (_) { return; } for (const fn of hs.get(o.id)?.L || []) try { fn({ data: o.data }); } catch (_) {} });
     document.addEventListener('jm-ws-fail', () => { pageToast('크랙 연결이 끊겨 이 메시지가 안 보내졌어요 · 다시 보내 주세요'); logErr('보내기', '기억을 넣는 사이 크랙 연결이 끊겨 메시지가 안 보내짐'); });
   })();
+  let numFixOn = true; getValue('numFix', 'on').then(v => { numFixOn = String(v) !== 'off'; }).catch(() => {});
+  const NU = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉'], NT = ['', '열', '스물', '서른', '마흔', '쉰', '예순', '일흔', '여든', '아흔'], SD = '영일이삼사오육칠팔구';
+  const nativeOf = n => n === 20 ? '스무' : NT[Math.floor(n / 10)] + NU[n % 10], sinoOf = n => (n >= 20 ? SD[Math.floor(n / 10)] : '') + (n >= 10 ? '십' : '') + (n % 10 ? SD[n % 10] : '');
+  const NAT_RE = '(열|스물|스무|서른|마흔|쉰|예순|일흔|여든|아흔)(한|두|세|네|다섯|여섯|일곱|여덟|아홉)?|(한|두|세|네|다섯|여섯|일곱|여덟|아홉)', SIN_RE = '([이삼사오육칠팔구])?십([일이삼사오육칠팔구])?';
+  const natVal = (t, u, one) => t ? NT.indexOf(t === '스무' ? '스물' : t) * 10 + (u ? NU.indexOf(u) : 0) : NU.indexOf(one), sinVal = (t, u) => (t ? SD.indexOf(t) : 1) * 10 + (u ? SD.indexOf(u) : 0);
+  const NF_RULES = [
+    [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(년)', 'g'), (m, pre, t, u, one, sp, k) => t ? pre + sinoOf(natVal(t, u, one)) + sp + k : m],
+    [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(개월)', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
+    [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)(살)', 'g'), (m, pre, t, u, sp, k) => { const n = sinVal(t, u); return n >= 10 && n <= 99 ? pre + nativeOf(n) + sp + k : m; }],
+    [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)시(?![간작절선체점키장청각계민인집험경골설식도])', 'g'), (m, pre, t, u, sp) => { const n = sinVal(t, u); return n >= 10 && n <= 12 && !t ? pre + nativeOf(n) + sp + '시' : m; }]];
+  const nfSplit = t => { const R = []; for (const re of [STY_RE, MORE_RE, V3_RE, V2_RE, V1_RE, /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3(?![\s\S]*MEMO_NOTE_END)[\s\S]*$/g, /\[ \]\(# "[\s\S]*?"\)/g]) for (const m of t.matchAll(re)) R.push([m.index, m.index + m[0].length]);
+    R.sort((x, y) => x[0] - y[0]); const out = []; let at = 0; for (const [x, y] of R) { if (y <= at) continue; const st = Math.max(x, at); out.push(t.slice(at, st), t.slice(st, y)); at = y; } out.push(t.slice(at)); return out; };
+  const numFixText = (t, pick) => { let n = 0; return nfSplit(String(t)).map((part, i) => i % 2 ? part : NF_RULES.reduce((x, [re, fn]) => x.replace(re, (...a) => { const r = fn(...a); if (r === a[0]) return r; const k = n++, off = a[a.length - 2], str = a[a.length - 1]; return !pick || pick(k, a[0], r, str.slice(Math.max(0, off - 18), off) + '【' + a[0].trim() + '】' + str.slice(off + a[0].length, off + a[0].length + 18)) ? r : a[0]; }), part)).join(''); };
+  const nf = { chat: '', items: [], busy: '' };
+  async function numFixScan() { const c = chatIdFromPath(); if (!c || busyNow || nf.busy) return; Object.assign(nf, { chat: c, items: [], busy: '대화 읽는 중' }); nav.sheet = 'numfix'; render();
+    try { const L = await readAll(c, MAX_PAGES, m => { const hit = []; if (msgRole(m) === 'assistant') numFixText(msgText(m), (k, from, to, ctx) => { hit.push({ k, from, to, ctx }); return true; }); return { ...m, content: '', message: '', jmNf: hit }; });
+      if (nf.chat !== c) return; let turn = 0; for (const m of L) { if (msgRole(m) === 'user') turn++; for (const h of m.jmNf || []) nf.items.push({ ...h, id: msgId(m), turn, on: true }); } }
+    catch (e) { toast('지난 답을 못 읽었어요 · ' + errMsg(e), 'err', 4000); } finally { nf.busy = ''; render(); } }
+  async function numFixGo() { const c = nf.chat, pick = nf.items.filter(x => x.on); if (!pick.length || chatIdFromPath() !== c || busyNow) return; busyNow = true; nf.busy = '고치는 중';
+    const by = new Map(); for (const x of pick) by.set(x.id, [...(by.get(x.id) || []), x]); let n = 0, miss = 0, done = 0; render();
+    try { for (const [id, xs] of by) { if (chatIdFromPath() !== c) break;
+        try { const t = msgText(await readMessage(c, id)), want = new Map(xs.map(x => [x.k, x.from])), out = numFixText(t, (k, from) => want.get(k) === from); if (out !== t) { await writeRaw(c, id, out); n += xs.length; } else miss += xs.length; }
+        catch (e) { miss += xs.length; logErr('숫자 읽기', '지난 답 고치기 실패 · ' + errMsg(e), c); }
+        nf.busy = `고치는 중 ${++done}/${by.size}`; const el = ui('.nf-busy'); if (el) el.textContent = nf.busy; }
+      toast(`${n}곳을 고쳤어요${miss ? ` · ${miss}곳은 그사이 글이 바뀌어 안 고침` : ''}`, 'ok', 3500); nf.items = nf.items.filter(x => !x.on); }
+    finally { busyNow = false; nf.busy = ''; render(); } }
+  function nfSheetHtml() { const on = nf.items.filter(x => x.on).length;
+    const body = nf.busy ? `<p class="nf-busy">${esc(nf.busy)}…</p>` : !nf.items.length ? '<p class="nf-busy">고칠 숫자 읽기가 없어요</p>'
+      : `<p class="nf-sum">${nf.items.length}곳을 찾았어요 · 아닌 건 눌러서 빼요</p><div class="nf-list">${nf.items.map((x, i) => `<button type="button" class="nf-it${x.on ? '' : ' off'}" data-act="nftog" data-arg="${i}"><i>${x.on ? '✓' : ''}</i><span><small>${x.turn}턴 답</small>${esc(x.ctx).replace('【', '<mark>').replace('】', '</mark>')}<b>${esc(x.from.trim())} → ${esc(x.to.trim())}</b></span></button>`).join('')}</div><button class="btn" data-act="nfgo"${on ? '' : ' disabled'}>${on}곳 고치기</button>`;
+    return sheetBox('지난 답 숫자 읽기 고치기', '', body); }
+  async function numFix(chatId, id) { const t = msgText(await readMessage(chatId, id)), n = numFixText(t); if (n === t || chatIdFromPath() !== chatId) return; await writeRaw(chatId, id, n); }
   async function applyScene(on, chatId, save) {
     if (save) sceneGen++;
     sceneOn = on; cycle = on ? 10 : 20; NOTE_LIMIT = on ? NO_LIMIT : 50000;
@@ -10667,6 +10717,7 @@
       { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !(refresh.stale ||= new Set()).has(chatId + id)) { refresh.stale.add(chatId + id); setTimeout(() => { if (chatIdFromPath() !== chatId || busyNow) return; const els = document.querySelectorAll('[data-message-group-id],[data-message-id]'); if (els.length < 2 || document.querySelector('[data-message-group-id="' + id + '"],[data-message-id="' + id + '"]')) return; const hd = m => (msgText(m).match(/#\d+/) || [''])[0], seenIds = new Set([...els].map(e => e.dataset.messageGroupId || e.dataset.messageId)), shown = L.filter(m => seenIds.has(msgId(m))).pop(), gap = shown ? L.filter(m => msgRole(m) === 'user' && L.indexOf(m) > L.indexOf(shown)).length : '?'; if (gap === 0) return;  logErr('화면', (IS_STAY ? '사파리' : '브라우저') + '와 크랙 사이 문제로 예전 화면이 뜸 · 화면 마지막 ' + (shown ? hd(shown) || msgId(shown).slice(-4) : '모름') + ' · 조아가 받은 마지막 ' + (hd(end) || id.slice(-4)) + ' · ' + gap + '턴 차이 · 서버엔 그대로 있어요(새로고침하면 돌아와요)', chatId); staleWhy(chatId, id).then(w => logErr('화면', '옛 화면 진단 · ' + w, chatId)).catch(() => {}); }, 8000); } }
       { const L = snap.all || [], end = L[L.length - 1], seen = leakSeen.c === chatId && Date.now() - leakSeen.at < 6e5;
         if (end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && (seen || injectOn && !busyNow && !(cutLeak.seen ||= new Set()).has(msgId(end)) && LEAK_RE.test(msgText(end)))) { if (seen) leakSeen.c = ''; (cutLeak.seen ||= new Set()).add(msgId(end)); cutLeak(chatId, end, snap.note?.carrierId).catch(e => logErr('노트', '따라 쓴 노트 안내 지우기 실패 · ' + e.message, chatId)); } }
+      { const L = snap.all || [], end = L[L.length - 1], id = msgId(end); if (numFixOn && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end') && !busyNow && !moving && !(numFix.seen ||= new Set()).has(id)) { numFix.seen.add(id); if (numFixText(msgText(end)) !== msgText(end)) numFix(chatId, id).catch(e => logErr('숫자 읽기', '고치기 실패 · ' + errMsg(e), chatId)); } }
       { const L = snap.all || [], end = L[L.length - 1]; if (sceneOn && injectOn && !IS_STAY && !moveSty.off && sentHere(chatId) && end && msgRole(end) === 'assistant' && (!end.status || end.status === 'end')) { const old = L.filter(m => msgRole(m) === 'user').slice(0, -1).filter(m => msgText(m).includes('MEMO_STY ')).slice(-2); if (old.length) setTimeout(() => moveSty(chatId, old), 5000); } }
       const talked = snap.all.some(m => msgRole(m) === 'user');
       const early = talked && !gsTried.has('sync|' + chatId) && String(await getValue('gsUrl', '')).trim() ? (gsTried.add('sync|' + chatId), gsModeFetch(chatId)) : null;
@@ -11253,22 +11304,26 @@
     finally { busyNow = false; render(); }
   }
 
-  async function saveSettings() {
-    { const c = Number(out('cyclepick')?.value); if (c && c !== cycle) { cycle = c; await setValue(sceneOn ? 'webCycle' : 'cycle', String(c)); repaintInline(); } }
+  async function saveSettings(only = '') {
+    const SW = ['ltmAsk', 'badges', 'wideChat', 'maskOn', 'tapEdit', 'hideHead', 'numFix', 'capShow'], want = k => !SW.includes(only) || only === k, all = !SW.includes(only);
+    if (all) { const c = Number(out('cyclepick')?.value); if (c && c !== cycle) { cycle = c; await setValue(sceneOn ? 'webCycle' : 'cycle', String(c)); repaintInline(); } }
+    if (all) {
     const cleanKey = v => String(v || '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
     for (const [k] of Object.values(KEYS)) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, cleanKey(el.value)); }
     { const mv = ui('[data-set="model"]')?.value.trim(); if (mv) { await setValue('model', mv); curModel = mv; } pregHasKey = !!String(await getValue(keyOf(curModel), '')).trim(); }
     { const tl = ui('[data-set="thinkLevel"]')?.value; if (tl) { await setValue('thinkLevel', tl); thinkLevel = tl; } }
     { const el = ui('[data-set="etcModel"]'); if (el) { etcModel = el.value; await setValue('etcModel', etcModel); await aiKeysLoad(); el.innerHTML = etcOpts(); } }
-    { const el = ui('[data-set="ltmAsk"]'); if (el) await setValue('ltmAsk', el.checked ? 'on' : 'off'); }
-    { const bd = ui('[data-set="badges"]'); if (bd) await setValue('badges', bd.checked ? 'on' : 'off'); }
-    { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
-    { const m = ui('[data-set="maskOn"]'); if (m && (m.checked ? 'on' : 'off') !== (mask.on ? 'on' : 'off')) { await setValue('maskUse', m.checked ? 'on' : 'off'); await maskLoad(); const o = ui('.mopts'); if (o) o.hidden = !mask.on; } }
-    { const w = ui('[data-set="tapEdit"]'); if (w) { await setValue('tapEdit', w.checked ? 'on' : 'off'); tapEditOn = w.checked; document.documentElement.classList.toggle('jm-tap', w.checked); } }
-    { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
-    { const w = ui('[data-set="capShow"]'); if (w) { await setValue('capShow', w.checked ? 'on' : 'off'); capShow = w.checked; if (!capShow) { if (cap.on) capOff(); capBtn.remove(); } else placeCapBtn(); } }
-    for (const k of ['firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
-    turnMapAt = 0; turnBase = null; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot);
+    }
+    if (want('ltmAsk')) { const el = ui('[data-set="ltmAsk"]'); if (el) await setValue('ltmAsk', el.checked ? 'on' : 'off'); }
+    if (want('badges')) { const bd = ui('[data-set="badges"]'); if (bd) await setValue('badges', bd.checked ? 'on' : 'off'); }
+    if (want('wideChat')) { const w = ui('[data-set="wideChat"]'); if (w) { await setValue('wideChat', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-wide', w.checked); } }
+    if (want('maskOn')) { const m = ui('[data-set="maskOn"]'); if (m && (m.checked ? 'on' : 'off') !== (mask.on ? 'on' : 'off')) { await setValue('maskUse', m.checked ? 'on' : 'off'); await maskLoad(); const o = ui('.mopts'); if (o) o.hidden = !mask.on; } }
+    if (want('tapEdit')) { const w = ui('[data-set="tapEdit"]'); if (w) { await setValue('tapEdit', w.checked ? 'on' : 'off'); tapEditOn = w.checked; document.documentElement.classList.toggle('jm-tap', w.checked); } }
+    if (want('hideHead')) { const w = ui('[data-set="hideHead"]'); if (w) { await setValue('hideHead', w.checked ? 'on' : 'off'); document.documentElement.classList.toggle('jm-hh', w.checked); } }
+    if (want('numFix')) { const w = ui('[data-set="numFix"]'); if (w) { await setValue('numFix', w.checked ? 'on' : 'off'); numFixOn = w.checked; } }
+    if (want('capShow')) { const w = ui('[data-set="capShow"]'); if (w) { await setValue('capShow', w.checked ? 'on' : 'off'); capShow = w.checked; if (!capShow) { if (cap.on) capOff(); capBtn.remove(); } else placeCapBtn(); } }
+    if (all) { for (const k of ['firebaseProject', 'firebaseAppId', 'firebaseDebugToken']) { const el = ui(`[data-set="${k}"]`); if (el) await setValue(k, el.value.trim()); }
+    turnMapAt = 0; turnBase = null; const cid = chatIdFromPath(); if (cid) loadTurnMap(cid, snapshot); }
     fillSettings(); toast('저장했어요', 'ok', 1200);
   }
   async function fillSettings() {
@@ -11281,10 +11336,12 @@
     const la = ui('[data-set="ltmAsk"]'); if (la && !la.dataset.filled) { la.checked = String(await getValue('ltmAsk', 'on')) !== 'off'; la.dataset.filled = '1'; }
     const wc = ui('[data-set="wideChat"]'); if (wc && !wc.dataset.filled) { wc.checked = String(await getValue('wideChat', 'on')) !== 'off'; wc.dataset.filled = '1'; }
     const mo = ui('[data-set="maskOn"]'); if (mo) mo.checked = mask.on;
+    const nf = ui('[data-set="numFix"]'); if (nf && !nf.dataset.filled) { nf.checked = numFixOn; nf.dataset.filled = '1'; }
     const cs = ui('[data-set="capShow"]'); if (cs && !cs.dataset.filled) { cs.checked = capShow; cs.dataset.filled = '1'; }
     const te = ui('[data-set="tapEdit"]'); if (te && !te.dataset.filled) { te.checked = String(await getValue('tapEdit', 'off')) === 'on'; te.dataset.filled = '1'; }
     const hh = ui('[data-set="hideHead"]'); if (hh && !hh.dataset.filled) { hh.checked = String(await getValue('hideHead', 'on')) !== 'off'; hh.dataset.filled = '1'; }
     const bd = ui('[data-set="badges"]'); if (bd && !bd.dataset.filled) { bd.checked = String(await getValue('badges', 'on')) !== 'off'; bd.dataset.filled = '1'; }
+    root.querySelectorAll('input.switch[data-set]').forEach(x => { swVal[x.dataset.set] = x.checked; });
   }
 
   function pickModel(id) {
@@ -11312,7 +11369,7 @@
     if (e.target.dataset?.out === 'regressfile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackupText(await f.text(), false, { regress: true }); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
     if (e.target.dataset?.out === 'restorefile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { await importBackup(f); } catch (err) { toast('불러오기 실패 · ' + err.message, 'err', 5000); } return; }
     if (e.target.dataset?.out === 'modelpick') { pickModel(e.target.value); if (!e.target.value) ui('[data-set="model"]')?.focus(); }
-    if ((nav.sheet || nav.tab === 'settings') && !nav.view && e.target.closest?.('[data-set]:not([data-set^="gs"]),[data-out="cyclepick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; saveSettings().then(() => { if (e.target.dataset?.out === 'modelpick') render(); }); }
+    if ((nav.sheet || nav.tab === 'settings') && !nav.view && e.target.closest?.('[data-set]:not([data-set^="gs"]),[data-out="cyclepick"],[data-out="modelpick"]')) { if (e.target.dataset?.out === 'modelpick' && !e.target.value) return; (e.target.type === 'checkbox' && e.target.dataset?.set && (swVal[e.target.dataset.set] = e.target.checked), saveSettings(e.target.type === 'checkbox' ? e.target.dataset?.set || '' : '')).then(() => { if (e.target.dataset?.out === 'modelpick') render(); }); }
   });
   async function importResult(raw) {
     { let d = null; try { d = JSON.parse(String(raw).trim().replace(/^```\w*\s*|\s*```$/g, '')); } catch (_) {}
@@ -11971,6 +12028,9 @@
       case 'reset': return resetMemory();
       case 'hwsheet': nav.sheet = 'hw'; return render();
       case 'hudyr': await hyOpen(); nav.sheet = 'hud'; return render();
+      case 'numfixall': return numFixScan();
+      case 'nftog': { const x = nf.items[Number(arg)]; if (x) x.on = !x.on; return keepScroll(render); }
+      case 'nfgo': return numFixGo();
       case 'hypick': hy.sel = +arg; hy.ov = {}; hy.skip = new Set(); hy.edit = -1; return hyPaint();
       case 'hyread': return hyRead();
       case 'hyall': hy.all = true; return hyPaint();
