@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.41
+// @version      6.0.42
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10418,7 +10418,8 @@
   let autoBusy = false, autoSumOn = true, ltmWipeOn = false;
   const sendSeen = { on: false, c: '', said: null, ...(() => { try { return JSON.parse(sessionStorage.getItem('jm_sent')); } catch (_) {} })() };
   const sentHere = chatId => { if (!sendSeen.on) return true; if (sendSeen.c !== chatId) return false; if (sendSeen.said == null) return true;
-    const u = [...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user'); return !!u && stripBlocks(msgText(u)).trim() === sendSeen.said.trim(); };
+    const sq = t => String(t || '').replace(/\s+/g, ''), u = [...(snapshot?.all || [])].reverse().find(m => msgRole(m) === 'user'); return !!u && sq(stripBlocks(msgText(u))) === sq(sendSeen.said); };
+  sendSeen.on = !!sendSeen.c;
   const ansOk = () => { const m = (snapshot?.all || []).filter(isChat).pop(); return !!m && msgRole(m) === 'assistant' && (!m.status || m.status === 'end') && !!msgText(m).trim(); };
   let autoMiss = null;
   const missOn = () => !!autoMiss && !autoBusy && !busyNow && nav.view !== 'preview' && autoMiss.c === chatIdFromPath() && !!snapshot && autoMiss.upto === (snapshot.note?.upto || '');
@@ -10446,7 +10447,7 @@
     if (cut && (IS_STAY || !navigator.locks || r.n)) { logErr('자동 정리', '앞선 자동 정리가 끝나기 전에 페이지가 새로 열려서 다시 안 부름', chatId);
       await rest(cycle, '자동 정리가 끊겼어요'); return setValue('autoRun:' + chatId, ''); }
     if (!aw && open && IS_STAY) return miss('정리할 때예요', true);
-    if (!force && !aw && !cut && !sentHere(chatId)) return miss('정리할 때예요', true);
+    if (!force && !aw && !cut && !sentHere(chatId)) { if (once('sentmiss')) logErr('자동 정리', '이 기기에서 보낸 방으로 안 보여 안 돌림 · ' + (sendSeen.c === chatId ? '마지막 내 말이 보낸 말과 다름' : '마지막으로 보낸 방이 다름'), chatId); return miss('정리할 때예요', true); }
     if (!force && !aw && !snapshot.note?.turns && freshTurns() >= Math.max(30, cycle + 10)) return miss('첫 정리를 기다려요', true);
     if (snapshot.note?.sel && !(fullNote && fullNote.upto === snapshot.note.upto)) { miss('이 기기엔 전체 기억이 없어요', true); if (once('nofull')) pageToast('이 기기엔 전체 기억이 없어 자동 정리를 건너뛰어요 · 조아메모리 홈에서 "처음부터 다시 만들기"를 눌러 주세요'); return; }
     const m = String(await getValue('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
@@ -10546,12 +10547,11 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushHeld(); });
     window.addEventListener('pagehide', flushHeld);
     const hook = function (data) {
-      sendSeen.on = true;
       if (this.readyState === 1) liveSock.set(this.url, this);
       if (!heard.has(this)) { heard.add(this); try { this.addEventListener('message', e => { const s = e.data; if (typeof s !== 'string' || !s.includes('characterMessage')) return;
         if (s.includes('"characterMessageGenerated"')) { penGenAt = 0; penSoon(); leakSeen.buf = ''; } else if (s.includes('"characterMessageGenerating"')) { penGenAt = Date.now(); const c = chatIdFromPath(), p = parseFrame(s)?.payload, txt = stripBlocks(p && typeof p === 'object' ? Object.values(p).filter(v => typeof v === 'string').join('\n') : s.replace(/\\n/g, '\n'));  leakSeen.buf = ((leakSeen.buf || '') + txt).slice(-600);  if (c && LEAK_RE.test(leakSeen.buf) && leakSeen.c !== c) { leakSeen.c = c; leakSeen.at = Date.now(); const ns = (/^42(\/[^,]+,)?/.exec(lastFrame.p || '') || [])[1] || ''; try { this.send('42' + ns + JSON.stringify(['stop', { chatId: c }])); } catch (_) {} logErr('노트', 'AI가 답에 노트 안내를 따라 써서 생성을 멈춤', c); } } }); } catch (_) {} }
       const f0 = parseFrame(data), f = sceneOn && injectOn ? f0 : null, chatId = chatIdFromPath(); if (f0) lastFrame.p = data;
-      if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; try { sessionStorage.setItem('jm_sent', JSON.stringify({ c: sendSeen.c, said: sendSeen.said })); } catch (_) {} }
+      if (f0 && ['send', 'reroll'].includes(f0.event) && f0.payload?.chatId) { sendSeen.on = true;  sendSeen.c = String(f0.payload.chatId); sendSeen.said = f0.event === 'send' && typeof f0.payload.message === 'string' ? f0.payload.message : null; try { sessionStorage.setItem('jm_sent', JSON.stringify({ c: sendSeen.c, said: sendSeen.said })); } catch (_) {} }
       if (!f || !['send', 'reroll'].includes(f.event) || !chatId || String(f.payload?.chatId || '') !== chatId) return raw(this, data);
       const sock = this, said = String(f.payload?.message ?? f.payload?.content ?? f.payload?.text ?? ''), t0 = Date.now();
       if (f.event === 'send' && typeof f.payload?.message === 'string') { const st = styLines().map(l => dq(l).replace(/"/g, '”').replace(/\s*\n\s*/g, ' ')).join(' / ');  if (st && said.length + st.length <= 2000) data = data.slice(0, data.indexOf('[')) + JSON.stringify([f.event, { ...f.payload, message: said + '\n[ ](# "MEMO_STY ' + st + '")' }]); } 
