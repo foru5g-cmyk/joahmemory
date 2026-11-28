@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.43
+// @version      6.0.44
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -45,6 +45,7 @@
   const V3_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_END(?:"\)|"|-->)/g;
   const MORE_RE = /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE_MORE[^\n]*\n[\s\S]*?\n[ \t]*MEMO_NOTE_MORE_END(?:"\)|"|-->)/g;
   const STY_RE = /\n*\[ \]\(# "MEMO_STY [^"\n]*"\)/g;
+  const BDC_RE = /\n*```\n(?:📱|🌙|💭) [\s\S]*?\n```/g;
   const stripBlocks = t => String(t || '').replace(STY_RE, '').replace(MORE_RE, '').replace(V3_RE, '').replace(V2_RE, '').replace(V1_RE, '').replace(/\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3[\s\S]*$/, '');
   const EXT_BLOCK_RE = /(?:\\|\?)?(?:<|&lt;)!--(RP_CONTEXT_MANAGER|W\x49SH_SESSION_SETUP)_START\b[\s\S]*?\1_END--(?:>|&gt;)/gi;
   const EXT_BLOCK_CUT = /(?:\\|\?)?(?:<|&lt;)!--(?:RP_CONTEXT_MANAGER|W\x49SH_SESSION_SETUP)_START\b[\s\S]*$/i;
@@ -7626,6 +7627,38 @@
     else { if (p.myVote) p[other] = Math.max(0, (p[other] || 0) - 1); p[key] = (p[key] || 0) + 1; p.myVote = dir; }
     await setValue('board:' + chatIdFromPath(), JSON.stringify(boardData));
   }
+  const BT = '```', bdQ = x => String(x ?? '').replace(/```/g, "'''").trim();
+  const bdPostText = p => { const n = v => Number(v || 0).toLocaleString('en-US'), cs = p.comments || [];
+    return ['━━━━━━━━━━━━━━━', `[ ${bdQ(p.title)} ]`, `${bdQ(p.board)} · ${bdQ(p.nick || '익명')} | 👁 ${n(p.views)} | 👍 ${n(p.likes)}`, '', bdQ(p.body).replace(/\n{3,}/g, '\n\n'),
+      ...(cs.length ? ['', '──────────', ...cs.map(c => (c.reply ? '   ↪ ' : '💭 ') + bdQ(c.nick || '익명') + ' : ' + bdQ(c.text).replace(/\n+/g, ' '))] : [])].join('\n'); };
+  const bdPutText = (name, p) => ['```', `📱 커뮤니티 · ${bdQ(name)}`, bdPostText(p), '```'].join('\n');
+  const bdPutInto = (t, name, p) => { const head = nfSplit(t)[0], post = bdPostText(p); if (t.includes(post)) return t;
+    const R = new RegExp(BDC_RE.source, 'y'); let end = 0, m, blk = ''; R.lastIndex = head.length; while ((m = R.exec(t))) if (m[0].includes(BT + '\n📱')) { end = R.lastIndex; blk = m[0]; }
+    if (end && blk.split('\n━━━━━━━━━━━━━━━\n[').length > 2) return null;
+    if (end) return t.slice(0, end - 4) + '\n\n' + post + '\n```' + t.slice(end);
+    return head.trimEnd() + '\n\n' + bdPutText(name, p) + t.slice(head.length); };
+  const aiLast = () => [...(snapshot?.all || [])].filter(m => isChat(m) && msgRole(m) === 'assistant' && (!m.status || m.status === 'end') && msgText(m).trim()).pop();
+  async function aiEdit(c, id, f) { const t = msgText(await readMessage(c, id)).replace(/\r\n?/g, '\n'), next = f(t); if (next === t || chatIdFromPath() !== c) return false; await writeRaw(c, id, next); return true; }
+  const blockInto = (t, b) => { if (t.includes(b)) return t; const head = nfSplit(t)[0]; return head.trimEnd() + '\n\n' + b + t.slice(head.length); };
+  const blockOut = (t, b) => t.includes('\n\n' + b) ? t.replace('\n\n' + b, '') : t.replace(b, '');
+  const BD_ONLY = /\n*```[^\n]*\n\s*📱 커뮤니티[\s\S]*?\n```/g;
+  async function bdUnput() { const c = chatIdFromPath(); if (!c || busyNow || moving) return; busyNow = true; render(); let n = 0;
+    try { const ids = new Set((boardData?.data?.posts || []).map(x => x.putId).filter(Boolean)); for (const m of snapshot?.all || []) if (msgRole(m) === 'assistant' && msgText(m).includes('📱 커뮤니티')) ids.add(msgId(m));
+      for (const id of ids) { if (chatIdFromPath() !== c) break; if (await aiEdit(c, id, t => t.replace(BD_ONLY, ''))) n++; }
+      if (n || !ids.size) for (const x of boardData?.data?.posts || []) { delete x.putAt; delete x.putId; }  await setValue('board:' + c, JSON.stringify(boardData)); toast(n ? '답 ' + n + '개에서 커뮤 글을 뺐어요 · 크랙 화면은 새로고침하면 바뀌어요' : ids.size ? '커뮤 칸을 못 찾았어요 · 설정 › 기록 › 오류 기록을 보내 주세요' : '대화에 넣은 커뮤 글이 없어요', n || !ids.size ? 'ok' : 'err', 4000);
+      if (!n && ids.size) { const id = [...ids].pop(), t = msgText(await readMessage(c, id)), k = t.indexOf('📱'); logErr('커뮤', '넣은 글 빼기: 칸을 못 찾음 · 답 ' + ids.size + '개 · ' + (k < 0 ? '📱 없음' : JSON.stringify(t.slice(Math.max(0, k - 12), k + 30))), c); } }
+    catch (e) { toast('빼기 실패 · ' + errMsg(e), 'err'); logErr('커뮤', '넣은 글 빼기 실패 · ' + errMsg(e), c); } finally { busyNow = false; refresh().catch(() => {}); } }
+  async function bdPut() {
+    const c = chatIdFromPath(), p = boardData?.data?.posts?.[nav.bdPost], u = aiLast();
+    if (!c || !p || busyNow || moving) return; if (!u) return toast('AI 답이 하나는 있어야 넣을 수 있어요', 'info');
+    busyNow = true; render();
+    try { const id = msgId(u), t = msgText(await readMessage(c, id)), next = bdPutInto(t, boardData.data.name || '커뮤니티', p);
+      if (/```\r?\n(?:🌙|💭) /.test(t)) return toast('이 답엔 꿈·만약에가 들어 있어서 커뮤 글은 못 넣어요 · 답 하나에 한 가지만', 'info', 3500);
+      if (next == null) return toast('답 하나엔 커뮤 글을 두 개까지만 넣을 수 있어요 · 다음 답이 나온 뒤에 넣어 주세요', 'info', 3500);
+      if (next !== t) { if (chatIdFromPath() !== c) return; await writeRaw(c, id, next); }
+      p.putAt = Date.now(); p.putId = id; await setValue('board:' + c, JSON.stringify(boardData)); toast('마지막 AI 답 아래에 붙였어요 · 크랙 화면은 새로고침하면 보여요', 'ok', 3500); }
+    catch (e) { toast('넣기 실패 · ' + errMsg(e), 'err'); logErr('커뮤', '대화에 넣기 실패 · ' + errMsg(e), c); }
+    finally { busyNow = false; refresh().catch(() => {}); } }
   const REPLY_PROMPT = `너는 RP 세계 안 커뮤니티 게시판의 댓글러들이다. [글]과 지금까지 [댓글]을 읽고, 방금 달린 [새 댓글]에 대해 자유롭게 대댓글을 단다.
 - [이번 판 온도]는 분위기만 정해 준다. 왜·어떻게 그렇게 되는지(누가 불을 붙이는지, 싸움이 어디로 번지는지, 여론이 어떻게 움직이는지)는 이 글·이 댓글을 보고 매번 새로 만든다. 같은 전개 방식을 되풀이하지 않는다. 온도가 높아도 욕만 늘리지 않는다.
 - 개수는 상황 따라 1~5개. 그냥 지나갈 댓글이면 1개, 판이 커질 댓글이면 4~5개. 매번 같은 개수로 맞추지 않는다(무플은 없다).
@@ -7732,7 +7765,7 @@
     const nm = String(d.name || '커뮤니티'), hash = [...nm].reduce((a, ch) => a + ch.codePointAt(0), 0);
     const [c1, c2] = [['#FF7A59', '#FFB36B'], ['#7B61FF', '#C08CFF'], ['#13B38B', '#7EDBB8'], ['#E24A6A', '#FF9AA2'], ['#2E3A59', '#6B7FB0'], ['#F2994A', '#F2C94C']][hash % 6];
     const members = d.members || 3000 + (hash * 37) % 47000, today = Math.round(members * 0.08);
-    const refreshBtn = open ? '' : `<span class="bd-tools" style="position:absolute;right:12px;top:0;margin:0"><button data-act="bdrefresh" data-arg="${esc(cur)}" style="font-size:11.5px;padding:4px 9px"${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : cur ? '🔄 이 게시판 새로고침' : '🔄 전체 새로고침'}</button></span>`;
+    const refreshBtn = open ? '' : `<span class="bd-tools" style="position:absolute;right:12px;top:0;margin:0">${posts.some(p => p.putAt) || (snapshot?.all || []).some(m => msgRole(m) === 'assistant' && msgText(m).includes('📱 커뮤니티')) ? `<button data-act="bdunput" style="font-size:11.5px;padding:4px 9px"${busyNow ? ' disabled' : ''}>${busyNow ? '빼는 중…' : '넣은 글 빼기'}</button> ` : ''}<button data-act="bdrefresh" data-arg="${esc(cur)}" style="font-size:11.5px;padding:4px 9px"${busyNow ? ' disabled' : ''}>${busyNow ? '불러오는 중…' : cur ? '🔄 이 게시판 새로고침' : '🔄 전체 새로고침'}</button></span>`;
     const bar = `<div class="bd-cover" style="background:linear-gradient(135deg,${c1},${c2})"></div>
       <div class="bd-head"><span class="bd-logo" style="background:linear-gradient(135deg,${c1},${c2})">${esc([...nm.replace(/\s/g, '')].slice(0, 2).join(''))}</span>
         <span class="bd-hn"><b>${esc(nm)}</b><small>${esc(d.about || '')}</small><small>회원 ${fmt(members)} · 오늘 방문 ${fmt(today)}</small></span>${refreshBtn}</div>
@@ -7744,7 +7777,7 @@
           <h4>${p.hot ? '<em class="bd-hot">HOT</em>' : ''}${esc(p.title || '')}</h4>
           <p class="bd-author"><span class="av bd-av">${esc([...String(p.nick || '익')][0])}</span><span><b>${nick(p)}</b> ${reveal(p.by, `${nav.bdPost}:p`)}<small>${esc(p.ago || '')} · 조회 ${fmt(p.views || 0)} · 추천 ${fmt(p.likes || 0)} · 댓글 ${cmtN(p)}</small></span></p>
           <div class="bd-body">${(() => { let html = '', cur = [], blank = 0; const flush = () => { if (cur.length) html += '<p>' + cur.map(esc).join('<br>') + '</p>'; cur = []; }; for (const raw of String(p.body || '').split('\n')) { const l = raw.trim(); if (!l) { blank++; continue; } if (blank && (cur.length || html)) { flush(); if (blank > 1) html += '<i class="bd-gap" style="height:' + Math.min(blank - 1, 12) * 25 + 'px"></i>'; } blank = 0; cur.push(l); } flush(); return html; })()}</div>
-          <div class="bd-vote"><button data-act="bdvote" data-arg="up" aria-pressed="${p.myVote === 'up'}">👍 추천 <b>${fmt(p.likes || 0)}</b></button><button data-act="bdvote" data-arg="down" aria-pressed="${p.myVote === 'down'}">👎 비추 <b>${fmt(p.dislikes ?? Math.round((p.likes || 0) / 9))}</b></button></div></div>
+          <div class="bd-vote"><button data-act="bdvote" data-arg="up" aria-pressed="${p.myVote === 'up'}">👍 추천 <b>${fmt(p.likes || 0)}</b></button><button data-act="bdvote" data-arg="down" aria-pressed="${p.myVote === 'down'}">👎 비추 <b>${fmt(p.dislikes ?? Math.round((p.likes || 0) / 9))}</b></button><button data-act="bdput" aria-pressed="${!!p.putAt}"${busyNow ? ' disabled' : ''}>💬 ${p.putAt ? '대화에 넣음' : '대화에 넣기'}</button></div></div>
         ${(() => { const key = c => { const o = c._src || c; if (!o.id) o.id = Math.random().toString(36).slice(2, 9); return `${nav.bdPost}:${o.id}`; };
           const cs = p.comments || [], to = Number.isInteger(nav.bdReplyTo) && cs[nav.bdReplyTo] ? nav.bdReplyTo : -1;
           let end = to; if (to >= 0) while (cs[end + 1]?.reply) end++;
@@ -8071,22 +8104,23 @@
       const mats = (() => { try { const t = k => blocksOf(bodyOf(k)).map(b => String(b.title || '').replace(/^\[|\]$/g, '').replace(/^[\d.\s~-]+-/, '').replace(/\s*\(.*$/, '').trim()).filter(x => x && x.length <= 30);
         return pickN([...t('소지품'), ...t('장소·조직'), ...t('날짜로그').slice(0, !typed && kind[0] === '꿈' ? -8 : undefined), ...t('인지·비밀'), ...all], dice([2, 2, 3])); } catch (_) { return []; } })();
       const lv = () => dice([0, 0, 1, 2, 3, 5, 7, 8, 9, 10, 10]), lvLow = () => dice([0, 0, 0, 0, 1, 2, 3, 5, 8]), lvHi = () => dice([3, 5, 6, 7, 8, 9, 10, 10]);
-      const te = turnEnd(), dream = !typed && kind[0] === '꿈', tone = !dream && Math.random() < .5 ? dice(IF_TONES) : null;
+      const te = turnEnd(), dream = kind[0] === '꿈', tone = !dream && Math.random() < .5 ? dice(IF_TONES) : null;
       const base = snapshot.note ? ['[기억 노트]', dropProofLines(noteMemory()), await rangeLogText(chatId, Math.max(1, te - (dream ? 10 : 7)), dream ? Math.max(1, te - 5) : te, dream ? '인물의 말투·지문 속 버릇만 여기서 읽을 것 — 꿈은 이 최근 대화의 일을 다시 꾸지 않는다(소재는 [이번에 섞여 드는 것]과 노트의 지난 일·인물에서)' : '인물의 말투·지문 속 버릇·최근 있었던 일을 여기서 읽을 것', dream ? 5000 : 12000)] : [await etcMemory(chatId, 0, 0)];
-      const raw = await askModelRetry(withRules(IF_PROMPT, ETC_KO), [etcWho('대사·속마음'), '[상황] ' + (typed || kind[1]), '[반응할 인물] ' + names.join(', '), dream ? '' : ((tone ? `[이번 결 — 힌트일 뿐] ${tone[0]}: ${tone[1]}. 이 인물·상황에 더 맛있는 결이 있으면 그걸로 바꾼다.` : '[이번 결] 정해 주지 않음 — 이 인물과 상황에서 가장 맛있는 결을 스스로 고른다(웃김·질투·야함·섬뜩함·짠함·유치함·독설 등은 예일 뿐, 목록에 없는 결도 된다).') + ' 고른 결 하나를 끝까지 확실하게 밀고 어중간하게 섞지 않는다. 인물마다 결이 달라도 된다.'), `[씨앗] ${Math.random().toString(36).slice(2, 8)} — 씨앗이 다르면 소재·전개·말맛이 달라야 한다. 지난번에 썼을 법한 것은 피한다.`, ...(old => old.length ? ['[지난번에 나온 것 — 이것들과 소재·전개·결·말맛이 겹치면 안 된다 · 행동도 속마음도 같은 장면·같은 낱말·같은 끝맺음을 되풀이하면 실패 · 이번엔 이 인물의 다른 면을 꺼낸다]', ...old] : [])((ifData?.rounds || []).slice(0, 4).flatMap(r => (r.cards || []).filter(c => names.some(n => canon(n) === canon(c.who))).map(c => `- ${c.who} · ${r.kind}${r.tone ? ' · ' + r.tone : ''}: ${String(c.act || '').slice(0, 120)} / ${String(c.inner || '').slice(0, 140)}`))), mats.length && !(dream && Math.random() < .5) ? `[이번에 섞여 드는 것] ${(dream ? mats.slice(0, dice([1, 2])) : mats).join(' · ')} — ${dream ? '한두 사람 꿈에만 뒤틀린 모습으로 나와도 된다' : '어울리면 장면에 끼워 넣는다'}(어떻게 쓰일지는 정해진 것이 없다)` : '', dream ? `[이번 꿈 판 — 인물마다 따로]\n${names.map(n => `- ${n}: 꿈 소재 ${dice(['자기 일·직장', '가족', '친구', '어릴 적', '좋아하는 것·취미', '먹을 것', '엉뚱한 상상', '동물', '유저와의 일'])} · 유저 ${dice(['안 나옴', '안 나옴', '잠깐 스침', '나옴'])} · 분위기 ${dice(['유쾌함', '엉뚱함', '어이없음', '귀여움', '신남', '평화로움', '황당한 모험', '유치함', '설렘', '살짝 짠함', '야함(성인만 · 상대는 유저가 아니어도 됨)'])}`).join('\n')}\n[이번 꿈의 눈금 — 0은 전혀 없음, 10은 끝까지] 터무니없음 ${lvHi()} · 귀여움 ${lv()} · 유쾌함 ${lvHi()} · 웃김 ${lvHi()} · 설렘 ${lvLow()} · 서글픔 ${lvLow()} · 무서움 ${lvLow()} · 야함 ${dice([0, 0, 0, 0, 1, 2, 4, 7])} · 장면이 바뀌는 횟수 ${dice([0, 0, 1, 2])} — 눈금대로 섞어 꿈을 처음부터 지어낸다. 높은 눈금이 이번 꿈의 맛이고, 눈금에 없는 맛을 더해도 된다(야함은 성인 인물만).` : `[이번 눈금 — 0은 전혀 없음, 10은 끝까지] 자극 ${lv()} · 천박함 ${lvLow()} · 야함 ${lvLow()} · 웃김 ${lv()} · 귀여움 ${lv()} · 무서움 ${lv()} · 짠함 ${lv()} · 질투 ${lv()} — 높은 눈금이 이번 질문과 반응의 맛이다. 눈금에 없는 맛을 더해도 된다(야함은 성인인 사람 인물만 · 천박함은 캐릭터 설정상 그런 인물만 · 어린아이에겐 천박함도 쓰지 않음).`, '', !typed && !dream ? `[이번 판 — 이대로 짓는다(이야기에 도저히 안 맞는 것만 바꾼다)] 때: ${dice(['지금', '지금', '노트에 있는 지난 어느 날', '몇 년 뒤'])} · 자리: ${dice(['둘뿐인 곳', '사람 많은 곳', '일하는 곳', '집', '낯선 곳', '얼굴을 안 보고 연락으로'])} · 유저: ${dice(['그 자리에 없음', '바로 곁에 있음', '멀리서 보고 있음', '나중에 알게 됨'])} · 흐름: ${dice(['짧게 끝남', '오래 이어짐', '일이 꼬여 뜻밖의 쪽으로 번짐'])} · 속마음이 향하는 곳: ${dice(['눈앞의 상대', '유저', '자기 자신', '지나간 옛일', '앞으로 벌일 일', '지금 몸에 느껴지는 것'])} · 먼저 ideas에 이 판으로 지을 수 있는, 뼈대가 서로 전혀 다른 가정 5개를 한 줄씩 적는다(처음 떠오르는 뻔한 것은 1번에 적어 버리고, 뒤로 갈수록 더 뜻밖으로) · 그중 ${dice([3, 4, 5])}번을 situation으로 삼아 cards를 쓴다` : '', (q => q.length ? '[지난 질문 — 누가 무엇을 하는지 뼈대가 이것들과 같으면 실패 · 사람도 자리도 벌어지는 일도 다른 질문을 짓는다] ' + q.join(' / ') : '')((ifData?.rounds || []).slice(0, 8).map(r => String(r.sit || '')).filter(x => x && x !== '어젯밤 꿈')), '', ...base].join('\n'), '💭만약에');
+      const raw = await askModelRetry(withRules(IF_PROMPT, ETC_KO), [etcWho('대사·속마음'), '[상황] ' + (dream && typed ? '어젯밤 꿈 — 이런 꿈: ' + typed : typed || kind[1]), '[반응할 인물] ' + names.join(', '), dream ? '' : ((tone ? `[이번 결 — 힌트일 뿐] ${tone[0]}: ${tone[1]}. 이 인물·상황에 더 맛있는 결이 있으면 그걸로 바꾼다.` : '[이번 결] 정해 주지 않음 — 이 인물과 상황에서 가장 맛있는 결을 스스로 고른다(웃김·질투·야함·섬뜩함·짠함·유치함·독설 등은 예일 뿐, 목록에 없는 결도 된다).') + ' 고른 결 하나를 끝까지 확실하게 밀고 어중간하게 섞지 않는다. 인물마다 결이 달라도 된다.'), `[씨앗] ${Math.random().toString(36).slice(2, 8)} — 씨앗이 다르면 소재·전개·말맛이 달라야 한다. 지난번에 썼을 법한 것은 피한다.`, ...(old => old.length ? ['[지난번에 나온 것 — 이것들과 소재·전개·결·말맛이 겹치면 안 된다 · 행동도 속마음도 같은 장면·같은 낱말·같은 끝맺음을 되풀이하면 실패 · 이번엔 이 인물의 다른 면을 꺼낸다]', ...old] : [])((ifData?.rounds || []).slice(0, 4).flatMap(r => (r.cards || []).filter(c => names.some(n => canon(n) === canon(c.who))).map(c => `- ${c.who} · ${r.kind}${r.tone ? ' · ' + r.tone : ''}: ${String(c.act || '').slice(0, 120)} / ${String(c.inner || '').slice(0, 140)}`))), mats.length && !(dream && Math.random() < .5) ? `[이번에 섞여 드는 것] ${(dream ? mats.slice(0, dice([1, 2])) : mats).join(' · ')} — ${dream ? '한두 사람 꿈에만 뒤틀린 모습으로 나와도 된다' : '어울리면 장면에 끼워 넣는다'}(어떻게 쓰일지는 정해진 것이 없다)` : '', dream ? `[이번 꿈 판 — 인물마다 따로]\n${names.map(n => `- ${n}: 꿈 소재 ${dice(['자기 일·직장', '가족', '친구', '어릴 적', '좋아하는 것·취미', '먹을 것', '엉뚱한 상상', '동물', '유저와의 일'])} · 유저 ${dice(['안 나옴', '안 나옴', '잠깐 스침', '나옴'])} · 분위기 ${dice(['유쾌함', '엉뚱함', '어이없음', '귀여움', '신남', '평화로움', '황당한 모험', '유치함', '설렘', '살짝 짠함', '야함(성인만 · 상대는 유저가 아니어도 됨)'])}`).join('\n')}\n[이번 꿈의 눈금 — 0은 전혀 없음, 10은 끝까지] 터무니없음 ${lvHi()} · 귀여움 ${lv()} · 유쾌함 ${lvHi()} · 웃김 ${lvHi()} · 설렘 ${lvLow()} · 서글픔 ${lvLow()} · 무서움 ${lvLow()} · 야함 ${dice([0, 0, 0, 0, 1, 2, 4, 7])} · 장면이 바뀌는 횟수 ${dice([0, 0, 1, 2])} — 눈금대로 섞어 꿈을 처음부터 지어낸다. 높은 눈금이 이번 꿈의 맛이고, 눈금에 없는 맛을 더해도 된다(야함은 성인 인물만).` : `[이번 눈금 — 0은 전혀 없음, 10은 끝까지] 자극 ${lv()} · 천박함 ${lvLow()} · 야함 ${lvLow()} · 웃김 ${lv()} · 귀여움 ${lv()} · 무서움 ${lv()} · 짠함 ${lv()} · 질투 ${lv()} — 높은 눈금이 이번 질문과 반응의 맛이다. 눈금에 없는 맛을 더해도 된다(야함은 성인인 사람 인물만 · 천박함은 캐릭터 설정상 그런 인물만 · 어린아이에겐 천박함도 쓰지 않음).`, '', !typed && !dream ? `[이번 판 — 이대로 짓는다(이야기에 도저히 안 맞는 것만 바꾼다)] 때: ${dice(['지금', '지금', '노트에 있는 지난 어느 날', '몇 년 뒤'])} · 자리: ${dice(['둘뿐인 곳', '사람 많은 곳', '일하는 곳', '집', '낯선 곳', '얼굴을 안 보고 연락으로'])} · 유저: ${dice(['그 자리에 없음', '바로 곁에 있음', '멀리서 보고 있음', '나중에 알게 됨'])} · 흐름: ${dice(['짧게 끝남', '오래 이어짐', '일이 꼬여 뜻밖의 쪽으로 번짐'])} · 속마음이 향하는 곳: ${dice(['눈앞의 상대', '유저', '자기 자신', '지나간 옛일', '앞으로 벌일 일', '지금 몸에 느껴지는 것'])} · 먼저 ideas에 이 판으로 지을 수 있는, 뼈대가 서로 전혀 다른 가정 5개를 한 줄씩 적는다(처음 떠오르는 뻔한 것은 1번에 적어 버리고, 뒤로 갈수록 더 뜻밖으로) · 그중 ${dice([3, 4, 5])}번을 situation으로 삼아 cards를 쓴다` : '', (q => q.length ? '[지난 질문 — 누가 무엇을 하는지 뼈대가 이것들과 같으면 실패 · 사람도 자리도 벌어지는 일도 다른 질문을 짓는다] ' + q.join(' / ') : '')((ifData?.rounds || []).slice(0, 8).map(r => String(r.sit || '')).filter(x => x && x !== '어젯밤 꿈')), '', ...base].join('\n'), '💭만약에');
       let data; try { data = parseJsonLoose(raw); } catch (_) { throw new Error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.'); }
       const cards = (data.cards || []).filter(c => c?.who && (c.inner || c.say || c.act) && !users.some(u => canon(c.who) === canon(u)));
       if (!cards.length) throw new Error('반응이 오지 않았어요. 한 번 더 눌러 주세요.');
-      ifData = { rounds: [{ at: Date.now(), turns: snapshot.note?.turns || 0, kind: typed ? '직접' : kind[0], tone: String(data.tone || tone?.[0] || '').slice(0, 12), sit: dream ? '어젯밤 꿈' : String(data.situation || typed || kind[0]), cards }, ...(ifData?.rounds || [])].slice(0, 20) };
+      ifData = { rounds: [{ at: Date.now(), turns: snapshot.note?.turns || 0, kind: dream ? '꿈' : typed ? '직접' : kind[0], tone: String(data.tone || tone?.[0] || '').slice(0, 12), sit: dream ? (typed ? '꿈 · ' + typed : '어젯밤 꿈') : String(data.situation || typed || kind[0]), cards }, ...(ifData?.rounds || [])].slice(0, 20) };
       await setValue('if:' + chatId, JSON.stringify(ifData));
       toast('속마음이 나왔어요 💭', 'ok', 2500);
     } catch (e) { toast('속마음 만들기 실패 · ' + errMsg(e), 'err'); }
     finally { busyNow = false; render(); }
   }
+  const ifBlock = (r, c) => [BT, r.kind === '꿈' ? `🌙 ${bdQ(c.who)} · ${c.day ? c.day + ' 아침 꿈' : '어제 꿈'}` : `💭 ${bdQ(c.who)} · 만약에 · 실제로 일어난 일 아님 — ${bdQ(r.sit)}`, bdQ(c.act), BT].join('\n');
   async function ifNote(arg) {
     const cid = chatIdFromPath(), [ri, ci] = String(arg).split('|').map(Number), c = ifData?.rounds?.[ri]?.cards?.[ci];
     const r = ifData?.rounds?.[ri], n = snapshot?.note;
-    if (!cid || !c || !n) return;
+    if (!cid || !c || (c.noted && !n)) return;
     if (busyNow) return toast('다른 작업이 끝난 뒤에 다시 눌러 주세요.', 'info', 2500);
     const one = t => String(t || '').replace(/\s+/g, ' ').trim(), redraw = () => { const m = out('main'), y = m?.scrollTop || 0; render(); if (out('main')) out('main').scrollTop = y; };
     busyNow = true; redraw();
@@ -8095,14 +8129,16 @@
         const secs = splitSections(noteMemory()), log = secs.find(x => x.key === '날짜로그');
         if (log) { const L = log.body.split('\n'), i = L.lastIndexOf(c.noted); if (i >= 0) L.splice(i, 1); log.body = L.join('\n'); }
         await onceTick(cid, snapshot); await rewriteNote(cid, joinSections(secs)); delete c.noted; await setValue('if:' + cid, JSON.stringify(ifData)); toast('기억 노트에서 뺐어요.', 'ok', 2500); await refresh();
-      } else {
-        const on = onceIs(r, ci);
-        if (on) delete ifData.once; else ifData.once = { at: r.at, ci, turn: turnEnd(), line: `※ 꿈 메모(${turnEnd() + 1}턴까지) · 장면에 어울릴 때만 그 인물이 꿈의 여운으로 보이는 모습으로 녹임(억지로 연결하지 않음 · 꿈을 설명하듯 옮기지 않음) · ${one(c.who)}가 지난밤 꾼 꿈(꿈일 뿐 실제 일이 아님 · 꿈속 유저의 말·행동을 실제로 한 것으로 쓰지 않음): ${one(c.act)}` };
-        await setValue('if:' + cid, JSON.stringify(ifData)); await onceTick(cid, snapshot); if (!sceneOn) await onceAppSync(cid);
-        toast(on ? '뺐어요.' : '2턴 동안만 들어가고 저절로 빠져요.', 'ok', 2500);
+      } else if (onceIs(r, ci)) { delete ifData.once; await setValue('if:' + cid, JSON.stringify(ifData)); await onceTick(cid, snapshot); if (!sceneOn) await onceAppSync(cid); toast('뺐어요.', 'ok', 2500); }
+      else { if (!c.putId) { try { const u = aiLast(), hd = u ? headTxt(stripBlocks(msgText(u))) : '', m = hd.match(/(?:\d+년차\s*)?\d{2,4}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?/), d = m ? null : pregDay(noteMemory(), snapshot); c.day = m ? m[0].trim() : d != null ? P_STR(d) : ''; } catch (_) {} } const b = ifBlock(r, c);
+        if (c.putId) { await aiEdit(cid, c.putId, t => blockOut(t, b)); delete c.putId; toast('뺐어요.', 'ok', 2500); }
+        else { const u = aiLast(); if (!u) return toast('AI 답이 하나는 있어야 넣을 수 있어요', 'info');
+          if (/```\r?\n(?:📱|🌙|💭) /.test(msgText(await readMessage(cid, msgId(u))))) return toast('마지막 답엔 이미 커뮤·꿈·만약에 중 하나가 들어 있어요 · 답 하나에 한 가지만 넣어요', 'info', 3500); await aiEdit(cid, msgId(u), t => blockInto(t, b)); c.putId = msgId(u); toast('마지막 AI 답 아래에 꿈을 붙였어요', 'ok', 2500); }
+        await setValue('if:' + cid, JSON.stringify(ifData));
       }
+
     }
-    catch (e) { toast('노트 고치기 실패 · ' + errMsg(e), 'err'); } finally { busyNow = false; redraw(); }
+    catch (e) { toast('노트 고치기 실패 · ' + errMsg(e), 'err'); } finally { busyNow = false; redraw(); refresh().catch(() => {}); }
   }
   const onceIs = (r, ci) => !!ifData?.once && ifData.once.at === r?.at && ifData.once.ci === ci;
   async function onceTick(chatId, snap, back = 0) {
@@ -8130,9 +8166,9 @@
     const pick = `<div class="bd"><div class="bd-empty if-pick"><b>속마음</b><small>상황 하나에 NPC마다 겉으로 한 행동과 속마음 · AI를 1번 불러요 · 기억 노트엔 안 들어가요(꿈만 골라서 넣을 수 있어요)</small>
       <div class="tl-who">${names.map(n => `<button data-act="ifwho" data-arg="${esc(n)}" aria-pressed="${picked.includes(n)}">${avatar(n)}<small>${esc(n)}</small></button>`).join('')}</div><small>${picked.length ? esc(picked.join(' · ')) + '의 마음을 봐요' : '보고 싶은 사람을 골라요'}</small>
       <div class="if-chips">${IF_KINDS.map(([k]) => `<button class="pcchk" data-act="ifkind" data-arg="${esc(k)}" aria-pressed="${(nav.ifKind || '꿈') === k}">${k === '꿈' ? '🌙 꿈' : esc(k)}</button>`).join('')}</div>
-      <div class="bd-write"><input type="text" data-out="ifin" maxlength="200" placeholder="만약에 · 직접 쓰기" autocomplete="off"${busyNow ? ' disabled' : ''}><button data-act="ifgo"${busyNow ? ' disabled' : ''}>보기</button></div><small class="if-hint">만약에는 안 써도 돼요 · 쓰면 그 상황으로, 비워 두면 위에서 고른 것(꿈·랜덤)으로</small></div></div>`;
+      <div class="bd-write"><input type="text" data-out="ifin" maxlength="200" placeholder="${(nav.ifKind || '꿈') === '꿈' ? '🌙 꿈 직접 쓰기 · 비우면 아무 꿈' : '만약에 · 직접 쓰기'}" autocomplete="off"${busyNow ? ' disabled' : ''}><button data-act="ifgo"${busyNow ? ' disabled' : ''}>보기</button></div><small class="if-hint">안 써도 돼요 · 🌙 꿈을 고르고 쓰면 그 꿈으로, 🎲를 고르고 쓰면 그 만약에로</small></div></div>`;
     const card = (r, ri) => `<div class="bt-card"><p class="bt-hook">${r.kind === '꿈' ? '🌙' : '💭'} ${esc(r.kind || '')}${r.tone ? ' · ' + esc(r.tone) : ''}${r.turns ? ' · ' + r.turns + '턴 시점' : ''}<button class="linkbtn if-del" data-act="ifdel" data-arg="${ri}" aria-label="이 속마음 지우기">지우기</button></p><h4>${esc(r.sit || '')}</h4>${(r.cards || []).map((c, ci) => { const n = etcPeople().find(x => canon(x) === canon(c.who)) || String(c.who);
-      return `<div class="if-c"><p class="if-who">${avatar(n)}<b>${esc(n)}</b></p>${c.act ? `<p class="if-t">${esc(c.act)}</p>` : ''}${c.inner ? `<div class="if-in" style="background:${avColor(n)[0]}"><small>속마음</small><p class="if-t">${esc(c.inner)}</p>${c.next ? `<p class="if-t">→ ${esc(c.next)}</p>` : ''}${c.secret ? `<p class="if-t if-sec">🤫 ${esc(c.secret)}</p>` : ''}</div>` : ''}</div>${r.kind === '꿈' && snapshot?.note ? (on => `<div class="if-note">${c.noted ? '기억에 넣었어요 · ' : on ? '2턴 동안 들어가요 · ' : ''}<button class="linkbtn" data-act="ifnote" data-arg="${ri}|${ci}"${busyNow ? ' disabled' : ''}>${c.noted || on ? '빼기' : '이 꿈 넣기'}</button><details class="nf-help"><summary><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more">꿈 내용만 다음 2턴 동안 들어가고 저절로 빠져요. 속마음은 안 들어가요. 기억 노트에는 안 남아요.</div></details></div>`)(onceIs(r, ci)) : ''}`; }).join('')}</div>`;
+      return `<div class="if-c"><p class="if-who">${avatar(n)}<b>${esc(n)}</b></p>${c.act ? `<p class="if-t">${esc(c.act)}</p>` : ''}${c.inner ? `<div class="if-in" style="background:${avColor(n)[0]}"><small>속마음</small><p class="if-t">${esc(c.inner)}</p>${c.next ? `<p class="if-t">→ ${esc(c.next)}</p>` : ''}${c.secret ? `<p class="if-t if-sec">🤫 ${esc(c.secret)}</p>` : ''}</div>` : ''}</div>${c.act ? (on => `<div class="if-note">${c.noted ? '기억에 넣었어요 · ' : on ? '2턴 동안 들어가요 · ' : c.putId ? '대화에 넣었어요 · ' : ''}<button class="linkbtn" data-act="ifnote" data-arg="${ri}|${ci}"${busyNow ? ' disabled' : ''}>${c.noted || on || c.putId ? '빼기' : r.kind === '꿈' ? '이 꿈 넣기' : '이 장면 넣기'}</button><details class="nf-help"><summary><i class="nf-q" aria-label="설명 보기">?</i></summary><div class="nf-more">겉으로 보인 내용만 마지막 AI 답 아래에 칸으로 붙어요. 속마음은 안 들어가요. 빼기를 누르면 그 칸을 지워요.</div></details></div>`)(onceIs(r, ci)) : ''}`; }).join('')}</div>`;
     const list = rounds.length ? `<div class="bd" style="margin-top:10px">${card(rounds[0], 0)}${rounds.length > 1 ? `<details class="tl-up tl-fold" style="margin:10px 14px"${nav.ifOldOpen ? ' open' : ''}><summary data-act="ifoldfold"><b>지난 속마음 ${rounds.length - 1}</b></summary>${rounds.slice(1).map((r, i) => card(r, i + 1)).join('')}</details>` : ''}<p class="bd-snap"><button class="linkbtn" data-act="bdimg" data-arg="home">이미지로 저장</button></p></div><p class="muted" style="text-align:center;margin:10px 0 4px"><button class="linkbtn" data-act="ifreset">기록 비우기</button></p>` : '';
     return head + genCard() + pick + list;
   }
@@ -9977,7 +10013,7 @@
   }
   function branchMatch(src, cur, upto) {
     const k = src.findIndex(m => msgId(m) === upto); if (k < 0) return null;
-    const norm = m => cleanLog(msgText(m), msgRole(m) !== 'user').replace(/\s+/g, ''), upTo = src.slice(0, k + 1), turn = upTo.filter(m => msgRole(m) === 'user').length; if (!turn) return null;
+    const norm = m => numFixText(cleanLog(msgText(m), msgRole(m) !== 'user').replace(BDC_RE, '')).replace(/\s+/g, '').replace(/\d+/g, ''), upTo = src.slice(0, k + 1), turn = upTo.filter(m => msgRole(m) === 'user').length; if (!turn) return null;
     let u = k; while (u >= 0 && msgRole(src[u]) !== 'user') u--;
     const tail = src.slice(u, k + 1), users = cur.map((m, i) => (msgRole(m) === 'user' ? i : -1)).filter(i => i >= 0), at = users[turn - 1]; if (at === undefined) return null;
     const mine = cur.slice(at, at + tail.length); if (mine.length !== tail.length || !tail.every((m, i) => msgRole(m) === msgRole(mine[i]) && norm(m) === norm(mine[i]))) return null;
@@ -10596,7 +10632,7 @@
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(개월)', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)(살)', 'g'), (m, pre, t, u, sp, k) => { const n = sinVal(t, u); return n >= 10 && n <= 99 ? pre + nativeOf(n) + sp + k : m; }],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)시(?![간작절선체점키장청각계민인집험경골설식도])', 'g'), (m, pre, t, u, sp) => { const n = sinVal(t, u); return n >= 10 && n <= 12 && !t ? pre + nativeOf(n) + sp + '시' : m; }]];
-  const nfSplit = t => { const R = []; for (const re of [STY_RE, MORE_RE, V3_RE, V2_RE, V1_RE, /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3(?![\s\S]*MEMO_NOTE_END)[\s\S]*$/g, /\[ \]\(# "[\s\S]*?"\)/g]) for (const m of t.matchAll(re)) R.push([m.index, m.index + m[0].length]);
+  const nfSplit = t => { const R = []; for (const re of [STY_RE, BDC_RE, MORE_RE, V3_RE, V2_RE, V1_RE, /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3(?![\s\S]*MEMO_NOTE_END)[\s\S]*$/g, /\[ \]\(# "[\s\S]*?"\)/g]) for (const m of t.matchAll(re)) R.push([m.index, m.index + m[0].length]);
     R.sort((x, y) => x[0] - y[0]); const out = []; let at = 0; for (const [x, y] of R) { if (y <= at) continue; const st = Math.max(x, at); out.push(t.slice(at, st), t.slice(st, y)); at = y; } out.push(t.slice(at)); return out; };
   const numFixText = (t, pick) => { let n = 0; return nfSplit(String(t)).map((part, i) => i % 2 ? part : NF_RULES.reduce((x, [re, fn]) => x.replace(re, (...a) => { const r = fn(...a); if (r === a[0]) return r; const k = n++, off = a[a.length - 2], str = a[a.length - 1]; return !pick || pick(k, a[0], r, str.slice(Math.max(0, off - 18), off) + '【' + a[0].trim() + '】' + str.slice(off + a[0].length, off + a[0].length + 18)) ? r : a[0]; }), part)).join(''); };
   const nf = { chat: '', items: [], busy: '' };
@@ -11894,6 +11930,8 @@
       case 'bdgo': nav.bdReplyTo = null; nav.bdPost = arg === '' ? null : Number(arg); nav.bdWho = null; return keepScroll(render);
       case 'noop': return;
       case 'bdvote': await bdVote(arg); return keepScroll(render);
+      case 'bdput': await bdPut(); return keepScroll(render);
+      case 'bdunput': await bdUnput(); return keepScroll(render);
       case 'bdcmt': return bdComment();
       case 'namesame': case 'namediff': if (draft && draft.askNames?.[Number(arg)]) {
         const pair = draft.askNames[Number(arg)], cid = chatIdFromPath();
