@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.48
+// @version      6.0.49
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1703,16 +1703,16 @@
 
   let love = null, loveChat = '', loveOut = [], loveSig = '', loveMode = false;
   const loveOf = async c => { try { return JSON.parse(String(await getValue('love:' + c, '') || 'null')); } catch (_) { return null; } };
-  const loveSave = () => { if (!loveChat || !love) return; love.cycFix = 1; const LV_SKIP = /^(cycFix|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|scanTry)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); }
+  const loveSave = () => { if (!loveChat || !love) return; love.cycFix = 1; const LV_SKIP = /^(cycFix|cycBack|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|scanTry)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); }
     const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + sig;
-    if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, j, 'lovesnap:'); }
+    if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, JSON.stringify({ ...love, undo: undefined, undoLabel: undefined, undoTurn: undefined, undoSum: undefined }), 'lovesnap:'); } 
     return setValue('love:' + loveChat, j); };
   function loveMerge(a, b) {
     const bNew = (b.sumT || 0) > (a.sumT || 0) || ((b.sumT || 0) === (a.sumT || 0) && (b.saved || 0) > (a.saved || 0)), base = bNew ? b : a, other = bNew ? a : b, m = new Map();
     for (const x of [...(other.log || []), ...(base.log || [])]) { const k = (x.w || '') + '|' + x.t, o = m.get(k); m.set(k, o ? { ...o, ...x, open: !!(o.open && x.open), solved: !!(o.solved || x.solved || ((o.open || x.open) && !(o.open && x.open))) } : x); }
     return { ...base, sumT: Math.max(a.sumT || 0, b.sumT || 0), log: [...m.values()].sort((p, q) => (p.d ?? 0) - (q.d ?? 0)).slice(-60), cycles: [...new Set([...(other.cycles || []), ...(base.cycles || [])])].slice(-30) };
   }
-  const loveAll = (x, y) => { const SKIP = /^(cycFix|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|undo|undoLabel|undoTurn|undoSum)$/, pick = L => JSON.stringify(L || null, function (k, v) { return this === L && SKIP.test(k) ? undefined : v; }); return pick(x) === pick(y); };
+  const loveAll = (x, y) => { const SKIP = /^(cycFix|cycBack|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|undo|undoLabel|undoTurn|undoSum)$/, pick = L => JSON.stringify(L || null, function (k, v) { return this === L && SKIP.test(k) ? undefined : v; }); return pick(x) === pick(y); };
   const loveThin = L => !L || (!L.log?.length && !L.cycles?.length && !L.scanned && !L.wedding && L.startBy !== 'user' && L.whoBy !== 'user');
   function loveRoll(s, day) { let L = null; try { L = JSON.parse(s?.j); } catch (_) {} if (!L || day == null) return null;
     const ok = t => { const d = P_DAY2(String(t).split(' · ')[0]); return d != null && d <= day; };
@@ -1745,7 +1745,12 @@
       for (const e of love.log) if (!e.open && was.has((e.w || '') + '|' + e.t)) e.solved = true; await setValue('love:' + c, JSON.stringify(love)); } if (!same) { loveOut = []; loveSig = ''; } loveMode = String(await getValue('loveMode', 'off')) === 'on';
     if (love && !love.cycFix) {
     if (love.cycles?.length) { const seen = new Set(), keep = love.cycles.filter(t => { const w = (t.match(/(?:·\s*)?([^·\s]+)와 (헤어짐|다시 사귐)/) || []); if (w[2] === '헤어짐') seen.add(w[1]); if (w[2] === '다시 사귐') { if (!seen.has(w[1])) return false; seen.delete(w[1]); } return true; }); if (keep.length !== love.cycles.length) { love.cycles = keep; if (love.startBy === 'again') { love.start = null; love.startBy = ''; } loveSave(); } }
-    if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } } }
+    if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } }
+    if (love?.who && !love.cycBack) { love.cycBack = 1; let o = null; try { o = JSON.parse(String(await getValue('lovesnap:' + c, '') || 'null')); } catch (_) {}
+      const key = love.who + '와 다시 사귐', cur = love.cycles || [];
+      for (const x of (o?.list || []).slice().reverse()) { let L = null; try { L = JSON.parse(x.j); } catch (_) {} const was = L?.who === love.who ? L.cycles || [] : [], lost = was.filter(t => t.includes(key) && !cur.includes(t)); if (!lost.length) continue;
+        love.cycles = [...was.filter(t => lost.includes(t) || cur.includes(t)), ...cur.filter(t => !was.includes(t))].slice(-30); if (love.start == null && !love.startBy && L.startBy === 'again' && L.start != null) { love.start = L.start; love.startBy = 'again'; }
+        loveSave(); logErr('연애 기록', '지워졌던 재회 줄 ' + lost.length + '개를 사본에서 되살림'); break; } } }
   const lvParts = k => String(k || '').split(/\s*[·,\/]\s*/), LOVE_ON = k => lvParts(k).some(x => /^(연인|약혼|부부)$/.test(x)), LOVE_EX = k => !LOVE_ON(k) && lvParts(k).includes('전 연인');
   function loveAuto(ppl, rel, me) {
     const kOf = n => pairKind0(rel, me, n), cur = love?.who && ppl.has(love.who) ? kOf(love.who) : '';
