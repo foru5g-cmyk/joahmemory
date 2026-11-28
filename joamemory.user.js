@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.51
+// @version      6.0.52
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10640,11 +10640,13 @@
   const NAT_RE = '(열|스물|스무|서른|마흔|쉰|예순|일흔|여든|아흔)(한|두|세|네|다섯|여섯|일곱|여덟|아홉)?|(한|두|세|네|다섯|여섯|일곱|여덟|아홉)', SIN_RE = '([이삼사오육칠팔구])?십([일이삼사오육칠팔구])?';
   const natVal = (t, u, one) => t ? NT.indexOf(t === '스무' ? '스물' : t) * 10 + (u ? NU.indexOf(u) : 0) : NU.indexOf(one), sinVal = (t, u) => (t ? SD.indexOf(t) : 1) * 10 + (u ? SD.indexOf(u) : 0);
   const NF_MIN = /^(?:간(?![의에가-힣])|\s*(?:동안|만에|(?:뒤|후|전)(?:에|부터|쯤|까지|[^가-힣]|$)|이\s*(?:지나|지났|흘러|흘렀|걸려|걸렸|걸린|남았)))/;
+  const NF_DAYS = ['', '하루', '이틀', '사흘', '나흘', '닷새', '엿새', '이레', '여드레', '아흐레'];
   const NF_RULES = [
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(년)', 'g'), (m, pre, t, u, one, sp, k) => t ? pre + sinoOf(natVal(t, u, one)) + sp + k : m],
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(개월)', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(분)(?![들께])', 'g'), (m, pre, t, u, one, sp, k, off, str) => t || NF_MIN.test(str.slice(off + m.length, off + m.length + 8)) ? pre + sinoOf(natVal(t, u, one)) + sp + k : m],
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(초)(?:(?![가-힣])|(?=간|동안|뒤|후|전|만|쯤|씩|마다|정도|밖에|이나|가량|짜리|[가를도의은는에]\\s))', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
+    [/(^|[^가-힣])(스물|스무|서른|마흔|쉰|예순|일흔|여든|아흔)\s?(하루|이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레)([가를는와](?![가-힣]))?/g, (m, pre, t, d, p, off, str) => /^(?:였|이었|라|다(?![가-힣])|예요|야(?![가-힣])|나(?![가-힣])|면|든|랑|고(?![가-힣])|날)/.test(p ? '' : str.slice(off + m.length, off + m.length + 3)) ? m : pre + sinoOf(NT.indexOf(t === '스무' ? '스물' : t) * 10 + NF_DAYS.indexOf(d)) + ' 일' + ({ 가: '이', 를: '을', 는: '은', 와: '과' }[p] || '')],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)(살)', 'g'), (m, pre, t, u, sp, k) => { const n = sinVal(t, u); return n >= 10 && n <= 99 ? pre + nativeOf(n) + sp + k : m; }],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)시(?![간작절선체점키장청각계민인집험경골설식도])', 'g'), (m, pre, t, u, sp) => { const n = sinVal(t, u); return n >= 10 && n <= 12 && !t ? pre + nativeOf(n) + sp + '시' : m; }]];
   const nfSplit = t => { const R = []; for (const re of [STY_RE, BDC_RE, MORE_RE, V3_RE, V2_RE, V1_RE, /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3(?![\s\S]*MEMO_NOTE_END)[\s\S]*$/g, /\[ \]\(# "[\s\S]*?"\)/g]) for (const m of t.matchAll(re)) R.push([m.index, m.index + m[0].length]);
