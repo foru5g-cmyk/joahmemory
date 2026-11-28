@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.40
+// @version      6.0.41
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3644,14 +3644,16 @@
       paintBadges();
     } catch (_) {  }
   }
-  const cpText = new Map();
-  function cpPut(el, id) { const o = el.querySelector('button[aria-label="메시지 옵션"]')?.closest('.dropdown-button'); if (!o || el.querySelector('.jm-cp')) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'jm-cp'; b.setAttribute('aria-label', '전체 복사'); b.dataset.for = id;
-    b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
-    b.style.cssText = 'width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#9A9AA3;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:0 0 auto';
-    b.addEventListener('click', cpClick); const bar = o.parentElement?.parentElement, left = bar?.firstElementChild;
-    if (bar?.classList.contains('justify-between') && left && left !== o.parentElement) { b.style.marginLeft = '-6px'; left.prepend(b); } else o.before(b); }
-  async function cpClick(e) { e.preventDefault(); e.stopPropagation(); const id = e.currentTarget.dataset.for, c = chatIdFromPath();
+  const cpText = new Map(); let cpFor = '';
+  document.addEventListener('pointerdown', e => { const b = e.target?.closest?.('button[aria-label="메시지 옵션"]'); if (!b || !b.closest('.justify-between')) return;  const g = b.closest('[data-message-id],[data-message-group-id]'); if (!g) return; cpFor = g.getAttribute('data-message-id') || g.getAttribute('data-message-group-id');
+    let n = 0; const tick = () => { const m = [...document.querySelectorAll('[role=menu]')].find(x => !x.querySelector('.jm-cpm') && [...x.querySelectorAll('[role=menuitem]')].some(i => /분기|수정|삭제/.test(i.textContent))); if (m) return cpMenu(m, cpFor); if (++n < 30) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }, true);
+  function cpMenu(m, id) { const src = m.querySelector('[role=menuitem]'); if (!src || !id) return; const it = src.cloneNode(true); it.classList.add('jm-cpm'); it.removeAttribute('data-highlighted'); it.removeAttribute('id');
+    [...it.childNodes].forEach(x => { if (x.nodeType === 3) x.remove(); }); const sv = it.querySelector('svg'); const ic = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+    if (sv) sv.outerHTML = ic; else it.insertAdjacentHTML('afterbegin', ic); it.append('복사');
+    it.addEventListener('pointerenter', () => it.setAttribute('data-highlighted', '')); it.addEventListener('pointerleave', () => it.removeAttribute('data-highlighted'));
+    it.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); cpCopy(id); m.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    const del = [...m.querySelectorAll('[role=menuitem]')].find(i => i !== it && /삭제/.test(i.textContent)); if (del) del.before(it); else m.append(it); }
+  async function cpCopy(id) { const c = chatIdFromPath();
     let t = cpText.get(id); if (t == null) { const m = (snapshot?.all || []).find(x => msgId(x) === id); if (m) t = stripBlocks(msgText(m)).trim(); }
     if (t == null) { try { t = stripBlocks(msgText(await readMessage(c, id))).trim(); if (cpText.size > 50) cpText.clear(); cpText.set(id, t); } catch (_) { pageToast('글을 못 읽었어요 · 다시 눌러 주세요'); return; } }
     try { await navigator.clipboard.writeText(t); pageToast('복사했어요'); } catch (_) { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); pageToast(ok ? '복사했어요' : '한 번 더 눌러 주세요'); } }
@@ -3681,8 +3683,7 @@
       if (id) loadTurnMap(id, snapshot, miss.filter(x => x.el.getBoundingClientRect().top < low).map(x => x.id)); }
   }
   let badgeTimer = null;
-  const cpScan = () => document.querySelectorAll('[data-message-id],[data-message-group-id]').forEach(el => { if (!el.parentElement?.closest('[data-message-id],[data-message-group-id]')) cpPut(el, el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id')); });
-  new MutationObserver(() => { if (!badgeTimer) badgeTimer = setTimeout(() => { badgeTimer = null; cpScan(); if (turnMap.size) paintBadges(); }, 400); })
+  new MutationObserver(() => { if (!badgeTimer && turnMap.size) badgeTimer = setTimeout(() => { badgeTimer = null; paintBadges(); }, 400); })
     .observe(document.documentElement, { childList: true, subtree: true });
 
   const ICON = {
