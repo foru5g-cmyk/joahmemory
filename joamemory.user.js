@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.47
+// @version      6.0.48
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -353,6 +353,8 @@
   const fxKeepSet = async (cid, body) => { if (!cid) return; body = String(body || '').trim(); FX_KEEP.set(cid, body); await setValue('fixkeep:' + cid, JSON.stringify({ b: body })); };
   const fxKeepApply = (cid, mem) => { if (!cid || !mem || !FX_KEEP.has(cid)) return mem; const k = FX_KEEP.get(cid), list = splitSections(mem), sec = list.find(x => x.key === FIXED);
     if ((sec?.body || '').trim() === k) return mem; if (!k) return joinSections(list.filter(x => x.key !== FIXED)); if (sec) sec.body = k; else list.unshift({ key: FIXED, body: k }); return joinSections(list); };
+  const fxOffKeep = async (cid, b, inA) => { const mine = cid === chatIdFromPath(), offs = fixItems(b).filter(it => it.head && !inA.has(itemKey(it.head)) && (mine || NO_INJ.has(FIXED + '|' + itemKey(it.head)))); let ch = false;
+    for (const it of offs) { const k = FIXED + '|' + itemKey(it.head); if (!NO_INJ.has(k)) { NO_INJ.add(k); ch = true; } } if (ch) { await setValue('noinj:' + cid, JSON.stringify([...NO_INJ])); logErr('고정 설정', '이 기기에만 있던 설정 ' + offs.length + '개를 꺼 둔 채로 남김'); } return offs; };
   let NO_INJ = new Set();
   const dayOf = t => { const m = String(t).replace(/^\[/, '').match(/^((?:\d+년차\s*)?\d{1,4}[./]\d{1,2}(?:[./]\d{1,2})?)(?![\d./])(?!\s*~)/); return m ? m[1].replace(/\s+/g, ' ') : ''; };
   function stripProof(memory, keepMiles = false) {
@@ -1701,7 +1703,7 @@
 
   let love = null, loveChat = '', loveOut = [], loveSig = '', loveMode = false;
   const loveOf = async c => { try { return JSON.parse(String(await getValue('love:' + c, '') || 'null')); } catch (_) { return null; } };
-  const loveSave = () => { if (!loveChat || !love) return; const LV_SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|scanTry)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); }
+  const loveSave = () => { if (!loveChat || !love) return; love.cycFix = 1; const LV_SKIP = /^(cycFix|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|scanTry)$/, sig = JSON.stringify(love, function (k, v) { return this === love && LV_SKIP.test(k) ? undefined : v; }); const h = (t => { let x = 2166136261; for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619) >>> 0; return x.toString(36); })(sig); if (love.sigS !== h) { love.saved = Date.now(); love.sigS = h; if (nav?.gsOn) gsModeSoon(loveChat); }
     const j = JSON.stringify(love), turn = (snapshot?.note?.turns || 0) + (snapshot?.fresh || []).filter(m => msgRole(m) === 'user').length, same = loveChat + '|' + sig;
     if (turn && loveSave.at !== same && loveChat === chatIdFromPath() && !loveBranch.wait?.has(loveChat)) { loveSave.at = same; pregSnapPut(loveChat, turn, j, 'lovesnap:'); }
     return setValue('love:' + loveChat, j); };
@@ -1710,7 +1712,7 @@
     for (const x of [...(other.log || []), ...(base.log || [])]) { const k = (x.w || '') + '|' + x.t, o = m.get(k); m.set(k, o ? { ...o, ...x, open: !!(o.open && x.open), solved: !!(o.solved || x.solved || ((o.open || x.open) && !(o.open && x.open))) } : x); }
     return { ...base, sumT: Math.max(a.sumT || 0, b.sumT || 0), log: [...m.values()].sort((p, q) => (p.d ?? 0) - (q.d ?? 0)).slice(-60), cycles: [...new Set([...(other.cycles || []), ...(base.cycles || [])])].slice(-30) };
   }
-  const loveAll = (x, y) => { const SKIP = /^(lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|undo|undoLabel|undoTurn|undoSum)$/, pick = L => JSON.stringify(L || null, function (k, v) { return this === L && SKIP.test(k) ? undefined : v; }); return pick(x) === pick(y); };
+  const loveAll = (x, y) => { const SKIP = /^(cycFix|lastTurn|ev|evTurn|evDay|kinds|noteKey|saved|sigS|phaseRoll|evRollDay|undo|undoLabel|undoTurn|undoSum)$/, pick = L => JSON.stringify(L || null, function (k, v) { return this === L && SKIP.test(k) ? undefined : v; }); return pick(x) === pick(y); };
   const loveThin = L => !L || (!L.log?.length && !L.cycles?.length && !L.scanned && !L.wedding && L.startBy !== 'user' && L.whoBy !== 'user');
   function loveRoll(s, day) { let L = null; try { L = JSON.parse(s?.j); } catch (_) {} if (!L || day == null) return null;
     const ok = t => { const d = P_DAY2(String(t).split(' · ')[0]); return d != null && d <= day; };
@@ -1741,8 +1743,9 @@
     if (love?.log?.length && !love.solvedBack) { love.solvedBack = 1; let o = null; try { o = JSON.parse(String(await getValue('lovesnap:' + c, '') || 'null')); } catch (_) {}
       const was = new Set(); for (const x of o?.list || []) { try { for (const e of JSON.parse(x.j).log || []) if (e.open) was.add((e.w || '') + '|' + e.t); } catch (_) {} } if (love.undo) try { for (const e of JSON.parse(love.undo).log || []) if (e.open) was.add((e.w || '') + '|' + e.t); } catch (_) {}
       for (const e of love.log) if (!e.open && was.has((e.w || '') + '|' + e.t)) e.solved = true; await setValue('love:' + c, JSON.stringify(love)); } if (!same) { loveOut = []; loveSig = ''; } loveMode = String(await getValue('loveMode', 'off')) === 'on';
-    if (love?.cycles?.length) { const seen = new Set(), keep = love.cycles.filter(t => { const w = (t.match(/(?:·\s*)?([^·\s]+)와 (헤어짐|다시 사귐)/) || []); if (w[2] === '헤어짐') seen.add(w[1]); if (w[2] === '다시 사귐') { if (!seen.has(w[1])) return false; seen.delete(w[1]); } return true; }); if (keep.length !== love.cycles.length) { love.cycles = keep; if (love.startBy === 'again') { love.start = null; love.startBy = ''; } loveSave(); } }
-    if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } }
+    if (love && !love.cycFix) {
+    if (love.cycles?.length) { const seen = new Set(), keep = love.cycles.filter(t => { const w = (t.match(/(?:·\s*)?([^·\s]+)와 (헤어짐|다시 사귐)/) || []); if (w[2] === '헤어짐') seen.add(w[1]); if (w[2] === '다시 사귐') { if (!seen.has(w[1])) return false; seen.delete(w[1]); } return true; }); if (keep.length !== love.cycles.length) { love.cycles = keep; if (love.startBy === 'again') { love.start = null; love.startBy = ''; } loveSave(); } }
+    if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } } }
   const lvParts = k => String(k || '').split(/\s*[·,\/]\s*/), LOVE_ON = k => lvParts(k).some(x => /^(연인|약혼|부부)$/.test(x)), LOVE_EX = k => !LOVE_ON(k) && lvParts(k).includes('전 연인');
   function loveAuto(ppl, rel, me) {
     const kOf = n => pairKind0(rel, me, n), cur = love?.who && ppl.has(love.who) ? kOf(love.who) : '';
@@ -5260,7 +5263,7 @@
       if (mine) { const list = splitSections(mem), sec = list.find(x => x.key === FIXED); if (sec) sec.body = mine; else list.unshift({ key: FIXED, body: mine }); return joinSections(list); } }
     const a = fx(note?.memory); if (!a) return mem; if (fxNewer(note, cid)) await fxTouch(cid, note.fx);
     const b = fx(mem); if (chatShape(a) === chatShape(b)) return mem;
-    const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = fixItems(b).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head)));
+    const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = await fxOffKeep(cid, b, inA);
     const old = new Map(fixItems(b).filter(it => it.head).map(it => [itemKey(it.head), it])), keepA = fixItems(a).map(it => { const o = it.head && old.get(itemKey(it.head)); return o && chatShape(o.text) === chatShape(it.text) ? o : it; });
     const list = splitSections(mem), sec = list.find(x => x.key === FIXED), body = fixJoin(keepA.concat(offs)); if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await fxKeepSet(cid, body); return joinSections(list); }
   const sameAsChat = (full, chatMemory) => chatShape(stripProof(full)) === chatShape(chatMemory);
@@ -10722,13 +10725,13 @@
       { const c = snap.note;
         if (c?.sel && !c.parked && fullNote?.memory && fullNote.upto === c.upto) { const fx = m => (splitSections(m).find(x => x.key === FIXED)?.body || '').trim(), a = fx(c.memory), b = fx(fullNote.memory);
           if (a && a !== b && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory))) && fxNewer(c, chatId)) { await fxTouch(chatId, c.fx);
-            const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = fixItems(b).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head)));
+            const inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))), offs = await fxOffKeep(chatId, b, inA);
             const list = splitSections(fullNote.memory), sec = list.find(x => x.key === FIXED), body = offs.length ? a + '\n' + fixJoin(offs) : a; if (sec) sec.body = body; else list.unshift({ key: FIXED, body }); await fxKeepSet(chatId, body); await saveFull(chatId, fullNote.upto, joinSections(list), fullNote.turns, fullNote.at); }
           else if (a && chatShape(a) !== chatShape(fx(stripProof(fullNote.memory))) && !busyNow && !fxRepair.has(chatId + '|' + chatShape(a))) {
             fxRepair.add(chatId + '|' + chatShape(a)); const mem = fullNote.memory;
             fxChain = fxChain.then(() => chatIdFromPath() === chatId && rewriteNote(chatId, mem)).then(() => logErr('고정 설정', '채팅 노트가 예전 고정 설정이라 이 기기 글로 다시 씀')).catch(e => logErr('고정 설정', '채팅 노트 다시 쓰기 실패 · ' + e.message)); } } }
       { const c = snap.note; if (c?.fx && !c.parked && fxNewer(c, chatId)) { const a = fxKeepOf(c.memory), inA = new Set(fixItems(a).map(it => itemKey(it.head || ''))),
-          offs = fixItems(FX_KEEP.get(chatId) || (fullNote ? fxKeepOf(fullNote.memory) : '')).filter(it => it.head && NO_INJ.has(FIXED + '|' + itemKey(it.head)) && !inA.has(itemKey(it.head)));
+          offs = await fxOffKeep(chatId, FX_KEEP.get(chatId) || (fullNote ? fxKeepOf(fullNote.memory) : ''), inA);
           await fxTouch(chatId, c.fx); await fxKeepSet(chatId, offs.length ? (a ? a + '\n' : '') + fixJoin(offs) : a); } }
       if (!FX_KEEP.has(chatId) && fullNote?.memory && snap.note && fullNote.upto === snap.note.upto) await fxKeepSet(chatId, fxKeepOf(fullNote.memory));
       { const c = snap.note;
