@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.46
+// @version      6.0.47
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -1993,7 +1993,7 @@
   function crRows() { const q = (crs.q || '').trim().toLowerCase(), l = crs.profs || [], hit = q ? l.filter(p => (p.name + ' ' + (crM(p.id).n || '') + ' ' + p.info).toLowerCase().includes(q)) : l;
     return hit.map(p => { const d = crDiff(p, l), on = p.id === crs.prof; return `<div class="cr-p${on ? ' on' : ''}" data-id="${p.id}"><button class="cr-pk" data-act="crpick" data-arg="${p.id}"><b>${esc(p.name)}${crM(p.id).n ? `<i>${esc(crM(p.id).n)}</i>` : ''}<em>쓰는 중</em></b><small>${esc((d ? '…' : '') + p.info.slice(d, d + 110)) || '글이 없어요'}</small></button><span class="cr-r"><button class="cr-fv" data-act="crfav" data-arg="${p.id}" aria-pressed="${!!crM(p.id).f}" aria-label="즐겨찾기">★</button><button class="cr-e" data-act="credit" data-arg="${p.id}">수정</button><button class="cr-e del" data-act="crdel" data-arg="${p.id}">삭제</button></span></div>`; }).join('') || `<p class="muted">${q ? '찾는 프로필이 없어요' : '프로필이 없어요 · ＋로 만들어요'}</p>`; }
   function crSheetHtml() { const s = crs, X = `<button class="hbtn" data-act="shclose" aria-label="닫기">${icon('close', 'currentColor', 18)}</button>`, dis = s?.saving ? ' disabled' : '';
-    const wrap = (h, b, cls = '') => `<div class="rsheet" data-act="shclose"><div class="rbox setbox cr-box${cls}" data-act="noop"><div class="cr-h">${h}</div>${b}${s?.undo ? `<div class="cr-bar"><span>${esc(s.undo.msg)}</span><button data-act="crundo"${dis}>되돌리기</button></div>` : ''}</div></div>`;
+    const wrap = (h, b, cls = '') => `<div class="rsheet" data-act="shclose"><div class="rbox setbox cr-box${cls}" data-act="noop"><div class="cr-h">${h}</div>${b}${s?.undo && !s.edit && s.tab === 'prof' ? `<div class="cr-bar"><span>${esc(s.undo.msg)}</span><button data-act="crundo"${dis}>되돌리기</button></div>` : ''}</div></div>`;
     if (!s || s.id !== chatIdFromPath() || !s.ok || !s.profs) return wrap(`<b class="cr-tt">프로필 · 유저노트</b><span class="sp"></span>${X}`, `<div class="cr-b">${s?.err ? `<p class="muted">못 불러왔어요 · ${esc(s.err)}</p><button class="btn" data-act="crsheet">다시 불러오기</button>` : '<p class="muted">크랙에서 불러오는 중…</p>'}</div>`);
     if (s.edit) { const e = s.edit; return wrap(`<button class="hbtn cr-bk" data-act="crback" aria-label="뒤로">${icon('back', 'currentColor', 18)}</button><b class="cr-tt">${e.id ? '프로필 수정' : '새 프로필'}</b><span class="sp"></span><button class="cr-tx" data-act="crsave"${dis}>${s.saving ? '저장 중…' : '저장'}</button>`, `<div class="cr-b"><input class="cr-in" data-out="crname" value="${esc(e.name)}" placeholder="이름" autocomplete="off"><input class="cr-in n" data-out="crnick" maxlength="12" value="${esc(e.nick)}" placeholder="별명 · 우리 보기 편하게 · 크랙엔 안 가요" autocomplete="off"><textarea class="cr-ta" data-out="crinfo" maxlength="500" placeholder="나이, 성격, 생김새">${esc(e.info)}</textarea><p class="cr-f"><span><b data-out="crcnt">${e.info.length}</b> / 500</span><span>${e.id ? '크랙 프로필이 바뀌어요' : '크랙 프로필에 추가돼요'}</span></p></div>`, ' w'); }
     const tabs = `<button class="cr-tb" data-act="crtab" data-arg="prof" aria-pressed="${s.tab === 'prof'}">프로필</button><button class="cr-tb" data-act="crtab" data-arg="note" aria-pressed="${s.tab === 'note'}">유저노트</button>`, sv = p => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
@@ -2007,7 +2007,9 @@
     const c = out('crcnt'); if (c) { c.textContent = v.length; c.classList.toggle('over', o === 'crnote' && v.length > crLim()); } return true; }
   function crPaint() { const b = ui('.cr-box'), c = ui('.cr-card'); if (c) { const x = document.createElement('template'); x.innerHTML = crCard(); c.replaceWith(x.content); }
     const box = out('cr'); if (nav.sheet !== 'cr') { box.textContent = ''; return; } const t = document.createElement('template'); t.innerHTML = crSheetHtml(); if (!b) { box.replaceChildren(t.content); return; }
-    const y = ui('.cr-list')?.scrollTop || 0, n = t.content.querySelector('.cr-box'); b.className = n.className; b.replaceChildren(...n.childNodes); const l = ui('.cr-list'); if (l) l.scrollTop = y; }
+    const l0 = ui('.cr-list'), a0 = ui('.cr-ta'), ay = a0?.scrollTop || 0, af = !!a0 && root.activeElement === a0, as = a0 ? [a0.selectionStart, a0.selectionEnd] : null; if (l0 && crs) crs.listY = l0.scrollTop;
+    const n = t.content.querySelector('.cr-box'); b.className = n.className; b.replaceChildren(...n.childNodes); const l = ui('.cr-list'), a = ui('.cr-ta'); if (l) l.scrollTop = crs?.listY || 0;
+    if (a0 && a && a.dataset.out === a0.dataset.out) { if (af) { a.focus({ preventScroll: true }); try { a.setSelectionRange(as[0], as[1]); } catch (_) {} } a.scrollTop = ay; } }
   const crMark = () => root.querySelectorAll('.cr-p').forEach(p => p.classList.toggle('on', p.dataset.id === crs.prof));
   async function crPick(id) { const s = crs; if (!s?.ok || !s.profs || s.id !== chatIdFromPath() || id === s.prof && !s.busy) return; s.prof = id; crMine(s); crMark(); if (s.picking) return;
     const was = s.real, old = crAll?.find(p => p.id === was)?.name || ''; s.picking = true; s.undo = null; let bad = '', first = s.busy;
@@ -3415,7 +3417,8 @@
   const MASK_COLORS = ['#FFFFFF', '#1F1D27', '#7B68D9', '#F4B6CC', '#FFE27A'], MASK_EMOJIS = ['💜', '🙈', '⭐', '🐰', '🌸'];
   async function maskSet(k, v) { await setValue(k, v); await maskLoad(); const o = ui('.mopts'); if (o) o.outerHTML = maskOptsHtml(); }
   function maskInput(el) { const v = el.value.trim(), k = el.dataset.mask;
-    if (k === 'add') return v && maskSet('maskNames', [...new Set([...mask.raw, ...v.split(/[,，]/).map(x => x.trim()).filter(Boolean)])].join(', '));
+    if (k === 'add') return v && (async () => { let cur = []; const here = root.activeElement === el;  try { cur = String(await getValue('maskNames', '')).split(/[,，\n]/).map(x => x.trim()).filter(Boolean); } catch (_) {}
+      await maskSet('maskNames', [...new Set([...cur, ...mask.raw, ...v.split(/[,，]/).map(x => x.trim()).filter(Boolean)])].join(', ')); if (here) ui('[data-mask="add"]')?.focus({ preventScroll: true }); })();
     if (k === 'color') return maskSet('maskColor', v);
     if (k === 'panel') return maskSet('maskPanel', el.checked ? 'on' : 'off');
     if (k === 'emo' && v) return maskSet('maskEmoji', v); }
