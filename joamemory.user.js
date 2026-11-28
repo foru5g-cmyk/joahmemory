@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.50
+// @version      6.0.51
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -118,7 +118,7 @@
       if (typeof GM_getValue === 'function') return await GM_getValue(key, fallback);
       if (hasGM && GM.getValue) return await GM.getValue(key, fallback);
       try { const v = localStorage.getItem('memo-note:' + key); return v === null ? fallback : v; } catch (_) { return fallback; }
-    } finally { io.gm += Date.now() - t; io.n++; }
+    } finally { io.gm += Date.now() - t; io.n++; if (io.k) { const p = String(key).split(':')[0]; io.k[p] = (io.k[p] || 0) + 1; } }
   }
   const DB_KEY = /^(hist|seen|pregsnap|lovesnap|emb|ltmorig|ltmcache|injlog):/;
   const DB_SLOW = /^(full|orig):/, DB_SLOW_OK = 5, dbSlowSeen = new Set();
@@ -1312,7 +1312,8 @@
     if (preg.userOff && !preg.on) return false;
     if (preg.start != null && !preg.wkFix && /관계 미상이라/.test(preg.why || '')) { preg.wkFix = 1; const day = pregDay(mem, snap), sn = !preg.fixId && day != null ? pregWeeksNote(mem, day, preg.who) : null;
       if (sn && Math.floor((sn.d - preg.start) / 7) !== sn.w) { preg.start = sn.d - sn.w * 7; preg.w0 = Math.min(preg.w0 ?? sn.w, sn.w); preg.why = `노트에 '${sn.w}주'라고 적혀 있어서 맞췄어요`; } pregSave(); }
-    if (preg.start != null) { if (preg.father == null || preg.dadV !== 4 && !preg.dadFix) { const first = preg.dadV !== 4; preg.dadV = 4; const f = pregFather(mem); if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); } return true; }
+    if (preg.start != null) { if (preg.father == null || preg.dadV !== 4 && !preg.dadFix) { const first = preg.dadV !== 4, set = preg.dadV === 3 && preg.father; preg.dadV = 4; const f = pregFather(mem); if (f && set) preg.fatherCands = f.cands.includes(preg.father) ? f.cands : [preg.father]; else if (f) { preg.father = f.name; preg.fatherCands = f.cands; } if (f || first) pregSave(); }
+      if (!preg.dadW) { preg.dadW = 1; const m = /(\S+?)[와과]의 관계(?:로 임신\(주사위| 기준으로 셌어요)/.exec(preg.why || ''); if (m && !preg.dadFix && preg.father !== m[1] && (preg.fatherCands || []).includes(m[1])) preg.father = m[1]; pregSave(); }  return true; }
     if (pregMaleNo(mem)) return false;
     { let t = snap?.note?.turns || 0; const told = []; for (const m of (snap?.fresh || []).filter(isChat)) { if (msgRole(m) === 'user') t++; if (t > (preg.afterTurn ?? -1)) told.push(P_SYN(stripBlocks(msgText(m)))); }
       const tell = preg.aiSaid || told.reverse().find(x => (P_TELL.test(x) || P_AUTHOR.test(x)) && !/임신(?:했어|이야|이에요|했다고)\s*\?|임신한\s*거\s*(?:아니|야\s*\?)|임신했을\s*리|임신일\s*리/.test(x) && !/말\s*못|말하지\s*말|아니야|아닐|아닌\s*것|안\s*했|안\s*됐/.test(x)), day = pregDay(mem, snap);
@@ -1748,7 +1749,7 @@
     if (love?.startBy === 'again' && !(love.cycles || []).some(t => t.includes('다시 사귐'))) { love.start = null; love.startBy = ''; loveSave(); } }
     if (love?.who && !love.cycBack) { love.cycBack = 1; let o = null; try { o = JSON.parse(String(await getValue('lovesnap:' + c, '') || 'null')); } catch (_) {}
       const key = love.who + '와 다시 사귐', cur = love.cycles || [];
-      for (const x of (o?.list || []).slice().reverse()) { let L = null; try { L = JSON.parse(x.j); } catch (_) {} const was = L?.who === love.who ? L.cycles || [] : [], lost = was.filter(t => t.includes(key) && !cur.includes(t)); if (!lost.length) continue;
+      for (const x of (o?.list || []).slice().reverse()) { let L = null; try { L = JSON.parse(x.j); } catch (_) {} const was = L?.who === love.who ? L.cycles || [] : [], seen = new Set(), lost = was.filter(t => { const w = (t.match(/(?:·\s*)?([^·\s]+)와 (헤어짐|다시 사귐)/) || []); if (w[2] === '헤어짐') seen.add(w[1]); if (w[2] !== '다시 사귐') return false; const pair = seen.delete(w[1]); return !pair && t.includes(key) && !cur.includes(t); }); if (!lost.length) continue;
         love.cycles = [...was.filter(t => lost.includes(t) || cur.includes(t)), ...cur.filter(t => !was.includes(t))].slice(-30); if (love.start == null && !love.startBy && L.startBy === 'again' && L.start != null) { love.start = L.start; love.startBy = 'again'; }
         loveSave(); logErr('연애 기록', '지워졌던 재회 줄 ' + lost.length + '개를 사본에서 되살림'); break; } } }
   const lvParts = k => String(k || '').split(/\s*[·,\/]\s*/), LOVE_ON = k => lvParts(k).some(x => /^(연인|약혼|부부)$/.test(x)), LOVE_EX = k => !LOVE_ON(k) && lvParts(k).includes('전 연인');
@@ -3467,7 +3468,7 @@
     css += dark ? `::highlight(jm-pen){background-color:color-mix(in srgb,${p} 30%,transparent);color:color-mix(in srgb,${p} 55%,#ffffff)}` : `::highlight(jm-pen){background-color:${p};color:#2B2418}`;
     if (themeCss.textContent !== css) { themeCss.textContent = css; maskSoon(); }
     const dq = ([o, c]) => /^["“”]$/.test(o) && /^["“”]$/.test(c);
-    const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”]{1,400}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^]){1,400}' + reEsc(c))];
+    const alt = [...(theme.marks.some(dq) ? ['["“”][^"“”]{1,1500}["“”]'] : []), ...theme.marks.filter(x => !dq(x)).map(([o, c]) => reEsc(o) + '(?:(?!' + reEsc(c) + ')[^]){1,1500}' + reEsc(c))];
     theme.re = theme.on && theme.pen && alt.length ? new RegExp(alt.join('|'), 'g') : null;
     penAll = true; penPaint();
   }
@@ -10687,7 +10688,7 @@
     if (!chatId) return;
     crumbCheck();
     const my = refresh.n = (refresh.n || 0) + 1, old = () => refresh.n !== my || chatIdFromPath() !== chatId;
-    loading = true; loadingAt = Date.now(); const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0;
+    loading = true; loadingAt = Date.now(); io.k = {}; const rT = loadingAt, io0 = { ...io }; let rRead = 0, rPick = 0, rMove = 0;
     const ck = 'rf' + my; crumbOn(ck, '방 읽기 · 대화 읽기');
     try {
       let snap = await readSinceLastNote(chatId); rRead = Date.now() - rT; crumbOn(ck, '방 읽기 · 전체 기억 꺼내기·기억 고르기·노트 옮기기');
@@ -10778,6 +10779,8 @@
       crumbOn(ck, '방 읽기 · 드라이브에서 전체 기억 받기'); { const c = snap.note, stale = memStale(c, fullNote, MEM_AT.get(chatId));
         if (c?.sel && !c.parked && (stale || !(fullNote && fullNote.upto === c.upto)) && !gsTried.has(chatId + '|' + c.upto + '|' + (c.me || 0)) && String(await getValue('gsUrl', '')).trim()) {
           const k = chatId + '|' + c.upto + '|' + (c.me || 0), nth = gsRe.get(k) || 0; gsTried.add(k); gsRe.set(k, nth + 1);
+          let held = false; { let tr = null; try { tr = JSON.parse(String(await getValue('gsfullTry:' + chatId, '') || 'null')); } catch (_) {} const cur = tr && tr.k === k && Date.now() - tr.at < 6e5 ? tr : { k, at: Date.now(), n: 0 }; held = cur.n >= (IS_STAY ? 2 : 4);
+            if (!held) await setValue('gsfullTry:' + chatId, JSON.stringify({ ...cur, n: cur.n + 1 })); else if (!nth) logErr('연동', '드라이브 전체 기억 받기를 잠깐 쉼 · 10분 안에 ' + cur.n + '번 받아 봤어요'); }
           const pull = async () => {
           let g = null, why = '', have = null; try { const r = await gsCall({ action: 'load', chat: chatId, prev: await getValue('gsAsked:' + chatId, '') ? 0 : 1 }), d = JSON.parse(r.data); if (d?.app === 'memo-note' && d.chat === chatId && d.memory) g = { memory: d.memory, upto: d.upto, turns: d.turns, at: d.noteAt || d.at, me: Number(d.me) || 0, hist: d.store?.hist || '', orig: d.store?.orig || '', pack: d.store?.pack || '', r }; } catch (e) { why = e.message || String(e); if (/백업이 아직 없어요/.test(why)) gsNone.add(chatId); }
           if (memTake(c, g, stale) && chatIdFromPath() === chatId) { have = g.r; const was = stale ? fullNote?.memory : null; await saveFull(chatId, c.upto, await withChatFixed(g.memory, c, chatId), g.turns || c.turns, g.at || c.at); await memTouch(chatId, Math.max(g.me || 0, c.me || 0)); await packTake(chatId, g.orig, g.pack); if (!stale || was !== fullNote?.memory) pageToast(stale ? '다른 기기에서 고친 기억을 받아 왔어요' : '이 방 전체 기억(1~' + (g.turns || c.turns) + '턴)을 받아 왔어요');
@@ -10791,7 +10794,7 @@
           if ((!(fullNote && fullNote.upto === c.upto) || memStale(c, fullNote, MEM_AT.get(chatId))) && nth < 3) setTimeout(() => { gsTried.delete(k); if (!IS_STAY && chatIdFromPath() === chatId && document.visibilityState === 'visible' && !busyNow && !loading) refresh(); }, IS_STAY ? 60000 : 15000 * (nth + 1));
           return have; };
           const draw = () => { if (chatIdFromPath() === chatId) render(); };
-          const p = pull(); gsGot.set(chatId, p); p.then(() => {}, () => {}).then(() => setTimeout(() => gsGot.delete(chatId), 5000));
+          const p = held ? Promise.resolve(null) : pull(); gsGot.set(chatId, p); p.then(() => {}, () => {}).then(() => setTimeout(() => gsGot.delete(chatId), 5000));
           if (stale) p.then(draw).catch(e => logErr('연동', '고친 기억 받기 실패 · ' + (e?.message || e))); else { render(); await p; draw(); } } }
       { const c = snap.note; if (fullNote?.memory && c && !c.sel && !c.parked && fullNote.upto === c.upto && fullNote.memory.length < c.memory.length * 0.7) await saveFull(chatId, c.upto, c.memory, c.turns, c.at); }
       if (early) gsPullStore(chatId, early);
@@ -10873,7 +10876,7 @@
       } catch (_) { movedInfo = ''; }
     } catch (e) { toast('읽기 실패 · ' + e.message, 'err'); }
     finally { crumbOff(ck); if (refresh.n !== my) return;  loading = false; const rv = Date.now(); if (!['edit', 'pvEdit', 'preview'].includes(nav.view) && !nav.fxEdit) render(); else paintInlineButton(snapshot ? `${Math.min(freshTurns(), cycle)}/${cycle}` : '기억', freshTurns() >= cycle);
-      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번) · 요청 ${s(io.net - io0.net)}초(${io.nn - io0.nn}번)`, chatId); }
+      const s = x => (x / 1000).toFixed(1), end = Date.now(); if (end - rT > 3000) logErr('느림', `방 읽기 ${s(end - rT)}초 = 대화 읽기 ${s(rRead)} + 기억 고르기 ${s(rPick)} + 노트 옮기기 ${s(rMove)} + 나머지 ${s(Math.max(0, rv - rT - rRead - rPick - rMove))} + 그리기 ${s(end - rv)} · 메시지 ${snapshot?.all?.length || 0}개 · 그중 저장소 꺼내기 ${s(io.gm - io0.gm)}초(${io.n - io0.n}번${io0.k ? ' · ' + Object.entries(io0.k).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => k + ' ' + n).join(' ') : ''}) · DB ${s(io.db - io0.db)}초(${io.dn - io0.dn}번) · 요청 ${s(io.net - io0.net)}초(${io.nn - io0.nn}번)`, chatId); }
   }
 
   let runningMode = 'new';
