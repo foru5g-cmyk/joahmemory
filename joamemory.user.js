@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.39
+// @version      6.0.40
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -3645,11 +3645,12 @@
     } catch (_) {  }
   }
   const cpText = new Map();
-  function cpPut(el, id) { const o = el.querySelector('button[aria-label="메시지 옵션"]')?.closest('.dropdown-button'); if (!o || o.previousElementSibling?.classList?.contains('jm-cp')) return;
+  function cpPut(el, id) { const o = el.querySelector('button[aria-label="메시지 옵션"]')?.closest('.dropdown-button'); if (!o || el.querySelector('.jm-cp')) return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'jm-cp'; b.setAttribute('aria-label', '전체 복사'); b.dataset.for = id;
     b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
     b.style.cssText = 'width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#9A9AA3;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:0 0 auto';
-    b.addEventListener('click', cpClick); o.before(b); }
+    b.addEventListener('click', cpClick); const bar = o.parentElement?.parentElement, left = bar?.firstElementChild;
+    if (bar?.classList.contains('justify-between') && left && left !== o.parentElement) { b.style.marginLeft = '-6px'; left.prepend(b); } else o.before(b); }
   async function cpClick(e) { e.preventDefault(); e.stopPropagation(); const id = e.currentTarget.dataset.for, c = chatIdFromPath();
     let t = cpText.get(id); if (t == null) { const m = (snapshot?.all || []).find(x => msgId(x) === id); if (m) t = stripBlocks(msgText(m)).trim(); }
     if (t == null) { try { t = stripBlocks(msgText(await readMessage(c, id))).trim(); if (cpText.size > 50) cpText.clear(); cpText.set(id, t); } catch (_) { pageToast('글을 못 읽었어요 · 다시 눌러 주세요'); return; } }
@@ -3663,7 +3664,7 @@
       const id = el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id');
       const info = turnMap.get(id);
       if (!info) { if (id) unknown.push({ id, el }); return; }
-      known.push(el); cpPut(el, id);
+      known.push(el);
       let b = [...el.children].find(c => c.classList?.contains('memo-turn-badge'));
       if (!b) { b = document.createElement('div'); b.className = 'memo-turn-badge'; el.prepend(b); }
       const done = info.turn <= noteTurns && noteTurns > 0;
@@ -3680,7 +3681,8 @@
       if (id) loadTurnMap(id, snapshot, miss.filter(x => x.el.getBoundingClientRect().top < low).map(x => x.id)); }
   }
   let badgeTimer = null;
-  new MutationObserver(() => { if (!badgeTimer && turnMap.size) badgeTimer = setTimeout(() => { badgeTimer = null; paintBadges(); }, 400); })
+  const cpScan = () => document.querySelectorAll('[data-message-id],[data-message-group-id]').forEach(el => { if (!el.parentElement?.closest('[data-message-id],[data-message-group-id]')) cpPut(el, el.getAttribute('data-message-id') || el.getAttribute('data-message-group-id')); });
+  new MutationObserver(() => { if (!badgeTimer) badgeTimer = setTimeout(() => { badgeTimer = null; cpScan(); if (turnMap.size) paintBadges(); }, 400); })
     .observe(document.documentElement, { childList: true, subtree: true });
 
   const ICON = {
