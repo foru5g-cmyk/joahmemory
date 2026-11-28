@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.42
+// @version      6.0.43
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -801,7 +801,8 @@
   const pAuto0 = mem => /조선|한양|궁궐|경복궁|창덕궁|별당|대감|마님|도령|양반|어의|의녀|세자|중전/.test(mem) ? 'old' : /마법|마나|기사단|왕국|엘프|마탑|신전|치유사|드래곤|황태자|공작가/.test(mem) ? 'fantasy' : 'modern';
   const P_WORLD = { modern: '현대', old: '옛날(조선 등)', fantasy: '판타지' };
   const P_DOC = { modern: '산부인과', old: '의원·산파', fantasy: '치유사' };
-  const P_HOSP = { modern: /병원|산부인과|검진|초음파|진료|의사|분만실|응급실/, old: /의원|산파|진맥|어의|의녀|약방/, fantasy: /치유사|신전|진찰|치료소|산파|의사/ };
+  const P_HOSP = { modern: /(?:병원|산부인과|응급실|분만실|진료실|대기실|의원)(?:에|에서|으로|로|\s)*(?:(?:실려|업혀|안겨|급히|바로)\s*)?(?:도착|들어[가서섰왔갔오]|왔|와서|와\s*있|갔|가서|앉|누워|입원|접수|나와|나왔)|초음파(?:를|로|에|\s)*(?:보|봤|찍|확인|화면|기계)|(?:진료|검진|진찰|검사)(?:를|을|\s)*(?:받|봤|마치|마쳤|끝나|끝났|중)|의사(?:가|는|\s*선생님(?:이|은|께서|도)?)\s*[^.!?\n]{0,30}(?:말했|설명|말씀|웃었|보더니|입을|건넸|가리켰|짚었|말을|고개)/,
+    old: /의원|산파|진맥|어의|의녀|약방/, fantasy: /치유사|신전|진찰|치료소|산파|의사/ };
   const P_SYM = [
     [5, 13, '특정 냄새에 갑자기 입덧이 올라옴', /헛구역|입덧|구역질|토할|토했|울렁/],
     [5, 14, '아랫배가 콕콕 쑤시고 땅김', /콕콕|아랫배가? ?(쑤|땅|당)/],
@@ -1137,7 +1138,7 @@
       if (!preg.knew.includes(ex) && (!broke ? !preg.secret : P_TELL.test(said) && !/못\s*하|아니야|아닐/.test(said) && (said.includes(ex) || lastAi.includes(ex)))) preg.knew.push(ex); }
     const exBlind = ex && broke && !preg.knew.includes(ex) ? ex : '';
     let cur = preg.cur;
-    if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) preg.cur = cur = null;
+    if (cur && turn > cur.from && new RegExp(cur.kw).test(lastAi)) { (preg.hit ||= {})[cur.k] = 1; preg.cur = cur = null; }
     else if (cur && turn > cur.until) preg.cur = cur = cur.big !== undefined && !cur.re ? { ...cur, re: 1, from: turn + 3, until: turn + 8 } : null;
     if (p.loss != null && p.loss <= 12 && preg.fired.loss == null && wk - p.loss >= 2) {
       for (const e of big) if (e.w <= p.loss) { preg.fired[e.k] ??= turn; if (e.k !== 'loss' && preg.shown[e.k] == null) preg.shown[e.k] = -1; }
@@ -1162,7 +1163,7 @@
     const userHosp = P_HOSP[world].test(said + '\n' + stripBlocks(msgText([...chat].reverse().find(m => msgRole(m) === 'user') || {})));
     if ((me ? userHosp : atHosp) && preg.unaware) {  preg.unaware = false; res.push(`진찰해 보니 임신 ${wk}주 — ${who}는 지금 처음 알게 됨`); preg.log.push({ w: wk, t: { old: '의원의 진맥으로 임신을 알게 됨', fantasy: '치유사에게서 임신을 알게 됨' }[world] || '병원에서 임신을 알게 됨', at: turn, res: 1 }); }
     if (atHosp) {
-      for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - (preg.firedW?.[e.k] ?? e.w) <= 4)) {
+      for (const e of big) if (e.res && e.k !== 'labor' && preg.fired[e.k] != null && (e.end || preg.hit?.[e.k]) && preg.fired[e.k] <= turn && (preg.shown[e.k] == null || preg.shown[e.k] === turn) && (e.end || wk - (preg.firedW?.[e.k] ?? e.w) <= 4)) {
         if (preg.shown[e.k] == null) { preg.shown[e.k] = turn; if (e.end) preg.log.push({ w: wk, t: e.res, at: turn, res: 1 }); else heard(wk, e.res); }
         res.push(e.res); if (e.end) preg.endNext = { kind: e.end, dayN: day, why: e.why || '', turn };
       }
@@ -1181,7 +1182,7 @@
         if (preg.twinAt == null) { preg.twinAt = turn; heard(wk, t); } res.unshift(t); }
       const sexTxt = p.sex.map(x => x === '남' ? '아들' : '딸').join('·');
       if (world === 'modern' && preg.shown.sex == null) {
-        if (P_SEXQ.test(said + ' ' + lastAi)) {
+        if (P_SEXQ.test(said)) {
           if (wk < 16) res.push('성별은 아직 안 보임(16주부터)'); else { res.push(`성별: ${sexTxt}`); preg.sexAt = turn; } }
       }
       if (world === 'modern' && p.sexFlip && !preg.sexFlipped && preg.shown.sex != null && preg.shown.sex < turn && wk >= 20 && preg.sexFix?.length === 1) {
