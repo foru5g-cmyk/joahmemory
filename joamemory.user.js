@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         조아메모리ෆ
 // @namespace    memo-note.v2
-// @version      6.0.45
+// @version      6.0.46
 // @updateURL    https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @downloadURL  https://raw.githubusercontent.com/foru5g-cmyk/joahmemory/refs/heads/main/joamemory.user.js
 // @description  랙시들의 RP정리🚀🚀
@@ -10632,7 +10632,7 @@
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(년)', 'g'), (m, pre, t, u, one, sp, k) => t ? pre + sinoOf(natVal(t, u, one)) + sp + k : m],
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(개월)', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
     [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(분)(?![들께])', 'g'), (m, pre, t, u, one, sp, k, off, str) => t || NF_MIN.test(str.slice(off + m.length, off + m.length + 8)) ? pre + sinoOf(natVal(t, u, one)) + sp + k : m],
-    [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(초)(?:(?![가-힣])|(?=간|동안|뒤|후|전|만에|쯤|씩|마다|정도|밖에|이나|가량|짜리|[가를도의]\\s))', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
+    [new RegExp('(^|[^가-힣])(?:' + NAT_RE + ')(\\s*)(초)(?:(?![가-힣])|(?=간|동안|뒤|후|전|만|쯤|씩|마다|정도|밖에|이나|가량|짜리|[가를도의은는에]\\s))', 'g'), (m, pre, t, u, one, sp, k) => pre + sinoOf(natVal(t, u, one)) + sp + k],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)(살)', 'g'), (m, pre, t, u, sp, k) => { const n = sinVal(t, u); return n >= 10 && n <= 99 ? pre + nativeOf(n) + sp + k : m; }],
     [new RegExp('(^|[^가-힣])' + SIN_RE + '(\\s*)시(?![간작절선체점키장청각계민인집험경골설식도])', 'g'), (m, pre, t, u, sp) => { const n = sinVal(t, u); return n >= 10 && n <= 12 && !t ? pre + nativeOf(n) + sp + '시' : m; }]];
   const nfSplit = t => { const R = []; for (const re of [STY_RE, BDC_RE, MORE_RE, V3_RE, V2_RE, V1_RE, /\n*(?:\[\/\/\]: # "|<!--|\[ \]\(# ")MEMO_NOTE v3(?![\s\S]*MEMO_NOTE_END)[\s\S]*$/g, /\[ \]\(# "[\s\S]*?"\)/g]) for (const m of t.matchAll(re)) R.push([m.index, m.index + m[0].length]);
